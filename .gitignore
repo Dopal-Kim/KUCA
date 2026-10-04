@@ -1,0 +1,51 @@
+# Unity generated
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Bb]uild/
+**/[Bb]uilds/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+**/[Mm]emoryCaptures/
+**/[Rr]ecordings/
+
+# IDE / project files
+.vs/
+.vscode/
+.idea/
+*.csproj
+*.unityproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Builds
+*.apk
+*.aab
+*.unitypackage
+*.app
+crashlytics-build.properties
+**/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# OS
+.DS_Store
+.DS_Store?
+Thumbs.db
+
+# Secrets (Mapbox 토큰 등)
+**/Assets/Resources/MapboxToken.txt
+**/Assets/Resources/MapboxToken.txt.meta
+*.textClipping
+*.textClipping.meta
