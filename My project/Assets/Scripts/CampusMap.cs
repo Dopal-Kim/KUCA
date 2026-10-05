@@ -2,6 +2,9 @@ using System.Collections;
 using System.Globalization;
 using UnityEngine;
 using UnityEngine.Networking;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem;
+#endif
 #if UNITY_ANDROID
 using UnityEngine.Android;
 #endif
@@ -41,21 +44,37 @@ public class CampusMap : MonoBehaviour
     public float playerHeight = 10f;
     [Tooltip("위치 보간 속도. 0이면 즉시 이동")]
     public float smoothSpeed = 5f;
+    [Tooltip("목표 위치와 이 거리(m) 이상 떨어지면 보간 없이 바로 이동 (첫 위치 수신 등)")]
+    public float snapDistance = 100f;
+    [Tooltip("Player가 이동 방향을 바라보도록 회전하는 속도. 0이면 회전하지 않음")]
+    public float turnSpeed = 8f;
 
     [Header("Location Service")]
     public float desiredAccuracyInMeters = 5f;
     public float updateDistanceInMeters = 1f;
+    [Tooltip("이보다 오차(m)가 큰 GPS 값은 무시한다")]
+    public float maxAcceptedAccuracy = 30f;
 
     [Header("Editor Test")]
     [Tooltip("에디터에서 GPS 대신 사용할 테스트 좌표")]
     public double testLongitude = 127.0800;
     public double testLatitude = 37.2440;
+    [Tooltip("에디터 플레이 중 WASD/방향키로 테스트 좌표를 움직이는 속도 (m/s, Shift로 3배)")]
+    public float testWalkSpeed = 5f;
+
+    [Header("Debug")]
+    [Tooltip("화면 왼쪽 위에 GPS 상태를 표시")]
+    public bool showDebugInfo = true;
 
     public bool IsLocationReady { get; private set; }
     public double CurrentLongitude { get; private set; }
     public double CurrentLatitude { get; private set; }
+    public float CurrentAccuracy { get; private set; }
+    public string StatusMessage { get; private set; } = "위치 서비스 시작 중";
 
     Vector3 targetPosition;
+    bool hasFix;
+    double lastTimestamp;
 
     IEnumerator Start()
     {
@@ -69,6 +88,7 @@ public class CampusMap : MonoBehaviour
 #if UNITY_EDITOR
         SetLocation(testLongitude, testLatitude);
         IsLocationReady = true;
+        StatusMessage = "에디터 테스트 (WASD/방향키로 이동)";
         yield break;
 #else
 #if UNITY_ANDROID
@@ -85,6 +105,7 @@ public class CampusMap : MonoBehaviour
 #endif
         if (!Input.location.isEnabledByUser)
         {
+            StatusMessage = "위치 권한이 없거나 위치 서비스가 꺼져 있음";
             Debug.LogWarning("[CampusMap] 위치 서비스가 꺼져 있습니다.");
             yield break;
         }
@@ -100,33 +121,115 @@ public class CampusMap : MonoBehaviour
 
         if (Input.location.status != LocationServiceStatus.Running)
         {
+            StatusMessage = $"위치 서비스 시작 실패: {Input.location.status}";
             Debug.LogWarning($"[CampusMap] 위치 서비스를 시작하지 못했습니다: {Input.location.status}");
             yield break;
         }
 
         IsLocationReady = true;
+        StatusMessage = "GPS 신호 대기 중";
 #endif
     }
 
     void Update()
     {
 #if UNITY_EDITOR
+        MoveTestLocationWithKeyboard();
         // 인스펙터에서 테스트 좌표를 바꾸면 바로 반영
         SetLocation(testLongitude, testLatitude);
 #else
         if (IsLocationReady && Input.location.status == LocationServiceStatus.Running)
-        {
-            LocationInfo info = Input.location.lastData;
-            SetLocation(info.longitude, info.latitude);
-        }
+            ReadGps();
 #endif
 
-        if (player == null)
+        if (player == null || !hasFix)
             return;
 
-        player.position = smoothSpeed > 0f
-            ? Vector3.Lerp(player.position, targetPosition, 1f - Mathf.Exp(-smoothSpeed * Time.deltaTime))
-            : targetPosition;
+        Vector3 from = player.position;
+        Vector3 to = targetPosition;
+        if (smoothSpeed <= 0f || (to - from).sqrMagnitude > snapDistance * snapDistance)
+            player.position = to;
+        else
+            player.position = Vector3.Lerp(from, to, 1f - Mathf.Exp(-smoothSpeed * Time.deltaTime));
+
+        // 이동 방향 바라보기 (수평 방향만)
+        Vector3 dir = to - from;
+        dir.y = 0f;
+        if (turnSpeed > 0f && dir.sqrMagnitude > 0.01f)
+        {
+            Quaternion look = Quaternion.LookRotation(dir.normalized, Vector3.up);
+            player.rotation = Quaternion.Slerp(player.rotation, look, 1f - Mathf.Exp(-turnSpeed * Time.deltaTime));
+        }
+    }
+
+    void ReadGps()
+    {
+        LocationInfo info = Input.location.lastData;
+        if (info.timestamp == lastTimestamp)
+            return;
+        lastTimestamp = info.timestamp;
+        CurrentAccuracy = info.horizontalAccuracy;
+
+        // 정확도가 너무 낮은 값은 버린다. 단, 아직 위치가 하나도 없으면 일단 사용한다.
+        if (hasFix && info.horizontalAccuracy > maxAcceptedAccuracy)
+        {
+            StatusMessage = $"GPS 오차가 큼 (±{info.horizontalAccuracy:F0}m), 무시함";
+            return;
+        }
+
+        SetLocation(info.longitude, info.latitude);
+        StatusMessage = IsInsideCampus(info.longitude, info.latitude) ? "GPS 수신 중" : "캠퍼스 밖 (가장자리에 표시)";
+    }
+
+#if UNITY_EDITOR
+    /// <summary>에디터 플레이 중 키보드로 테스트 좌표를 걸어서 움직인다.</summary>
+    void MoveTestLocationWithKeyboard()
+    {
+        Vector2 move = Vector2.zero;
+        bool fast = false;
+#if ENABLE_INPUT_SYSTEM
+        Keyboard kb = Keyboard.current;
+        if (kb == null)
+            return;
+        if (kb.wKey.isPressed || kb.upArrowKey.isPressed) move.y += 1f;
+        if (kb.sKey.isPressed || kb.downArrowKey.isPressed) move.y -= 1f;
+        if (kb.dKey.isPressed || kb.rightArrowKey.isPressed) move.x += 1f;
+        if (kb.aKey.isPressed || kb.leftArrowKey.isPressed) move.x -= 1f;
+        fast = kb.leftShiftKey.isPressed || kb.rightShiftKey.isPressed;
+#else
+        move = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+        fast = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
+#endif
+        if (move == Vector2.zero)
+            return;
+
+        // 지도 기준 동(+X)/북(+Z)으로 이동한 뒤 위경도로 되돌린다.
+        float meters = testWalkSpeed * (fast ? 3f : 1f) * Time.deltaTime;
+        Vector3 world = GeoToMapPlane(testLongitude, testLatitude);
+        world += new Vector3(move.x, 0f, move.y).normalized * meters;
+        Vector2d geo = WorldToGeo(world);
+        testLongitude = System.Math.Clamp(geo.x, minLongitude, maxLongitude);
+        testLatitude = System.Math.Clamp(geo.y, minLatitude, maxLatitude);
+    }
+#endif
+
+    void OnGUI()
+    {
+        if (!showDebugInfo)
+            return;
+
+        float scale = Mathf.Max(1f, Screen.dpi / 160f);
+        GUIStyle style = new GUIStyle(GUI.skin.box)
+        {
+            alignment = TextAnchor.UpperLeft,
+            fontSize = Mathf.RoundToInt(14 * scale),
+            padding = new RectOffset(10, 10, 8, 8),
+        };
+        string text = $"{StatusMessage}\n" +
+                      $"위도 {CurrentLatitude:F6}  경도 {CurrentLongitude:F6}\n" +
+                      (CurrentAccuracy > 0f ? $"정확도 ±{CurrentAccuracy:F0}m" : "정확도 -");
+        Vector2 size = style.CalcSize(new GUIContent(text));
+        GUI.Box(new Rect(10 * scale, 10 * scale, size.x, size.y), text, style);
     }
 
     void OnDisable()
@@ -272,6 +375,7 @@ public class CampusMap : MonoBehaviour
         CurrentLongitude = longitude;
         CurrentLatitude = latitude;
         targetPosition = GeoToWorld(longitude, latitude);
+        hasFix = true;
     }
 
     /// <summary>위경도 → 지도 위 월드 좌표 (캠퍼스 범위 밖이면 가장자리로 고정)</summary>
