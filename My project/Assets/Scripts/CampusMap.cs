@@ -91,45 +91,68 @@ public class CampusMap : MonoBehaviour
         StatusMessage = "에디터 테스트 (WASD/방향키로 이동)";
         yield break;
 #else
-#if UNITY_ANDROID
-        if (!Permission.HasUserAuthorizedPermission(Permission.FineLocation))
-        {
-            Permission.RequestUserPermission(Permission.FineLocation);
-            float waitPermission = 10f;
-            while (!Permission.HasUserAuthorizedPermission(Permission.FineLocation) && waitPermission > 0f)
-            {
-                waitPermission -= Time.deltaTime;
-                yield return null;
-            }
-        }
-#endif
-        if (!Input.location.isEnabledByUser)
-        {
-            StatusMessage = "위치 권한이 없거나 위치 서비스가 꺼져 있음";
-            Debug.LogWarning("[CampusMap] 위치 서비스가 꺼져 있습니다.");
-            yield break;
-        }
-
-        Input.location.Start(desiredAccuracyInMeters, updateDistanceInMeters);
-
-        float wait = 20f;
-        while (Input.location.status == LocationServiceStatus.Initializing && wait > 0f)
-        {
-            wait -= Time.deltaTime;
-            yield return null;
-        }
-
-        if (Input.location.status != LocationServiceStatus.Running)
-        {
-            StatusMessage = $"위치 서비스 시작 실패: {Input.location.status}";
-            Debug.LogWarning($"[CampusMap] 위치 서비스를 시작하지 못했습니다: {Input.location.status}");
-            yield break;
-        }
-
-        IsLocationReady = true;
-        StatusMessage = "GPS 신호 대기 중";
+        yield return RunLocationService();
 #endif
     }
+
+#if !UNITY_EDITOR
+    /// <summary>
+    /// 위치 서비스를 켜고, 실패하거나 중간에 멈추면 몇 초마다 다시 시도한다.
+    /// 사용자가 설정에서 권한을 켜고 돌아오면 앱을 재시작하지 않아도 이어서 동작한다.
+    /// </summary>
+    IEnumerator RunLocationService()
+    {
+        const float retryDelay = 3f;
+        while (true)
+        {
+#if UNITY_ANDROID
+            if (!Permission.HasUserAuthorizedPermission(Permission.FineLocation))
+            {
+                Permission.RequestUserPermission(Permission.FineLocation);
+                float waitPermission = 10f;
+                while (!Permission.HasUserAuthorizedPermission(Permission.FineLocation) && waitPermission > 0f)
+                {
+                    waitPermission -= Time.unscaledDeltaTime;
+                    yield return null;
+                }
+            }
+#endif
+            if (!Input.location.isEnabledByUser)
+            {
+                StatusMessage = "위치가 꺼져 있음\n설정에서 위치 서비스와 KUCA 위치 권한을 켜 주세요";
+                yield return new WaitForSecondsRealtime(retryDelay);
+                continue;
+            }
+
+            Input.location.Start(desiredAccuracyInMeters, updateDistanceInMeters);
+            StatusMessage = "위치 서비스 시작 중";
+
+            // 권한 팝업에 답할 때까지 기다린다 (Initializing 상태가 유지됨)
+            while (Input.location.status == LocationServiceStatus.Initializing)
+                yield return null;
+
+            if (Input.location.status == LocationServiceStatus.Running)
+            {
+                IsLocationReady = true;
+                if (!hasFix)
+                    StatusMessage = "GPS 신호 대기 중";
+                while (Input.location.status == LocationServiceStatus.Running)
+                    yield return null;
+                IsLocationReady = false;
+            }
+
+            StatusMessage = $"위치를 받을 수 없음 ({Input.location.status})\n" +
+#if UNITY_IOS
+                            "설정 → 개인정보 보호 및 보안 → 위치 서비스 → KUCA →\n'앱을 사용하는 동안' 허용, '정확한 위치' 켜기";
+#else
+                            "설정에서 KUCA 위치 권한을 '정확한 위치'로 허용해 주세요";
+#endif
+            Debug.LogWarning($"[CampusMap] 위치 서비스 상태: {Input.location.status}, {retryDelay}초 후 다시 시도");
+            Input.location.Stop();
+            yield return new WaitForSecondsRealtime(retryDelay);
+        }
+    }
+#endif
 
     void Update()
     {
