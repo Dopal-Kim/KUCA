@@ -89,13 +89,16 @@ public class CameraFollow : MonoBehaviour
 
     void HandleInput()
     {
+        // 모달 화면(꾸미기, 메모판)이 열려 있으면 지도 카메라를 움직이지 않는다 (목록 스크롤이 줌이 되지 않게).
+        if (UIInputBlocker.IsModalOpen)
+            return;
 #if ENABLE_INPUT_SYSTEM
         var touches = Touch.activeTouches;
         if (touches.Count == 1)
         {
             Touch t = touches[0];
-            // UI(꾸미기 패널, 버튼) 위에서 시작한 터치는 카메라 조작에 쓰지 않는다.
-            if (CharacterCustomizer.IsOverUI(t.startScreenPosition))
+            // UI(패널, 버튼) 위에서 시작한 터치나 모달 화면이 열려 있을 때는 카메라 조작에 쓰지 않는다.
+            if (!UIInputBlocker.AllowsGameInput(t.startScreenPosition))
                 return;
             if (t.phase == UnityEngine.InputSystem.TouchPhase.Moved)
                 Rotate(t.delta.x);

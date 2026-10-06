@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "id": "sample-library-1",
+      "buildingId": "way-474085534",
+      "author": "KUCA",
+      "text": "중앙도서관 도착! 시험 기간엔 열람실 자리가 일찍 차니까 아침에 오세요. (가짜 서버의 예시 메모예요)",
+      "photoUrl": "resource://MemoSamples/library",
+      "createdAt": "2026-10-06T03:00:00Z"
+    }
+  ]
+}

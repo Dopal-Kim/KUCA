@@ -25,17 +25,6 @@ public class CharacterCustomizer : MonoBehaviour
 
     public static bool IsOpen { get; private set; }
 
-    static readonly List<RectTransform> blockingRects = new List<RectTransform>();
-
-    /// <summary>화면 좌표가 이 화면의 UI(열기 버튼, 패널) 위인지. 게임 탭 처리에서 제외할 때 쓴다.</summary>
-    public static bool IsOverUI(Vector2 screenPos)
-    {
-        foreach (RectTransform rt in blockingRects)
-            if (rt != null && rt.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(rt, screenPos, null))
-                return true;
-        return false;
-    }
-
     static readonly (CharacterSlot slot, string label)[] SlotRows =
     {
         (CharacterSlot.Head, "머리"),
@@ -81,7 +70,7 @@ public class CharacterCustomizer : MonoBehaviour
     void OnDestroy()
     {
         IsOpen = false;
-        blockingRects.Clear();
+        UIInputBlocker.SetModal(this, false);
         if (previewTexture != null)
             previewTexture.Release();
     }
@@ -102,6 +91,7 @@ public class CharacterCustomizer : MonoBehaviour
     public void SetOpen(bool open)
     {
         IsOpen = open;
+        UIInputBlocker.SetModal(this, open);
         screen.SetActive(open);
         openButton.SetActive(!open);
         previewCam.enabled = open;
@@ -207,7 +197,7 @@ public class CharacterCustomizer : MonoBehaviour
         ob.anchorMin = ob.anchorMax = ob.pivot = new Vector2(0f, 0f);
         ob.anchoredPosition = new Vector2(30f, 330f);
         ob.sizeDelta = new Vector2(240f, 120f);
-        blockingRects.Add(ob);
+        UIInputBlocker.Register(ob);
 
         // 꾸미기 화면 전체: 어두운 배경 + 위쪽 미리보기 + 아래쪽 패널
         screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));
@@ -217,7 +207,7 @@ public class CharacterCustomizer : MonoBehaviour
         sr.anchorMin = Vector2.zero;
         sr.anchorMax = Vector2.one;
         sr.offsetMin = sr.offsetMax = Vector2.zero;
-        blockingRects.Add(sr);
+        UIInputBlocker.Register(sr);
 
         BuildPreview(screen.transform);
 

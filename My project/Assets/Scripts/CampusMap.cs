@@ -240,7 +240,7 @@ public class CampusMap : MonoBehaviour
 
     void OnGUI()
     {
-        if (!showDebugInfo || CharacterCustomizer.IsOpen)
+        if (!showDebugInfo || UIInputBlocker.IsModalOpen)
             return;
 
         float scale = Mathf.Max(1f, Screen.dpi / 160f);

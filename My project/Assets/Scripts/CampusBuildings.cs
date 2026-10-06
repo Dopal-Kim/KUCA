@@ -74,14 +74,14 @@ public class CampusBuildings : MonoBehaviour
     }
 
     /// <summary>OSM JSON을 파싱해 건물별 (이름, 메시) 목록을 만든다.</summary>
-    public List<(string name, Mesh mesh)> BuildMeshes(string json)
+    public List<(string name, string id, Mesh mesh)> BuildMeshes(string json)
     {
         // JsonUtility는 ':'가 들어간 키를 매핑할 수 없으므로 미리 바꾼다.
         json = json.Replace("\"building:levels\"", "\"building_levels\"")
                    .Replace("\"building:min_level\"", "\"building_min_level\"");
         OsmResponse resp = JsonUtility.FromJson<OsmResponse>(json);
 
-        var result = new List<(string, Mesh)>();
+        var result = new List<(string, string, Mesh)>();
         if (resp?.elements == null)
             return result;
 
@@ -111,7 +111,7 @@ public class CampusBuildings : MonoBehaviour
 
                 string label = !string.IsNullOrEmpty(e.tags?.name) ? e.tags.name : $"{e.type}_{e.id}";
                 mesh.name = $"Building_{e.id}";
-                result.Add((label, mesh));
+                result.Add((label, $"{e.type}-{e.id}", mesh));
             }
         }
         return result;
@@ -369,8 +369,8 @@ public class CampusBuildings : MonoBehaviour
         var container = ScriptableObject.CreateInstance<CampusBuildingMeshes>();
         UnityEditor.AssetDatabase.CreateAsset(container, MeshAssetPath);
 
-        List<(string name, Mesh mesh)> meshes = BuildMeshes(osmData.text);
-        foreach (var (label, mesh) in meshes)
+        List<(string name, string id, Mesh mesh)> meshes = BuildMeshes(osmData.text);
+        foreach (var (label, id, mesh) in meshes)
         {
             UnityEditor.AssetDatabase.AddObjectToAsset(mesh, container);
 
@@ -380,6 +380,9 @@ public class CampusBuildings : MonoBehaviour
             go.AddComponent<MeshRenderer>().sharedMaterial = buildingMaterial;
             if (addColliders)
                 go.AddComponent<MeshCollider>().sharedMesh = mesh;
+            var info = go.AddComponent<CampusBuildingInfo>();
+            info.buildingId = id;
+            info.buildingName = label.StartsWith(id.Replace('-', '_')) ? "" : label;
             UnityEditor.Undo.RegisterCreatedObjectUndo(go, "Generate Buildings");
         }
 

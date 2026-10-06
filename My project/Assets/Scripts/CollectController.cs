@@ -26,6 +26,9 @@ public class CollectController : MonoBehaviour
 
     public GameProgress Progress { get; private set; }
 
+    /// <summary>수집 대상이 아닌 건물을 탭했을 때 (메모판이 듣는다)</summary>
+    public event System.Action<CampusBuildingInfo> BuildingTapped;
+
     LineRenderer ring;
     const int RingSegments = 64;
 
@@ -61,7 +64,7 @@ public class CollectController : MonoBehaviour
                 if (c != null)
                     c.SetInRange(CollectibleSpawner.HorizontalDistance(c.transform.position, p) <= collectRadius);
 
-        if (TryGetTap(out Vector2 screenPos) && !CharacterCustomizer.IsOpen && !CharacterCustomizer.IsOverUI(screenPos))
+        if (TryGetTap(out Vector2 screenPos) && UIInputBlocker.AllowsGameInput(screenPos))
             HandleTap(screenPos);
     }
 
@@ -112,7 +115,10 @@ public class CollectController : MonoBehaviour
             }
         }
         if (target == null)
+        {
+            TapBuilding(ray);
             return;
+        }
 
         float dist = CollectibleSpawner.HorizontalDistance(target.transform.position, campusMap.player.position);
         if (dist > collectRadius)
@@ -126,6 +132,18 @@ public class CollectController : MonoBehaviour
         hud?.Toast($"{target.Type.displayName} 획득! +{target.Type.points}");
         hud?.ShowProgress(Progress, spawner.types);
         spawner.Remove(target);
+    }
+
+    void TapBuilding(Ray ray)
+    {
+        if (BuildingTapped == null)
+            return;
+        if (Physics.Raycast(ray, out RaycastHit hit, 5000f, ~0, QueryTriggerInteraction.Ignore))
+        {
+            var info = hit.collider.GetComponentInParent<CampusBuildingInfo>();
+            if (info != null)
+                BuildingTapped(info);
+        }
     }
 
     void CreateRing()
