@@ -11581,9 +11581,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 1008019450}
-  distance: 180
+  distance: 250
+  minDistance: 60
+  maxDistance: 700
   pitch: 55
+  yaw: 0
   followSpeed: 6
+  rotateDegreesPerScreen: 270
+  mouseZoomStep: 0.1
+  doubleTapTime: 0.3
 --- !u!1 &331454001
 GameObject:
   m_ObjectHideFlags: 0
@@ -33516,6 +33522,7 @@ MeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 80167e96bbe4b4687877b4d448503ed8, type: 2}
+  - {fileID: 2100000, guid: e146121b2b11a420abbefa2f459dbbfa, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
