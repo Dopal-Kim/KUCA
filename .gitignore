@@ -49,3 +49,6 @@ Thumbs.db
 **/Assets/Resources/MapboxToken.txt.meta
 *.textClipping
 *.textClipping.meta
+
+# 키아트 도구 중간 결과
+tools/keyart/tiles/
