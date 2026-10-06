@@ -26,7 +26,10 @@ public class CollectController : MonoBehaviour
 
     public GameProgress Progress { get; private set; }
 
-    /// <summary>수집 대상이 아닌 건물을 탭했을 때 (메모판이 듣는다)</summary>
+    /// <summary>경희스팟을 탭했을 때 (메모판이 듣는다)</summary>
+    public event System.Action<KyungHeeSpot> SpotTapped;
+
+    /// <summary>수집 대상도 스팟도 아닌 건물을 탭했을 때</summary>
     public event System.Action<CampusBuildingInfo> BuildingTapped;
 
     LineRenderer ring;
@@ -104,15 +107,25 @@ public class CollectController : MonoBehaviour
 
         Ray ray = cam.ScreenPointToRay(screenPos);
         Collectible target = null;
+        KyungHeeSpot spot = null;
         float best = float.MaxValue;
+        // 화면에서 가장 앞에 있는 수집 대상 또는 경희스팟
         foreach (RaycastHit hit in Physics.RaycastAll(ray, 5000f, ~0, QueryTriggerInteraction.Collide))
         {
+            if (hit.distance >= best)
+                continue;
             var c = hit.collider.GetComponent<Collectible>();
-            if (c != null && hit.distance < best)
-            {
-                best = hit.distance;
-                target = c;
-            }
+            var s = hit.collider.GetComponent<KyungHeeSpot>();
+            if (c == null && s == null)
+                continue;
+            best = hit.distance;
+            target = c;
+            spot = s;
+        }
+        if (spot != null)
+        {
+            SpotTapped?.Invoke(spot);
+            return;
         }
         if (target == null)
         {

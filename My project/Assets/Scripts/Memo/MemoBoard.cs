@@ -13,6 +13,12 @@ public class MemoBoard : MonoBehaviour
 {
     public CollectController collectController;
     public PhotoCaptureScreen photoCapture;
+    public KyungHeeSpots spots;
+
+    [Tooltip("켜면 경희스팟이 없는 건물도 탭해서 메모판을 연다 (쓰기는 항상 가능)")]
+    public bool openOnBuildingTap = false;
+    [Tooltip("켜면 경희스팟 근처(interactRadius)에서만 메모를 쓸 수 있다")]
+    public bool requireProximityToWrite = true;
 
     [Tooltip("메모 서버 주소 (예: http://192.168.0.5:5080). 비우면 가짜 서버")]
     public string serverUrl = "";
@@ -36,6 +42,8 @@ public class MemoBoard : MonoBehaviour
     byte[] photoJpg;
     Texture2D photoTexture;
     bool posting;
+    KyungHeeSpot currentSpot;
+    Text writeHint;
 
     public static string DeviceId
     {
@@ -63,17 +71,41 @@ public class MemoBoard : MonoBehaviour
     void OnEnable()
     {
         if (collectController != null)
-            collectController.BuildingTapped += Open;
+        {
+            collectController.SpotTapped += OpenSpot;
+            collectController.BuildingTapped += OnBuildingTapped;
+        }
+    }
+
+    void OnBuildingTapped(CampusBuildingInfo info)
+    {
+        if (openOnBuildingTap)
+            Open(info);
+    }
+
+    public void OpenSpot(KyungHeeSpot spot)
+    {
+        currentSpot = spot;
+        OpenBoard(spot.Building);
+    }
+
+    public void Open(CampusBuildingInfo target)
+    {
+        currentSpot = null;
+        OpenBoard(target);
     }
 
     void OnDisable()
     {
         if (collectController != null)
-            collectController.BuildingTapped -= Open;
+        {
+            collectController.SpotTapped -= OpenSpot;
+            collectController.BuildingTapped -= OnBuildingTapped;
+        }
         UIInputBlocker.SetModal(this, false);
     }
 
-    public void Open(CampusBuildingInfo target)
+    void OpenBoard(CampusBuildingInfo target)
     {
         building = target;
         root.SetActive(true);
@@ -97,6 +129,7 @@ public class MemoBoard : MonoBehaviour
         listView.SetActive(true);
         writeView.SetActive(false);
         writeButton.gameObject.SetActive(true);
+        writeHint.gameObject.SetActive(true);
         Reload();
     }
 
@@ -187,8 +220,31 @@ public class MemoBoard : MonoBehaviour
 
     // ---------- 쓰기 ----------
 
+    /// <summary>경희스팟 근처에 있는지. 스팟이 아닌 건물에서 열었거나 거리 제한을 껐으면 항상 true.</summary>
+    bool CanWrite(out float distance)
+    {
+        distance = 0f;
+        if (!requireProximityToWrite || currentSpot == null || spots == null || collectController == null || collectController.campusMap == null)
+            return true;
+        distance = currentSpot.DistanceFrom(collectController.campusMap.player.position);
+        return distance <= spots.interactRadius;
+    }
+
+    void Update()
+    {
+        if (root == null || !root.activeSelf || !listView.activeSelf)
+            return;
+        // 걸어서 가까워지면 바로 쓰기 버튼이 켜지도록 매 프레임 확인한다.
+        bool can = CanWrite(out float d);
+        writeButton.interactable = can;
+        writeHint.text = can ? "" : $"경희스팟에서 {d:F0}m 떨어져 있어요. {spots.interactRadius:F0}m 안으로 가면 메모를 남길 수 있어요.";
+    }
+
     void ShowWrite()
     {
+        if (!CanWrite(out _))
+            return;
+        writeHint.gameObject.SetActive(false);
         listView.SetActive(false);
         writeView.SetActive(true);
         writeButton.gameObject.SetActive(false);
@@ -267,7 +323,7 @@ public class MemoBoard : MonoBehaviour
     // ---------- 화면 만들기 ----------
 
     const float HeaderHeight = 200f;
-    const float FooterHeight = 200f;
+    const float FooterHeight = 260f;
 
     void BuildUI(Transform canvas)
     {
@@ -341,6 +397,17 @@ public class MemoBoard : MonoBehaviour
         wr.pivot = new Vector2(0.5f, 0f);
         wr.sizeDelta = new Vector2(-80f, 140f);
         wr.anchoredPosition = new Vector2(0f, 40f);
+        var disabled = writeButton.colors;
+        disabled.disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.6f);
+        writeButton.colors = disabled;
+
+        writeHint = UIKit.Text(root.transform, "", 32, TextAnchor.MiddleCenter, UIKit.Quiet);
+        var hr = writeHint.rectTransform;
+        hr.anchorMin = new Vector2(0f, 0f);
+        hr.anchorMax = new Vector2(1f, 0f);
+        hr.pivot = new Vector2(0.5f, 0f);
+        hr.sizeDelta = new Vector2(-80f, 60f);
+        hr.anchoredPosition = new Vector2(0f, 185f);
 
         root.SetActive(false);
     }

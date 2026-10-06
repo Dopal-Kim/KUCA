@@ -41334,6 +41334,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MemoBoard
   collectController: {fileID: 1082617445}
   photoCapture: {fileID: 1082617451}
+  spots: {fileID: 1855503126}
+  openOnBuildingTap: 0
+  requireProximityToWrite: 1
   serverUrl: 
 --- !u!114 &1082617451
 MonoBehaviour:
@@ -70457,6 +70460,81 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CampusBuildingInfo
   buildingId: way-170402243
   buildingName: 
+--- !u!1 &1855503125
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1855503127}
+  - component: {fileID: 1855503126}
+  m_Layer: 0
+  m_Name: KyungHeeSpots
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1855503126
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1855503125}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 284ff3349733e4be28308e5fd410f69d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::KyungHeeSpots
+  campusMap: {fileID: 1171499777}
+  buildingsRoot: {fileID: 229196529}
+  badgeMaterial: {fileID: 2100000, guid: a978f2f9004684c3ea787fe338a3f0b8, type: 2}
+  poleMaterial: {fileID: 2100000, guid: 254022635498e4ea0b0a739a35f03dc4, type: 2}
+  interactRadius: 40
+  buildingIds:
+  - way-473963422
+  - way-474085534
+  - way-474085535
+  - way-455725718
+  - way-455728922
+  - way-474085539
+  - way-474085542
+  - way-474085538
+  - way-474531805
+  - way-474085537
+  - way-474521121
+  - way-585696506
+  - way-585696420
+  - way-778946313
+  - way-474085536
+  - way-474521123
+  - way-585696507
+  - relation-8269760
+  - way-474521122
+  - way-455728923
+  - way-474085540
+  - relation-6739958
+  - relation-6739964
+  - way-474521125
+  - way-455726113
+--- !u!4 &1855503127
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1855503125}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1856269743
 GameObject:
   m_ObjectHideFlags: 0
@@ -82549,3 +82627,4 @@ SceneRoots:
   - {fileID: 1171499778}
   - {fileID: 229196529}
   - {fileID: 1082617448}
+  - {fileID: 1855503127}
