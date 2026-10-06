@@ -1,0 +1,32 @@
+# VS Code의 REST Client 확장으로 각 요청 위의 "Send Request"를 누르면 실행돼요.
+@host = http://localhost:5080
+
+### 서버 살아 있는지
+GET {{host}}/api/health
+
+### 이름 있는 건물 목록
+GET {{host}}/api/buildings?named=true
+
+### 건물 하나
+GET {{host}}/api/buildings/way-455725718
+
+### (2단계) 건물의 메모 목록
+GET {{host}}/api/buildings/way-455725718/memos
+
+### (2단계) 글만 있는 메모 작성
+POST {{host}}/api/buildings/way-455725718/memos
+Content-Type: multipart/form-data; boundary=kuca
+
+--kuca
+Content-Disposition: form-data; name="author"
+
+테스트
+--kuca
+Content-Disposition: form-data; name="text"
+
+도서관 3층 창가 자리 콘센트 있어요
+--kuca
+Content-Disposition: form-data; name="deviceId"
+
+test-device-1
+--kuca--

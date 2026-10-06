@@ -1,0 +1,12 @@
+# .NET 빌드 결과
+bin/
+obj/
+*.user
+.vs/
+
+# 로컬 데이터 (DB, 업로드된 사진)
+*.db
+*.db-shm
+*.db-wal
+KucaMemoServer/wwwroot/photos/*
+!KucaMemoServer/wwwroot/photos/.gitkeep
