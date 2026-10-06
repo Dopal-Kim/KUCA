@@ -34,7 +34,7 @@ public class MemoBoard : MonoBehaviour
     GameObject root, listView, writeView;
     Text title, subtitle, listStatus, writeError;
     RectTransform listContent;
-    Button writeButton, postButton, photoButton, removePhotoButton;
+    Button writeButton, postButton, photoButton, galleryButton, removePhotoButton;
     InputField authorInput, textInput;
     RawImage photoPreview;
     AspectRatioFitter photoFitter;
@@ -260,6 +260,25 @@ public class MemoBoard : MonoBehaviour
         photoCapture.Open((jpg, tex) => SetPhoto(jpg, tex));
     }
 
+    /// <summary>폰 앨범에서 사진을 고른다 (NativeGallery). 긴 변을 1280px 로 줄여 JPEG 로 올린다.</summary>
+    void PickFromGallery()
+    {
+        NativeGallery.GetImageFromGallery(path =>
+        {
+            if (string.IsNullOrEmpty(path))
+                return; // 고르지 않고 닫음
+            Texture2D tex = NativeGallery.LoadImageAtPath(path, 1280, markTextureNonReadable: false, generateMipmaps: false);
+            if (tex == null)
+            {
+                writeError.text = "사진을 불러오지 못했어요. 다른 사진을 골라 주세요.";
+                return;
+            }
+            // 플러그인의 크기 제한이 적용되지 않는 경우(에디터 등)도 있어 한 번 더 줄인다.
+            tex = PhotoCaptureScreen.Downscale(tex, 1280);
+            SetPhoto(tex.EncodeToJPG(80), tex);
+        }, "메모에 올릴 사진 고르기", "image/*");
+    }
+
     void SetPhoto(byte[] jpg, Texture2D tex)
     {
         if (photoTexture != null && photoTexture != tex)
@@ -379,8 +398,9 @@ public class MemoBoard : MonoBehaviour
         RectTransform photoRow = UIKit.Rect(form, "PhotoButtons");
         UIKit.Size(photoRow, 120f);
         UIKit.Horizontal(photoRow, 24f);
-        photoButton = UIKit.Button(photoRow, "사진 찍기", TakePhoto, UIKit.ButtonGray, 42);
-        removePhotoButton = UIKit.Button(photoRow, "사진 빼기", () => SetPhoto(null, null), UIKit.ButtonGray, 42);
+        photoButton = UIKit.Button(photoRow, "사진 찍기", TakePhoto, UIKit.ButtonGray, 38);
+        galleryButton = UIKit.Button(photoRow, "앨범에서 고르기", PickFromGallery, UIKit.ButtonGray, 38);
+        removePhotoButton = UIKit.Button(photoRow, "사진 빼기", () => SetPhoto(null, null), UIKit.ButtonGray, 38);
 
         writeError = UIKit.Text(form, "", 36, TextAnchor.MiddleLeft, new Color(1f, 0.55f, 0.55f));
         RectTransform postRow = UIKit.Rect(form, "PostButtons");

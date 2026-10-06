@@ -181,7 +181,8 @@ public class PhotoCaptureScreen : MonoBehaviour
         Finish(tex);
     }
 
-    static Texture2D Downscale(Texture2D src, int maxSize)
+    /// <summary>긴 변이 maxSize 를 넘으면 줄인다 (원본 텍스처는 지운다).</summary>
+    public static Texture2D Downscale(Texture2D src, int maxSize)
     {
         int longSide = Mathf.Max(src.width, src.height);
         if (longSide <= maxSize)

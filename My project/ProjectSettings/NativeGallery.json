@@ -1,0 +1,6 @@
+{
+    "AutomatedSetup": true,
+    "PhotoLibraryUsageDescription": "장소 메모에 올릴 사진을 앨범에서 고르기 위해 사진 접근 권한을 사용합니다.",
+    "PhotoLibraryAdditionsUsageDescription": "",
+    "DontAskLimitedPhotosPermissionAutomaticallyOnIos14": true
+}
