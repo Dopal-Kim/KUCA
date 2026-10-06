@@ -48,7 +48,6 @@ def load_tile(name, meters, crop=None, blur=0):
 
 print('tiles…', W, H)
 grass = load_tile('grass', 36, blur=2.2)
-forest = load_tile('forest', 34)
 paving = load_tile('paving', 14)
 plaza = load_tile('plaza', 18)
 water = load_tile('water', 24)
@@ -98,7 +97,7 @@ paved_m = area_mask(lambda t: t.get('amenity') == 'parking' or t.get('area:highw
 water_m = area_mask(lambda t: t.get('natural') == 'water' or t.get('landuse') in ('reservoir', 'basin'))
 
 print('areas…')
-blend(forest_m, forest, 2.0)
+# 숲 영역은 바닥에 숲 그림을 깔지 않고 잔디 그대로 둔다 (3D 나무만 보이게)
 pitch_tex = np.clip(grass * np.array([0.92, 1.08, 0.9], np.float32) + 8, 0, 255)
 # 육상 트랙(붉은색)과 그 안의 축구장(초록 + 흰 선)
 track_tex = np.clip(paving * np.array([0.95, 0.52, 0.42], np.float32), 0, 255)
