@@ -1,0 +1,298 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9702ba5caa81d451fa9bac74b49c45c8, type: 3}
+  m_Name: CharacterPartsDatabase
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterPartsDatabase
+  genders:
+  - id: men
+    displayName: "\uB0A8\uC790"
+    animator: {fileID: 9100000, guid: bb2137a8f1ba44ae78a79e773e04d54e, type: 2}
+    heads:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: fce569aab0e9e483e8cb1bdf57ad9a4d, type: 3}
+    - id: Beach
+      displayName: "\uD574\uBCC0"
+      prefab: {fileID: 919132149155446097, guid: d55f0eec7183c4bcc96d01f92bf198ad, type: 3}
+    - id: Casual_2
+      displayName: "\uCE90\uC8FC\uC5BC 2"
+      prefab: {fileID: 919132149155446097, guid: ea579089efa33482381632bd1a538f99, type: 3}
+    - id: Casual_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 02f026b49af3049898477a2d47d29ec0, type: 3}
+    - id: Farmer
+      displayName: "\uB18D\uBD80"
+      prefab: {fileID: 919132149155446097, guid: de0e3eec2f67841d19b97511b3b11c4e, type: 3}
+    - id: Horse
+      displayName: "\uB9D0 \uBA38\uB9AC"
+      prefab: {fileID: 919132149155446097, guid: e4df6f2e352fe4672ad0a4fdc699fe03, type: 3}
+    - id: King
+      displayName: "\uC655"
+      prefab: {fileID: 919132149155446097, guid: 45f4d5daf0fd844ab945d93811989276, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 22562d885db8b4771b686f169633aeb3, type: 3}
+    - id: SpaceSuit
+      displayName: "\uC6B0\uC8FC\uBCF5"
+      prefab: {fileID: 919132149155446097, guid: 2e856c8bbfe164834adc366d7ce63629, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: a351bde5b54e34f8ba94cfe6c098fa3f, type: 3}
+    - id: Swat
+      displayName: "\uD2B9\uC218\uBD80\uB300"
+      prefab: {fileID: 919132149155446097, guid: 120ed44c2b23248f280233e7203122a8, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: b78f3f6f4e5014e7d89ef83713c7b624, type: 3}
+    bodies:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: bb3c56c8bacda437c9b46cbe4c909c05, type: 3}
+    - id: Beach
+      displayName: "\uD574\uBCC0"
+      prefab: {fileID: 919132149155446097, guid: b7c1d600ce04d447680ea50acf49662c, type: 3}
+    - id: Casual_2
+      displayName: "\uCE90\uC8FC\uC5BC 2"
+      prefab: {fileID: 919132149155446097, guid: 154b1aae5525445f3ac79f05d99d2fd2, type: 3}
+    - id: Casual_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: e5c38e1f4aabf4876b1daffdfed9206e, type: 3}
+    - id: Farmer
+      displayName: "\uB18D\uBD80"
+      prefab: {fileID: 919132149155446097, guid: c22be11a9da394778aea4e71a21d817e, type: 3}
+    - id: King
+      displayName: "\uC655"
+      prefab: {fileID: 919132149155446097, guid: e9cbc6949bbb74e8cbc4c50caff1238c, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 1e3d57b3c5f5f41d4bb6c106f86927d9, type: 3}
+    - id: SpaceSuit
+      displayName: "\uC6B0\uC8FC\uBCF5"
+      prefab: {fileID: 919132149155446097, guid: 889c1b7a6cc4142919ff8b5b5249479b, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: 7b331214bb5504a599fa8606db5506f0, type: 3}
+    - id: Swat
+      displayName: "\uD2B9\uC218\uBD80\uB300"
+      prefab: {fileID: 919132149155446097, guid: b1043d7fd47de4f4f90694353842d331, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: d6c05ccfaf29148d69a2c351d11ea78e, type: 3}
+    legs:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 55ea992fc42cb43a3954310559684268, type: 3}
+    - id: Beach
+      displayName: "\uD574\uBCC0"
+      prefab: {fileID: 919132149155446097, guid: cedbecc333c394369a00f4b3d0fa08c1, type: 3}
+    - id: Casual_2
+      displayName: "\uCE90\uC8FC\uC5BC 2"
+      prefab: {fileID: 919132149155446097, guid: 2934abb9cb9fd4699b1fabeb34efd12d, type: 3}
+    - id: Casual_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 3de7d2454b0174168866280d57f3114c, type: 3}
+    - id: Farmer
+      displayName: "\uB18D\uBD80"
+      prefab: {fileID: 919132149155446097, guid: 6bc2df8e6aad443eca4c6b9b33f9c609, type: 3}
+    - id: King
+      displayName: "\uC655"
+      prefab: {fileID: 919132149155446097, guid: 9d976aede455040278a65c19e3d0645b, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 337fd650fd5b441cdb6c62d9ff68ad77, type: 3}
+    - id: SpaceSuit
+      displayName: "\uC6B0\uC8FC\uBCF5"
+      prefab: {fileID: 919132149155446097, guid: 0d6ab1942c7ef42f0b1ed360016b88f1, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: a52741f4a5b3d4ffa823ce48d60b3e65, type: 3}
+    - id: Swat
+      displayName: "\uD2B9\uC218\uBD80\uB300"
+      prefab: {fileID: 919132149155446097, guid: f5571ae18a9e5431ba1e3b0f59f20e42, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: f99112bfbf45a43cbb7ca65eff0f6a22, type: 3}
+    feet:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: d1ce209332d2e441abbf957324249f90, type: 3}
+    - id: Beach
+      displayName: "\uD574\uBCC0"
+      prefab: {fileID: 919132149155446097, guid: af4d3f947ca214a55a1b696773027394, type: 3}
+    - id: Casual_2
+      displayName: "\uCE90\uC8FC\uC5BC 2"
+      prefab: {fileID: 919132149155446097, guid: c523b44caabab45238f6a4202d6256c0, type: 3}
+    - id: Casual_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: c8468eecd2b6541b38e15788b90593e5, type: 3}
+    - id: Farmer
+      displayName: "\uB18D\uBD80"
+      prefab: {fileID: 919132149155446097, guid: 92305f47879274df697063469f109297, type: 3}
+    - id: King
+      displayName: "\uC655"
+      prefab: {fileID: 919132149155446097, guid: 9203593021d964c1ca778ee717fa53da, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 0c34565d08a1e41e5a6982f6c809a8e1, type: 3}
+    - id: SpaceSuit
+      displayName: "\uC6B0\uC8FC\uBCF5"
+      prefab: {fileID: 919132149155446097, guid: 0b9effcc6c1b3423091d63c2691b9937, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: f66c6e7522c2c420a8897728cd2ae8e5, type: 3}
+    - id: Swat
+      displayName: "\uD2B9\uC218\uBD80\uB300"
+      prefab: {fileID: 919132149155446097, guid: ea35a173270e44f5ab2d9a4e8a01a0fa, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: 5ac00056a57494dca8c2c22879b3e590, type: 3}
+    accessories:
+    - id: none
+      displayName: "\uC5C6\uC74C"
+      prefab: {fileID: 0}
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00 \uAC00\uBC29"
+      prefab: {fileID: 919132149155446097, guid: 39ae8b05b34724fcc9ba47bc7b170e76, type: 3}
+  - id: women
+    displayName: "\uC5EC\uC790"
+    animator: {fileID: 9100000, guid: 0e0fbc66ec8df49c488837a1a7a8caca, type: 2}
+    heads:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: c56218ec94a94493bbcac5275d72df76, type: 3}
+    - id: Casual
+      displayName: "\uCE90\uC8FC\uC5BC"
+      prefab: {fileID: 919132149155446097, guid: 3d481a60d98444fffb12b12243aaa407, type: 3}
+    - id: Formal
+      displayName: "\uD3EC\uBA40"
+      prefab: {fileID: 919132149155446097, guid: 1676afd3a6d144163a1477791e3e6863, type: 3}
+    - id: Medieval
+      displayName: "\uC911\uC138"
+      prefab: {fileID: 919132149155446097, guid: d3d71af07d4df47bcbdaa7cfc5d49aae, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 38933fa0464bb4909ae3515be67a71bd, type: 3}
+    - id: SciFi
+      displayName: SF
+      prefab: {fileID: 919132149155446097, guid: bba54072064814fa3b4fd52d88e9e21c, type: 3}
+    - id: Soldier
+      displayName: "\uAD70\uC778"
+      prefab: {fileID: 919132149155446097, guid: 1fd0c32c81dd2469eb8f36b9f70aa2d8, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: dd39af34cc8c84f2eb6d5b1a2f59dc31, type: 3}
+    - id: Witch
+      displayName: "\uB9C8\uB140"
+      prefab: {fileID: 919132149155446097, guid: a90c6adbd27eb4c09b71d2bb8978255d, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: 9892d1e3b332f449489b55aaeafb7903, type: 3}
+    bodies:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: bb238112bf0684343b02c6acd5e46fde, type: 3}
+    - id: Casual
+      displayName: "\uCE90\uC8FC\uC5BC"
+      prefab: {fileID: 919132149155446097, guid: f9ad072ad5305413db24f00370da0c87, type: 3}
+    - id: Formal
+      displayName: "\uD3EC\uBA40"
+      prefab: {fileID: 919132149155446097, guid: b74c415df7ac34c4b8aea4bf79c4c792, type: 3}
+    - id: Medieval
+      displayName: "\uC911\uC138"
+      prefab: {fileID: 919132149155446097, guid: ef2cf690015324671923f09630e0acdd, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: 9d5c11031741f48fa97abf1188664704, type: 3}
+    - id: SciFi
+      displayName: SF
+      prefab: {fileID: 919132149155446097, guid: 1d1471cd3c8f24e77a440987213f7230, type: 3}
+    - id: Soldier
+      displayName: "\uAD70\uC778"
+      prefab: {fileID: 919132149155446097, guid: 8678839e46000488ab9c5f9acd2e9f66, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: fc5934164dcaa4b02ad36287b2d30af6, type: 3}
+    - id: Witch
+      displayName: "\uB9C8\uB140"
+      prefab: {fileID: 919132149155446097, guid: fd1101de1c8cf4f5589a10217c9da910, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: e676b68c3f0d54b9aad21f6417413437, type: 3}
+    legs:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: d45de22f5f5974ac9b54966a90420356, type: 3}
+    - id: Casual
+      displayName: "\uCE90\uC8FC\uC5BC"
+      prefab: {fileID: 919132149155446097, guid: f6801414f9435408cbde37bef0ce1316, type: 3}
+    - id: Formal
+      displayName: "\uD3EC\uBA40"
+      prefab: {fileID: 919132149155446097, guid: 0c9b5790204684726ac17b5730cbe8b9, type: 3}
+    - id: Medieval
+      displayName: "\uC911\uC138"
+      prefab: {fileID: 919132149155446097, guid: 05a9a99ca1cee4a518d1578c810b5080, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: a3549ed8f765c492bb313a7a8f076519, type: 3}
+    - id: SciFi
+      displayName: SF
+      prefab: {fileID: 919132149155446097, guid: 633501c2c134542f991cf716a843c2cd, type: 3}
+    - id: Soldier
+      displayName: "\uAD70\uC778"
+      prefab: {fileID: 919132149155446097, guid: 2609e38b3972a49e5ae2c89619b3da45, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: a959db6655f58422d908543d7e91174b, type: 3}
+    - id: Witch
+      displayName: "\uB9C8\uB140"
+      prefab: {fileID: 919132149155446097, guid: 11d2f39ca1f154168a012e56dfbe3e7a, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: 24fe1e9afe7ee45679364ddc1e3b274e, type: 3}
+    feet:
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 1ac54f6e9dfcc437597e57fd96cc56ae, type: 3}
+    - id: Casual
+      displayName: "\uCE90\uC8FC\uC5BC"
+      prefab: {fileID: 919132149155446097, guid: 3932ae6c1606c49adb1db166cee2a6a4, type: 3}
+    - id: Formal
+      displayName: "\uD3EC\uBA40"
+      prefab: {fileID: 919132149155446097, guid: c5cc610b01d9449989fbeb55c5b7e971, type: 3}
+    - id: Medieval
+      displayName: "\uC911\uC138"
+      prefab: {fileID: 919132149155446097, guid: 2d8ad0990e8e24a289ea104f19085962, type: 3}
+    - id: Punk
+      displayName: "\uD391\uD06C"
+      prefab: {fileID: 919132149155446097, guid: f68cad31e578d46f49e8d99f383d147d, type: 3}
+    - id: SciFi
+      displayName: SF
+      prefab: {fileID: 919132149155446097, guid: 816e81f768abc429daafe8d5937894d2, type: 3}
+    - id: Soldier
+      displayName: "\uAD70\uC778"
+      prefab: {fileID: 919132149155446097, guid: 416f65a45dddf4e8da0815c41f806428, type: 3}
+    - id: Suit
+      displayName: "\uC815\uC7A5"
+      prefab: {fileID: 919132149155446097, guid: fbe2b9007374f48acbe861b1795ac59b, type: 3}
+    - id: Witch
+      displayName: "\uB9C8\uB140"
+      prefab: {fileID: 919132149155446097, guid: 259ce55dcc8d44f81aadb495c76333da, type: 3}
+    - id: Worker
+      displayName: "\uC791\uC5C5\uC790"
+      prefab: {fileID: 919132149155446097, guid: 45b34f9acbc544a5cbb9427a2b08ad2d, type: 3}
+    accessories:
+    - id: none
+      displayName: "\uC5C6\uC74C"
+      prefab: {fileID: 0}
+    - id: Adventurer
+      displayName: "\uBAA8\uD5D8\uAC00 \uAC00\uBC29"
+      prefab: {fileID: 919132149155446097, guid: 6d63bada554fe44a6a5b76c77ba18825, type: 3}

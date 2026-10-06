@@ -34,6 +34,7 @@ public class CameraFollow : MonoBehaviour
     public float doubleTapTime = 0.3f;
 
     float lastTapTime = -1f;
+
     float resetVelocity;
     bool resettingYaw;
 
@@ -93,6 +94,9 @@ public class CameraFollow : MonoBehaviour
         if (touches.Count == 1)
         {
             Touch t = touches[0];
+            // UI(꾸미기 패널, 버튼) 위에서 시작한 터치는 카메라 조작에 쓰지 않는다.
+            if (CharacterCustomizer.IsOverUI(t.startScreenPosition))
+                return;
             if (t.phase == UnityEngine.InputSystem.TouchPhase.Moved)
                 Rotate(t.delta.x);
             else if (t.phase == UnityEngine.InputSystem.TouchPhase.Began)

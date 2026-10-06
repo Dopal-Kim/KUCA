@@ -71,6 +71,8 @@ public class CampusMap : MonoBehaviour
     public double CurrentLatitude { get; private set; }
     public float CurrentAccuracy { get; private set; }
     public string StatusMessage { get; private set; } = "위치 서비스 시작 중";
+    /// <summary>위치를 한 번이라도 받았는지 (Player가 실제 위치에 놓였는지)</summary>
+    public bool HasLocation => hasFix;
 
     Vector3 targetPosition;
     bool hasFix;
@@ -238,7 +240,7 @@ public class CampusMap : MonoBehaviour
 
     void OnGUI()
     {
-        if (!showDebugInfo)
+        if (!showDebugInfo || CharacterCustomizer.IsOpen)
             return;
 
         float scale = Mathf.Max(1f, Screen.dpi / 160f);

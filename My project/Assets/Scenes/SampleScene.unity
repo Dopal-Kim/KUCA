@@ -33493,7 +33493,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 10, z: 0}
   m_LocalScale: {x: 10, y: 10, z: 10}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 2055078388}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!23 &1008019451
@@ -33521,7 +33522,6 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 80167e96bbe4b4687877b4d448503ed8, type: 2}
   - {fileID: 2100000, guid: e146121b2b11a420abbefa2f459dbbfa, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
@@ -36515,6 +36515,129 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1081618674}
   m_Mesh: {fileID: 8447527559618602427, guid: 276a7784152fa49cbabf7773a30f84c4, type: 2}
+--- !u!1 &1082617444
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1082617448}
+  - component: {fileID: 1082617447}
+  - component: {fileID: 1082617446}
+  - component: {fileID: 1082617445}
+  - component: {fileID: 1082617449}
+  m_Layer: 0
+  m_Name: GameSystems
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1082617445
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082617444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20a521382a97d4a4b8a36b620349ab13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollectController
+  campusMap: {fileID: 1171499777}
+  spawner: {fileID: 1082617447}
+  hud: {fileID: 1082617446}
+  cam: {fileID: 330585545}
+  collectRadius: 40
+  tapMaxMove: 20
+  tapMaxDuration: 0.4
+--- !u!114 &1082617446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082617444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5050476ef668a4a21be248df80211602, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GameHUD
+  toastDuration: 2.5
+--- !u!114 &1082617447
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082617444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 18226c6b0a80a45ae86fca94b116270a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CollectibleSpawner
+  campusMap: {fileID: 1171499777}
+  buildingsRoot: {fileID: 229196529}
+  targetCount: 25
+  spawnRadius: 300
+  minSpawnDistance: 40
+  despawnRadius: 500
+  minSpacing: 25
+  refillInterval: 4
+  types:
+  - id: sprout
+    displayName: "\uC0C8\uC2F9 \uC870\uAC01"
+    shape: 0
+    color: {r: 0.3, g: 0.85, b: 0.35, a: 1}
+    points: 10
+    weight: 60
+  - id: crystal
+    displayName: "\uD478\uB978 \uACB0\uC815"
+    shape: 3
+    color: {r: 0.2, g: 0.6, b: 1, a: 1}
+    points: 30
+    weight: 30
+  - id: star
+    displayName: "\uD669\uAE08 \uBCC4"
+    shape: 2
+    color: {r: 1, g: 0.8, b: 0.15, a: 1}
+    points: 100
+    weight: 10
+--- !u!4 &1082617448
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082617444}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1082617449
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1082617444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d362c340f09d14aee9a9cba99f14358d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CharacterCustomizer
+  character: {fileID: 2055078389}
+  previewDistance: 4.5
+  previewLookHeight: 0.9
+  previewFov: 30
+  previewRotateSpeed: 0.4
 --- !u!1 &1084888968
 GameObject:
   m_ObjectHideFlags: 0
@@ -69126,6 +69249,54 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2055030399}
   m_Mesh: {fileID: -2966264150246654102, guid: 276a7784152fa49cbabf7773a30f84c4, type: 2}
+--- !u!1 &2055078387
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2055078388}
+  - component: {fileID: 2055078389}
+  m_Layer: 6
+  m_Name: Character
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2055078388
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055078387}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
+  m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1008019450}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2055078389
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2055078387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25d584a262e0447bba7fe646182fd314, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ModularCharacter
+  database: {fileID: 11400000, guid: efab617ad7f3b4166aafcbcd52b883ea, type: 2}
+  movementSource: {fileID: 1008019450}
+  metersPerUnit: 1
+  speedDamping: 0.25
 --- !u!1 &2055327659
 GameObject:
   m_ObjectHideFlags: 0
@@ -72866,3 +73037,4 @@ SceneRoots:
   - {fileID: 1008019450}
   - {fileID: 1171499778}
   - {fileID: 229196529}
+  - {fileID: 1082617448}

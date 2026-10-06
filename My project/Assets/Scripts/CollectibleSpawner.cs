@@ -1,0 +1,152 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+/// <summary>
+/// Player 주변의 캠퍼스 안, 건물이 없는 곳에 수집 대상을 뿌린다.
+/// 멀어진 대상은 지우고, 개수가 모자라면 일정 간격으로 다시 채운다.
+/// </summary>
+public class CollectibleSpawner : MonoBehaviour
+{
+    public CampusMap campusMap;
+    [Tooltip("건물 루트. 이 아래 충돌체 위에는 스폰하지 않는다")]
+    public Transform buildingsRoot;
+
+    [Header("Spawn")]
+    public int targetCount = 25;
+    [Tooltip("Player로부터 이 거리(m) 안에 스폰")]
+    public float spawnRadius = 300f;
+    [Tooltip("Player와 너무 붙어서 나오지 않도록 하는 최소 거리 (m)")]
+    public float minSpawnDistance = 40f;
+    [Tooltip("이 거리(m)보다 멀어지면 지운다")]
+    public float despawnRadius = 500f;
+    [Tooltip("대상끼리 최소 간격 (m)")]
+    public float minSpacing = 25f;
+    [Tooltip("모자란 대상을 하나씩 채우는 간격 (초)")]
+    public float refillInterval = 4f;
+
+    public List<CollectibleType> types = new List<CollectibleType>
+    {
+        new CollectibleType { id = "sprout", displayName = "새싹 조각", shape = PrimitiveType.Sphere, color = new Color(0.3f, 0.85f, 0.35f), points = 10, weight = 60f },
+        new CollectibleType { id = "crystal", displayName = "푸른 결정", shape = PrimitiveType.Cube, color = new Color(0.2f, 0.6f, 1f), points = 30, weight = 30f },
+        new CollectibleType { id = "star", displayName = "황금 별", shape = PrimitiveType.Cylinder, color = new Color(1f, 0.8f, 0.15f), points = 100, weight = 10f },
+    };
+
+    public IReadOnlyList<Collectible> Active => active;
+
+    readonly List<Collectible> active = new List<Collectible>();
+    readonly Dictionary<string, Material> materials = new Dictionary<string, Material>();
+    float refillTimer;
+    bool initialFillDone;
+
+    void Update()
+    {
+        if (campusMap == null || campusMap.player == null || !campusMap.HasLocation)
+            return;
+
+        Vector3 center = campusMap.player.position;
+
+        for (int i = active.Count - 1; i >= 0; i--)
+        {
+            if (active[i] == null)
+            {
+                active.RemoveAt(i);
+                continue;
+            }
+            if (HorizontalDistance(active[i].transform.position, center) > despawnRadius)
+            {
+                Destroy(active[i].gameObject);
+                active.RemoveAt(i);
+            }
+        }
+
+        // 처음 위치를 받으면 한 번에 채우고, 이후에는 천천히 하나씩 채운다.
+        if (!initialFillDone)
+        {
+            for (int i = 0; i < targetCount * 3 && active.Count < targetCount; i++)
+                TrySpawn(center);
+            initialFillDone = true;
+            return;
+        }
+
+        refillTimer -= Time.deltaTime;
+        if (refillTimer <= 0f && active.Count < targetCount)
+        {
+            refillTimer = refillInterval;
+            for (int i = 0; i < 10 && !TrySpawn(center); i++) { }
+        }
+    }
+
+    public void Remove(Collectible c)
+    {
+        active.Remove(c);
+        if (c != null)
+            Destroy(c.gameObject);
+    }
+
+    bool TrySpawn(Vector3 center)
+    {
+        Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(minSpawnDistance, spawnRadius);
+        Vector3 pos = new Vector3(center.x + offset.x, 0f, center.z + offset.y);
+
+        if (!IsInsideMap(pos) || IsOnBuilding(pos))
+            return false;
+        foreach (var other in active)
+            if (other != null && HorizontalDistance(other.transform.position, pos) < minSpacing)
+                return false;
+
+        CollectibleType type = PickType();
+        active.Add(Collectible.Create(type, pos, GetMaterial(type), transform));
+        return true;
+    }
+
+    bool IsInsideMap(Vector3 p)
+    {
+        float hw = campusMap.mapWidth * 0.5f - 5f;
+        float hh = campusMap.mapHeight * 0.5f - 5f;
+        return p.x > -hw && p.x < hw && p.z > -hh && p.z < hh;
+    }
+
+    bool IsOnBuilding(Vector3 p)
+    {
+        if (buildingsRoot == null)
+            return false;
+        // 위에서 아래로 쏴서 건물 충돌체에 먼저 맞으면 건물 위
+        var ray = new Ray(new Vector3(p.x, 500f, p.z), Vector3.down);
+        foreach (RaycastHit hit in Physics.RaycastAll(ray, 1000f, ~0, QueryTriggerInteraction.Ignore))
+            if (hit.collider.transform.IsChildOf(buildingsRoot))
+                return true;
+        return false;
+    }
+
+    CollectibleType PickType()
+    {
+        float total = 0f;
+        foreach (var t in types) total += Mathf.Max(0f, t.weight);
+        float r = Random.value * total;
+        foreach (var t in types)
+        {
+            r -= Mathf.Max(0f, t.weight);
+            if (r <= 0f) return t;
+        }
+        return types[types.Count - 1];
+    }
+
+    Material GetMaterial(CollectibleType type)
+    {
+        if (materials.TryGetValue(type.id, out Material m))
+            return m;
+        Shader lit = Shader.Find("Universal Render Pipeline/Lit");
+        m = new Material(lit != null ? lit : Shader.Find("Standard"));
+        m.SetColor("_BaseColor", type.color);
+        m.EnableKeyword("_EMISSION");
+        m.SetColor("_EmissionColor", type.color * 0.5f);
+        materials[type.id] = m;
+        return m;
+    }
+
+    public static float HorizontalDistance(Vector3 a, Vector3 b)
+    {
+        float dx = a.x - b.x, dz = a.z - b.z;
+        return Mathf.Sqrt(dx * dx + dz * dz);
+    }
+}
