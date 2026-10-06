@@ -12,7 +12,7 @@ for r in range(2):
         m = nonwhite[y0:y1, x0:x1]
         rows = np.where(m.mean(axis=1) > 0.6)[0]; cols = np.where(m.mean(axis=0) > 0.6)[0]
         by0, by1 = y0 + rows[0], y0 + rows[-1]; bx0, bx1 = x0 + cols[0], x0 + cols[-1]
-        pad = 6
+        pad = int(0.05 * min(by1 - by0, bx1 - bx0))  # 타일 테두리의 흰 여백이 섞이지 않게 안쪽만
         tile = Image.fromarray(im[by0 + pad:by1 - pad, bx0 + pad:bx1 - pad].astype(np.uint8))
         tile.save(f'tiles/{names[k]}.png')
         print(names[k], tile.size)

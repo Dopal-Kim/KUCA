@@ -35,7 +35,8 @@ def seamless(img):
 def load_tile(name, meters, crop=None, blur=0):
     img = Image.open(f'tiles/{name}.png').convert('RGB')
     if blur:
-        img = img.filter(ImageFilter.GaussianBlur(blur))
+        # 반복되면 줄무늬처럼 보이는 밝은 풀잎 점을 지운 뒤 살짝 흐린다
+        img = img.filter(ImageFilter.MedianFilter(7)).filter(ImageFilter.GaussianBlur(blur))
     if crop:
         w, h = img.size
         img = img.crop((int(crop[0] * w), int(crop[1] * h), int(crop[2] * w), int(crop[3] * h)))
@@ -90,14 +91,36 @@ def area_mask(pred):
 T = lambda k, *v: (lambda t: t.get(k) in v)
 forest_m = area_mask(lambda t: t.get('natural') in ('wood',) or t.get('landuse') in ('forest',) or t.get('leisure') == 'golf_course')
 park_m = area_mask(lambda t: t.get('leisure') in ('park',) or t.get('landuse') in ('grass', 'flowerbed', 'cemetery') or t.get('natural') == 'grassland')
-pitch_m = area_mask(lambda t: t.get('leisure') in ('pitch', 'track', 'stadium', 'sports_centre'))
+pitch_m = area_mask(lambda t: t.get('leisure') in ('pitch', 'sports_centre'))
+track_m = area_mask(lambda t: t.get('leisure') in ('track', 'stadium'))
+square_m = area_mask(lambda t: t.get('place') == 'square')
 paved_m = area_mask(lambda t: t.get('amenity') == 'parking' or t.get('area:highway') or (t.get('highway') == 'pedestrian' and t.get('area') == 'yes') or t.get('landuse') in ('construction',))
 water_m = area_mask(lambda t: t.get('natural') == 'water' or t.get('landuse') in ('reservoir', 'basin'))
 
 print('areas…')
 blend(forest_m, forest, 2.0)
 pitch_tex = np.clip(grass * np.array([0.92, 1.08, 0.9], np.float32) + 8, 0, 255)
+# 육상 트랙(붉은색)과 그 안의 축구장(초록 + 흰 선)
+track_tex = np.clip(paving * np.array([0.95, 0.52, 0.42], np.float32), 0, 255)
+blend(track_m, track_tex, 1.0)
+stadium_m = area_mask(lambda t: t.get('leisure') == 'stadium')
+field_m = stadium_m.filter(ImageFilter.MinFilter(int(12 * PPM) | 1))
+blend(field_m, pitch_tex, 1.0)
+lines_m = new_mask(); ld = ImageDraw.Draw(lines_m)
+fa = np.argwhere(np.asarray(field_m) > 0)
+if len(fa):
+    (y0, x0), (y1, x1) = fa.min(axis=0), fa.max(axis=0)
+    cx, cy, lw = (x0 + x1) / 2, (y0 + y1) / 2, max(2, int(0.5 * PPM))
+    ld.rectangle((x0 + 4 * PPM, y0 + 4 * PPM, x1 - 4 * PPM, y1 - 4 * PPM), outline=255, width=lw)
+    if (y1 - y0) > (x1 - x0):
+        ld.line((x0 + 4 * PPM, cy, x1 - 4 * PPM, cy), fill=255, width=lw)
+    else:
+        ld.line((cx, y0 + 4 * PPM, cx, y1 - 4 * PPM), fill=255, width=lw)
+    r = 9 * PPM
+    ld.ellipse((cx - r, cy - r, cx + r, cy + r), outline=255, width=lw)
+blend(lines_m, np.broadcast_to(np.array([245, 245, 240], np.float32), canvas.shape), 0.6)
 blend(pitch_m, pitch_tex, 1.0)
+blend(square_m, plaza, 1.0)
 blend(paved_m, plaza, 1.0)
 blend(water_m, water, 1.5)
 
@@ -152,7 +175,7 @@ def grow(m, meters):
     return m.filter(ImageFilter.MaxFilter(k if k < 99 else 99))
 
 blocked = arr(grow(bld_m, 4)) | arr(grow(stroke_mask(ROAD_W, 3), 1)) | arr(grow(walk_m, 1.5)) \
-          | arr(grow(paved_m, 2)) | arr(grow(water_m, 2)) | arr(grow(pitch_m, 3))
+          | arr(grow(paved_m, 2)) | arr(grow(water_m, 2)) | arr(grow(pitch_m, 3)) | arr(grow(track_m, 3)) | arr(grow(square_m, 2))
 forest_a, park_a = arr(forest_m), arr(park_m)
 
 trees = []
@@ -194,6 +217,17 @@ for hw, pts in lines({k: v for k, v in ROAD_W.items() if k != 'service'}):
             cx, cy = x0 + (x1 - x0) * t, y0 + (y1 - y0) * t
             for sgn in (1, -1):
                 try_add(cx + nx * off * sgn, cy + ny * off * sgn, [0.2, 0.1, 0.7])
+
+# 대운동장 둘레 벚꽃길: 트랙 바깥 6m 에 10m 간격
+edge = np.argwhere(np.asarray(grow(track_m, 6)) > 0)
+ring = np.asarray(grow(track_m, 6)).astype(bool) & ~np.asarray(grow(track_m, 5)).astype(bool)
+pts = np.argwhere(ring)
+random.shuffle(pts := [tuple(p) for p in pts])
+taken = []
+for (py, px) in pts:
+    if all((px - qx) ** 2 + (py - qy) ** 2 > (10 * PPM) ** 2 for qx, qy in taken):
+        taken.append((px, py))
+        try_add(px, py, [0.05, 0.05, 0.9])
 
 json.dump({'trees': trees}, open(out_trees, 'w'))
 from collections import Counter

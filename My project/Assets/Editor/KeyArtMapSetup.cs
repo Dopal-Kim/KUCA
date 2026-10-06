@@ -76,6 +76,7 @@ public static class KeyArtMapSetup
         }
 
         SetBuildingMaterial(building);
+        KeyArtLandmarks.Build(building, tree);   // 건물마다 외벽 재질과 특징 형태
         BuildTrees(tree);
         SetOuterGround(outer, true);
         SetSky(sky, true);
@@ -91,6 +92,7 @@ public static class KeyArtMapSetup
         var map = GameObject.Find("Map");
         Undo.RecordObject(map.GetComponent<Renderer>(), "Mapbox");
         map.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(MapboxMapMat);
+        KeyArtLandmarks.Clear();
         SetBuildingMaterial(AssetDatabase.LoadAssetAtPath<Material>(MapboxBuildingMat));
         var trees = GameObject.Find("KeyArtTrees");
         if (trees != null) Undo.DestroyObjectImmediate(trees);
@@ -194,13 +196,13 @@ public static class KeyArtMapSetup
 
         // 지도를 6x6 칸으로 나눠 칸마다 메시 하나 (보이는 칸만 그리도록)
         const int Grid = 6;
-        var chunks = new Dictionary<int, MeshBuilder>();
+        var chunks = new Dictionary<int, LowPolyMeshBuilder>();
         foreach (TreeRow t in rows)
         {
             int cx = Mathf.Clamp(Mathf.FloorToInt((t.x / 1418f + 0.5f) * Grid), 0, Grid - 1);
             int cz = Mathf.Clamp(Mathf.FloorToInt((t.z / 1548f + 0.5f) * Grid), 0, Grid - 1);
             int key = cz * Grid + cx;
-            if (!chunks.TryGetValue(key, out MeshBuilder mb)) chunks[key] = mb = new MeshBuilder();
+            if (!chunks.TryGetValue(key, out LowPolyMeshBuilder mb)) chunks[key] = mb = new LowPolyMeshBuilder();
             AddTree(mb, t);
         }
 
@@ -247,7 +249,7 @@ public static class KeyArtMapSetup
     static readonly Color[] Leafy = { new Color(0.40f, 0.66f, 0.24f), new Color(0.46f, 0.70f, 0.28f), new Color(0.35f, 0.60f, 0.22f) };
     static readonly Color[] Blossom = { new Color(0.98f, 0.74f, 0.82f), new Color(0.96f, 0.66f, 0.77f), new Color(1.00f, 0.82f, 0.88f) };
 
-    static void AddTree(MeshBuilder mb, TreeRow t)
+    static void AddTree(LowPolyMeshBuilder mb, TreeRow t)
     {
         var rnd = new System.Random(t.rot * 7919 + (int)(t.x * 13) + (int)(t.z * 31));
         Color Pick(Color[] c) => c[rnd.Next(c.Length)];
@@ -256,122 +258,20 @@ public static class KeyArtMapSetup
         switch (t.kind)
         {
             case "cone":
-                mb.Prism(m, 0.35f, 0f, 1.6f, 6, Trunk);
-                mb.Cone(m, 3.2f, 1.2f, 6.4f, 8, Pick(Evergreen));
-                mb.Cone(m, 2.4f, 4.0f, 8.8f, 8, Pick(Evergreen));
+                mb.Prism(m, Vector3.zero, 0.35f, 1.6f, 6, Trunk);
+                mb.Cone(m, new Vector3(0f, 1.2f, 0f), 3.2f, 5.2f, 8, Pick(Evergreen));
+                mb.Cone(m, new Vector3(0f, 4.0f, 0f), 2.4f, 4.8f, 8, Pick(Evergreen));
                 break;
             case "round":
-                mb.Prism(m, 0.4f, 0f, 2.4f, 6, Trunk);
+                mb.Prism(m, Vector3.zero, 0.4f, 2.4f, 6, Trunk);
                 mb.Ico(m, new Vector3(0f, 4.6f, 0f), new Vector3(3.0f, 2.7f, 3.0f), Pick(Leafy));
                 break;
             default: // cherry
-                mb.Prism(m, 0.38f, 0f, 2.2f, 6, Trunk);
+                mb.Prism(m, Vector3.zero, 0.38f, 2.2f, 6, Trunk);
                 mb.Ico(m, new Vector3(0f, 4.3f, 0f), new Vector3(2.6f, 2.1f, 2.6f), Pick(Blossom));
                 mb.Ico(m, new Vector3(1.4f, 3.7f, 0.6f), new Vector3(1.8f, 1.5f, 1.8f), Pick(Blossom));
                 mb.Ico(m, new Vector3(-1.2f, 3.8f, -0.8f), new Vector3(1.7f, 1.4f, 1.7f), Pick(Blossom));
                 break;
-        }
-    }
-
-    /// <summary>면마다 정점을 따로 두는(각진) 로우폴리 메시 조립기</summary>
-    class MeshBuilder
-    {
-        readonly List<Vector3> v = new List<Vector3>();
-        readonly List<Vector3> n = new List<Vector3>();
-        readonly List<Color> c = new List<Color>();
-
-        /// <summary>inside(도형 안쪽 점)의 반대쪽을 바라보도록 감는 방향을 맞춘다.</summary>
-        void Tri(Matrix4x4 m, Vector3 a, Vector3 b, Vector3 d, Color col, Vector3 inside)
-        {
-            Vector3 centroid = (a + b + d) / 3f;
-            if (Vector3.Dot(Vector3.Cross(b - a, d - a), centroid - inside) < 0f)
-                (b, d) = (d, b);
-            a = m.MultiplyPoint3x4(a); b = m.MultiplyPoint3x4(b); d = m.MultiplyPoint3x4(d);
-            Vector3 nn = Vector3.Cross(b - a, d - a).normalized;
-            v.Add(a); v.Add(b); v.Add(d);
-            n.Add(nn); n.Add(nn); n.Add(nn);
-            // 버텍스 색은 감마 보정을 거치지 않으므로 리니어 색 공간 기준으로 바꿔 넣는다.
-            Color lin = QualitySettings.activeColorSpace == ColorSpace.Linear ? col.linear : col;
-            c.Add(lin); c.Add(lin); c.Add(lin);
-        }
-
-        public void Prism(Matrix4x4 m, float r, float y0, float y1, int sides, Color col)
-        {
-            for (int i = 0; i < sides; i++)
-            {
-                float a0 = i * Mathf.PI * 2 / sides, a1 = (i + 1) * Mathf.PI * 2 / sides;
-                var p0 = new Vector3(Mathf.Cos(a0) * r, y0, Mathf.Sin(a0) * r);
-                var p1 = new Vector3(Mathf.Cos(a1) * r, y0, Mathf.Sin(a1) * r);
-                var q0 = new Vector3(p0.x, y1, p0.z);
-                var q1 = new Vector3(p1.x, y1, p1.z);
-                var axis = new Vector3(0f, (y0 + y1) / 2f, 0f);
-                Tri(m, p0, q0, q1, col, axis);
-                Tri(m, p0, q1, p1, col, axis);
-            }
-        }
-
-        public void Cone(Matrix4x4 m, float r, float y0, float y1, int sides, Color col)
-        {
-            var tip = new Vector3(0f, y1, 0f);
-            var bottom = new Vector3(0f, y0, 0f);
-            for (int i = 0; i < sides; i++)
-            {
-                float a0 = i * Mathf.PI * 2 / sides, a1 = (i + 1) * Mathf.PI * 2 / sides;
-                var p0 = new Vector3(Mathf.Cos(a0) * r, y0, Mathf.Sin(a0) * r);
-                var p1 = new Vector3(Mathf.Cos(a1) * r, y0, Mathf.Sin(a1) * r);
-                // 면마다 밝기를 조금 달리해 손으로 깎은 느낌
-                Color shade = col * (0.92f + 0.16f * ((i * 37) % 7) / 6f);
-                shade.a = 1f;
-                var inner = new Vector3(0f, y0 + (y1 - y0) * 0.3f, 0f);
-                Tri(m, p0, tip, p1, shade, inner);
-                Color under = col * 0.8f; under.a = 1f;
-                Tri(m, p0, p1, bottom, under, inner);
-            }
-        }
-
-        static readonly Vector3[] IcoV;
-        static readonly int[] IcoF =
-        {
-            0,11,5, 0,5,1, 0,1,7, 0,7,10, 0,10,11, 1,5,9, 5,11,4, 11,10,2, 10,7,6, 7,1,8,
-            3,9,4, 3,4,2, 3,2,6, 3,6,8, 3,8,9, 4,9,5, 2,4,11, 6,2,10, 8,6,7, 9,8,1,
-        };
-
-        static MeshBuilder()
-        {
-            float t = (1f + Mathf.Sqrt(5f)) / 2f;
-            IcoV = new[]
-            {
-                new Vector3(-1, t, 0), new Vector3(1, t, 0), new Vector3(-1, -t, 0), new Vector3(1, -t, 0),
-                new Vector3(0, -1, t), new Vector3(0, 1, t), new Vector3(0, -1, -t), new Vector3(0, 1, -t),
-                new Vector3(t, 0, -1), new Vector3(t, 0, 1), new Vector3(-t, 0, -1), new Vector3(-t, 0, 1),
-            };
-            for (int i = 0; i < IcoV.Length; i++) IcoV[i] = IcoV[i].normalized;
-        }
-
-        public void Ico(Matrix4x4 m, Vector3 center, Vector3 radius, Color col)
-        {
-            for (int f = 0; f < IcoF.Length; f += 3)
-            {
-                Vector3 a = center + Vector3.Scale(IcoV[IcoF[f]], radius);
-                Vector3 b = center + Vector3.Scale(IcoV[IcoF[f + 1]], radius);
-                Vector3 d = center + Vector3.Scale(IcoV[IcoF[f + 2]], radius);
-                Color shade = col * (0.94f + 0.12f * ((f * 13) % 5) / 4f);
-                shade.a = 1f;
-                Tri(m, a, d, b, shade, center);
-            }
-        }
-
-        public Mesh ToMesh(string name)
-        {
-            var mesh = new Mesh { name = name, indexFormat = IndexFormat.UInt32 };
-            mesh.SetVertices(v);
-            mesh.SetNormals(n);
-            mesh.SetColors(c);
-            var idx = new int[v.Count];
-            for (int i = 0; i < idx.Length; i++) idx[i] = i;
-            mesh.SetTriangles(idx, 0);
-            mesh.RecalculateBounds();
-            return mesh;
         }
     }
 
