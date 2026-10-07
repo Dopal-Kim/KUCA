@@ -3,63 +3,137 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 /// <summary>
 /// 지도를 컨셉아트 키아트 스타일로 바꾸거나 원래(Mapbox) 스타일로 되돌린다.
 /// 메뉴: KUCA/Map Style/Apply Key Art, KUCA/Map Style/Apply Mapbox
-/// 입력: Assets/Art/KeyArt/CampusGround.jpg, CampusTrees.json (tools/keyart/render_ground.py 로 생성)
+/// 입력 (tools/keyart/build_art.py 가 만듦, Assets/Art/KeyArt):
+///   CampusGround.jpg, GrassDetail.png, KeyArtGeometry.bytes, KeyArtManifest.json
+///   KeyArtLook.json — 조명·재질·카메라 값 (웹 미리보기와 같이 씀)
 /// </summary>
 public static class KeyArtMapSetup
 {
     const string Dir = "Assets/Art/KeyArt";
     const string GroundTex = Dir + "/CampusGround.jpg";
-    const string TreesJson = Dir + "/CampusTrees.json";
+    const string DetailTex = Dir + "/GrassDetail.png";
+    const string GeometryFile = Dir + "/KeyArtGeometry.bytes";
+    const string ManifestFile = Dir + "/KeyArtManifest.json";
+    const string LookFile = Dir + "/KeyArtLook.json";
     const string GroundMat = Dir + "/KeyArtGround.mat";
     const string OuterMat = Dir + "/KeyArtOuterGround.mat";
     const string BuildingMat = Dir + "/KeyArtBuilding.mat";
-    const string TreeMat = Dir + "/KeyArtTree.mat";
+    const string VertexColorMat = Dir + "/KeyArtTree.mat";
     const string SkyMat = Dir + "/KeyArtSky.mat";
-    const string TreeMeshes = Dir + "/KeyArtTrees.asset";
+    const string GeometryRoot = "KeyArtGeometry";
+    const string LookRoot = "KeyArtLook";
+    static readonly string[] OldRoots = { "KeyArtTrees", "KeyArtLandmarks" };   // 이전 버전이 만든 오브젝트
+
+    const string CampusScene = "Assets/Scenes/SampleScene.unity";
+
+    /// <summary>캠퍼스 씬(SampleScene)이 열려 있지 않으면 저장 여부를 물은 뒤 연다.</summary>
+    static bool EnsureCampusScene()
+    {
+        if (GameObject.Find("Map") != null && GameObject.Find("Buildings") != null)
+            return true;
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return false;
+        EditorSceneManager.OpenScene(CampusScene, OpenSceneMode.Single);
+        if (GameObject.Find("Map") == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", $"{CampusScene} 에서 Map 오브젝트를 찾지 못했습니다.", "확인");
+            return false;
+        }
+        return true;
+    }
 
     const string MapboxMapMat = "Assets/Materials/CampusMap.mat";
     const string MapboxBuildingMat = "Assets/Materials/CampusBuilding.mat";
 
-    static readonly Color GrassColor = new Color(0.51f, 0.62f, 0.23f); // 잔디 타일 평균색
-    static readonly Color FogColor = new Color(0.80f, 0.89f, 0.97f);
+    // ---------- JSON ----------
+
+    [System.Serializable] class Sun { public float[] color; public float intensity, pitch, yaw; }
+    [System.Serializable] class Ambient { public float[] sky, ground; }
+    [System.Serializable] class Fog { public float[] color; public float start, end; }
+    [System.Serializable] class Detail { public float tile, strength; }
+    [System.Serializable] class Cam { public float fov, distance, minDistance, maxDistance, pitch; }
+    [System.Serializable]
+    class Style
+    {
+        public float[] wall, trim, window, roof;
+        public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick;
+    }
+    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick; }
+    [System.Serializable]
+    class Look
+    {
+        public Sun sun; public Ambient ambient; public float shadowStrength; public Fog fog;
+        public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
+    }
+    [System.Serializable] class StyleRow { public string id, style; }
+    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; }
+
+    static Color Srgb(float[] c) => new Color(c[0], c[1], c[2]);   // Unity Color 는 감마(sRGB) 값
+
+    // ---------- 키아트 ----------
 
     [MenuItem("KUCA/Map Style/Apply Key Art")]
     public static void ApplyKeyArt()
     {
+        if (!EnsureCampusScene()) return;
+        var look = JsonUtility.FromJson<Look>(System.IO.File.ReadAllText(LookFile));
+        var manifest = JsonUtility.FromJson<Manifest>(System.IO.File.ReadAllText(ManifestFile));
+
+        // 텍스처
+        var gImp = (TextureImporter)AssetImporter.GetAtPath(GroundTex);
+        gImp.maxTextureSize = 4096;
+        gImp.anisoLevel = 8;
+        gImp.wrapMode = TextureWrapMode.Clamp;
+        gImp.npotScale = TextureImporterNPOTScale.None;
+        gImp.sRGBTexture = true;
+        gImp.SaveAndReimport();
+        var dImp = (TextureImporter)AssetImporter.GetAtPath(DetailTex);
+        dImp.sRGBTexture = false;
+        dImp.wrapMode = TextureWrapMode.Repeat;
+        dImp.anisoLevel = 4;
+        dImp.SaveAndReimport();
+
         // 지면
-        var tImp = (TextureImporter)AssetImporter.GetAtPath(GroundTex);
-        tImp.maxTextureSize = 4096;
-        tImp.anisoLevel = 4;
-        tImp.wrapMode = TextureWrapMode.Clamp;
-        tImp.npotScale = TextureImporterNPOTScale.None;
-        tImp.SaveAndReimport();
-        Material ground = LoadOrCreate(GroundMat, "Universal Render Pipeline/Lit");
+        Material ground = LoadOrCreate(GroundMat, "KUCA/StylizedGround");
         ground.SetTexture("_BaseMap", AssetDatabase.LoadAssetAtPath<Texture2D>(GroundTex));
         ground.SetColor("_BaseColor", Color.white);
-        ground.SetFloat("_Smoothness", 0f);
-        ground.SetFloat("_SpecularHighlights", 0f);
-        ground.EnableKeyword("_SPECULARHIGHLIGHTS_OFF");
-        ground.SetFloat("_EnvironmentReflections", 0f);
-        ground.EnableKeyword("_ENVIRONMENTREFLECTIONS_OFF");
+        ground.SetTexture("_DetailMap", AssetDatabase.LoadAssetAtPath<Texture2D>(DetailTex));
+        ground.SetFloat("_DetailTile", look.grassDetail.tile);
+        ground.SetFloat("_DetailStrength", look.grassDetail.strength);
         EditorUtility.SetDirty(ground);
 
-        Material outer = LoadOrCreate(OuterMat, "Universal Render Pipeline/Lit");
-        outer.SetColor("_BaseColor", GrassColor);
-        outer.SetFloat("_Smoothness", 0f);
+        Material outer = LoadOrCreate(OuterMat, "KUCA/StylizedGround");
+        outer.SetTexture("_BaseMap", null);
+        outer.SetColor("_BaseColor", Srgb(look.outerGrass));
+        outer.SetTexture("_DetailMap", AssetDatabase.LoadAssetAtPath<Texture2D>(DetailTex));
+        outer.SetFloat("_DetailTile", look.grassDetail.tile);
+        outer.SetFloat("_DetailStrength", look.grassDetail.strength);
         EditorUtility.SetDirty(outer);
 
-        Material building = LoadOrCreate(BuildingMat, "KUCA/StylizedBuilding");
-        Material tree = LoadOrCreate(TreeMat, "KUCA/VertexColorLit");
+        // 건물 외벽: 스타일별 재질 (층 높이도 건물 높이 배율만큼 키워 층수는 그대로)
+        float hs = look.buildingHeightScale > 0f ? look.buildingHeightScale : 1f;
+        var styleMats = new Dictionary<string, Material>
+        {
+            { "Default", StyleMaterial(BuildingMat, look.styles.Default, hs) },
+            { "Classical", StyleMaterial(Dir + "/KeyArtBuilding_Classical.mat", look.styles.Classical, hs) },
+            { "Modern", StyleMaterial(Dir + "/KeyArtBuilding_Modern.mat", look.styles.Modern, hs) },
+            { "Glass", StyleMaterial(Dir + "/KeyArtBuilding_Glass.mat", look.styles.Glass, hs) },
+            { "Brick", StyleMaterial(Dir + "/KeyArtBuilding_Brick.mat", look.styles.Brick, hs) },
+        };
+        Material vertexColor = LoadOrCreate(VertexColorMat, "KUCA/VertexColorLit");
+        vertexColor.SetColor("_Tint", Color.white);
+        EditorUtility.SetDirty(vertexColor);
 
         Material sky = LoadOrCreate(SkyMat, "Skybox/Procedural");
-        sky.SetColor("_SkyTint", new Color(0.42f, 0.62f, 0.95f));
-        sky.SetColor("_GroundColor", GrassColor);
-        sky.SetFloat("_AtmosphereThickness", 0.75f);
-        sky.SetFloat("_Exposure", 1.35f);
+        sky.SetColor("_SkyTint", new Color(0.48f, 0.68f, 0.96f));
+        sky.SetColor("_GroundColor", Srgb(look.outerGrass));
+        sky.SetFloat("_AtmosphereThickness", 0.7f);
+        sky.SetFloat("_Exposure", 1.3f);
         sky.SetFloat("_SunSize", 0.03f);
         EditorUtility.SetDirty(sky);
         AssetDatabase.SaveAssets();
@@ -67,6 +141,7 @@ public static class KeyArtMapSetup
         var map = GameObject.Find("Map");
         Undo.RecordObject(map.GetComponent<Renderer>(), "Key Art");
         map.GetComponent<Renderer>().sharedMaterial = ground;
+        map.GetComponent<Renderer>().receiveShadows = true;
         // 실행할 때 Mapbox 지도를 다시 받아 덮어쓰지 않게 한다.
         var campusMap = Object.FindAnyObjectByType<CampusMap>();
         if (campusMap != null)
@@ -75,11 +150,13 @@ public static class KeyArtMapSetup
             campusMap.downloadOnStart = false;
         }
 
-        SetBuildingMaterial(building);
-        KeyArtLandmarks.Build(building, tree);   // 건물마다 외벽 재질과 특징 형태
-        BuildTrees(tree);
+        ApplyBuildingStyles(styleMats, manifest, hs);
+        BuildGeometry(vertexColor, styleMats);
         SetOuterGround(outer, true);
-        SetSky(sky, true);
+        SetLighting(look, sky, true);
+        SetCamera(look.camera);
+        SetRenderQuality();
+        SetPostProcessing(true);
 
         EditorSceneManager.MarkSceneDirty(map.scene);
         EditorSceneManager.SaveScene(map.scene);
@@ -89,33 +166,95 @@ public static class KeyArtMapSetup
     [MenuItem("KUCA/Map Style/Apply Mapbox")]
     public static void ApplyMapbox()
     {
+        if (!EnsureCampusScene()) return;
         var map = GameObject.Find("Map");
         Undo.RecordObject(map.GetComponent<Renderer>(), "Mapbox");
         map.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(MapboxMapMat);
-        KeyArtLandmarks.Clear();
-        SetBuildingMaterial(AssetDatabase.LoadAssetAtPath<Material>(MapboxBuildingMat));
-        var trees = GameObject.Find("KeyArtTrees");
-        if (trees != null) Undo.DestroyObjectImmediate(trees);
+        var mapboxBuilding = AssetDatabase.LoadAssetAtPath<Material>(MapboxBuildingMat);
+        var buildings = GameObject.Find("Buildings");
+        Undo.RecordObject(buildings.transform, "Mapbox");
+        buildings.transform.localScale = Vector3.one;
+        foreach (Renderer r in buildings.GetComponentsInChildren<Renderer>(true))
+        {
+            Undo.RecordObject(r, "Mapbox");
+            r.sharedMaterial = mapboxBuilding;
+            r.enabled = true;
+        }
+        DestroyIfExists(GeometryRoot);
+        DestroyIfExists(LookRoot);
+        foreach (string n in OldRoots) DestroyIfExists(n);
         SetOuterGround(null, false);
-        SetSky(null, false);
+        SetLighting(null, null, false);
+        SetPostProcessing(false);
         EditorSceneManager.MarkSceneDirty(map.scene);
         EditorSceneManager.SaveScene(map.scene);
     }
 
-    static void SetBuildingMaterial(Material mat)
+    static Material StyleMaterial(string path, Style st, float heightScale)
     {
+        Material mat = LoadOrCreate(path, "KUCA/StylizedBuilding");
+        mat.SetColor("_WallColor", Srgb(st.wall));
+        mat.SetColor("_TrimColor", Srgb(st.trim));
+        mat.SetColor("_WindowColor", Srgb(st.window));
+        mat.SetColor("_RoofColor", Srgb(st.roof));
+        mat.SetFloat("_FloorHeight", st.floorHeight * heightScale);
+        mat.SetFloat("_WindowSpacing", st.spacing);
+        mat.SetFloat("_WindowWidth", st.windowWidth);
+        mat.SetFloat("_WindowHeight", st.windowHeight);
+        mat.SetFloat("_PilasterEvery", st.pilasterEvery);
+        mat.SetFloat("_Brick", st.brick);
+        EditorUtility.SetDirty(mat);
+        return mat;
+    }
+
+    /// <summary>건물마다 외벽 재질, 랜드마크로 대신하는 상자 건물은 숨김 (충돌체·정보는 남김)</summary>
+    static void ApplyBuildingStyles(Dictionary<string, Material> mats, Manifest manifest, float heightScale)
+    {
+        var styleOf = new Dictionary<string, string>();
+        foreach (StyleRow row in manifest.styles) styleOf[row.id] = row.style;
+        var hidden = new HashSet<string>(manifest.hidden);
+
         var root = GameObject.Find("Buildings");
-        foreach (Renderer r in root.GetComponentsInChildren<Renderer>())
+        // 미니어처 비율: 건물 높이만 키운다 (build_art.py 도 같은 배율로 난간·지붕 디테일을 올림)
+        Undo.RecordObject(root.transform, "Building height");
+        root.transform.localScale = new Vector3(1f, heightScale, 1f);
+        foreach (CampusBuildingInfo info in root.GetComponentsInChildren<CampusBuildingInfo>(true))
         {
-            Undo.RecordObject(r, "Building material");
-            r.sharedMaterial = mat;
+            var r = info.GetComponent<Renderer>();
+            if (r == null) continue;
+            Undo.RecordObject(r, "Building style");
+            r.sharedMaterial = mats[styleOf.TryGetValue(info.buildingId, out string s) && mats.ContainsKey(s) ? s : "Default"];
+            r.enabled = !hidden.Contains(info.buildingId);
+            r.shadowCastingMode = ShadowCastingMode.On;
+            r.receiveShadows = true;
         }
         var gen = root.GetComponent<CampusBuildings>();
         if (gen != null)
         {
             Undo.RecordObject(gen, "Building material");
-            gen.buildingMaterial = mat;
+            gen.buildingMaterial = mats["Default"];
         }
+    }
+
+    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats)
+    {
+        foreach (string n in OldRoots) DestroyIfExists(n);
+        var go = GameObject.Find(GeometryRoot);
+        if (go == null)
+        {
+            go = new GameObject(GeometryRoot);
+            Undo.RegisterCreatedObjectUndo(go, "Key Art geometry");
+        }
+        var geo = go.GetComponent<KeyArtGeometry>();
+        if (geo == null) geo = Undo.AddComponent<KeyArtGeometry>(go);
+        Undo.RecordObject(geo, "Key Art geometry");
+        geo.geometry = AssetDatabase.LoadAssetAtPath<TextAsset>(GeometryFile);
+        geo.material = mat;
+        geo.shellStyles = new List<string>(styleMats.Keys).ToArray();
+        geo.shellMaterials = new List<Material>(styleMats.Values).ToArray();
+        geo.castShadows = ShadowCastingMode.On;
+        geo.Build();
+        Debug.Log($"[KeyArtMapSetup] 키아트 지오메트리 정점 {geo.VertexCount:N0}개");
     }
 
     /// <summary>지도 바깥을 잔디로 채워 지평선까지 이어지게 한다.</summary>
@@ -139,140 +278,151 @@ public static class KeyArtMapSetup
         var r = go.GetComponent<Renderer>();
         r.sharedMaterial = mat;
         r.shadowCastingMode = ShadowCastingMode.Off;
+        r.receiveShadows = true;
     }
 
-    static void SetSky(Material sky, bool on)
+    static void SetLighting(Look look, Material sky, bool on)
     {
         Camera cam = Camera.main;
         Undo.RecordObject(cam, "Sky");
         cam.clearFlags = CameraClearFlags.Skybox;
-        cam.farClipPlane = 4000f;
+        cam.farClipPlane = 6000f;
         RenderSettings.skybox = on ? sky : null;
         RenderSettings.fog = on;
-        RenderSettings.fogMode = FogMode.Linear;
-        RenderSettings.fogColor = FogColor;
-        RenderSettings.fogStartDistance = 500f;
-        RenderSettings.fogEndDistance = 1700f;
-        RenderSettings.ambientMode = AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor = on ? new Color(0.78f, 0.86f, 0.98f) : new Color(0.21f, 0.23f, 0.26f);
-        RenderSettings.ambientEquatorColor = on ? new Color(0.72f, 0.78f, 0.70f) : new Color(0.11f, 0.12f, 0.13f);
-        RenderSettings.ambientGroundColor = on ? new Color(0.45f, 0.55f, 0.32f) : new Color(0.05f, 0.04f, 0.04f);
-        if (!on)
+        if (on)
+        {
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = Srgb(look.fog.color);
+            RenderSettings.fogStartDistance = look.fog.start;
+            RenderSettings.fogEndDistance = look.fog.end;
+            // 키아트 셰이더 밖(캐릭터 등 URP Lit)도 비슷한 환경광을 받게 (리니어 배율 → 감마 색)
+            RenderSettings.ambientMode = AmbientMode.Trilight;
+            Color skyAmb = new Color(look.ambient.sky[0], look.ambient.sky[1], look.ambient.sky[2]);
+            Color groundAmb = new Color(look.ambient.ground[0], look.ambient.ground[1], look.ambient.ground[2]);
+            RenderSettings.ambientSkyColor = skyAmb.gamma;
+            RenderSettings.ambientEquatorColor = Color.Lerp(skyAmb, groundAmb, 0.5f).gamma;
+            RenderSettings.ambientGroundColor = groundAmb.gamma;
+        }
+        else
+        {
             RenderSettings.ambientMode = AmbientMode.Skybox;
+        }
+
+        // 셰이더 전역 값 (KUCAStylizedLighting.hlsl)
+        var lookGo = GameObject.Find(LookRoot);
+        if (on)
+        {
+            if (lookGo == null)
+            {
+                lookGo = new GameObject(LookRoot);
+                Undo.RegisterCreatedObjectUndo(lookGo, "Key Art look");
+            }
+            var kl = lookGo.GetComponent<KeyArtLook>();
+            if (kl == null) kl = Undo.AddComponent<KeyArtLook>(lookGo);
+            Undo.RecordObject(kl, "Key Art look");
+            kl.skyAmbient = new Vector3(look.ambient.sky[0], look.ambient.sky[1], look.ambient.sky[2]);
+            kl.groundAmbient = new Vector3(look.ambient.ground[0], look.ambient.ground[1], look.ambient.ground[2]);
+            kl.shadowStrength = look.shadowStrength;
+            kl.Apply();
+        }
 
         var sun = Object.FindAnyObjectByType<Light>();
         if (sun != null && sun.type == LightType.Directional)
         {
             Undo.RecordObject(sun, "Sun");
             Undo.RecordObject(sun.transform, "Sun");
-            sun.color = on ? new Color(1f, 0.97f, 0.9f) : Color.white;
-            sun.intensity = on ? 1.15f : 1f;
+            sun.color = on ? Srgb(look.sun.color) : Color.white;
+            sun.intensity = on ? look.sun.intensity : 1f;
             sun.shadows = LightShadows.Soft;
-            sun.shadowStrength = 0.6f;
-            sun.transform.rotation = Quaternion.Euler(52f, 330f, 0f);
+            sun.shadowStrength = 1f;   // 그림자 세기는 셰이더(_KucaShadowStrength)가 정한다
+            sun.transform.rotation = on ? Quaternion.Euler(look.sun.pitch, look.sun.yaw, 0f) : Quaternion.Euler(50f, 330f, 0f);
         }
     }
 
-    // ---------- 나무 ----------
-
-    [System.Serializable] class TreeFile { public List<TreeRow> trees; }
-    [System.Serializable] class TreeRow { public float x, z, s; public string kind; public int rot; }
-
-    static void BuildTrees(Material mat)
+    /// <summary>디오라마 카메라: 좁은 화각으로 멀리서 (원근 왜곡이 적은 미니어처 느낌)</summary>
+    static void SetCamera(Cam c)
     {
-        string json = System.IO.File.ReadAllText(TreesJson);
-        // [x, z, kind, s, rot] 배열을 JsonUtility 가 읽을 수 있게 바꾼다
-        var rows = ParseTrees(json);
-
-        var old = GameObject.Find("KeyArtTrees");
-        if (old != null) Undo.DestroyObjectImmediate(old);
-        AssetDatabase.DeleteAsset(TreeMeshes);
-        var container = ScriptableObject.CreateInstance<CampusBuildingMeshes>();
-        AssetDatabase.CreateAsset(container, TreeMeshes);
-
-        var root = new GameObject("KeyArtTrees");
-        Undo.RegisterCreatedObjectUndo(root, "Trees");
-        root.isStatic = true;
-
-        // 지도를 6x6 칸으로 나눠 칸마다 메시 하나 (보이는 칸만 그리도록)
-        const int Grid = 6;
-        var chunks = new Dictionary<int, LowPolyMeshBuilder>();
-        foreach (TreeRow t in rows)
+        Camera cam = Camera.main;
+        Undo.RecordObject(cam, "Camera");
+        cam.fieldOfView = c.fov;
+        cam.nearClipPlane = 5f;
+        var follow = cam.GetComponent<CameraFollow>();
+        if (follow != null)
         {
-            int cx = Mathf.Clamp(Mathf.FloorToInt((t.x / 1418f + 0.5f) * Grid), 0, Grid - 1);
-            int cz = Mathf.Clamp(Mathf.FloorToInt((t.z / 1548f + 0.5f) * Grid), 0, Grid - 1);
-            int key = cz * Grid + cx;
-            if (!chunks.TryGetValue(key, out LowPolyMeshBuilder mb)) chunks[key] = mb = new LowPolyMeshBuilder();
-            AddTree(mb, t);
+            Undo.RecordObject(follow, "Camera");
+            follow.distance = c.distance;
+            follow.minDistance = c.minDistance;
+            follow.maxDistance = c.maxDistance;
+            follow.pitch = c.pitch;
         }
-
-        foreach (var kv in chunks)
+        var data = cam.GetComponent<UniversalAdditionalCameraData>();
+        if (data != null)
         {
-            Mesh mesh = kv.Value.ToMesh($"Trees_{kv.Key}");
-            AssetDatabase.AddObjectToAsset(mesh, container);
-            var go = new GameObject(mesh.name);
-            go.transform.SetParent(root.transform, false);
-            go.isStatic = true;
-            go.AddComponent<MeshFilter>().sharedMesh = mesh;
-            var r = go.AddComponent<MeshRenderer>();
-            r.sharedMaterial = mat;
-            r.shadowCastingMode = ShadowCastingMode.On;
+            Undo.RecordObject(data, "Camera");
+            data.renderShadows = true;
+            data.renderPostProcessing = true;
+        }
+    }
+
+    /// <summary>
+    /// URP 품질: 멀리서 보는 카메라에도 그림자가 보이게 그림자 거리·캐스케이드를 늘리고, MSAA 4x, 렌더 스케일 1.
+    /// (이전 설정은 그림자 거리 50 m 라 250 m 밖 카메라에서 그림자가 하나도 안 보였다)
+    /// </summary>
+    static void SetRenderQuality()
+    {
+        var assets = new HashSet<RenderPipelineAsset>();
+        if (GraphicsSettings.defaultRenderPipeline != null) assets.Add(GraphicsSettings.defaultRenderPipeline);
+        for (int i = 0; i < QualitySettings.count; i++)
+        {
+            var a = QualitySettings.GetRenderPipelineAssetAt(i);
+            if (a != null) assets.Add(a);
+        }
+        foreach (RenderPipelineAsset a in assets)
+        {
+            var so = new SerializedObject(a);
+            bool mobile = a.name.Contains("Mobile");
+            SetFloat(so, "m_ShadowDistance", 1100f);
+            SetInt(so, "m_ShadowCascadeCount", 2);
+            SetFloat(so, "m_Cascade2Split", 0.35f);
+            SetInt(so, "m_MainLightShadowmapResolution", mobile ? 2048 : 4096);
+            SetBool(so, "m_MainLightShadowsSupported", true);
+            SetBool(so, "m_SoftShadowsSupported", true);
+            SetInt(so, "m_MSAA", 4);
+            SetFloat(so, "m_RenderScale", 1f);
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(a);
         }
         AssetDatabase.SaveAssets();
-        Debug.Log($"[KeyArtMapSetup] 나무 {rows.Count}그루, 메시 {chunks.Count}개");
     }
 
-    static List<TreeRow> ParseTrees(string json)
+    /// <summary>키아트 색을 그대로: 톤매핑 끄고 비네팅 약하게</summary>
+    static void SetPostProcessing(bool on)
     {
-        var list = new List<TreeRow>();
-        int start = json.IndexOf('[', json.IndexOf("trees")) + 1;
-        string body = json.Substring(start, json.LastIndexOf(']') - start);
-        foreach (string item in body.Split(new[] { "], [", "],[" }, System.StringSplitOptions.RemoveEmptyEntries))
+        var volume = Object.FindAnyObjectByType<Volume>();
+        VolumeProfile profile = volume != null ? volume.sharedProfile : null;
+        if (profile == null) return;
+        Undo.RecordObject(profile, "Post processing");
+        if (profile.TryGet(out Tonemapping tm))
         {
-            string[] p = item.Trim('[', ']', ' ').Split(',');
-            if (p.Length < 5) continue;
-            var inv = System.Globalization.CultureInfo.InvariantCulture;
-            list.Add(new TreeRow
-            {
-                x = float.Parse(p[0], inv),
-                z = float.Parse(p[1], inv),
-                kind = p[2].Trim().Trim('"'),
-                s = float.Parse(p[3], inv),
-                rot = int.Parse(p[4].Trim()),
-            });
+            tm.active = true;
+            tm.mode.Override(on ? TonemappingMode.None : TonemappingMode.Neutral);
         }
-        return list;
+        if (profile.TryGet(out Vignette vig))
+            vig.intensity.Override(on ? 0.12f : 0.2f);
+        if (profile.TryGet(out Bloom bloom))
+            bloom.intensity.Override(on ? 0.15f : 0.25f);
+        EditorUtility.SetDirty(profile);
+        AssetDatabase.SaveAssets();
     }
 
-    static readonly Color Trunk = new Color(0.47f, 0.34f, 0.24f);
-    static readonly Color[] Evergreen = { new Color(0.24f, 0.52f, 0.20f), new Color(0.30f, 0.58f, 0.22f), new Color(0.20f, 0.46f, 0.19f) };
-    static readonly Color[] Leafy = { new Color(0.40f, 0.66f, 0.24f), new Color(0.46f, 0.70f, 0.28f), new Color(0.35f, 0.60f, 0.22f) };
-    static readonly Color[] Blossom = { new Color(0.98f, 0.74f, 0.82f), new Color(0.96f, 0.66f, 0.77f), new Color(1.00f, 0.82f, 0.88f) };
+    static void SetFloat(SerializedObject so, string name, float v) { var p = so.FindProperty(name); if (p != null) p.floatValue = v; }
+    static void SetInt(SerializedObject so, string name, int v) { var p = so.FindProperty(name); if (p != null) p.intValue = v; }
+    static void SetBool(SerializedObject so, string name, bool v) { var p = so.FindProperty(name); if (p != null) p.boolValue = v; }
 
-    static void AddTree(LowPolyMeshBuilder mb, TreeRow t)
+    static void DestroyIfExists(string name)
     {
-        var rnd = new System.Random(t.rot * 7919 + (int)(t.x * 13) + (int)(t.z * 31));
-        Color Pick(Color[] c) => c[rnd.Next(c.Length)];
-        Matrix4x4 m = Matrix4x4.TRS(new Vector3(t.x, 0f, t.z), Quaternion.Euler(0f, t.rot, 0f), Vector3.one * t.s);
-
-        switch (t.kind)
-        {
-            case "cone":
-                mb.Prism(m, Vector3.zero, 0.35f, 1.6f, 6, Trunk);
-                mb.Cone(m, new Vector3(0f, 1.2f, 0f), 3.2f, 5.2f, 8, Pick(Evergreen));
-                mb.Cone(m, new Vector3(0f, 4.0f, 0f), 2.4f, 4.8f, 8, Pick(Evergreen));
-                break;
-            case "round":
-                mb.Prism(m, Vector3.zero, 0.4f, 2.4f, 6, Trunk);
-                mb.Ico(m, new Vector3(0f, 4.6f, 0f), new Vector3(3.0f, 2.7f, 3.0f), Pick(Leafy));
-                break;
-            default: // cherry
-                mb.Prism(m, Vector3.zero, 0.38f, 2.2f, 6, Trunk);
-                mb.Ico(m, new Vector3(0f, 4.3f, 0f), new Vector3(2.6f, 2.1f, 2.6f), Pick(Blossom));
-                mb.Ico(m, new Vector3(1.4f, 3.7f, 0.6f), new Vector3(1.8f, 1.5f, 1.8f), Pick(Blossom));
-                mb.Ico(m, new Vector3(-1.2f, 3.8f, -0.8f), new Vector3(1.7f, 1.4f, 1.7f), Pick(Blossom));
-                break;
-        }
+        var go = GameObject.Find(name);
+        if (go != null) Undo.DestroyObjectImmediate(go);
     }
 
     static Material LoadOrCreate(string path, string shaderName)

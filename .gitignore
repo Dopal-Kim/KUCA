@@ -52,3 +52,8 @@ Thumbs.db
 
 # 키아트 도구 중간 결과
 tools/keyart/tiles/
+
+# 키아트 미리보기
+tools/keyart/preview/node_modules/
+tools/keyart/preview/data/
+tools/keyart/preview/shots/
