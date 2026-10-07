@@ -16,6 +16,36 @@ HOW TO WORK
    "#1A Space Engineering Rabbit - card  (3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png)". Nothing written inside the images.
 
 
+ATTACHED REFERENCE FILES (KUCA_Final_Master_KeyArt_All.zip - the official key art of this game)
+Use them ONLY as references; never copy their text, frames or UI into the new images.
+- 04_System_and_Visuals/[캠퍼스 전경] - [발표 메인 비주얼]_16x9.png : the overall look of the game world (colors, light, low-poly miniature style).
+- 01_Buildings/*_아이콘_*.png and 02_Landscapes/*_아이콘_*.png : round diorama icons of each landmark.
+  Copy their round grass-and-stone diorama base style for every character base, and use the matching icon as the landmark
+  in the background of each LEGENDARY collection card (rebuild it as a softly blurred miniature behind the character, same shapes and colors).
+- 03_Place_Cards_9x16/*_카드_기본.png : layout reference for every (A) collection card (9:16, empty top third, subject in the lower two thirds).
+- Do not use: "[공학관]_아이콘_공사구역.png", "[쪽지 마커 3종]_아이콘.png", "[8종 타일].png".
+
+LANDMARK BACKGROUND MAP (LEGENDARY characters -> key art file to use as the card background)
+  #1 Space Engineering Rabbit  ->  "01_Buildings/[캠퍼스 내 건물] - [공학관]_아이콘_기본.png"
+  #10 Library Owl  ->  "01_Buildings/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_아이콘_기본.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_카드_기본.png (9:16 background composition)"
+  #11 Plaza Lake Duck  ->  "02_Landscapes/[캠퍼스 내 조경] - [사색의 광장(오벨리스크 2기)]_아이콘_기본.png"
+  #12 Main Gate Magpie  ->  "02_Landscapes/[캠퍼스 내 조경] - [정문(새천년기념탑:네오르네상스문)]_아이콘_기본.png"
+  #13 Sports College Lion Cub  ->  "01_Buildings/[캠퍼스 내 건물] - [체육대학관]_아이콘_기본.png"
+  #14 Clock Tower Rooster  ->  "01_Buildings/[캠퍼스 내 건물] - [선승관(시계탑)]_아이콘_기본.png"
+  #15 Art College Chameleon  ->  "01_Buildings/[캠퍼스 내 건물] - [예술·디자인대학관]_아이콘_기본.png"
+  #16 Ceramics Mole  ->  "01_Buildings/[캠퍼스 내 건물] - [도예관]_아이콘_기본.png"
+  #17 Observatory Flying Squirrel  ->  "02_Landscapes/[캠퍼스 내 조경] - [천문대]_아이콘_기본.png"  +  "02_Landscapes/[캠퍼스 내 조경] - [천문대]_아이콘_밤_맑음.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 조경] - [천문대]_카드_기본.png (9:16 background composition)"
+  #18 Amphitheater Frog  ->  "02_Landscapes/[캠퍼스 내 조경] - [평화노천극장(연못·무대배경)]_아이콘_기본.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 조경] - [평화노천극장]_카드_기본.png (9:16 background composition)"
+  #19 Stadium Jindo Puppy  ->  "02_Landscapes/[캠퍼스 내 조경] - [대운동장(벚꽃길)]_아이콘_기본.png"
+  #20 Foreign Language Parrot  ->  "01_Buildings/[캠퍼스 내 건물] - [외국어대학관]_아이콘_기본.png"
+  #21 Dormitory Hamster  ->  "01_Buildings/[캠퍼스 내 건물] - [우정원]_아이콘_기본.png"
+  #22 Electronics Hedgehog  ->  "01_Buildings/[캠퍼스 내 건물] - [전자정보·응용과학대학관]_아이콘_기본.png"
+  #23 Business Fox  ->  "01_Buildings/[캠퍼스 내 건물] - [국제·경영대학관]_아이콘_기본.png"
+  #24 Multimedia Meerkat  ->  "01_Buildings/[캠퍼스 내 건물] - [멀티미디어교육관·글로벌관]_아이콘_기본.png"
+COMMON (#2-#5) and RARE (#6-#9) characters have no landmark: use the plain pastel rarity-color gradient background, no key art.
+For (B) 3D model reference sheets never use a key art background (pure white only).
+
+
 SHARED STYLE (applies to every image)
 A cute anthropomorphic animal character rendered as a soft 3D toy figure, like a premium vinyl / clay collectible.
 Chibi proportion: exactly 2 heads tall (the head is as big as the whole body), standing upright on two short legs,

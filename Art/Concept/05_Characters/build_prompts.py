@@ -55,6 +55,48 @@ def no_pose(c):
     return '\n'.join(l for l in c.strip().split('\n') if not l.startswith(('POSE:', 'LANDMARK:')))
 
 
+# 첨부 zip (KUCA_Final_Master_KeyArt_All.zip) 안의 폴더 경로
+ZIP_DIR = {'[캠퍼스 내 건물]': '01_Buildings', '[캠퍼스 내 조경]': '02_Landscapes'}
+PLACE_CARD = {'중앙도서관': '03_Place_Cards_9x16/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_카드_기본.png',
+              '천문대': '03_Place_Cards_9x16/[캠퍼스 내 조경] - [천문대]_카드_기본.png',
+              '평화노천극장': '03_Place_Cards_9x16/[캠퍼스 내 조경] - [평화노천극장]_카드_기본.png'}
+EXTRA_ICON = {'천문대': ['02_Landscapes/[캠퍼스 내 조경] - [천문대]_아이콘_기본.png']}   # 천문대: 낮 모양 + 밤 분위기 둘 다
+
+
+def zip_path(icon):
+    return f"{ZIP_DIR[icon.split(' - ')[0]]}/{icon}.png"
+
+
+def ref_section():
+    rows = []
+    for i, (nm, _, c) in enumerate(order, 1):
+        if rarity(c) != 'LEGENDARY':
+            continue
+        name = re.search(r'CHARACTER = ([^,(]+)', c).group(1).strip()
+        files = [zip_path(icon_of(nm))]
+        for k, extra in EXTRA_ICON.items():
+            if nm.startswith(k):
+                files = extra + files
+        for k, card_file in PLACE_CARD.items():
+            if nm.startswith(k):
+                files.append(card_file + ' (9:16 background composition)')
+        rows.append(f'  #{i} {name}  ->  ' + '  +  '.join(f'"{f}"' for f in files))
+    return ("""ATTACHED REFERENCE FILES (KUCA_Final_Master_KeyArt_All.zip - the official key art of this game)
+Use them ONLY as references; never copy their text, frames or UI into the new images.
+- 04_System_and_Visuals/[캠퍼스 전경] - [발표 메인 비주얼]_16x9.png : the overall look of the game world (colors, light, low-poly miniature style).
+- 01_Buildings/*_아이콘_*.png and 02_Landscapes/*_아이콘_*.png : round diorama icons of each landmark.
+  Copy their round grass-and-stone diorama base style for every character base, and use the matching icon as the landmark
+  in the background of each LEGENDARY collection card (rebuild it as a softly blurred miniature behind the character, same shapes and colors).
+- 03_Place_Cards_9x16/*_카드_기본.png : layout reference for every (A) collection card (9:16, empty top third, subject in the lower two thirds).
+- Do not use: "[공학관]_아이콘_공사구역.png", "[쪽지 마커 3종]_아이콘.png", "[8종 타일].png".
+
+LANDMARK BACKGROUND MAP (LEGENDARY characters -> key art file to use as the card background)
+""" + '\n'.join(rows) + """
+COMMON (#2-#5) and RARE (#6-#9) characters have no landmark: use the plain pastel rarity-color gradient background, no key art.
+For (B) 3D model reference sheets never use a key art background (pure white only).
+""")
+
+
 # ---------- 1) 통합본: 한 번에 붙여 넣기, 48장을 멈추지 않고 연속 생성 ----------
 parts = ['''You are generating a full set of collectible character art for a cheerful campus map game (Kyung Hee University Global Campus).
 There are 24 characters. For EACH character make TWO images: (A) a collection card and (B) a 3D model reference sheet. 48 images total.
@@ -72,7 +114,7 @@ HOW TO WORK
 3. Each (B) sheet shows exactly the same character as its (A) card: same face, colors, outfit, accessories and base.
 4. Above each image write only its number, name and file name, e.g.
    "#1A Space Engineering Rabbit - card  (3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png)". Nothing written inside the images.
-''', 'SHARED STYLE (applies to every image)\n' + style,
+''', ref_section(), 'SHARED STYLE (applies to every image)\n' + style,
          'RARITY RULES (each character lists its rarity)\n' + '\n\n'.join(rar.values()),
          'IMAGE TYPE (A)\n' + out_a.replace('OUTPUT = COLLECTION CARD:', 'COLLECTION CARD:'),
          'IMAGE TYPE (B)\n' + out_b.replace('OUTPUT = 3D MODEL REFERENCE SHEET:', '3D MODEL REFERENCE SHEET:')
