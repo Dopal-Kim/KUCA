@@ -1,19 +1,15 @@
-// 키아트 건물 외벽: 크림 벽, 층마다 창문 줄(창틀·창턱·유리 반사), 기둥 띠, 층 띠, 벽돌 줄눈, 지붕 판넬.
-// 메시 UV 없이 월드 좌표로 무늬를 만든다 (1 유닛 = 1 m). 웹 미리보기 main.js 의 kucaBuilding 과 같은 무늬.
+// 키아트 건물: 크림색 벽, 연회색 지붕, 층마다 창문 줄. 메시 UV 없이 월드 좌표로 무늬를 만든다 (1 유닛 = 1 m).
 Shader "KUCA/StylizedBuilding"
 {
     Properties
     {
-        _WallColor ("Wall", Color) = (0.94, 0.90, 0.82, 1)
-        _TrimColor ("Trim (창틀·기둥·띠)", Color) = (0.99, 0.97, 0.92, 1)
-        _RoofColor ("Roof", Color) = (0.73, 0.72, 0.71, 1)
-        _WindowColor ("Window", Color) = (0.36, 0.52, 0.64, 1)
-        _FloorHeight ("Floor Height (m)", Float) = 3.4
-        _WindowSpacing ("Window Spacing (m)", Float) = 3.2
-        _WindowWidth ("Window Width (0-1)", Range(0.1, 1.0)) = 0.52
-        _WindowHeight ("Window Height (0-1)", Range(0.1, 0.9)) = 0.5
-        _PilasterEvery ("Pilaster Every N Windows (0 = 없음)", Float) = 3
-        _Brick ("Brick Courses (0/1)", Float) = 0
+        _WallColor ("Wall", Color) = (0.93, 0.89, 0.80, 1)
+        _RoofColor ("Roof", Color) = (0.74, 0.75, 0.77, 1)
+        _WindowColor ("Window", Color) = (0.42, 0.55, 0.66, 1)
+        _FloorHeight ("Floor Height (m)", Float) = 3.3
+        _WindowSpacing ("Window Spacing (m)", Float) = 3.0
+        _WindowWidth ("Window Width (0-1)", Range(0.1, 0.9)) = 0.55
+        _WindowHeight ("Window Height (0-1)", Range(0.1, 0.9)) = 0.45
     }
     SubShader
     {
@@ -28,13 +24,13 @@ Shader "KUCA/StylizedBuilding"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
             #include "KUCAStylizedLighting.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                half4 _WallColor, _TrimColor, _RoofColor, _WindowColor;
-                float _FloorHeight, _WindowSpacing, _WindowWidth, _WindowHeight, _PilasterEvery, _Brick;
+                half4 _WallColor, _RoofColor, _WindowColor;
+                float _FloorHeight, _WindowSpacing, _WindowWidth, _WindowHeight;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; };
@@ -56,54 +52,31 @@ Shader "KUCA/StylizedBuilding"
                 return o;
             }
 
-            half3 BuildingAlbedo(float3 p, float3 n)
-            {
-                if (n.y > 0.6)
-                {
-                    float2 g = abs(frac(p.xz / 4.0) - 0.5);
-                    return _RoofColor.rgb * (1.0 - 0.05 * step(0.47, max(g.x, g.y)));
-                }
-                float2 side = normalize(float2(-n.z, n.x) + 1e-5);
-                float u = dot(p.xz, side) / _WindowSpacing;
-                float v = p.y / _FloorHeight;
-                float fu = frac(u), fv = frac(v);
-                half3 c = _WallColor.rgb;
-                if (_Brick > 0.5) c *= 1.0 - 0.08 * step(frac(p.y / 0.32), 0.14);
-                if (_PilasterEvery > 0.5)
-                {
-                    float colI = floor(u + 0.5);
-                    float gap = abs(frac(u + 0.5) - 0.5);
-                    if (fmod(abs(colI), _PilasterEvery) < 0.5 && gap < 0.17 && p.y > 0.9) c = lerp(c, _TrimColor.rgb, 0.85);
-                }
-                if (fv < 0.06 && p.y > 2.0) c = lerp(c, _TrimColor.rgb, 0.7);
-                float hw = _WindowWidth * 0.5, hh = _WindowHeight * 0.5;
-                float du = abs(fu - 0.5), dv = abs(fv - 0.55);
-                bool above = p.y > 1.4;
-                if (above && du < hw + 0.05 && dv < hh + 0.07)
-                {
-                    c = _TrimColor.rgb * 0.96;
-                    if (du < hw && dv < hh)
-                    {
-                        float t = (fv - (0.55 - hh)) / (2.0 * hh);
-                        float h = frac(sin(dot(floor(float2(u, v)), float2(12.9898, 78.233))) * 43758.5453);
-                        half3 glass = _WindowColor.rgb * (0.78 + 0.34 * t) * (0.88 + 0.24 * h);
-                        float streak = step(0.8, frac((u * _WindowSpacing + p.y) * 0.11));
-                        glass = lerp(glass, half3(0.80, 0.88, 0.96), 0.25 * streak);
-                        if (h > 0.82 && t > 0.45) glass = lerp(glass, half3(0.93, 0.91, 0.86), 0.6);   // 블라인드 내린 창
-                        if (t > 0.84) glass *= 0.68;                                                    // 창 윗부분 그늘 (깊이감)
-                        if (_WindowWidth > 0.8 && du < 0.012) glass = _TrimColor.rgb * 0.9;             // 넓은 창 가운데 멀리언
-                        c = glass;
-                    }
-                }
-                if (above && du < hw + 0.1 && fv > 0.55 - hh - 0.12 && fv < 0.55 - hh - 0.06) c = _TrimColor.rgb;
-                return c * lerp(0.84, 1.0, saturate(p.y / 4.0));
-            }
-
             half4 frag (Varyings i) : SV_Target
             {
                 float3 n = normalize(i.normalWS);
-                half3 color = KucaShade(BuildingAlbedo(i.positionWS, n), n, i.positionWS);
-                return half4(MixFog(color, i.fog), 1);
+                half3 albedo;
+                if (n.y > 0.6)
+                {
+                    albedo = _RoofColor.rgb;
+                }
+                else
+                {
+                    albedo = _WallColor.rgb;
+                    // 벽을 따라가는 가로 좌표 (벽의 수평 방향)
+                    float2 side = normalize(float2(-n.z, n.x) + 1e-5);
+                    float u = dot(i.positionWS.xz, side) / _WindowSpacing;
+                    float v = i.positionWS.y / _FloorHeight;
+                    float fu = frac(u), fv = frac(v);
+                    // 지붕 바로 아래(첫 층 위 1.2m 미만)와 1층 바닥 근처에는 창을 두지 않는다
+                    bool inWindow = abs(fu - 0.5) < _WindowWidth * 0.5 && abs(fv - 0.55) < _WindowHeight * 0.5 && i.positionWS.y > 1.2;
+                    // 창틀 그늘로 살짝 입체감
+                    half frame = (abs(fu - 0.5) < _WindowWidth * 0.5 + 0.06 && abs(fv - 0.55) < _WindowHeight * 0.5 + 0.06 && i.positionWS.y > 1.2) ? 0.9h : 1.0h;
+                    albedo = inWindow ? _WindowColor.rgb * (0.9 + 0.2 * fv) : albedo * frame;
+                }
+                half3 color = KucaShade(albedo, n, i.positionWS);
+                color = MixFog(color, i.fog);
+                return half4(color, 1);
             }
             ENDHLSL
         }

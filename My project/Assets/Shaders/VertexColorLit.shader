@@ -1,5 +1,4 @@
-// 버텍스 색으로 칠하는 로우폴리 오브젝트 (나무, 산울타리, 건물 디테일, 랜드마크). 면마다 법선이 따로라 각진 일러스트 느낌이 난다.
-// 버텍스 색은 sRGB (KeyArtGeometry.bytes 의 Color32) 로 들어오므로 리니어 색 공간에서는 여기서 바꾼다.
+// 버텍스 색으로 칠하는 로우폴리 오브젝트 (나무 등). 면마다 법선이 따로라 각진 일러스트 느낌이 난다.
 Shader "KUCA/VertexColorLit"
 {
     Properties
@@ -19,10 +18,9 @@ Shader "KUCA/VertexColorLit"
             #pragma vertex vert
             #pragma fragment frag
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
-            #pragma multi_compile_fragment _ _SHADOWS_SOFT _SHADOWS_SOFT_LOW _SHADOWS_SOFT_MEDIUM _SHADOWS_SOFT_HIGH
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
             #pragma multi_compile_fog
             #include "KUCAStylizedLighting.hlsl"
-            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Color.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
                 half4 _Tint;
@@ -44,11 +42,7 @@ Shader "KUCA/VertexColorLit"
                 o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
-                half4 c = v.color;
-            #if !defined(UNITY_COLORSPACE_GAMMA)
-                c.rgb = SRGBToLinear(c.rgb);
-            #endif
-                o.color = c * _Tint;
+                o.color = v.color * _Tint;
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 return o;
             }
