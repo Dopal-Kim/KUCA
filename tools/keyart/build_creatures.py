@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', 'My project', 'Assets', 'Resources', 'KUCA')
 
 meshes = creatures.build_all()
-n = write_bytes(os.path.join(OUT, 'CreatureMeshes.bytes'), meshes)
+n = write_bytes(os.path.join(OUT, 'CreatureMeshes.bytes'), meshes, pos_unit=creatures.POS_UNIT)
 for name, mb in meshes:
     print(f'{name}: {len(mb.pos) // 9} tris')
 info = [{'id': cid, 'name': nm, 'tier': tier} for cid, (nm, tier, _) in creatures.CREATURES.items()]

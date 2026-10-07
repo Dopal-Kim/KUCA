@@ -108,9 +108,9 @@ def subtract(f, g, k=0.0):
         return lambda P: np.maximum(f(P), -g(P))
 
     def h(P):
-        a, b = f(P), -g(P)
-        hh = np.clip(0.5 - 0.5 * (b - a) / k, 0.0, 1.0)
-        return a + (b - a) * hh + k * hh * (1 - hh)
+        a, b = f(P), g(P)
+        hh = np.clip(0.5 - 0.5 * (a + b) / k, 0.0, 1.0)
+        return a * (1 - hh) - b * hh + k * hh * (1 - hh)
     return h
 
 
@@ -173,11 +173,14 @@ class Sculpt:
         g = np.stack([self.field(V + e[i]) - self.field(V - e[i]) for i in range(3)], axis=1)
         return g / np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)
 
-    def colors(self, V, sharp=0.035, ao=0.5):
+    def colors(self, V, sharp=0.03, ao=0.5):
         dmin, per = self.field(V, with_parts=True)
-        D = np.stack(per, axis=1)                                        # (N, parts)
+        D = np.abs(np.stack(per, axis=1))                                # (N, parts) 표면까지 거리
         cols = np.stack([c for _, c, _, _ in self.parts])                # (parts, 3)
-        W = np.exp(-(np.maximum(D, 0) - np.maximum(D, 0).min(axis=1, keepdims=True)) / sharp)
+        layer_of = [l for _, _, _, l in self.parts]
+        owner = D.argmin(axis=1)
+        same = np.array([[layer_of[i] == layer_of[j] for j in range(len(layer_of))] for i in range(len(layer_of))])
+        W = np.exp(-(D - D.min(axis=1, keepdims=True)) / sharp) * same[owner]
         C = (W @ cols) / W.sum(axis=1, keepdims=True)
         for f, col, soft in self.paints:
             a = np.clip(0.5 - f(V) / soft * 0.5, 0.0, 1.0)[:, None]
@@ -191,6 +194,27 @@ class Sculpt:
             C = C * (a * np.array([1.0, 0.97, 1.0]) + (1 - a) * np.array([0.0, 0.0, 0.06]))   # 그늘은 살짝 보랏빛
         return np.clip(C, 0, 1)
 
+    def _relax(self, V, F, iters=6):
+        """줄인 뒤 울퉁불퉁함 제거: Taubin 다듬기 + 표면(SDF 0)으로 다시 붙이기"""
+        n = len(V)
+        e = np.concatenate([F[:, [0, 1]], F[:, [1, 2]], F[:, [2, 0]]])
+        e = np.concatenate([e, e[:, ::-1]])
+        deg = np.bincount(e[:, 0], minlength=n).astype(np.float64)
+        deg[deg == 0] = 1
+
+        def lap(X):
+            acc = np.zeros_like(X)
+            np.add.at(acc, e[:, 0], X[e[:, 1]])
+            return acc / deg[:, None] - X
+        for _ in range(iters):
+            V = V + 0.5 * lap(V)
+            V = V - 0.53 * lap(V)
+        for _ in range(3):
+            d = self.field(V)
+            N = self.normals(V)
+            V = V - N * d[:, None]
+        return V
+
     def build(self, lo, hi, voxel=0.06, tris=16000, ao=0.5):
         from skimage import measure
         import fast_simplification
@@ -201,11 +225,12 @@ class Sculpt:
         if len(F) > tris:
             V, F = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), 1.0 - tris / len(F))
             V = V.astype(np.float64)
+        V = self._relax(V, F)
         # 감는 방향: 면 법선이 SDF 기울기(바깥)와 같은 쪽이 되게
         a, b, c = V[F[:, 0]], V[F[:, 1]], V[F[:, 2]]
         fn = np.cross(b - a, c - a)
         g = self.normals((a + b + c) / 3)
-        if np.mean(np.sum(fn * g, axis=1)) < 0:
+        if np.median(np.sum(fn * g, axis=1)) < 0:
             F = F[:, ::-1]
         return V, F, self.colors(V, ao=ao)
 

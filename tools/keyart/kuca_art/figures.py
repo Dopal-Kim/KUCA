@@ -18,8 +18,8 @@ TOP = 1.05
 # ---------- 팔레트 (sRGB) ----------
 WHITE = (0.985, 0.975, 0.965)
 SUIT = (0.96, 0.955, 0.95)
-GOLD = (0.99, 0.74, 0.20)
-GOLD_HI = (1.0, 0.93, 0.62)
+GOLD = (0.96, 0.62, 0.06)
+GOLD_HI = (1.0, 0.91, 0.48)
 SILVER = (0.80, 0.82, 0.86)
 PINK = (0.99, 0.70, 0.74)
 BLUSH = (1.0, 0.62, 0.66)
@@ -32,7 +32,7 @@ RED = (0.88, 0.20, 0.20)
 GRASS = (0.42, 0.72, 0.22)
 GRASS_HI = (0.62, 0.86, 0.34)
 RIMS = {'green': ((0.36, 0.74, 0.30), (0.70, 0.94, 0.56)), 'blue': ((0.25, 0.55, 0.92), (0.66, 0.86, 1.0)),
-        'gold': ((0.96, 0.66, 0.12), (1.0, 0.92, 0.55))}
+        'gold': ((0.95, 0.62, 0.08), (1.0, 0.90, 0.45))}
 
 
 # ---------- 금속·광택 색 (버텍스 색으로 굽는 가짜 반사) ----------
@@ -40,9 +40,10 @@ RIMS = {'green': ((0.36, 0.74, 0.30), (0.70, 0.94, 0.56)), 'blue': ((0.25, 0.55,
 def metal_shade(C, N, base, hi):
     """금속 부위: 위를 볼수록 밝은 반사, 옆 아래는 짙은 색 + 가로 반사 띠"""
     ny = N[:, 1]
-    t = np.clip(0.55 + 0.45 * ny, 0, 1) ** 1.6
-    band = np.exp(-((ny - 0.25) / 0.12) ** 2) * 0.35
-    dark = np.asarray(base) * 0.72
+    nz = N[:, 2]
+    t = np.clip(0.5 + 0.5 * ny + 0.15 * nz, 0, 1) ** 2.0
+    band = np.exp(-((ny - 0.35) / 0.1) ** 2) * 0.45 + np.exp(-((ny + 0.25) / 0.08) ** 2) * 0.12
+    dark = np.asarray(base) * 0.58
     col = dark[None, :] * (1 - t[:, None]) + np.asarray(hi)[None, :] * t[:, None]
     return np.clip(col + band[:, None] * 0.6, 0, 1)
 
@@ -55,6 +56,8 @@ class Figure:
         self.metal = []           # (part index, base, hi)
         self.extra = Builder()    # 눈·코·입 등 또렷한 부품
         self.extra.ao_strength = 0.0
+        self.smooth = ([], [], [])   # 법선을 직접 계산한 부품 (받침): pos, nrm, col
+        self.glass = ([], [], [])    # 투명 유리 (헬멧 바이저): 따로 __glass 메시로 낸다
         self.tier = tier
 
     def add(self, f, col, k=0.2, layer='body', metal=None):
@@ -65,11 +68,11 @@ class Figure:
     def paint(self, f, col, soft=0.05):
         self.s.paint(f, col, soft)
 
-    def build(self, tris, voxel=0.05, ao=0.55, lo=(-4.8, -0.05, -4.8), hi=(4.8, 11.8, 4.8)):
+    def build(self, tris, voxel=0.04, ao=0.55, lo=(-4.8, -0.05, -4.8), hi=(4.8, 12.6, 4.8)):
         V, F, C = self.s.build(lo, hi, voxel, tris, ao=ao)
         if self.metal:
             dmin, per = self.s.field(V, with_parts=True)
-            D = np.stack(per, axis=1)
+            D = np.abs(np.stack(per, axis=1))
             owner = D.argmin(axis=1)
             N = self.s.normals(V)
             for idx, base, hi_ in self.metal:
@@ -83,31 +86,73 @@ class Figure:
 
 # ---------- 공통: 받침 ----------
 
+def lathe(fig, profile, col_fn, segs=96):
+    """회전체 (profile = [(반지름, 높이)...] 아래→위), 법선은 단면 접선에서 정확히 계산 → 아주 매끈한 받침"""
+    pr = np.asarray(profile, np.float64)
+    tan = np.gradient(pr, axis=0)
+    nrm2 = np.stack([tan[:, 1], -tan[:, 0]], axis=1)
+    nrm2 /= np.maximum(np.linalg.norm(nrm2, axis=1, keepdims=True), 1e-9)
+    b = fig.smooth
+    for j in range(segs):
+        a0, a1 = 2 * math.pi * j / segs, 2 * math.pi * (j + 1) / segs
+        for i in range(len(pr) - 1):
+            quad = []
+            for (k, a) in ((i, a0), (i, a1), (i + 1, a1), (i + 1, a0)):
+                r, y = pr[k]
+                nr, ny = nrm2[k]
+                quad.append(((r * math.cos(a), y, r * math.sin(a)), (nr * math.cos(a), ny, nr * math.sin(a)), col_fn(k, y, (nr, ny))))
+            for t in ((0, 2, 1), (0, 3, 2)):
+                for v in t:
+                    p, n, c = quad[v]
+                    b[0].extend(p); b[1].extend(n); b[2].extend(c)
+
+
 def base(fig, rng, flowers=7):
     rim, rim_hi = RIMS[fig.tier]
-    fig.add(S.cylinder((0, 0.5, 0), 4.5, 0.5, round_=0.22), rim, k=0.0, layer='base', metal=(rim, rim_hi))
+    prof = []
+    R0, H0, rr = 4.5, 1.0, 0.22
+    prof.append((0.0, 0.0))
+    for k in range(6):                                        # 아래 둥근 모서리
+        a = -math.pi / 2 + (math.pi / 2) * k / 5
+        prof.append((R0 - rr + math.cos(a) * rr, rr + math.sin(a) * rr))
+    for k in range(6):                                        # 위 둥근 모서리
+        a = (math.pi / 2) * k / 5
+        prof.append((R0 - rr + math.cos(a) * rr, H0 - rr + math.sin(a) * rr))
+    prof.append((R0 - 0.35, H0 - 0.02))                       # 잔디 쪽으로 살짝 들어간 턱
+    prof = [prof[0]] + prof[1:]
+
+    def rim_col(k, y, n):
+        ny = n[1]
+        t = np.clip(0.55 + 0.45 * ny, 0, 1) ** 2
+        band = math.exp(-((y - 0.62) / 0.09) ** 2) * 0.55 + math.exp(-((y - 0.2) / 0.12) ** 2) * 0.15
+        c = np.asarray(rim) * (0.55 + 0.35 * t) + np.asarray(rim_hi) * (t * 0.45 + band)
+        return tuple(np.clip(c, 0, 1))
+    lathe(fig, prof, rim_col)
     grass_top = lambda P: S.cylinder((0, TOP - 0.12, 0), 4.22, 0.14, round_=0.12)(P) - 0.05 * np.sin(P[:, 0] * 3.1) * np.sin(P[:, 2] * 2.7)
     fig.add(grass_top, GRASS, k=0.0, layer='grass')
     fig.paint(lambda P: 0.15 - np.abs(np.sin(P[:, 0] * 1.7 + P[:, 2] * 1.3) * np.cos(P[:, 2] * 1.9)) - (TOP - 0.3 - P[:, 1]) * 9, GRASS_HI, soft=0.4)
+    fig.paint(lambda P: 0.2 - np.abs(np.sin(P[:, 0] * 4.1 - P[:, 2] * 2.3) * np.sin(P[:, 2] * 3.7 + 1.0)) - (TOP - 0.3 - P[:, 1]) * 9, (0.30, 0.56, 0.14), soft=0.3)
     b = fig.extra
-    for k in range(70):   # 잔디 잎
+    for k in range(260):   # 잔디 덤불 (잎 3장씩)
         a = rng.uniform(0, 2 * math.pi)
-        d = math.sqrt(rng.uniform(0.0, 1.0)) * 4.05
+        d = math.sqrt(rng.uniform(0.02, 1.0)) * 4.1
         x, z = math.cos(a) * d, math.sin(a) * d
-        if abs(x) < 1.8 and -1.2 < z < 1.8:
-            continue
-        h = rng.uniform(0.25, 0.5)
-        b.cone(Frame.yaw((x, TOP - 0.06, z), rng.uniform(0, 90)), (0, 0, 0), 0.09, h, 4, GRASS_HI if k % 3 else GRASS)
+        for j in range(3):
+            h = rng.uniform(0.28, 0.6)
+            tilt = rng.uniform(-25, 25)
+            f = Frame((x, TOP - 0.08, z), *[tuple(S.rot(rng.uniform(0, 360), tilt, rng.uniform(-20, 20))[:, i]) for i in range(3)])
+            b.cone(f, (0, 0, 0), 0.08, h, 4, ((0.62, 0.86, 0.30), (0.46, 0.76, 0.22), (0.34, 0.62, 0.16))[(k + j) % 3])
     placed = 0
-    while placed < flowers:   # 데이지
+    while placed < flowers:   # 데이지 (흰 꽃잎 8장 + 노란 가운데)
         a = rng.uniform(0, 2 * math.pi)
-        d = rng.uniform(2.3, 3.9)
+        d = rng.uniform(2.4, 3.95)
         x, z = math.cos(a) * d, math.sin(a) * d
         placed += 1
-        for p in range(6):
-            pa = p * math.pi / 3
-            _ellipsoid(b, (x + math.cos(pa) * 0.16, TOP + 0.07, z + math.sin(pa) * 0.16), (0.12, 0.04, 0.12), WHITE, 8, 4)
-        _ellipsoid(b, (x, TOP + 0.1, z), (0.08, 0.05, 0.08), (1.0, 0.80, 0.25), 8, 4)
+        for p in range(8):
+            pa = p * math.pi / 4
+            _ellipsoid(b, (x + math.cos(pa) * 0.26, TOP + 0.3, z + math.sin(pa) * 0.26), (0.18, 0.05, 0.1), WHITE, 8, 4,
+                       Frame((0, 0, 0), (math.cos(pa), 0, math.sin(pa)), (0, 1, 0), (-math.sin(pa), 0, math.cos(pa))) if False else IDENT)
+        _ellipsoid(b, (x, TOP + 0.33, z), (0.12, 0.08, 0.12), (1.0, 0.76, 0.16), 8, 4)
 
 
 # ---------- 또렷한 부품 (Builder) ----------
@@ -174,96 +219,145 @@ def blush(fig, head_c, R, spread=46, pitch=-24, size=0.55):
 
 # ---------- 공학관 우주 토끼 ----------
 
+FACE = (0.995, 0.985, 0.975)
+EAR_PINK = (1.0, 0.66, 0.72)
+SUIT_GREY = (0.70, 0.72, 0.76)
+
+
+def sphere_cap(fig, c, R, z_cut, segs=64, rings=24):
+    """유리 바이저: 중심 c, 반지름 R 구에서 z >= z_cut (로컬, 앞) 부분. 법선 정확 (투명 재질 메시)"""
+    b = fig.glass
+    t0 = math.acos(max(-1.0, min(1.0, z_cut / R)))
+    def P(i, j):
+        th = t0 * i / rings              # 앞쪽 극(+Z)에서의 각
+        ph = 2 * math.pi * j / segs
+        n = (math.sin(th) * math.cos(ph), math.sin(th) * math.sin(ph), math.cos(th))
+        return (c[0] + R * n[0], c[1] + R * n[1], c[2] + R * n[2]), n
+    for i in range(rings):
+        for j in range(segs):
+            q = [P(i, j), P(i + 1, j), P(i + 1, j + 1), P(i, j + 1)]
+            for t in ((0, 2, 1), (0, 3, 2)):
+                for v in t:
+                    b[0].extend(q[v][0]); b[1].extend(q[v][1]); b[2].extend((0.92, 0.97, 1.0))
+
+
 def space_rabbit(fig, rng):
-    base(fig, rng)
+    base(fig, rng, flowers=9)
     W = SUIT
     g = (GOLD, GOLD_HI)
     y0 = TOP
-    # 다리·장화
+    # ---- 다리: 통통한 장화 + 무릎 금색 고리 + 무릎 주름 ----
     for s in (-1, 1):
-        fig.add(S.capsule((s * 0.78, y0 + 0.9, 0.05), (s * 0.82, y0 + 2.1, 0.0), 0.74, 0.8), W, k=0.3)
-        fig.add(S.ellipsoid((s * 0.84, y0 + 0.5, 0.28), (0.78, 0.55, 0.98)), W, k=0.3)
-        fig.add(S.intersect(S.ellipsoid((s * 0.82, y0 + 1.05, 0.12), (0.92, 0.9, 0.95)),
-                            S.box((s * 0.82, y0 + 1.05, 0.1), (1.2, 0.13, 1.2))), GOLD, k=0.0, layer='trim', metal=g)
-    # 몸통 (배불뚝이 우주복)
-    fig.add(S.ellipsoid((0, y0 + 2.75, 0.05), (1.95, 1.45, 1.7)), W, k=0.45)
-    fig.add(S.ellipsoid((0, y0 + 3.6, 0.0), (1.7, 1.25, 1.5)), W, k=0.45)
-    fig.add(S.intersect(S.ellipsoid((0, y0 + 2.95, 0.05), (2.04, 1.55, 1.8)), S.box((0, y0 + 2.95, 0), (3, 0.17, 3))), GOLD, k=0.0, layer='trim', metal=g)
-    fig.add(S.box((0, y0 + 2.95, 1.78), (0.36, 0.26, 0.1), round_=0.07, R=S.rot(0, -8, 0)), GOLD, k=0.0, layer='trim', metal=g)
-    fig.paint(S.box((0, y0 + 2.95, 1.86), (0.2, 0.12, 0.2)), SILVER, soft=0.02)
-    fig.add(S.torus((0, y0 + 3.75, 1.47), 0.3, 0.07, Rm=S.rot(0, 90 - 18, 0)), GOLD, k=0.0, layer='trim', metal=g)   # 가슴 단추
-    fig.paint(S.box((-1.45, y0 + 3.9, 0.55), (0.25, 0.08, 0.4), R=S.rot(-35, 0, 0)), RED, soft=0.02)               # 어깨 깃발
-    fig.paint(S.box((-1.48, y0 + 3.72, 0.55), (0.25, 0.06, 0.4), R=S.rot(-35, 0, 0)), RED, soft=0.02)
-    fig.paint(S.sphere((1.28, y0 + 4.05, 0.95), 0.1), CRIMSON, soft=0.03)
-    for s in (-1, 1):   # 허리 회색 주머니
-        fig.add(S.box((s * 1.35, y0 + 2.6, 1.1), (0.3, 0.35, 0.18), round_=0.1, R=S.rot(s * 38, 0, 0)), (0.66, 0.68, 0.72), k=0.06)
-    # 팔·장갑·금색 손목
-    for s, elbow, hand in ((-1, (-2.05, y0 + 3.0, 0.35), (-2.05, y0 + 2.45, 0.55)), (1, (2.05, y0 + 3.0, 0.35), (2.05, y0 + 2.45, 0.55))):
-        fig.add(S.capsule((s * 1.45, y0 + 3.85, 0.0), elbow, 0.58, 0.52), W, k=0.3)
-        fig.add(S.sphere(hand, 0.55), WHITE, k=0.12)
-        fig.add(S.capsule((s * 2.27, y0 + 2.6, 0.5), (s * 2.0, y0 + 2.2, 0.85), 0.2), WHITE, k=0.15)   # 엄지
-        c = np.array(elbow) * 0.35 + np.array(hand) * 0.65
-        fig.add(S.torus(tuple(c), 0.5, 0.12, Rm=S.rot(0, 0, s * 10)), GOLD, k=0.0, layer='trim', metal=g)
-    # 금색 코일 호스 (벨트 왼쪽 → 제트팩)
-    for k in range(26):
-        t = k / 25
-        x, y, z = -1.85 - 0.25 * math.sin(t * math.pi), y0 + 2.9 - 0.75 * math.sin(t * math.pi), 0.9 - 2.2 * t
-        a = t * 22 * math.pi
-        fig.add(S.sphere((x + math.cos(a) * 0.1, y + math.sin(a) * 0.1, z), 0.11), GOLD, k=0.0, layer='trim', metal=g)
-    # 목 고리
-    fig.add(S.torus((0, y0 + 4.55, 0.05), 1.1, 0.24), GOLD, k=0.0, layer='trim', metal=g)
-    # 머리 (헬멧 = 둥근 머리) + 귀 혹
-    hc = (0, y0 + 6.55, 0.1)
-    HR = 2.35
-    fig.add(S.ellipsoid(hc, (HR * 1.04, HR * 0.97, HR)), WHITE, k=0.35, layer='head')
+        x = s * 0.72
+        fig.add(S.ellipsoid((x, y0 + 0.42, 0.22), (0.66, 0.45, 0.85)), W, k=0.2)                      # 장화 앞코
+        fig.add(S.capsule((x, y0 + 0.5, 0.05), (x, y0 + 1.25, 0.0), 0.62, 0.6), W, k=0.25)            # 장화
+        fig.add(S.capsule((x, y0 + 1.35, 0.0), (x * 1.02, y0 + 2.1, 0.0), 0.56, 0.6), W, k=0.25)      # 정강이
+        fig.add(S.torus((x, y0 + 1.3, 0.0), 0.6, 0.11), GOLD, k=0.0, layer='trim', metal=g)
+        fig.add(S.torus((x, y0 + 0.95, 0.0), 0.63, 0.05), SUIT_GREY, k=0.0, layer='trim')
+    # ---- 몸통: 위가 살짝 넓은 우주복, 가슴판 ----
+    fig.add(S.ellipsoid((0, y0 + 2.45, 0.0), (1.38, 0.75, 1.1)), W, k=0.4)                           # 엉덩이
+    fig.add(S.ellipsoid((0, y0 + 3.35, 0.0), (1.48, 1.05, 1.15)), W, k=0.45)                          # 가슴
+    fig.add(S.intersect(S.ellipsoid((0, y0 + 2.62, 0.0), (1.47, 0.85, 1.19)), S.box((0, y0 + 2.62, 0), (3, 0.13, 3))), GOLD, k=0.0, layer='trim', metal=g)   # 벨트
+    for x in (-0.95, 0.0, 0.95):                                                                     # 벨트 버클 3개
+        R = S.rot(math.degrees(math.atan2(x, 1.05)), 0, 0)
+        p = (x * 1.0, y0 + 2.62, math.sqrt(max(0.0, 1.0 - (x / 1.47) ** 2)) * 1.19 + 0.02)
+        fig.add(S.box(p, (0.2, 0.17, 0.07), round_=0.05, R=R), SUIT_GREY if x else GOLD, k=0.0, layer='buckle',
+                metal=None if x else g)
+    fig.add(S.ellipsoid((0, y0 + 3.45, 1.05), (0.34, 0.34, 0.12)), (0.98, 0.98, 0.99), k=0.0, layer='chest')
+    fig.add(S.torus((0, y0 + 3.45, 1.1), 0.33, 0.07, Rm=S.rot(0, 90 - 12, 0)), GOLD, k=0.0, layer='trim', metal=g)
+    for s in (-1, 1):   # 가슴 멜빵 (어깨 → 벨트)
+        pts = [(s * 0.62, y0 + 4.1, 0.55), (s * 0.66, y0 + 3.7, 1.0), (s * 0.68, y0 + 3.15, 1.15), (s * 0.7, y0 + 2.7, 1.2)]
+        for a_, b_ in zip(pts, pts[1:]):
+            fig.add(S.capsule(a_, b_, 0.065), GOLD, k=0.02, layer='trim', metal=g)
+        fig.add(S.box((s * 1.15, y0 + 2.35, 0.75), (0.22, 0.28, 0.14), round_=0.08, R=S.rot(s * 40, 0, 0)), SUIT_GREY, k=0.04, layer='buckle')   # 허리 주머니
+    # ---- 팔: 어깨 → 팔꿈치 고리 → 손목 금색 → 흰 장갑 ----
     for s in (-1, 1):
-        a, b = (s * 0.82, hc[1] + 1.6, -0.1), (s * 1.05, hc[1] + 3.75, -0.25)
-        fig.add(S.capsule(a, b, 0.66, 0.6), WHITE, k=0.45, layer='head')
-        fig.paint(S.ellipsoid((s * 1.0, hc[1] + 3.0, 0.42), (0.36, 0.95, 0.3), R=S.rot(0, 0, -s * 6)), PINK, soft=0.08)
-        # 헬멧 옆 금색 통신 포트
-        fig.add(S.torus((s * 2.38, hc[1] - 0.1, 0.05), 0.52, 0.14, Rm=S.rot(0, 0, 90)), GOLD, k=0.0, layer='trim', metal=g)
-        fig.add(S.ellipsoid((s * 2.36, hc[1] - 0.1, 0.05), (0.14, 0.45, 0.45)), WHITE, k=0.05, layer='trim')
-    fig.add(S.sphere((0.25, hc[1] + 2.35, -0.15), 0.2), (0.80, 0.52, 0.22), k=0.08, layer='head')     # 꼭대기 단추
-    # 헬멧 앞 테 (얼굴을 두른 은백색 고리) + 유리 반사
-    fig.add(S.torus((0, hc[1] - 0.15, 1.38), 1.92, 0.15, Rm=S.rot(0, 90 - 6, 0)), (0.92, 0.93, 0.96), k=0.0, layer='trim', metal=((0.86, 0.88, 0.92), (1.0, 1.0, 1.0)))
-    fig.paint(S.ellipsoid((-1.0, hc[1] + 1.0, 1.9), (0.55, 0.22, 0.3), R=S.rot(0, 0, 35)), (0.93, 0.97, 1.0), soft=0.12)
-    # 제트팩 (등)
-    fig.add(S.box((0, y0 + 3.4, -1.75), (1.15, 1.1, 0.55), round_=0.28), (0.93, 0.93, 0.95), k=0.08)
-    fig.add(S.torus((0, y0 + 3.7, -2.32), 0.32, 0.09, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='trim', metal=g)
-    fig.add(S.sphere((0, y0 + 3.7, -2.3), 0.22), GOLD, k=0.0, layer='trim', metal=g)
+        sh, el, wr = (s * 1.3, y0 + 3.85, 0.0), (s * 1.75, y0 + 3.05, 0.15), (s * 1.95, y0 + 2.35, 0.3)
+        fig.add(S.sphere(sh, 0.58), W, k=0.3)
+        fig.add(S.capsule(sh, el, 0.48, 0.44), W, k=0.25)
+        fig.add(S.capsule(el, wr, 0.44, 0.42), W, k=0.2)
+        fig.add(S.torus(el, 0.44, 0.05, Rm=S.rot(0, 0, s * 30)), SUIT_GREY, k=0.0, layer='trim')
+        fig.add(S.torus(wr, 0.44, 0.12, Rm=S.rot(0, 0, s * 18)), GOLD, k=0.0, layer='trim', metal=g)
+        hand = (s * 2.02, y0 + 1.95, 0.38)
+        fig.add(S.sphere(hand, 0.43), WHITE, k=0.12, layer='glove')
+        fig.add(S.capsule((s * 1.85, y0 + 2.05, 0.65), (s * 1.92, y0 + 1.8, 0.75), 0.15), WHITE, k=0.1, layer='glove')
+    for k in range(2):   # 왼팔 빨간 패치
+        fig.add(S.box((-1.5, y0 + 3.55 - k * 0.17, 0.38), (0.06, 0.05, 0.22), round_=0.025, R=S.rot(-62, 0, -28)), RED, k=0.0, layer='decal')
+    fig.add(S.sphere((1.18, y0 + 3.95, 0.72), 0.08), CRIMSON, k=0.0, layer='decal')
+    # 금색 코일 호스 (벨트 앞 → 등)
+    for k in range(34):
+        t = k / 33
+        x, y, z = -1.5 - 0.32 * math.sin(t * math.pi), y0 + 2.5 - 0.7 * math.sin(t * math.pi), 0.95 - 2.1 * t
+        a = t * 30 * math.pi
+        fig.add(S.sphere((x + math.cos(a) * 0.09, y + math.sin(a) * 0.09, z), 0.09), GOLD, k=0.0, layer='trim', metal=g)
+    fig.add(S.torus((0, y0 + 4.32, 0.0), 0.95, 0.2), GOLD, k=0.0, layer='trim', metal=g)          # 목 고리
+    # ---- 머리: 토끼 얼굴 (유리 안) + 뒤쪽 흰 헬멧 껍질 + 귀 ----
+    hc = (0, y0 + 6.2, 0.05)
+    HR = 2.3                                     # 헬멧 반지름
+    cut = 0.55                                   # 바이저 경계 (로컬 z)
+    shell = S.subtract(S.sphere(hc, HR), S.box((0, hc[1], hc[2] + cut + 3), (4, 4, 3)))
+    shell = S.subtract(shell, S.sphere(hc, HR - 0.14))
+    fig.add(shell, W, k=0.0, layer='helmet')
+    fc, FR = (0, hc[1] - 0.12, hc[2] + 0.12), 1.95
+    fig.add(S.ellipsoid(fc, (FR * 1.06, FR * 0.97, FR)), FACE, k=0.0, layer='face')
+    for s in (-1, 1):   # 볼살 (눈·입 아래 옆쪽)
+        fig.add(S.sphere((s * 1.05, fc[1] - 0.95, fc[2] + 0.85), 0.68), FACE, k=0.6, layer='face')
+    ring_r = math.sqrt(HR ** 2 - cut ** 2)
+    fig.add(S.torus((0, hc[1], hc[2] + cut), ring_r, 0.17, Rm=S.rot(0, 90, 0)), (0.95, 0.96, 0.98), k=0.0, layer='ring',
+            metal=((0.82, 0.84, 0.88), (1.0, 1.0, 1.0)))
+    for s in (-1, 1):   # 귀: 헬멧 위로 뚫고 나온 흰 귀 + 오목한 분홍 안쪽 + 헬멧 귀 고리
+        ear = S.ellipsoid((s * 0.95, hc[1] + 3.05, -0.35), (0.72, 1.45, 0.52), R=S.rot(0, 0, -s * 10))
+        inner = S.ellipsoid((s * 0.98, hc[1] + 3.15, 0.14), (0.44, 1.08, 0.3), R=S.rot(0, 0, -s * 10))
+        fig.add(S.subtract(ear, inner, k=0.1), W, k=0.35, layer='helmet')
+        fig.paint(S.ellipsoid((s * 0.98, hc[1] + 3.15, 0.06), (0.5, 1.15, 0.42), R=S.rot(0, 0, -s * 10)), EAR_PINK, soft=0.05)
+        fig.add(S.torus((s * HR * 0.99, hc[1] - 0.15, hc[2] - 0.2), 0.5, 0.15, Rm=S.rot(0, 0, 90)), GOLD, k=0.0, layer='trim', metal=g)
+        fig.add(S.ellipsoid((s * HR * 0.99, hc[1] - 0.15, hc[2] - 0.2), (0.14, 0.4, 0.4)), (0.97, 0.97, 0.98), k=0.0, layer='port')
+    fig.add(S.sphere((0.25, hc[1] + HR + 0.05, hc[2] - 0.5), 0.2), (0.78, 0.48, 0.20), k=0.08, layer='helmet')   # 꼭대기 단추
+    sphere_cap(fig, hc, HR - 0.04, cut)
+    # 얼굴: 키아트처럼 작고 동그란 눈, 넓은 간격, 분홍 코·'w' 입·볼터치
+    kawaii_eyes(fig, fc, FR + 0.02, spread=26, pitch=-4, size=0.5, tall=1.12)
+    nose(fig, fc, FR + 0.03, pitch=-17, size=0.12)
+    smile(fig, fc, FR + 0.04, pitch=-25, w=0.24)
+    for s in (-1, 1):
+        p = np.array(_frame_on(fc, FR, s * 43, -22, 0).p((0, 0, 0)))
+        fig.paint(S.sphere(p, 0.55), BLUSH, soft=0.7)
+    # ---- 제트팩 ----
+    fig.add(S.box((0, y0 + 3.3, -1.42), (0.95, 0.95, 0.42), round_=0.25), (0.94, 0.94, 0.96), k=0.06, layer='pack')
+    fig.add(S.torus((0, y0 + 3.6, -1.86), 0.27, 0.08, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='trim', metal=g)
+    fig.add(S.sphere((0, y0 + 3.6, -1.83), 0.19), GOLD, k=0.0, layer='trim', metal=g)
     for k in range(3):
-        fig.paint(S.box((0, y0 + 3.15 - k * 0.18, -2.3), (0.35, 0.04, 0.1)), (0.62, 0.64, 0.68), soft=0.02)
+        fig.add(S.box((0, y0 + 3.08 - k * 0.16, -1.86), (0.3, 0.035, 0.05), round_=0.02), SUIT_GREY, k=0.0, layer='decal')
     for s in (-1, 1):
-        fig.add(S.cylinder((s * 1.2, y0 + 3.3, -1.75), 0.32, 0.6, round_=0.12), (0.88, 0.88, 0.9), k=0.05)
-        fig.add(S.capsule((s * 1.2, y0 + 2.6, -1.75), (s * 1.2, y0 + 2.25, -1.75), 0.3, 0.38), GOLD, k=0.0, layer='trim', metal=g)
-    # 받침 소품: 로켓 · 달 돌 · 톱니
-    rx, rz = -3.0, 1.4
-    fig.add(S.capsule((rx, y0 + 0.35, rz), (rx, y0 + 1.6, rz), 0.42, 0.34), WHITE, k=0.0, layer='prop')
-    fig.add(S.capsule((rx, y0 + 1.55, rz), (rx, y0 + 2.25, rz), 0.36, 0.05), RED, k=0.0, layer='prop')
-    fig.add(S.torus((rx, y0 + 1.15, rz + 0.36), 0.16, 0.05, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='prop', metal=g)
+        fig.add(S.cylinder((s * 1.05, y0 + 3.2, -1.42), 0.28, 0.6, round_=0.12), (0.9, 0.9, 0.92), k=0.04, layer='pack')
+        fig.add(S.capsule((s * 1.05, y0 + 2.55, -1.42), (s * 1.05, y0 + 2.2, -1.42), 0.26, 0.34), GOLD, k=0.0, layer='trim', metal=g)
+    # ---- 받침 소품: 로켓 · 달 돌 · 톱니 ----
+    rx, rz = -3.0, 1.5
+    fig.add(S.capsule((rx, y0 + 0.4, rz), (rx, y0 + 1.75, rz), 0.44, 0.38), WHITE, k=0.0, layer='prop')
+    fig.add(S.capsule((rx, y0 + 1.68, rz), (rx, y0 + 2.45, rz), 0.39, 0.04), RED, k=0.0, layer='prop2')
+    fig.add(S.torus((rx, y0 + 1.2, rz + 0.41), 0.17, 0.06, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='prop3', metal=g)
+    fig.add(S.sphere((rx, y0 + 1.2, rz + 0.37), 0.13), (0.25, 0.25, 0.3), k=0.0, layer='prop3')
     for k in range(3):
         R = S.rot(k * 120 + 30, 0, 0)
-        fig.add(S.box(tuple(np.array((rx, y0 + 0.45, rz)) + R @ np.array((0.5, 0, 0))), (0.22, 0.32, 0.05), round_=0.04, R=R), RED, k=0.0, layer='prop')
-    rock = lambda P: S.sphere((2.8, y0 + 0.35, 1.7), 0.75)(P) + 0.05 * np.sin(P[:, 0] * 9) * np.sin(P[:, 2] * 8)
-    fig.add(rock, (0.66, 0.66, 0.68), k=0.0, layer='prop')
-    for cc in ((2.45, y0 + 0.75, 2.2), (3.25, y0 + 0.8, 1.8), (2.75, y0 + 1.0, 1.35)):
-        fig.paint(S.sphere(cc, 0.18), (0.48, 0.48, 0.52), soft=0.05)
-    gear = (1.4, y0 + 0.12, 2.9)
-    fig.add(S.cylinder(gear, 0.42, 0.12, round_=0.04), SILVER, k=0.0, layer='prop', metal=(SILVER, (1, 1, 1)))
-    for k in range(8):
-        R = S.rot(k * 45, 0, 0)
-        fig.add(S.box(tuple(np.array(gear) + R @ np.array((0.48, 0, 0))), (0.1, 0.11, 0.09), round_=0.03, R=R), SILVER, k=0.0, layer='prop', metal=(SILVER, (1, 1, 1)))
-    # 얼굴
-    kawaii_eyes(fig, hc, HR, spread=25, pitch=-12, size=0.6)
-    nose(fig, hc, HR, pitch=-22, size=0.14)
-    smile(fig, hc, HR, pitch=-29, w=0.3)
-    blush(fig, hc, HR)
-    # 오른손 스패너 (공구)
-    w = S.rot(0, 0, -20)
-    fig.add(S.capsule((2.05, y0 + 2.2, 0.75), (2.45, y0 + 3.4, 0.8), 0.12), SILVER, k=0.0, layer='tool', metal=(SILVER, (1, 1, 1)))
-    fig.add(S.capsule((2.05, y0 + 2.25, 0.75), (2.15, y0 + 2.6, 0.76), 0.17), GOLD, k=0.0, layer='tool', metal=g)
-    fig.add(S.subtract(S.cylinder((2.55, y0 + 3.62, 0.8), 0.32, 0.09, R=S.rot(0, 90, -20)),
-                       S.box((2.62, y0 + 3.85, 0.8), (0.12, 0.25, 0.3), R=w)), SILVER, k=0.0, layer='tool', metal=(SILVER, (1, 1, 1)))
+        fig.add(S.box(tuple(np.array((rx, y0 + 0.5, rz)) + R @ np.array((0.52, 0, 0))), (0.24, 0.34, 0.05), round_=0.04, R=R), RED, k=0.0, layer='prop2')
+    fig.add(S.capsule((rx, y0 + 0.1, rz), (rx, y0 + 0.4, rz), 0.3, 0.36), SILVER, k=0.0, layer='prop3', metal=(SILVER, (1, 1, 1)))
+    rock = lambda P: S.sphere((2.8, y0 + 0.4, 1.7), 0.8)(P) + 0.03 * np.sin(P[:, 0] * 9) * np.sin(P[:, 2] * 8)
+    craters = [((2.45, y0 + 0.82, 2.25), 0.2), ((3.3, y0 + 0.85, 1.85), 0.17), ((2.75, y0 + 1.12, 1.35), 0.15), ((2.25, y0 + 0.5, 2.35), 0.14)]
+    def rock_f(P, rock=rock):
+        d = rock(P)
+        for cc, rr in craters:
+            d = np.maximum(d, -(S.sphere(cc, rr)(P)))
+        return d
+    fig.add(rock_f, (0.68, 0.68, 0.70), k=0.0, layer='rock')
+    for gc, gr in (((1.5, y0 + 0.12, 2.9), 0.44), ((2.35, y0 + 0.1, 3.3), 0.28)):
+        fig.add(S.subtract(S.cylinder(gc, gr, 0.12, round_=0.04), S.cylinder(gc, gr * 0.38, 0.3)), SILVER, k=0.0, layer='gear', metal=(SILVER, (1, 1, 1)))
+        for k in range(8):
+            R = S.rot(k * 45, 0, 0)
+            fig.add(S.box(tuple(np.array(gc) + R @ np.array((gr * 1.12, 0, 0))), (gr * 0.22, 0.11, gr * 0.2), round_=0.03, R=R), SILVER, k=0.0, layer='gear', metal=(SILVER, (1, 1, 1)))
+    # ---- 오른손 스패너 (금색 손잡이 + 은색 머리) ----
+    fig.add(S.capsule((2.05, y0 + 1.75, 0.55), (2.25, y0 + 2.55, 0.62), 0.14), GOLD, k=0.0, layer='tool', metal=g)
+    fig.add(S.capsule((2.25, y0 + 2.5, 0.62), (2.4, y0 + 3.15, 0.66), 0.1), SILVER, k=0.0, layer='tool2', metal=(SILVER, (1, 1, 1)))
+    fig.add(S.subtract(S.cylinder((2.47, y0 + 3.38, 0.67), 0.3, 0.08, R=S.rot(0, 90, -14)),
+                       S.box((2.52, y0 + 3.6, 0.67), (0.11, 0.24, 0.3), R=S.rot(0, 0, -14))), SILVER, k=0.0, layer='tool2', metal=(SILVER, (1, 1, 1)))
 
 
 FIGURES = {
@@ -271,13 +365,51 @@ FIGURES = {
 }
 
 
-def build(cid, tris=16000, seed=3):
+def _load_figs():
+    """kuca_art/figs/<id>.py 마다 TIER, build(fig, rng) 를 둔다 (캐릭터별 파일, 병렬 작업용)"""
+    import importlib
+    import pkgutil
+    from . import figs
+    for m in pkgutil.iter_modules(figs.__path__):
+        mod = importlib.import_module(f'{figs.__name__}.{m.name}')
+        FIGURES[m.name] = (mod.TIER, mod.build)
+
+
+_load_figs()
+
+
+def smooth_normals(P):
+    """삼각형 묶음 (N*3, 3) 의 정점 법선: 같은 위치끼리 면 법선(넓이 가중) 평균"""
+    T = P.reshape(-1, 3, 3)
+    fn = np.cross(T[:, 1] - T[:, 0], T[:, 2] - T[:, 0])
+    key = np.round(P / 0.0005).astype(np.int64)
+    _, inv = np.unique(key, axis=0, return_inverse=True)
+    inv = inv.ravel()
+    acc = np.zeros((inv.max() + 1, 3))
+    np.add.at(acc, inv, np.repeat(fn, 3, axis=0))
+    n = acc[inv]
+    return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
+
+
+def build(cid, tris=16000, seed=3, voxel=0.04):
     tier, fn = FIGURES[cid]
     fig = Figure(tier)
     fn(fig, random.Random(seed))
-    V, F, C = fig.build(tris)
+    V, F, C = fig.build(tris, voxel=voxel)
+    N = fig.s.normals(V)
+    # 조형 표면: SDF 기울기 법선 (아주 매끈), 부품: 위치별 평균 법선
+    body = V[F].reshape(-1, 3)
+    extra = np.asarray(fig.extra.pos, np.float64).reshape(-1, 3)
     mb = Builder()
-    S.add_to_builder(mb, V, F, C)
-    mb.pos.extend(fig.extra.pos)
-    mb.col.extend(fig.extra.col)
-    return mb
+    mb.pos = body.ravel().tolist() + extra.ravel().tolist()
+    mb.col = C[F].reshape(-1, 3).ravel().tolist() + list(fig.extra.col)
+    mb.nrm = N[F].reshape(-1, 3).ravel().tolist() + (smooth_normals(extra).ravel().tolist() if len(extra) else [])
+    sp, sn, sc = fig.smooth
+    mb.pos += sp
+    mb.nrm += sn
+    mb.col += sc
+    glass = None
+    if fig.glass[0]:
+        glass = Builder()
+        glass.pos, glass.nrm, glass.col = list(fig.glass[0]), list(fig.glass[1]), list(fig.glass[2])
+    return mb, glass
