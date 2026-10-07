@@ -29,6 +29,24 @@ public static class KeyArtMapSetup
     const string LookRoot = "KeyArtLook";
     static readonly string[] OldRoots = { "KeyArtTrees", "KeyArtLandmarks" };   // 이전 버전이 만든 오브젝트
 
+    const string CampusScene = "Assets/Scenes/SampleScene.unity";
+
+    /// <summary>캠퍼스 씬(SampleScene)이 열려 있지 않으면 저장 여부를 물은 뒤 연다.</summary>
+    static bool EnsureCampusScene()
+    {
+        if (GameObject.Find("Map") != null && GameObject.Find("Buildings") != null)
+            return true;
+        if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            return false;
+        EditorSceneManager.OpenScene(CampusScene, OpenSceneMode.Single);
+        if (GameObject.Find("Map") == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", $"{CampusScene} 에서 Map 오브젝트를 찾지 못했습니다.", "확인");
+            return false;
+        }
+        return true;
+    }
+
     const string MapboxMapMat = "Assets/Materials/CampusMap.mat";
     const string MapboxBuildingMat = "Assets/Materials/CampusBuilding.mat";
 
@@ -62,6 +80,7 @@ public static class KeyArtMapSetup
     [MenuItem("KUCA/Map Style/Apply Key Art")]
     public static void ApplyKeyArt()
     {
+        if (!EnsureCampusScene()) return;
         var look = JsonUtility.FromJson<Look>(System.IO.File.ReadAllText(LookFile));
         var manifest = JsonUtility.FromJson<Manifest>(System.IO.File.ReadAllText(ManifestFile));
 
@@ -147,6 +166,7 @@ public static class KeyArtMapSetup
     [MenuItem("KUCA/Map Style/Apply Mapbox")]
     public static void ApplyMapbox()
     {
+        if (!EnsureCampusScene()) return;
         var map = GameObject.Find("Map");
         Undo.RecordObject(map.GetComponent<Renderer>(), "Mapbox");
         map.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(MapboxMapMat);
