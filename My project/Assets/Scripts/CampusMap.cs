@@ -62,10 +62,6 @@ public class CampusMap : MonoBehaviour
     [Tooltip("에디터 플레이 중 WASD/방향키로 테스트 좌표를 움직이는 속도 (m/s, Shift로 3배)")]
     public float testWalkSpeed = 5f;
 
-    [Header("Debug")]
-    [Tooltip("화면 왼쪽 위에 GPS 상태를 표시")]
-    public bool showDebugInfo = true;
-
     public bool IsLocationReady { get; private set; }
     public double CurrentLongitude { get; private set; }
     public double CurrentLatitude { get; private set; }
@@ -237,25 +233,6 @@ public class CampusMap : MonoBehaviour
         testLatitude = System.Math.Clamp(geo.y, minLatitude, maxLatitude);
     }
 #endif
-
-    void OnGUI()
-    {
-        if (!showDebugInfo || UIInputBlocker.IsModalOpen)
-            return;
-
-        float scale = Mathf.Max(1f, Screen.dpi / 160f);
-        GUIStyle style = new GUIStyle(GUI.skin.box)
-        {
-            alignment = TextAnchor.UpperLeft,
-            fontSize = Mathf.RoundToInt(14 * scale),
-            padding = new RectOffset(10, 10, 8, 8),
-        };
-        string text = $"{StatusMessage}\n" +
-                      $"위도 {CurrentLatitude:F6}  경도 {CurrentLongitude:F6}\n" +
-                      (CurrentAccuracy > 0f ? $"정확도 ±{CurrentAccuracy:F0}m" : "정확도 -");
-        Vector2 size = style.CalcSize(new GUIContent(text));
-        GUI.Box(new Rect(10 * scale, 10 * scale, size.x, size.y), text, style);
-    }
 
     void OnDisable()
     {

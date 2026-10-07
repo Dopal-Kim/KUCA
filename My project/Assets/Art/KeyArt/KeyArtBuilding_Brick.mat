@@ -25,13 +25,17 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _FloorHeight: 3.2
-    - _WindowHeight: 0.5
-    - _WindowSpacing: 2.8
-    - _WindowWidth: 0.5
+    - _Arch: 0
+    - _Brick: 1
+    - _FloorHeight: 4.16
+    - _PilasterEvery: 4
+    - _WindowHeight: 0.52
+    - _WindowSpacing: 3.4
+    - _WindowWidth: 0.48
     m_Colors:
-    - _RoofColor: {r: 0.74, g: 0.75, b: 0.77, a: 1}
-    - _WallColor: {r: 0.72, g: 0.38, b: 0.27, a: 1}
-    - _WindowColor: {r: 0.88, g: 0.86, b: 0.8, a: 1}
+    - _RoofColor: {r: 0.76, g: 0.73, b: 0.7, a: 1}
+    - _TrimColor: {r: 0.98, g: 0.94, b: 0.86, a: 1}
+    - _WallColor: {r: 0.82, g: 0.45, b: 0.33, a: 1}
+    - _WindowColor: {r: 0.42, g: 0.6, b: 0.76, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
