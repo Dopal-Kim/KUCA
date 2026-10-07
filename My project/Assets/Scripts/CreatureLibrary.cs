@@ -110,6 +110,8 @@ public static class CreatureLibrary
         get
         {
             if (material == null)
+                material = Resources.Load<Material>("KUCA/CreatureToy");   // 비닐 토이 광택 (빌드 포함되게 재질 에셋)
+            if (material == null)
             {
                 Shader s = Shader.Find("KUCA/VertexColorLit");
                 if (s == null) s = Shader.Find("Universal Render Pipeline/Simple Lit");

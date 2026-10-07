@@ -75,7 +75,7 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 const mat = q.get('toy') === '0' ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62 })
-  : new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.35, sheen: 0.3, sheenRoughness: 0.6, envMapIntensity: 0.55 });
+  : new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.32, clearcoat: 0.7, clearcoatRoughness: 0.18, envMapIntensity: 0.6 });
 const sp = +(q.get('sp') || 12);
 ids.forEach((id, i) => {
   const m = new THREE.Mesh(geos[id], mat);

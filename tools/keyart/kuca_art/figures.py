@@ -48,6 +48,15 @@ def metal_shade(C, N, base, hi):
     return np.clip(col + band[:, None] * 0.6, 0, 1)
 
 
+def vivid(C, sat=1.22, contrast=1.06):
+    """색을 확실하게: 채도를 올리고 살짝 대비를 준다 (흰색·검정은 그대로 두고 색 있는 곳만 또렷해진다)"""
+    C = np.asarray(C, np.float64)
+    L = (C @ np.array([0.299, 0.587, 0.114]))[:, None]
+    C = L + (C - L) * sat
+    C = 0.5 + (C - 0.5) * contrast
+    return np.clip(C, 0, 1)
+
+
 class Figure:
     """조형 + 금속 부위 표시 + 얼굴 부품 Builder"""
 
@@ -70,6 +79,7 @@ class Figure:
 
     def build(self, tris, voxel=0.04, ao=0.55, lo=(-4.8, -0.05, -4.8), hi=(4.8, 12.6, 4.8)):
         V, F, C = self.s.build(lo, hi, voxel, tris, ao=ao)
+        C = vivid(C)
         if self.metal:
             dmin, per = self.s.field(V, with_parts=True)
             D = np.abs(np.stack(per, axis=1))
@@ -252,8 +262,11 @@ def surface_frame(fig, origin, direction, up=(0, 1, 0), out=0.0, layer=None):
             v = f(P)
             out_ = v if out_ is None else S.smin(out_, v, k)
         return out_
+    if field(o[None, :])[0] < 0:
+        # 안(머리 중심 등)에서 시작하면: 밖(d 방향 멀리)에서 거꾸로 쏴서 가장 바깥 표면을 찾는다
+        o, d = o + d * 12.0, -d
     t = 0.0
-    for _ in range(200):
+    for _ in range(400):
         dist = field((o + d * t)[None, :])[0]
         if dist < 1e-3:
             break
@@ -376,9 +389,9 @@ def space_rabbit(fig, rng):
     shell = S.subtract(shell, S.sphere(hc, HR - 0.14))
     fig.add(shell, W, k=0.0, layer='helmet')
     fc, FR = (0, hc[1] - 0.12, hc[2] + 0.12), 1.95
-    fig.add(S.ellipsoid(fc, (FR * 1.06, FR * 0.97, FR)), FACE, k=0.0, layer='face')
-    for s in (-1, 1):   # 볼살 (눈·입 아래 옆쪽)
-        fig.add(S.sphere((s * 1.05, fc[1] - 0.95, fc[2] + 0.85), 0.68), FACE, k=0.6, layer='face')
+    # 두상: 세로로 살짝 긴 타원, 아래쪽(턱·볼)이 자연스럽게 넓어지는 형태 — 따로 붙인 볼살 없음
+    fig.add(S.ellipsoid(fc, (FR * 1.02, FR * 1.0, FR * 0.96)), FACE, k=0.0, layer='face')
+    fig.add(S.ellipsoid((0, fc[1] - 0.55, fc[2] + 0.1), (FR * 1.08, FR * 0.66, FR * 0.9)), FACE, k=0.7, layer='face')
     ring_r = math.sqrt(HR ** 2 - cut ** 2)
     fig.add(S.torus((0, hc[1], hc[2] + cut), ring_r, 0.17, Rm=S.rot(0, 90, 0)), (0.95, 0.96, 0.98), k=0.0, layer='ring',
             metal=((0.82, 0.84, 0.88), (1.0, 1.0, 1.0)))
@@ -392,12 +405,20 @@ def space_rabbit(fig, rng):
     fig.add(S.sphere((0.25, hc[1] + HR + 0.05, hc[2] - 0.5), 0.2), (0.78, 0.48, 0.20), k=0.08, layer='helmet')   # 꼭대기 단추
     sphere_cap(fig, hc, HR - 0.04, cut)
     # 얼굴: 키아트처럼 작고 동그란 눈, 넓은 간격, 분홍 코·'w' 입·볼터치
-    kawaii_eyes(fig, fc, FR + 0.02, spread=26, pitch=-4, size=0.5, tall=1.12)
-    nose(fig, fc, FR + 0.03, pitch=-17, size=0.12)
-    smile(fig, fc, FR + 0.04, pitch=-25, w=0.24)
+    for s in (-1, 1):   # 눈: 실제 얼굴 표면에 (round, 넓은 간격)
+        d = (math.sin(math.radians(s * 27)), math.sin(math.radians(-3)), 1.0)
+        f = surface_frame(fig, fc, d, layer='face', out=-0.06)
+        eye_at(fig, f, 'round', size=0.47, side=s)
+    f = surface_frame(fig, fc, (0, -0.28, 1), layer='face', out=0.02)
+    _ellipsoid(fig.extra, (0, 0, 0), (0.15, 0.1, 0.07), PINK, 12, 6, f)
+    f = surface_frame(fig, fc, (0, -0.44, 1), layer='face', out=-0.01)
     for s in (-1, 1):
-        p = np.array(_frame_on(fc, FR, s * 43, -22, 0).p((0, 0, 0)))
-        fig.paint(S.sphere(p, 0.55), BLUSH, soft=0.7)
+        for k in range(9):
+            a = math.pi * k / 8
+            _ellipsoid(fig.extra, (s * 0.12 + math.cos(a) * 0.12, -math.sin(a) * 0.1, 0.02), (0.045, 0.045, 0.035), (0.30, 0.16, 0.16), 6, 4, f)
+    for s in (-1, 1):   # 볼터치: 칠만 (돌출 없음)
+        f = surface_frame(fig, fc, (math.sin(math.radians(s * 42)), -0.38, 0.85), layer='face')
+        fig.paint(S.sphere(f.o, 0.5), BLUSH, soft=0.6)
     # ---- 제트팩 ----
     fig.add(S.box((0, y0 + 3.3, -1.42), (0.95, 0.95, 0.42), round_=0.25), (0.94, 0.94, 0.96), k=0.06, layer='pack')
     fig.add(S.torus((0, y0 + 3.6, -1.86), 0.27, 0.08, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='trim', metal=g)
@@ -479,7 +500,8 @@ def build(cid, tris=16000, seed=3, voxel=0.04):
     extra = np.asarray(fig.extra.pos, np.float64).reshape(-1, 3)
     mb = Builder()
     mb.pos = body.ravel().tolist() + extra.ravel().tolist()
-    mb.col = C[F].reshape(-1, 3).ravel().tolist() + list(fig.extra.col)
+    ex_col = vivid(np.asarray(fig.extra.col, np.float64).reshape(-1, 3)).ravel().tolist() if fig.extra.col else []
+    mb.col = C[F].reshape(-1, 3).ravel().tolist() + ex_col
     mb.nrm = N[F].reshape(-1, 3).ravel().tolist() + (smooth_normals(extra).ravel().tolist() if len(extra) else [])
     # 밤에 빛나는 부품 (fig.extra.emissive 로 만든 정점, 예: 고슴도치 LED): 알파 0 을 그대로 옮긴다
     ex_alpha = list(fig.extra.alpha) if len(fig.extra.alpha) == len(extra) else [1.0] * len(extra)

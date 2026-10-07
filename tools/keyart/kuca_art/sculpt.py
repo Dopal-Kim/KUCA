@@ -139,8 +139,10 @@ class Sculpt:
         if layer not in self.order:
             self.order.append(layer)
 
+    PAINT_EDGE = 0.35   # 칠 경계 선명도 (모든 paint 의 soft 에 곱한다; 작을수록 또렷한 색 경계)
+
     def paint(self, f, col, soft=0.05):
-        self.paints.append((f, np.asarray(col, np.float64), soft))
+        self.paints.append((f, np.asarray(col, np.float64), soft * self.PAINT_EDGE))
 
     def field(self, P, with_parts=False):
         layers = {}
@@ -173,7 +175,7 @@ class Sculpt:
         g = np.stack([self.field(V + e[i]) - self.field(V - e[i]) for i in range(3)], axis=1)
         return g / np.maximum(np.linalg.norm(g, axis=1, keepdims=True), 1e-9)
 
-    def colors(self, V, sharp=0.03, ao=0.5):
+    def colors(self, V, sharp=0.012, ao=0.5):
         dmin, per = self.field(V, with_parts=True)
         D = np.abs(np.stack(per, axis=1))                                # (N, parts) 표면까지 거리
         cols = np.stack([c for _, c, _, _ in self.parts])                # (parts, 3)
@@ -190,8 +192,8 @@ class Sculpt:
             occ = np.zeros(len(V))
             for i, h in enumerate((0.08, 0.18, 0.32, 0.5, 0.75)):
                 occ += (h - self.field(V + N * h)) / (2 ** i)
-            a = np.clip(1.0 - ao * np.clip(occ, 0, None) * 1.6, 0.45, 1.0)[:, None]
-            C = C * (a * np.array([1.0, 0.97, 1.0]) + (1 - a) * np.array([0.0, 0.0, 0.06]))   # 그늘은 살짝 보랏빛
+            a = np.clip(1.0 - ao * np.clip(occ, 0, None) * 1.2, 0.62, 1.0)[:, None]
+            C = C * a   # 접촉 그늘만 (색을 탁하게 하는 보랏빛 섞기 없음)
         return np.clip(C, 0, 1)
 
     def _relax(self, V, F, iters=6):
