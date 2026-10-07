@@ -70,7 +70,8 @@ HOW TO WORK
 2. Character #1 (Space Engineering Rabbit) defines the art style. Every other character must match #1's rendering style,
    proportion, face style and diorama base design exactly (different animal, same art style).
 3. Each (B) sheet shows exactly the same character as its (A) card: same face, colors, outfit, accessories and base.
-4. Above each image write only its number and name, e.g. "#1A Space Engineering Rabbit - card". Nothing written inside the images.
+4. Above each image write only its number, name and file name, e.g.
+   "#1A Space Engineering Rabbit - card  (3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png)". Nothing written inside the images.
 ''', 'SHARED STYLE (applies to every image)\n' + style,
          'RARITY RULES (each character lists its rarity)\n' + '\n\n'.join(rar.values()),
          'IMAGE TYPE (A)\n' + out_a.replace('OUTPUT = COLLECTION CARD:', 'COLLECTION CARD:'),
@@ -79,7 +80,28 @@ HOW TO WORK
          'CHARACTER LIST']
 for i, (_, _, c) in enumerate(order, 1):
     parts.append(f'#{i}\n' + c.strip())
-parts.append('Start now with #1A and continue through all 48 images to #24B in this same response without stopping.')
+FOLDER = {'COMMON': '1_Green_Common', 'RARE': '2_Blue_Rare', 'LEGENDARY': '3_Yellow_Legendary'}
+
+
+def file_base(i, c):
+    name = re.search(r'CHARACTER = ([^,(]+)', c).group(1).strip()
+    return f"{FOLDER[rarity(c)]}/{i:02d}_{''.join(w[:1].upper() + w[1:] for w in name.split())}"
+
+
+files = []
+for i, (_, _, c) in enumerate(order, 1):
+    files.append(f'#{i}A -> {file_base(i, c)}_card.png    #{i}B -> {file_base(i, c)}_model.png')
+parts.append('''DELIVERY - AFTER ALL 48 IMAGES ARE DONE
+When image #24B is finished, package everything as ONE zip file named "KUCA_Characters.zip" and give me the download link.
+Inside the zip, split the images into three folders by rarity:
+  1_Green_Common/      (green / common characters)
+  2_Blue_Rare/         (blue / rare characters)
+  3_Yellow_Legendary/  (gold / legendary landmark characters)
+Use exactly these file names (A = collection card, B = 3D model reference sheet), PNG at full resolution:
+''' + '\n'.join(files) + '''
+If you cannot create a zip file, instead list every image again grouped under the three folder names above with its file name,
+so I can download and sort them myself.''')
+parts.append('Start now with #1A and continue through all 48 images to #24B in this same response without stopping, then deliver the zip.')
 open(os.path.join(HERE, '제미나이_프롬프트_통합본.txt'), 'w', encoding='utf-8').write('\n\n'.join(parts) + '\n')
 
 # ---------- 2) 단체 시트: 24종을 한 장에 ----------

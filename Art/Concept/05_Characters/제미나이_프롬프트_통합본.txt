@@ -12,7 +12,8 @@ HOW TO WORK
 2. Character #1 (Space Engineering Rabbit) defines the art style. Every other character must match #1's rendering style,
    proportion, face style and diorama base design exactly (different animal, same art style).
 3. Each (B) sheet shows exactly the same character as its (A) card: same face, colors, outfit, accessories and base.
-4. Above each image write only its number and name, e.g. "#1A Space Engineering Rabbit - card". Nothing written inside the images.
+4. Above each image write only its number, name and file name, e.g.
+   "#1A Space Engineering Rabbit - card  (3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png)". Nothing written inside the images.
 
 
 SHARED STYLE (applies to every image)
@@ -260,4 +261,38 @@ Base decoration: a tiny tripod.
 POSE: standing on tiptoe taking a photo, one eye closed.
 LANDMARK: a modern building mixing blue glass curtain-wall volumes and beige stone volumes with vertical slit windows, a glass entrance canopy.
 
-Start now with #1A and continue through all 48 images to #24B in this same response without stopping.
+DELIVERY - AFTER ALL 48 IMAGES ARE DONE
+When image #24B is finished, package everything as ONE zip file named "KUCA_Characters.zip" and give me the download link.
+Inside the zip, split the images into three folders by rarity:
+  1_Green_Common/      (green / common characters)
+  2_Blue_Rare/         (blue / rare characters)
+  3_Yellow_Legendary/  (gold / legendary landmark characters)
+Use exactly these file names (A = collection card, B = 3D model reference sheet), PNG at full resolution:
+#1A -> 3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png    #1B -> 3_Yellow_Legendary/01_SpaceEngineeringRabbit_model.png
+#2A -> 1_Green_Common/02_Pigeon_card.png    #2B -> 1_Green_Common/02_Pigeon_model.png
+#3A -> 1_Green_Common/03_Snail_card.png    #3B -> 1_Green_Common/03_Snail_model.png
+#4A -> 1_Green_Common/04_Ant_card.png    #4B -> 1_Green_Common/04_Ant_model.png
+#5A -> 1_Green_Common/05_Ladybug_card.png    #5B -> 1_Green_Common/05_Ladybug_model.png
+#6A -> 2_Blue_Rare/06_CampusStrayCat_card.png    #6B -> 2_Blue_Rare/06_CampusStrayCat_model.png
+#7A -> 2_Blue_Rare/07_KoreanSquirrel_card.png    #7B -> 2_Blue_Rare/07_KoreanSquirrel_model.png
+#8A -> 2_Blue_Rare/08_Crow_card.png    #8B -> 2_Blue_Rare/08_Crow_model.png
+#9A -> 2_Blue_Rare/09_KoreanRaccoonDog_card.png    #9B -> 2_Blue_Rare/09_KoreanRaccoonDog_model.png
+#10A -> 3_Yellow_Legendary/10_LibraryOwl_card.png    #10B -> 3_Yellow_Legendary/10_LibraryOwl_model.png
+#11A -> 3_Yellow_Legendary/11_PlazaLakeDuck_card.png    #11B -> 3_Yellow_Legendary/11_PlazaLakeDuck_model.png
+#12A -> 3_Yellow_Legendary/12_MainGateMagpie_card.png    #12B -> 3_Yellow_Legendary/12_MainGateMagpie_model.png
+#13A -> 3_Yellow_Legendary/13_SportsCollegeLionCub_card.png    #13B -> 3_Yellow_Legendary/13_SportsCollegeLionCub_model.png
+#14A -> 3_Yellow_Legendary/14_ClockTowerRooster_card.png    #14B -> 3_Yellow_Legendary/14_ClockTowerRooster_model.png
+#15A -> 3_Yellow_Legendary/15_ArtCollegeChameleon_card.png    #15B -> 3_Yellow_Legendary/15_ArtCollegeChameleon_model.png
+#16A -> 3_Yellow_Legendary/16_CeramicsMole_card.png    #16B -> 3_Yellow_Legendary/16_CeramicsMole_model.png
+#17A -> 3_Yellow_Legendary/17_ObservatoryFlyingSquirrel_card.png    #17B -> 3_Yellow_Legendary/17_ObservatoryFlyingSquirrel_model.png
+#18A -> 3_Yellow_Legendary/18_AmphitheaterFrog_card.png    #18B -> 3_Yellow_Legendary/18_AmphitheaterFrog_model.png
+#19A -> 3_Yellow_Legendary/19_StadiumJindoPuppy_card.png    #19B -> 3_Yellow_Legendary/19_StadiumJindoPuppy_model.png
+#20A -> 3_Yellow_Legendary/20_ForeignLanguageParrot_card.png    #20B -> 3_Yellow_Legendary/20_ForeignLanguageParrot_model.png
+#21A -> 3_Yellow_Legendary/21_DormitoryHamster_card.png    #21B -> 3_Yellow_Legendary/21_DormitoryHamster_model.png
+#22A -> 3_Yellow_Legendary/22_ElectronicsHedgehog_card.png    #22B -> 3_Yellow_Legendary/22_ElectronicsHedgehog_model.png
+#23A -> 3_Yellow_Legendary/23_BusinessFox_card.png    #23B -> 3_Yellow_Legendary/23_BusinessFox_model.png
+#24A -> 3_Yellow_Legendary/24_MultimediaMeerkat_card.png    #24B -> 3_Yellow_Legendary/24_MultimediaMeerkat_model.png
+If you cannot create a zip file, instead list every image again grouped under the three folder names above with its file name,
+so I can download and sort them myself.
+
+Start now with #1A and continue through all 48 images to #24B in this same response without stopping, then deliver the zip.
