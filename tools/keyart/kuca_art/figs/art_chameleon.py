@@ -33,7 +33,7 @@ def build(fig, rng):
     # ---------- 다리·발 (가는 다리, 집게 발가락) ----------
     for s in (-1, 1):
         x = s * 0.6
-        fig.add(S.capsule((x, y0 + 0.35, 0.12), (x * 1.02, y0 + 1.45, 0.0), 0.3, 0.36), B, k=0.22)
+        fig.add(S.capsule((x, y0 + 0.35, 0.12), (x * 1.02, y0 + 1.45, 0.0), 0.3, 0.36), B, k=0.14)
         fig.add(S.ellipsoid((x, y0 + 0.22, 0.32), (0.4, 0.22, 0.5)), B, k=0.2)
         for a in (-35, 0, 35):
             R = S.rot(a, 0, 0)
@@ -48,11 +48,11 @@ def build(fig, rng):
 
     # ---------- 팔 (가늘게) ----------
     shL, elL, hdL = (-0.95, y0 + 3.1, 0.3), (-1.45, y0 + 2.45, 0.55), (-1.8, y0 + 2.62, 0.95)
-    fig.add(S.capsule(shL, elL, 0.29, 0.26), B, k=0.22)
+    fig.add(S.capsule(shL, elL, 0.29, 0.26), B, k=0.12)
     fig.add(S.capsule(elL, hdL, 0.26, 0.24), B, k=0.18)
     fig.add(S.sphere(hdL, 0.28), B, k=0.12)
     shR, elR, hdR = (0.95, y0 + 3.1, 0.3), (1.45, y0 + 2.5, 0.45), (1.82, y0 + 2.6, 0.7)
-    fig.add(S.capsule(shR, elR, 0.29, 0.26), B, k=0.22)
+    fig.add(S.capsule(shR, elR, 0.29, 0.26), B, k=0.12)
     fig.add(S.capsule(elR, hdR, 0.26, 0.24), B, k=0.18)
     fig.add(S.sphere(hdR, 0.28), B, k=0.12)
 
@@ -74,7 +74,7 @@ def build(fig, rng):
     hc = np.array((0, y0 + 4.75, 0.5))
     fig.add(S.ellipsoid(tuple(hc), (1.58, 1.3, 1.9)), B, k=0.45)
     fig.add(S.ellipsoid(tuple(hc + (0, -0.45, 0.35)), (1.5, 0.85, 1.55)), B, k=0.5)        # 넓은 턱 (볼 볼륨)
-    fig.add(S.ellipsoid((0, y0 + 3.65, 0.3), (0.82, 0.48, 0.72)), B, k=0.45)              # 목
+    fig.add(S.ellipsoid((0, y0 + 3.65, 0.3), (0.82, 0.48, 0.72)), B, k=0.3)              # 목
     casque = S.ellipsoid(tuple(hc + (0, 0.82, -1.05)), (0.5, 0.95, 1.05), R=S.rot(0, -38, 0))
     fig.add(casque, B, k=0.35)                                                             # 투구 볏
     eyes = []
@@ -89,28 +89,20 @@ def build(fig, rng):
         q = hit(fig, (0, y, -4.5), (0, 0, 1))
         fig.add(S.sphere(tuple(q + (0, 0, 0.02)), 0.19 - 0.07 * t), B, k=0.1)
 
-    # ---------- 무지개 칠 (몸 layer 에만) ----------
+    # ---------- 무지개 칠: 또렷한 사선 띠 (몸 layer 에만) ----------
     lp = lambda f, c, soft: layer_paint(fig, 'body', f, c, soft, tol=0.05)
-    lp(S.sphere((-1.2, y0 + 6.2, 0.0), 1.5), PINKP, 1.0)
-    lp(S.sphere((0.5, y0 + 6.3, 0.6), 1.3), YELLOWP, 1.0)
-    lp(S.sphere((1.8, y0 + 4.9, -0.3), 1.2), BLUEP, 0.9)
-    lp(S.sphere((-1.9, y0 + 4.3, -0.2), 1.0), LILAC, 0.9)
-    lp(S.sphere((0.0, y0 + 5.6, -1.4), 1.0), LILAC, 0.8)
-    lp(S.sphere((1.4, y0 + 2.7, 0.3), 0.9), BLUEP, 0.9)
-    lp(S.sphere((-1.4, y0 + 2.6, 0.6), 0.8), PINKP, 0.7)
-    lp(S.sphere((-0.8, y0 + 1.6, 0.9), 0.55), YELLOWP, 0.5)
-    lp(S.sphere((0.0, y0 + 2.5, -1.2), 1.1), LILAC, 1.0)
-    lp(S.sphere((0.8, y0 + 0.8, 0.3), 0.8), LILAC, 0.8)
-    lp(S.sphere((-0.8, y0 + 0.8, 0.3), 0.8), BLUEP, 0.8)
-    lp(S.sphere((-0.3, y0 + 1.85, -2.0), 0.65), PINKP, 0.5)
-    lp(S.sphere((-0.3, y0 + 0.45, -1.75), 0.55), YELLOWP, 0.5)
-    lp(S.sphere((-0.3, y0 + 1.15, -2.8), 0.5), BLUEP, 0.45)
-    lp(S.sphere((-0.3, y0 + 1.2, -1.85), 0.33), LILAC, 0.35)
-    for s in (-1, 1):
-        lp(S.sphere(tuple(hc + (s * 1.7, 0.6, 1.0)), 0.7), PINKP if s < 0 else YELLOWP, 0.6)
-    # 배·턱 (크림)
-    lp(S.ellipsoid((0, y0 + 2.05, 0.95), (0.62, 0.95, 0.32)), BELLY, 0.12)
-    lp(S.ellipsoid(tuple(hc + (0, -1.0, 1.25)), (1.25, 0.5, 0.9)), BELLY, 0.15)
+    bands = (PINKP, PEACH, YELLOWP, MINT, BLUEP, LILAC)
+    BW = 0.62                                         # 띠 폭
+
+    def coord(P):                                     # 띠 좌표: 위로 갈수록 + 앞뒤로 약간 기울어짐 + 살짝 물결
+        return P[:, 1] * 0.92 - P[:, 2] * 0.38 + P[:, 0] * 0.12 + 0.08 * np.sin(P[:, 0] * 2.3 + P[:, 2] * 1.7)
+    for i in range(-2, 16):
+        col = bands[i % len(bands)]
+        c0 = y0 + i * BW
+        lp(lambda P, c0=c0: np.abs(coord(P) - c0 - BW / 2) - BW / 2, col, 0.05)
+    # 배·턱 (크림, 또렷한 경계)
+    lp(S.ellipsoid((0, y0 + 2.05, 0.95), (0.62, 0.95, 0.34)), BELLY, 0.04)
+    lp(S.ellipsoid(tuple(hc + (0, -1.0, 1.25)), (1.25, 0.5, 0.9)), BELLY, 0.04)
 
     # ---------- 눈: 포탑 눈 (금테 + 흰 눈알 + 큰 갈색 눈) ----------
     for s, tc in eyes:

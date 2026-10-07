@@ -123,24 +123,28 @@ def build(fig, rng):
         for a, b in zip(pts, pts[1:]):
             fig.add(S.capsule(tuple(a), tuple(b), 0.055), (0.99, 0.99, 0.99), k=0.0, layer='stripe')
 
-    # 민소매 (흰 껍질) + 빨간 테
+    # 민소매 (흰 껍질, 팔 구멍·목 U 파임을 또렷하게 자름) — 테는 아래에서 칠
     T_TOP = y0 + 4.08
+    ARM = {s_: ((s_ * 1.02, y0 + 3.75, 0.02), (s_ * 1.35, y0 + 2.95, 0.18)) for s_ in (-1, 1)}
+
+    def neck_u(P):
+        return np.hypot(P[:, 0] / 0.48, (P[:, 1] - T_TOP) / 0.34)
+
+    def armcut(P):
+        d = None
+        for sh_, el_ in ARM.values():
+            v = np.minimum(S.capsule(sh_, el_, 0.31, 0.28)(P), S.sphere(sh_, 0.36)(P))
+            d = v if d is None else np.minimum(d, v)
+        return d
 
     def tank(P):
-        d = np.abs(torso_f(P) - 0.17) - 0.065
-        d = rmax(d, (y0 + 2.62) - P[:, 1], 0.06)
+        d = np.abs(torso_f(P) - 0.16) - 0.075
+        d = rmax(d, (y0 + 2.62) - P[:, 1], 0.05)
         d = np.maximum(d, P[:, 1] - T_TOP)
-        neck = np.maximum(np.hypot(P[:, 0] / 0.48, (P[:, 1] - T_TOP) / 0.34) - 1.0, -(P[:, 2] - 0.15))
-        d = np.maximum(d, -neck * 0.5)
+        d = np.maximum(d, -np.maximum(neck_u(P) - 1.0, -(P[:, 2] - 0.15)))
+        d = np.maximum(d, -(armcut(P) - 0.05))
         return d
     fig.add(tank, SHIRT, k=0.0, layer='tank')
-    pts = []
-    for a in np.linspace(-math.pi * 0.5, math.pi * 0.5, 15):
-        x = math.sin(a) * 0.5
-        y = T_TOP - math.cos(a) * 0.36
-        pts.append(hit(fig, (x, y, 4.5), (0, 0, -1), field=tank) + (0, 0, -0.03))
-    for a, b in zip(pts, pts[1:]):
-        fig.add(S.capsule(tuple(a), tuple(b), 0.055), RED, k=0.02, layer='trim')
 
     # ---------- 팔 (가늘고 김) + 손목밴드 ----------
     arms = {}
@@ -161,8 +165,9 @@ def build(fig, rng):
         R = S.rot(0, 0, s * 16)
         fig.add(S.cylinder(tuple(wc), 0.34, 0.13, round_=0.05, R=R), RED, k=0.0, layer='band')
 
-    for ah, near in arm_holes:   # 소매 둘레 빨간 테
-        layer_paint(fig, 'tank', lambda P, ah=ah, near=near: np.maximum(np.abs(ah(P) - 0.08) - 0.1, near(P)), RED, 0.03, tol=0.03)
+    # 민소매 빨간 테: 목 U 둘레 + 팔 구멍 둘레 (또렷한 띠)
+    layer_paint(fig, 'tank', lambda P: np.where(P[:, 2] > 0.15, neck_u(P) - 1.28, 1.0), RED, 0.02, tol=0.04)
+    layer_paint(fig, 'tank', lambda P: armcut(P) - 0.2, RED, 0.02, tol=0.04)
     # ---------- 바통 (왼손, 화면 왼쪽) ----------
     hd = np.array(arms[-1][2])
     b0 = hd + np.array((0.12, 0.4, 0.22))

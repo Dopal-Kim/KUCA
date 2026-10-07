@@ -38,7 +38,7 @@ def build(fig, rng):
              (-112, -30, 0.34), (112, -30, 0.34)]
     for yaw, pitch, r in spots:
         p, n = surf_point(shell, bc, yaw, pitch)
-        fig.paint(masked(S.sphere(p, r), near_b, 0.1), SPOT, soft=0.04)     # 점은 칠만 (표면과 같은 높이, 매끈한 가장자리)
+        fig.add(S.intersect(lambda P: shell(P) - 0.06, S.sphere(p, r)), SPOT, k=0.0, layer='spot')   # 또렷한 검은 점 (얇은 판)
     # ---- 팔다리 (짙은 갈색, 짧고 통통) ----
     LIMB = DARK
     for s in (-1, 1):
@@ -58,19 +58,16 @@ def build(fig, rng):
     fig.paint(masked(lambda P: np.abs(P[:, 0]) - 0.025, near_h, 0.06), (0.20, 0.14, 0.13), soft=0.04)
     fc = np.array((0.0, y0 + 5.55, 0.15))
     face0 = S.intersect(soft_head(fc, (1.6, 1.42, 1.62), flare=0.1, flare_y=-0.45), lambda P: (0.2 - P[:, 2]) * 0.8)
-    mp, mn = surf_point(face0, fc, 0, -24)
-    Rmo = basis(mn)
-    def mouth_d(P):     # 'D' 모양 열린 입 (위 평평, 아래 둥글게)
-        q = (P - mp) @ Rmo
-        return np.maximum(np.hypot(q[:, 0] / 0.3, q[:, 1] / 0.25) - 1.0, q[:, 1] - 0.05) * 0.3
-    for_face = lambda P: S.subtract(face0, lambda Q: np.maximum(mouth_d(Q), np.abs((Q - mp) @ Rmo[:, 2]) - 0.12), k=0.05)(P)
-    fig.add(for_face, SKIN, k=0.06, layer='helm')
-    mz = lambda P: (np.abs((P - mp) @ Rmo[:, 2]) - 0.3) * 10
-    fig.paint(lambda P: np.maximum(mouth_d(P) * 10, mz(P)), (0.55, 0.14, 0.16), soft=0.2)
-    fig.paint(lambda P: np.maximum(np.maximum(mouth_d(P) * 10, ((P - mp) @ Rmo[:, 1] + 0.1) * 20), mz(P)), (0.98, 0.52, 0.56), soft=0.3)
-    eye_pair(fig, fc, 25, 2, 'round', 0.42, iris=(0.40, 0.21, 0.09), layer='helm', sink=0.14)
-    blush_paint(fig, fc, 44, -20, 'helm', size=0.4, soft=0.55)
-    fig.paint(S.sphere(face_frame(fig, fc, 0, -11, 'helm').o, 0.06), (0.88, 0.62, 0.55), soft=0.05)
+    fig.add(face0, SKIN, k=0.0, layer='face')
+    # 활짝 웃는 'D' 입: 또렷한 부품 (짙은 입 안 + 분홍 혀), 표면에 붙임
+    fmo = face_frame(fig, fc, 0, -23, 'face', out=-0.03)
+    for k in range(7):
+        t = -1 + 2 * k / 6
+        ell(fig.extra, fmo, (t * 0.16, -0.1 * (1 - t * t) * 0.9, 0.0), (0.09, 0.09 + 0.06 * (1 - t * t), 0.06), (0.50, 0.12, 0.15), 10, 6)
+    ell(fig.extra, fmo, (0, -0.13, 0.03), (0.13, 0.07, 0.05), (1.0, 0.52, 0.58), 12, 6)
+    eye_pair(fig, fc, 25, 2, 'round', 0.42, iris=(0.40, 0.21, 0.09), layer='face', sink=0.14)
+    blush_paint(fig, fc, 42, -18, 'face', size=0.36, soft=0.4)
+    fig.paint(S.sphere(face_frame(fig, fc, 0, -11, 'face').o, 0.06), (0.88, 0.62, 0.55), soft=0.05)
     # ---- 더듬이 (가는 줄기 + 큰 공) ----
     for s in (-1, 1):
         a, _ = surf_point(helm, hc, s * 22, 60)
@@ -90,19 +87,19 @@ def build(fig, rng):
     for s in (-1, 1):
         fig.add(S.box(tuple(pc + (s * 0.98, -0.3, 0.0)), (0.18, 0.45, 0.35), round_=0.14), PACK_D, k=0.0, layer='pack2')   # 옆주머니
     # 멜빵: 가방 위 → 어깨 넘어 → 가슴 앞 → 겨드랑이 아래 → 가방 아래 (등딱지 표면을 따라)
-    strap_pts = {}
-    for s in (-1, 1):
-        pts = [pc + (s * 0.6, 0.85, 0.35)]
-        for yaw, pitch in ((150, 48), (90, 56), (40, 52), (32, 36), (30, 10), (38, -18), (62, -34), (110, -36)):
-            p, n = surf_point(shell, bc, s * yaw, pitch)
-            pts.append(p + n * 0.1)
-        pts.append(pc + (s * 0.75, -0.85, 0.35))
-        strap_pts[s] = pts
-        for a, b in zip(pts, pts[1:]):
-            fig.add(S.capsule(tuple(a), tuple(b), 0.12), PACK, k=0.08, layer='strap')
+    for s_ in (-1, 1):   # 등딱지를 감싸는 납작한 띠 (평면으로 자른 껍질 → 또렷한 가장자리)
+        nrm = np.array((1.0, 0.0, 0.12 * s_)); nrm /= np.linalg.norm(nrm)
+        c0 = np.array((s_ * 0.98, 0, 0))
+        def band(P, nrm=nrm, c0=c0):
+            shell_d = np.abs(shell(P) - 0.06) - 0.07
+            plane = np.abs((P - c0) @ nrm) - 0.13
+            low = (bc[1] - 1.25) - P[:, 1]
+            return np.maximum(np.maximum(shell_d, plane), low)
+        fig.add(band, PACK, k=0.0, layer='strap')
     # 진홍 꽃 단추 (-x 멜빵 가슴)
-    bp, bn = surf_point(shell, bc, -31, 28)
-    bp = bp + bn * 0.2
+    fbt = Fg.surface_frame(fig, (-0.98, bc[1] + 0.85, 6.0), (0, 0, -1), layer='strap')
+    bp, bn = np.array(fbt.o), np.array(fbt.z)
+    bp = bp + bn * 0.05
     Rb = axis_R(bn)
     fig.add(S.cylinder(tuple(bp), 0.3, 0.07, round_=0.05, R=Rb), Fg.CRIMSON, k=0.0, layer='button')
     for k in range(5):

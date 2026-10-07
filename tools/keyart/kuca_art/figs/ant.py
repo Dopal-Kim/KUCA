@@ -61,12 +61,12 @@ def build(fig, rng):
             fig.add(S.capsule(tuple(p), tuple(q), 0.13, 0.12), LIMB, k=0.12, layer='ant')
         fig.add(S.sphere(tuple(d), 0.16), LIMB, k=0.1, layer='ant')
     # ---- 잎 모자: 머리를 두건처럼 덮음 (잎맥이 앞→뒤, 뒤쪽 끝이 목덜미까지, +x 쪽이 조금 더 내려옴) ----
-    O = np.array((0.05, y0 + 7.42, -0.25))
+    O = np.array((0.05, y0 + 7.55, -0.3))
     dvec = np.array((-0.12, 0.0, 1.0)); dvec /= np.linalg.norm(dvec)
     R = np.stack([np.cross((0, 1, 0), dvec), np.array((0, 1.0, 0)), dvec], axis=1)
-    R = R @ S.rot(0, 0, 9)
-    u0, u1 = -2.55, 1.45
-    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.45, 0.42, 0.58, 0.36, th=0.09, rib=0.06, tip_pow=0.85)
+    R = R @ S.rot(0, 0, 7)
+    u0, u1 = -2.55, 1.95
+    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.5, 0.3, 0.58, 0.27, th=0.1, rib=0.06, tip_pow=0.9)
     fig.add(lf, LEAF, k=0.0, layer='leaf')
     leaf_paints(fig, lf, local, height, width, u0, u1, under=(0.64, 0.86, 0.38), vein=LEAF_HI, spacing=0.6)
     pb, nb = to_world(u0 + 0.05, 0.0)

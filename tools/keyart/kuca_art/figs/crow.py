@@ -262,7 +262,7 @@ def build(fig, rng):
     torso = S.ellipsoid((0, y0 + 2.25, 0.0), (1.98, 1.78, 1.78))
     belly = S.ellipsoid((0, y0 + 1.92, 0.32), (1.82, 1.5, 1.6))
     trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
-    core = lambda P: S.smin(head(P), trunk(P), 0.6)
+    core = lambda P: S.smin(head(P), trunk(P), 0.4)
     fig.add(core, INK, k=0.3)
     # 정수리 깃털 (가운데 위로, 양옆으로 휘어진 뾰족한 깃 + 뒤 작은 깃)
     top = hc + np.array((0, 1.88, -0.15))

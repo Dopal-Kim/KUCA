@@ -11,9 +11,9 @@ TIER = 'gold'
 
 INK = (0.17, 0.17, 0.20)
 WHITE = (0.98, 0.97, 0.96)
-NAVY = (0.15, 0.22, 0.46)
-TEAL = (0.10, 0.46, 0.50)
-GREEN = (0.20, 0.50, 0.36)
+NAVY = (0.11, 0.19, 0.54)
+TEAL = (0.03, 0.50, 0.52)
+GREEN = (0.10, 0.56, 0.38)
 BEAK = (0.30, 0.30, 0.34)
 LEG = (0.20, 0.20, 0.24)
 CAP = (0.13, 0.13, 0.15)
@@ -315,16 +315,16 @@ def build(fig, rng):
     cc = np.array((2.85, y0 - 0.02, 0.85))
     clear_grass(fig, lambda C: np.linalg.norm(C[:, [0, 2]] - cc[[0, 2]], axis=1) < 0.7)
     fig = Fast(fig)
-    hc = np.array((0.0, y0 + 5.62, 0.3))
+    hc = np.array((0.0, y0 + 5.55, 0.28))
     # 매끈한 둥근 머리 (앞으로 살짝 숙임), 아래쪽이 아주 살짝 넓다 (볼 구 없음)
-    head_up = S.ellipsoid(hc, (1.82, 1.78, 1.8), R=S.rot(0, 10, 0))
-    head_lo = S.ellipsoid(hc + np.array((0, -0.5, 0.12)), (1.9, 1.25, 1.7))
+    head_up = S.ellipsoid(hc, (1.72, 1.7, 1.72), R=S.rot(0, 10, 0))
+    head_lo = S.ellipsoid(hc + np.array((0, -0.48, 0.1)), (1.8, 1.2, 1.62))
     head = lambda P: S.smin(head_up(P), head_lo(P), 0.5)
     # 날씬하지만 배는 둥근 몸: 아래 둥근 배 → 위로 갈수록 좁아지는 가슴
-    belly = S.ellipsoid((0, y0 + 2.12, 0.12), (1.66, 1.55, 1.56))
-    chest = S.ellipsoid((0, y0 + 3.42, 0.1), (1.4, 1.3, 1.32))
+    belly = S.ellipsoid((0, y0 + 2.15, 0.15), (1.82, 1.62, 1.66))
+    chest = S.ellipsoid((0, y0 + 3.45, 0.12), (1.55, 1.3, 1.42))
     trunk = lambda P: S.smin(belly(P), chest(P), 0.7)
-    core = lambda P: S.smin(head(P), trunk(P), 0.95)
+    core = lambda P: S.smin(head(P), trunk(P), 0.55)
     fig.add(core, INK, k=0.3)
     # 흰 무늬: 볼 (눈 아래·옆) + 가슴·배
     for s in (-1, 1):
@@ -348,7 +348,7 @@ def build(fig, rng):
         toes.append(S.capsule(ank - (0, 0.1, 0), ank + np.array((0, -0.15, -0.5)), 0.11, 0.07))
         fig.add(U(toes, 0.08), LEG, k=0.06, layer='feet')
     # 긴 꼬리 (뒤 아래로 넓게, 남색 → 청록 끝)
-    tp = np.array((0, y0 + 2.05, -1.3))
+    tp = np.array((0, y0 + 2.05, -1.42))
     tail = U([feather(tp, 0, 36, r, 1.5, (0.36, 1.45, 0.12)) for r in (-15, -7.5, 0, 7.5, 15)], 0.05)
     fig.add(tail, NAVY, k=0.1, layer='tail')
     fig.paint(lambda P: np.maximum(S.sphere(tp + S.rot(0, 36, 0) @ np.array((0, -2.9, 0)), 1.5)(P), np.abs(tail(P)) - 0.1), TEAL, soft=0.6)
@@ -381,7 +381,7 @@ def build(fig, rng):
     envelope(fig, (1.05, y0 + 3.15, 2.0), S.rot(-18, -10, 12))
     # 벨보이 모자: 검은 원통 + 진홍 띠 + 금 테 2줄 + 앞 금 단추 + 작은 챙
     Rc = S.rot(0, -6, -8)
-    cp = hc + np.array((0.2, 1.75, -0.12))
+    cp = hc + np.array((0.2, 1.67, -0.12))
     fig.add(S.cylinder(cp + Rc @ np.array((0, 0.32, 0)), 1.28, 0.36, round_=0.2, R=Rc), CAP, k=0.0, layer='cap')
     fig.add(S.cylinder(cp + Rc @ np.array((0, -0.12, 0)), 1.2, 0.2, round_=0.06, R=Rc), CRIMSON, k=0.0, layer='band')
     for yy in (0.1, -0.33):

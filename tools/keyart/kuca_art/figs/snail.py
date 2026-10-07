@@ -19,7 +19,7 @@ LEAF = (0.42, 0.76, 0.22)
 LEAF_HI = (0.58, 0.86, 0.34)
 LEAF_UNDER = (0.56, 0.84, 0.32)
 STEM = (0.40, 0.70, 0.20)
-BROW = (0.80, 0.60, 0.42)
+BROW = (0.70, 0.47, 0.28)
 
 
 def leaf_fn(O, R, u0, u1, Wm, k_tip, k_base, k_cup, th=0.08, rib=0.05, tip_pow=0.75, k_cup_pos=None):
@@ -127,7 +127,7 @@ def build(fig, rng):
         parts.append(S.ellipsoid(bc, (0.6, 0.56, 0.56)))
 
     def core(P):
-        d = S.smin(parts[0](P), parts[1](P), 0.9)
+        d = S.smin(parts[0](P), parts[1](P), 0.6)
         for i, g in enumerate(parts[2:]):
             d = S.smin(d, g(P), 0.45 if i < 2 else 0.25)
         return d
@@ -144,7 +144,7 @@ def build(fig, rng):
     for s in (-1, 1):
         p0 = face_frame(fig, hc, s * 17, 6).o
         p1 = face_frame(fig, hc, s * 31, 3).o
-        fig.paint(masked(S.capsule(p0, p1, 0.06, 0.045), near_body, 0.1), BROW, soft=0.05)
+        fig.paint(masked(S.capsule(p0, p1, 0.075, 0.05), near_body, 0.12), BROW, soft=0.03)
     # 눈자루 끝: 반쯤 감긴 졸린 눈 (eye_at droopy, 크림색 눈꺼풀)
     for s, bc in zip((-1, 1), balls):
         f = face_frame(fig, bc, s * 6, -6, 'body', out=-0.06)
@@ -161,15 +161,15 @@ def build(fig, rng):
     fig.paint(masked(lambda P: P[:, 1] - (y0 + 1.6), near_shell, 0.08), SHELL_D, soft=0.8)
     gem = scn + np.array((0.25, 1.62, 0.25))
     p_g, n_g = surf_point(shell_f, scn, -95, 58)
-    fig.add(S.ellipsoid(tuple(p_g + n_g * 0.1), (0.32, 0.32, 0.22), R=basis(n_g)), (0.86, 0.10, 0.12), k=0.0, layer='gem',
-            metal=((0.80, 0.10, 0.12), (1.0, 0.6, 0.6)))
+    fig.add(S.ellipsoid(tuple(p_g + n_g * 0.02), (0.3, 0.3, 0.16), R=basis(n_g)), Fg.CRIMSON, k=0.0, layer='gem',
+            metal=(Fg.CRIMSON, (1.0, 0.55, 0.55)))
 
     # ---- 잎 우산 (오른손 +x 으로 줄기를 쥠) ----
     O = np.array((0.3, y0 + 10.05, 0.0))
     d = np.array((1.0, 0.0, 0.3)); d /= np.linalg.norm(d)
     R = np.stack([np.cross((0, 1, 0), d), np.array((0, 1.0, 0)), d], axis=1)
     u0, u1 = -2.9, 3.4
-    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 3.15, 0.3, 0.17, 0.19, th=0.1, rib=0.06, tip_pow=0.65)
+    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 3.15, 0.3, 0.17, 0.19, th=0.12, rib=0.06, tip_pow=0.65)
     fig.add(lf, LEAF, k=0.0, layer='leaf')
     leaf_paints(fig, lf, local, height, width, u0, u1, spacing=0.9)
     # 물방울

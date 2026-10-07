@@ -96,8 +96,8 @@ def build(fig, rng):
         q = P - hc
         y = q[:, 1]
         th = np.arctan2(q[:, 0], q[:, 2])
-        band = np.cos(2 * math.pi * (y + 0.25 * np.abs(np.sin(th))) / 0.55) - 0.35
-        side = (np.abs(th) > 1.1) | (y > 0.75)
+        band = np.cos(2 * math.pi * (y + 0.25 * np.abs(np.sin(th))) / 0.6) - 0.3
+        side = (np.abs(th) > 1.15) | ((y > 0.7) & (np.abs(th) > 0.75))
         return np.where(side & (y > -1.4) & (y < 1.75), -band, 1.0) * 0.6
     fig.paint(masked(stripes_head, lambda P: np.abs(head_parts[0](P)), 0.12), STRIPE, soft=0.14)
     for x0, tilt in ((-0.45, 6), (0.0, 0), (0.45, -6)):   # 이마 'M' 줄

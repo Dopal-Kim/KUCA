@@ -9,9 +9,9 @@ from .. import figures as Fg
 
 TIER = 'blue'
 
-FUR = (0.63, 0.53, 0.45)
+FUR = (0.66, 0.52, 0.42)
 FUR_LT = (0.72, 0.63, 0.55)
-FUR_DK = (0.37, 0.26, 0.20)
+FUR_DK = (0.34, 0.22, 0.16)
 CREAM = (0.98, 0.94, 0.88)
 EAR_IN = (0.99, 0.82, 0.76)
 NOSE = (0.22, 0.14, 0.12)
@@ -287,7 +287,7 @@ def build(fig, rng):
     belly = S.ellipsoid((0, y0 + 1.92, 0.3), (1.66, 1.45, 1.5))
     trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
     face = head
-    core = lambda P: S.smin(face(P), trunk(P), 0.6)
+    core = lambda P: S.smin(face(P), trunk(P), 0.38)
     fig.add(core, FUR, k=0.3)
     # 볼 털 뭉치 (옆으로 삐죽)
     tufts = []
@@ -338,7 +338,7 @@ def build(fig, rng):
     sh_r, el_r, pw_r = np.array((-1.5, y0 + 3.05, 0.25)), np.array((-1.95, y0 + 2.3, 0.65)), np.array((-1.82, y0 + 2.6, 1.42))
     sh_l, el_l, pw_l = np.array((1.5, y0 + 3.05, 0.2)), np.array((1.98, y0 + 2.3, 0.4)), np.array((2.02, y0 + 1.75, 0.75))
     for sh, el, pw in ((sh_r, el_r, pw_r), (sh_l, el_l, pw_l)):
-        fig.add(S.capsule(sh, el, 0.5, 0.43), FUR, k=0.3, layer='body')
+        fig.add(S.capsule(sh, el, 0.5, 0.43), FUR, k=0.16, layer='body')
         fig.add(S.capsule(el, pw, 0.43, 0.42), FUR_DK, k=0.15, layer='body')
         fig.add(S.sphere(pw, 0.46), FUR_DK, k=0.15, layer='body')
         fig.paint(S.capsule(el, pw, 0.55), FUR_DK, soft=0.2)

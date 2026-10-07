@@ -10,7 +10,7 @@ from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell,
 
 TIER = 'blue'
 
-FUR = (0.56, 0.39, 0.27)
+FUR = (0.60, 0.39, 0.24)
 FUR_D = (0.36, 0.24, 0.16)
 FUR_L = (0.70, 0.52, 0.38)
 CREAM = (0.98, 0.91, 0.79)
@@ -53,7 +53,7 @@ def build(fig, rng):
         d = S.smin(torso(P), belly(P), 0.4)
         for g in parts:
             d = S.smin(d, g(P), 0.3)
-        return S.smin(d, head(P), 0.5)
+        return S.smin(d, head(P), 0.35)
     # ---- 귀 + 귀 끝 털 ----
     ears = []
     for s in (-1, 1):
@@ -128,10 +128,12 @@ def build(fig, rng):
         d = None
         for (a, ra), (b, rb) in zip(tp, tp[1:]):
             g = S.capsule(a, b, ra, rb)(P)
-            d = g if d is None else S.smin(d, g, 0.4)
-        return d + fuzz(P, 0.045, 2.6)
+            d = g if d is None else S.smin(d, g, 0.6)
+        return d + fuzz(P, 0.015, 3.0)
     fig.add(tail, FUR, k=0.3)
-    fig.paint(masked(lambda P: -(np.abs(tail(P)) - 0.0) * 0 + (np.hypot(P[:, 0] - 0.4, (P[:, 2] + 2.6)) - 0.9), lambda P: np.abs(tail(P)), 0.15), FUR_L, soft=0.8)
+    nt = lambda P: np.abs(tail(P))
+    fig.paint(masked(lambda P: (P[:, 2] + 3.35) * 3.0, nt, 0.15), FUR_L, soft=0.25)          # 꼬리 바깥 끝 테두리 밝게
+    fig.paint(masked(lambda P: np.abs(P[:, 0]) - 0.35 + (P[:, 2] + 1.6) * 0.0, nt, 0.15), FUR_D, soft=0.6)  # 꼬리 등줄 짙게
 
     # ---- 파란 털모자 (머리 위, 골지 테 + 방울) ----
     top, tn = surf_point(head0, hc, 0, 75)
@@ -164,7 +166,7 @@ def build(fig, rng):
             pts.append(p + n * 0.07)
         pts.append(np.array((-1.05, y0 + 2.42, 0.95)) if side == 0 else np.array((-1.35, y0 + 2.1, 0.5)))
         for a, b in zip(pts, pts[1:]):
-            fig.add(S.capsule(tuple(a), tuple(b), 0.1), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
+            fig.add(S.capsule(tuple(a), tuple(b), 0.12), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
     over = [surf_point(shell_core, np.array((pa[0] * 0.9, pa[1] - 0.15, z)), 0, 90)[0] for z in (-0.8, -0.4, 0.0, 0.4, 0.8)]
     for a, b in zip(over, over[1:]):
         fig.add(S.capsule(tuple(a + (0, 0.06, 0)), tuple(b + (0, 0.06, 0)), 0.1), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))

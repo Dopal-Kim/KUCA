@@ -9,10 +9,10 @@ from .. import figures as Fg
 
 TIER = 'gold'
 
-FUR = (0.97, 0.76, 0.42)
+FUR = (0.98, 0.74, 0.36)
 FUR_LT = (0.99, 0.88, 0.66)
-MANE = (0.91, 0.60, 0.27)
-MANE_LT = (0.97, 0.72, 0.38)
+MANE = (0.90, 0.56, 0.20)
+MANE_LT = (0.97, 0.69, 0.30)
 MUZZLE = (1.0, 0.96, 0.90)
 EAR_IN = (0.97, 0.66, 0.62)
 NOSE = (0.86, 0.48, 0.48)
@@ -288,6 +288,17 @@ def tube_stripe(a, b, r, refdir, ang, w, t0=0.0, t1=1.0):
     return f
 
 
+def stripe_line(a, b, ra, rb, refdir, ang, w=0.065):
+    """원통 구간 a→b (반지름 ra→rb) 표면을 따라가는 또렷한 세로 줄 (별도 레이어용 SDF)"""
+    a, b = np.asarray(a, np.float64), np.asarray(b, np.float64)
+    ax = (b - a) / np.linalg.norm(b - a)
+    u = np.asarray(refdir, np.float64) - ax * (np.asarray(refdir, np.float64) @ ax)
+    u /= np.linalg.norm(u)
+    v = np.cross(ax, u)
+    d = u * math.cos(ang) + v * math.sin(ang)
+    return S.capsule(a + d * (ra - w * 0.35), b + d * (rb - w * 0.35), w)
+
+
 def stairs(fig, c, yaw):
     """돌계단 3단 (뒤로 올라감) + 돌 이음 선"""
     c = np.asarray(c, np.float64)
@@ -336,7 +347,7 @@ def build(fig, rng):
     for s in (-1, 1):
         fig.add(S.torus((s * 0.78, y0 + 0.95, 0.15), 0.5, 0.1), SUIT_SH, k=0.0, layer='pants')
         for k in (-1, 1):
-            fig.paint(tube_stripe((s * 0.78, y0 + 0.9, 0.15), (s * 0.72, y0 + 2.2, 0.05), 0.58, (s, 0, 0), k * 0.2, 0.065), STRIPE, soft=0.02)
+            fig.add(stripe_line((s * 0.78, y0 + 0.98, 0.15), (s * 0.73, y0 + 1.85, 0.05), 0.56, 0.62, (s, 0, 0), k * 0.2), STRIPE, k=0.0, layer='stripe')
     # ---- 꼬리 (오른쪽 뒤로, 끝 갈기 뭉치) ----
     tl = [(0.25, 1.9, -1.0), (0.85, 1.5, -1.55), (1.55, 1.35, -1.6), (2.0, 1.7, -1.2), (2.15, 2.15, -0.95)]
     tl = [np.array(p) + (0, y0, 0) for p in tl]
@@ -364,7 +375,8 @@ def build(fig, rng):
         fig.add(S.capsule(el, wr, 0.5, 0.45), SUIT, k=0.2, layer='jacket')
         fig.add(S.torus(wr, 0.4, 0.13, Rm=axes(wr - el, (0, 0, 1)) @ np.eye(3)), SUIT_SH, k=0.0, layer='cuff')
         for k in (-1, 1):
-            fig.paint(tube_stripe(sh + (0, 0.3, 0), wr, 0.5, (s, 1.0, 0), k * 0.24, 0.07, 0.0, 0.93), STRIPE, soft=0.02)
+            fig.add(U([stripe_line(sh + (0, 0.12, 0), el, 0.6, 0.5, (s, 1.0, 0), k * 0.24), stripe_line(el, wr - (wr - el) * 0.12, 0.5, 0.45, (s, 1.0, 0), k * 0.24)], 0.04),
+                    STRIPE, k=0.0, layer='stripe')
         pw = wr + (wr - el) / np.linalg.norm(wr - el) * 0.42
         fig.add(S.sphere(pw, 0.4), FUR, k=0.15, layer='paw')
         for u in (-1, 0, 1):
@@ -408,14 +420,17 @@ def build(fig, rng):
                 continue
             # 잎 모양 털 뭉치: 아래로 겹쳐 내려오는 비늘처럼, 끝이 둥글게 가늘어짐 (복슬한 실루엣)
             b0 = p + R @ np.array((0, -0.2, -0.08))
-            locks.append(S.capsule(b0, b0 + R @ np.array((0, L * 1.2, 0)), 0.34, 0.13))
-    for (el_, n, L) in ((58, 13, 0.62), (70, 9, 0.58), (81, 5, 0.52), (90, 1, 0.48)):
-        for j in range(n):
-            az = 360 * (j + 0.3) / n + 180
-            d = _dir(az, el_)
-            p = mc + d * MR * 0.9
-            R = axes(d * 0.5 + np.array((0, 0.05, -0.9)), d)
-            locks.append(S.capsule(p, p + R @ np.array((0, L * 1.25, 0)), 0.34, 0.13))
+            locks.append(S.capsule(b0, b0 + R @ np.array((0, L * 1.0, 0)), 0.4, 0.16))
+    # 정수리: 앞(밴드 뒤)에서 뒤로 빗어 넘긴 긴 갈기 결 (돔을 따라 흐르는 굵은 → 가는 관)
+    for u in (-1.05, -0.7, -0.35, 0.0, 0.35, 0.7, 1.05):
+        pts = []
+        for t in np.linspace(0, 1, 7):
+            th = math.radians(62 + 88 * t + 6 * abs(u))
+            d = np.array((u * (0.62 - 0.12 * t), math.sin(th), math.cos(th)))
+            d /= np.linalg.norm(d)
+            pts.append(mc + d * MR * (1.03 + 0.05 * math.sin(math.pi * t)))
+        rr = [0.4 - 0.27 * t for t in np.linspace(0, 1, 7)]
+        locks += [S.capsule(pts[i], pts[i + 1], rr[i], rr[i + 1]) for i in range(6)]
     lk = U(locks, 0.12)
     mane = lambda P: S.smin(mb(P), lk(P), 0.25)
     fig.add(mane, MANE, k=0.0, layer='mane')
