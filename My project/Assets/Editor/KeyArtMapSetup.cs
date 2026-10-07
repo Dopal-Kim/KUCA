@@ -50,7 +50,7 @@ public static class KeyArtMapSetup
     class Look
     {
         public Sun sun; public Ambient ambient; public float shadowStrength; public Fog fog;
-        public float[] outerGrass; public Detail grassDetail; public Cam camera; public Styles styles;
+        public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
     }
     [System.Serializable] class StyleRow { public string id, style; }
     [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; }
@@ -96,14 +96,15 @@ public static class KeyArtMapSetup
         outer.SetFloat("_DetailStrength", look.grassDetail.strength);
         EditorUtility.SetDirty(outer);
 
-        // 건물 외벽: 스타일별 재질
+        // 건물 외벽: 스타일별 재질 (층 높이도 건물 높이 배율만큼 키워 층수는 그대로)
+        float hs = look.buildingHeightScale > 0f ? look.buildingHeightScale : 1f;
         var styleMats = new Dictionary<string, Material>
         {
-            { "Default", StyleMaterial(BuildingMat, look.styles.Default) },
-            { "Classical", StyleMaterial(Dir + "/KeyArtBuilding_Classical.mat", look.styles.Classical) },
-            { "Modern", StyleMaterial(Dir + "/KeyArtBuilding_Modern.mat", look.styles.Modern) },
-            { "Glass", StyleMaterial(Dir + "/KeyArtBuilding_Glass.mat", look.styles.Glass) },
-            { "Brick", StyleMaterial(Dir + "/KeyArtBuilding_Brick.mat", look.styles.Brick) },
+            { "Default", StyleMaterial(BuildingMat, look.styles.Default, hs) },
+            { "Classical", StyleMaterial(Dir + "/KeyArtBuilding_Classical.mat", look.styles.Classical, hs) },
+            { "Modern", StyleMaterial(Dir + "/KeyArtBuilding_Modern.mat", look.styles.Modern, hs) },
+            { "Glass", StyleMaterial(Dir + "/KeyArtBuilding_Glass.mat", look.styles.Glass, hs) },
+            { "Brick", StyleMaterial(Dir + "/KeyArtBuilding_Brick.mat", look.styles.Brick, hs) },
         };
         Material vertexColor = LoadOrCreate(VertexColorMat, "KUCA/VertexColorLit");
         vertexColor.SetColor("_Tint", Color.white);
@@ -130,8 +131,8 @@ public static class KeyArtMapSetup
             campusMap.downloadOnStart = false;
         }
 
-        ApplyBuildingStyles(styleMats, manifest);
-        BuildGeometry(vertexColor);
+        ApplyBuildingStyles(styleMats, manifest, hs);
+        BuildGeometry(vertexColor, styleMats);
         SetOuterGround(outer, true);
         SetLighting(look, sky, true);
         SetCamera(look.camera);
@@ -150,7 +151,10 @@ public static class KeyArtMapSetup
         Undo.RecordObject(map.GetComponent<Renderer>(), "Mapbox");
         map.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>(MapboxMapMat);
         var mapboxBuilding = AssetDatabase.LoadAssetAtPath<Material>(MapboxBuildingMat);
-        foreach (Renderer r in GameObject.Find("Buildings").GetComponentsInChildren<Renderer>(true))
+        var buildings = GameObject.Find("Buildings");
+        Undo.RecordObject(buildings.transform, "Mapbox");
+        buildings.transform.localScale = Vector3.one;
+        foreach (Renderer r in buildings.GetComponentsInChildren<Renderer>(true))
         {
             Undo.RecordObject(r, "Mapbox");
             r.sharedMaterial = mapboxBuilding;
@@ -166,14 +170,14 @@ public static class KeyArtMapSetup
         EditorSceneManager.SaveScene(map.scene);
     }
 
-    static Material StyleMaterial(string path, Style st)
+    static Material StyleMaterial(string path, Style st, float heightScale)
     {
         Material mat = LoadOrCreate(path, "KUCA/StylizedBuilding");
         mat.SetColor("_WallColor", Srgb(st.wall));
         mat.SetColor("_TrimColor", Srgb(st.trim));
         mat.SetColor("_WindowColor", Srgb(st.window));
         mat.SetColor("_RoofColor", Srgb(st.roof));
-        mat.SetFloat("_FloorHeight", st.floorHeight);
+        mat.SetFloat("_FloorHeight", st.floorHeight * heightScale);
         mat.SetFloat("_WindowSpacing", st.spacing);
         mat.SetFloat("_WindowWidth", st.windowWidth);
         mat.SetFloat("_WindowHeight", st.windowHeight);
@@ -184,13 +188,16 @@ public static class KeyArtMapSetup
     }
 
     /// <summary>건물마다 외벽 재질, 랜드마크로 대신하는 상자 건물은 숨김 (충돌체·정보는 남김)</summary>
-    static void ApplyBuildingStyles(Dictionary<string, Material> mats, Manifest manifest)
+    static void ApplyBuildingStyles(Dictionary<string, Material> mats, Manifest manifest, float heightScale)
     {
         var styleOf = new Dictionary<string, string>();
         foreach (StyleRow row in manifest.styles) styleOf[row.id] = row.style;
         var hidden = new HashSet<string>(manifest.hidden);
 
         var root = GameObject.Find("Buildings");
+        // 미니어처 비율: 건물 높이만 키운다 (build_art.py 도 같은 배율로 난간·지붕 디테일을 올림)
+        Undo.RecordObject(root.transform, "Building height");
+        root.transform.localScale = new Vector3(1f, heightScale, 1f);
         foreach (CampusBuildingInfo info in root.GetComponentsInChildren<CampusBuildingInfo>(true))
         {
             var r = info.GetComponent<Renderer>();
@@ -209,7 +216,7 @@ public static class KeyArtMapSetup
         }
     }
 
-    static void BuildGeometry(Material mat)
+    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats)
     {
         foreach (string n in OldRoots) DestroyIfExists(n);
         var go = GameObject.Find(GeometryRoot);
@@ -223,6 +230,8 @@ public static class KeyArtMapSetup
         Undo.RecordObject(geo, "Key Art geometry");
         geo.geometry = AssetDatabase.LoadAssetAtPath<TextAsset>(GeometryFile);
         geo.material = mat;
+        geo.shellStyles = new List<string>(styleMats.Keys).ToArray();
+        geo.shellMaterials = new List<Material>(styleMats.Values).ToArray();
         geo.castShadows = ShadowCastingMode.On;
         geo.Build();
         Debug.Log($"[KeyArtMapSetup] 키아트 지오메트리 정점 {geo.VertexCount:N0}개");

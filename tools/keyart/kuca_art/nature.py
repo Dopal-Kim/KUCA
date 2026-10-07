@@ -149,7 +149,7 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
     p.scatter(20, other, 0.28, [0.45, 0.25, 0.3])
 
     # 5) 관목: 길가와 공원에 작은 덤불
-    p.scatter(7, lambda x, z: (park(x, z) or other(x, z)) and _near(g, x, z), 0.35, [0.7, 0.3], kinds=('shrub', 'small_cone'))
+    p.scatter(6, lambda x, z: (park(x, z) or other(x, z)) and _near(g, x, z), 0.5, [0.7, 0.3], kinds=('shrub', 'small_cone'))
 
     # 6) 지도 바깥 숲 띠 (가장자리에서 잔디만 보이지 않게)
     band = 120
@@ -171,3 +171,86 @@ def _near(g, x, z):
         return False
     win = g.blocked_env[iy - k:iy + k + 1:3, ix - k:ix + k + 1:3]
     return bool(win.any())
+
+
+# ---------- 소품: 가로등, 벤치 ----------
+
+LAMP_POLE = (0.32, 0.34, 0.38)
+LAMP_HEAD = (1.0, 0.97, 0.86)
+WOOD = (0.66, 0.47, 0.30)
+METAL = (0.36, 0.38, 0.42)
+
+
+def draw_lamp(mb, x, z, face_yaw):
+    m = Frame.yaw((x, 0.0, z), face_yaw)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.2
+    mb.prism(m, (0, 0, 0), 0.28, 0.45, 6, LAMP_POLE)
+    mb.ao_strength = 0.0
+    mb.prism(m, (0, 0.45, 0), 0.13, 4.6, 6, LAMP_POLE, r_top=0.1)
+    mb.box(m, (0, 5.0, 0.35), (0.14, 0.12, 0.8), LAMP_POLE)
+    mb.box(m, (0, 4.75, 0.75), (0.55, 0.45, 0.55), LAMP_HEAD, top=LAMP_HEAD)
+    mb.box(m, (0, 5.05, 0.75), (0.75, 0.14, 0.75), LAMP_POLE)
+    mb.ao_strength = 0.25
+
+
+def draw_bench(mb, x, z, face_yaw):
+    """face_yaw: 앉은 사람이 바라보는 방향 (로컬 +Z)"""
+    m = Frame.yaw((x, 0.0, z), face_yaw)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.25
+    for s in (-0.75, 0.75):
+        mb.box(m, (s, 0.22, 0), (0.12, 0.44, 0.55), METAL)
+        mb.box(m, (s, 0.62, -0.26), (0.1, 0.5, 0.08), METAL)
+    mb.ao_strength = 0.0
+    mb.box(m, (0, 0.47, 0.02), (1.9, 0.08, 0.58), WOOD)
+    mb.box(m, (0, 0.78, -0.28), (1.9, 0.32, 0.07), shade(WOOD, 0.95))
+    mb.ao_strength = 0.25
+
+
+def place_props(layer, ground, rng):
+    """보행로 옆 가로등(24 m)·벤치(55 m), 차도 옆 가로등(32 m). 길·물·다른 물체와 겹치지 않게"""
+    from .ground import WALK_W
+    g = ground
+    counts = {'lamp': 0, 'bench': 0}
+
+    def spot_ok(x, z, r):
+        if not g.inside(x, z, 4):
+            return False
+        for mask in (g.road, g.curb, g.walk, g.water, g.buildings, g.track, g.pitch, g.square, g.parking, g.paved):
+            if g.has(mask, x, z):
+                return False
+        return True
+
+    def along(lines, widths, step, extra, kind, phase):
+        for hw, pts in lines:
+            if hw in ('steps', 'track', 'service'):
+                continue
+            off = widths[hw] / 2 + extra
+            dist_next = step * phase
+            side = 1
+            for a, b in zip(pts, pts[1:]):
+                L = math.hypot(b[0] - a[0], b[1] - a[1])
+                if L < 0.5:
+                    continue
+                ux, uz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+                nx, nz = -uz, ux
+                t = dist_next
+                while t < L:
+                    px, pz = a[0] + ux * t + nx * off * side, a[1] + uz * t + nz * off * side
+                    if spot_ok(px, pz, 0.8) and not g.has(g.occupied, px, pz):
+                        # 길 쪽을 바라보게
+                        yaw = math.degrees(math.atan2(-nx * side, -nz * side))
+                        if kind == 'lamp':
+                            draw_lamp(layer.at(px, pz), px, pz, yaw)
+                            g.occupy(px, pz, 0.8, ao=0.25, ao_radius=0.6)
+                        else:
+                            draw_bench(layer.at(px, pz), px, pz, yaw)
+                            g.occupy(px, pz, 1.4, ao=0.3, ao_radius=1.1)
+                        counts[kind] += 1
+                        side = -side
+                    t += step
+                dist_next = t - L
+
+    along(g.walk_lines, WALK_W, 24.0, 0.9, 'lamp', 0.3)
+    along(g.walk_lines, WALK_W, 55.0, 1.3, 'bench', 0.7)
+    along(g.road_lines, ROAD_W, 32.0, 2.6, 'lamp', 0.5)
+    return counts

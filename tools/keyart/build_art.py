@@ -36,8 +36,13 @@ def main():
         import crop_tiles  # noqa: F401  (실행하면 tiles/*.png 를 만든다)
 
     rng = random.Random(7)
-    bld.load_look(os.path.join(OUT, 'KeyArtLook.json'))
+    look = bld.load_look(os.path.join(OUT, 'KeyArtLook.json'))
     buildings = load_buildings(os.path.join(ASSETS, 'Data', 'CampusBuildings.json'))
+    # 미니어처 비율: 건물 높이를 키운다 (Unity 는 Buildings 루트의 Y 배율로 같은 값을 적용)
+    hs = look.get('buildingHeightScale', 1.0)
+    for b in buildings:
+        b.h *= hs
+        b.min_h *= hs
     osm = load_osm(os.path.join(HERE, 'osm_ground.json'))
     print(f'buildings {len(buildings)}, osm {len(osm)}')
 
@@ -48,16 +53,23 @@ def main():
     print(f'entrances {len(entrances)}  ({time.time() - t0:.0f}s)')
 
     layer = Layer('KeyArt', MAP_W / 2, MAP_H / 2, grid=6)
+    # 지붕 단차 블록: 외벽 셰이더 재질로 그릴 덩어리 (스타일마다 레이어, Unity 는 이름 앞부분으로 재질을 고른다)
+    shells = {st: Layer(f'Shell{st}', MAP_W / 2, MAP_H / 2, grid=3) for st in bld.PALETTE}
+    bld.HEIGHT_SCALE = hs
     landmarks.build(buildings, layer, ground)
-    bld.build_details(buildings, layer, entrances, landmarks.NO_DETAILS, rng)
+    bld.build_details(buildings, layer, shells, entrances, landmarks.NO_DETAILS, rng)
     hedges = bld.build_hedges(buildings, layer, ground, entrances, landmarks.NO_DETAILS, rng)
     print(f'hedges {hedges}  ({time.time() - t0:.0f}s)')
     counts = nature.plant_all(layer, ground, buildings, rng, landmarks.NO_DETAILS)
     print('plants', counts, f'({time.time() - t0:.0f}s)')
+    print('props', nature.place_props(layer, ground, rng))
 
     ground.paint(os.path.join(OUT, 'CampusGround.jpg'), os.path.join(OUT, 'GrassDetail.png'))
-    verts = write_bytes(os.path.join(OUT, 'KeyArtGeometry.bytes'), layer.meshes())
-    print(f'geometry: {len(layer.chunks)} meshes, {verts} verts, {verts // 3} tris')
+    meshes = list(layer.meshes())
+    for sl in shells.values():
+        meshes += list(sl.meshes())
+    verts = write_bytes(os.path.join(OUT, 'KeyArtGeometry.bytes'), meshes)
+    print(f'geometry: {len(meshes)} meshes, {verts} verts, {verts // 3} tris')
 
     styles = sorted({(b.id, bld.style_of(b)) for b in buildings if bld.style_of(b) != 'Default'})
     manifest = {

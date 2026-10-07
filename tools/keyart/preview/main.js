@@ -106,7 +106,7 @@ async function main() {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, buildingMaterial(look.styles[style] || look.styles.Default));
+    const mesh = new THREE.Mesh(g, buildingMaterial(look.styles[style] || look.styles.Default, look.buildingHeightScale || 1));
     mesh.castShadow = mesh.receiveShadow = true;
     scene.add(mesh);
   }
@@ -114,8 +114,16 @@ async function main() {
   // 키아트 지오메트리 (나무, 산울타리, 건물 디테일, 랜드마크)
   const buf = await (await fetch(ART + 'KeyArtGeometry.bytes')).arrayBuffer();
   const vcMat = new THREE.MeshLambertMaterial({ vertexColors: true });
-  for (const g of await parseGeometry(buf)) {
-    const m = new THREE.Mesh(g, vcMat);
+  const shellMats = {};
+  for (const { name, g } of await parseGeometry(buf)) {
+    // Shell<스타일>_n: 지붕 단차 블록 → 건물 외벽 재질, 나머지는 버텍스 색
+    const shell = name.match(/^Shell(\w+?)_\d+$/);
+    let mat = vcMat;
+    if (shell) {
+      const st = shell[1];
+      mat = shellMats[st] ||= buildingMaterial(look.styles[st] || look.styles.Default, look.buildingHeightScale || 1);
+    }
+    const m = new THREE.Mesh(g, mat);
     m.castShadow = m.receiveShadow = true;
     scene.add(m);
   }
@@ -130,12 +138,12 @@ async function main() {
   window.__done = true;
 }
 
-function buildingMaterial(st) {
+function buildingMaterial(st, heightScale = 1) {
   const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
   mat.onBeforeCompile = (sh) => {
     const u = {
       uWall: lin(st.wall), uTrim: lin(st.trim), uWindow: lin(st.window), uRoof: lin(st.roof),
-      uFloorH: st.floorHeight, uSpacing: st.spacing, uWinW: st.windowWidth, uWinH: st.windowHeight,
+      uFloorH: st.floorHeight * heightScale, uSpacing: st.spacing, uWinW: st.windowWidth, uWinH: st.windowHeight,
       uPilEvery: st.pilasterEvery, uBrick: st.brick,
     };
     for (const [k, v] of Object.entries(u)) sh.uniforms[k] = { value: v };
@@ -176,9 +184,14 @@ vec3 kucaBuilding(vec3 p, vec3 n) {
     c = uTrim * 0.96;
     if (du < hw && dv < hh) {
       float t = (fv - (0.55 - hh)) / (2.0 * hh);
-      vec3 gl = uWindow * (0.78 + 0.34 * t);
+      float h = fract(sin(dot(floor(vec2(u, v)), vec2(12.9898, 78.233))) * 43758.5453);
+      vec3 gl = uWindow * (0.78 + 0.34 * t) * (0.88 + 0.24 * h);
       float streak = step(0.8, fract((u * uSpacing + p.y) * 0.11));
-      c = mix(gl, vec3(0.80, 0.88, 0.96), 0.25 * streak);
+      gl = mix(gl, vec3(0.80, 0.88, 0.96), 0.25 * streak);
+      if (h > 0.82 && t > 0.45) gl = mix(gl, vec3(0.93, 0.91, 0.86), 0.6);   // 블라인드 내린 창
+      if (t > 0.84) gl *= 0.68;                                               // 창 윗부분 그늘 (깊이감)
+      if (uWinW > 0.8 && du < 0.012) gl = uTrim * 0.9;                        // 넓은 창 가운데 멀리언
+      c = gl;
     }
   }
   if (above && du < hw + 0.1 && fv > 0.55 - hh - 0.12 && fv < 0.55 - hh - 0.06) c = uTrim;
@@ -198,7 +211,8 @@ async function parseGeometry(buf) {
   const lut = new Float32Array(256).map((_, i) => toLin(i / 255));
   const UNIT = 0.02;
   for (let k = 0; k < count; k++) {
-    const nl = dv.getInt32(o, true); o += 4 + nl;
+    const nl = dv.getInt32(o, true); o += 4;
+    const name = new TextDecoder().decode(new Uint8Array(body, o, nl)); o += nl;
     const ox = dv.getFloat32(o, true), oy = dv.getFloat32(o + 4, true), oz = dv.getFloat32(o + 8, true); o += 12;
     const vc = dv.getInt32(o, true); o += 4;
     const src = new Int16Array(body.slice(o, o + vc * 6)); o += vc * 6;
@@ -216,7 +230,7 @@ async function parseGeometry(buf) {
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.computeVertexNormals();
-    out.push(g);
+    out.push({ name, g });
   }
   return out;
 }

@@ -85,9 +85,14 @@ Shader "KUCA/StylizedBuilding"
                     if (du < hw && dv < hh)
                     {
                         float t = (fv - (0.55 - hh)) / (2.0 * hh);
-                        half3 glass = _WindowColor.rgb * (0.78 + 0.34 * t);
+                        float h = frac(sin(dot(floor(float2(u, v)), float2(12.9898, 78.233))) * 43758.5453);
+                        half3 glass = _WindowColor.rgb * (0.78 + 0.34 * t) * (0.88 + 0.24 * h);
                         float streak = step(0.8, frac((u * _WindowSpacing + p.y) * 0.11));
-                        c = lerp(glass, half3(0.80, 0.88, 0.96), 0.25 * streak);
+                        glass = lerp(glass, half3(0.80, 0.88, 0.96), 0.25 * streak);
+                        if (h > 0.82 && t > 0.45) glass = lerp(glass, half3(0.93, 0.91, 0.86), 0.6);   // 블라인드 내린 창
+                        if (t > 0.84) glass *= 0.68;                                                    // 창 윗부분 그늘 (깊이감)
+                        if (_WindowWidth > 0.8 && du < 0.012) glass = _TrimColor.rgb * 0.9;             // 넓은 창 가운데 멀리언
+                        c = glass;
                     }
                 }
                 if (above && du < hw + 0.1 && fv > 0.55 - hh - 0.12 && fv < 0.55 - hh - 0.06) c = _TrimColor.rgb;

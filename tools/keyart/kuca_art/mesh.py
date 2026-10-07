@@ -416,3 +416,65 @@ def write_bytes(path, meshes):
 
 
 POS_UNIT = 0.02
+
+
+def triangulate(poly):
+    """단순 다각형 귀 자르기 삼각분할 → 인덱스 삼각형 목록 (방향 무관)"""
+    n = len(poly)
+    if n < 3:
+        return []
+    idx = list(range(n))
+    if signed_area(poly) < 0:
+        idx.reverse()   # 내부적으로 반시계
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    def inside(p, a, b, c):
+        return cross(a, b, p) >= 0 and cross(b, c, p) >= 0 and cross(c, a, p) >= 0
+
+    tris = []
+    guard = n * n
+    while len(idx) > 3 and guard > 0:
+        guard -= 1
+        for k in range(len(idx)):
+            ia, ib, ic = idx[k - 1], idx[k], idx[(k + 1) % len(idx)]
+            a, b, c = poly[ia], poly[ib], poly[ic]
+            if cross(a, b, c) <= 0:
+                continue
+            if any(inside(poly[j], a, b, c) for j in idx if j not in (ia, ib, ic)):
+                continue
+            tris.append((ia, ib, ic))
+            idx.pop(k)
+            break
+        else:
+            return tris   # 꼬인 외곽선: 지금까지만
+    if len(idx) == 3:
+        tris.append(tuple(idx))
+    return tris
+
+
+def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True):
+    """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다."""
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        nx, nz = outward_normal(poly, i)
+        mx, mz = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+        ins = (mx - nx, (y0 + y1) / 2, mz - nz)
+        mb.quad(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), (a[0], y1, a[1]), col, ins)
+    if roof:
+        for ia, ib, ic in triangulate(poly):
+            a, b, c = poly[ia], poly[ib], poly[ic]
+            cx, cz = (a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3
+            mb.tri(IDENT, (a[0], y1, a[1]), (b[0], y1, b[1]), (c[0], y1, c[1]), col, (cx, y1 - 1.0, cz))
+
+
+def rect_poly(center, u, v, half_u, half_v):
+    """중심·축·반길이로 사각형 (시계 방향, 건물 다각형과 같은 방향)"""
+    cx, cz = center
+    pts = [(cx + u[0] * su * half_u + v[0] * sv * half_v, cz + u[1] * su * half_u + v[1] * sv * half_v)
+           for su, sv in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
+    if signed_area(pts) > 0:
+        pts.reverse()
+    return pts

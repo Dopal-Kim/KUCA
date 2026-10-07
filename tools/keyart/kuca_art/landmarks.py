@@ -123,7 +123,7 @@ def portico(mb, f, height, pediment, max_cols, grand=False):
     width = min(f['length'] * 0.5, 44.0)
     cols = max(4, min(max_cols, round(width / 5) + 1))
     depth, base_h = 7.0, 1.6 if grand else 1.2
-    col_top = max(7.0, min(height - 2.2, 16.0))
+    col_top = max(7.0, min(height - 2.2, 22.0 if grand else 17.0))
 
     mb.box(m, (0, base_h / 2, depth / 2 - 0.5), (width + 2, base_h, depth + 1), STEP)
     # 뒤 벽면의 어두운 현관 안쪽 (기둥 사이로 보이는 그늘진 벽과 문)
@@ -154,6 +154,13 @@ def portico(mb, f, height, pediment, max_cols, grand=False):
             x = s * (width / 2 + 3.2)
             mb.box(m, (x, 1.0, depth + 3.2), (1.4, 2.0, 7.5), STONE)
             mb.box(m, (x, 2.2, depth + 6.4), (1.8, 0.6, 1.8), COLUMN)
+        # 계단 앞 깃대 3기 (경희 진홍·흰색·하늘)
+        for k, flag in zip((-1, 0, 1), ((0.68, 0.10, 0.18), (0.98, 0.98, 0.97), (0.36, 0.60, 0.86))):
+            x, z = k * 7.0, depth + 7.5 + 7.0
+            mb.box(m, (x, 0.3, z), (1.6, 0.6, 1.6), STEP)
+            mb.prism(m, (x, 0.6, z), 0.14, 15.0, 6, (0.80, 0.81, 0.83), r_top=0.09)
+            mb.prism(m, (x, 15.6, z), 0.22, 0.4, 6, GOLD, caps=True)
+            mb.box(m, (x + 1.6, 13.6, z), (3.0, 1.9, 0.06), flag, top=flag)
 
 
 def arcade(mb, f, height):
@@ -175,7 +182,7 @@ def clock_tower(mb, f, height):
     c, n, t = f['center'], f['normal'], f['tangent']
     pos = (c[0] + t[0] * (f['length'] / 2 - 6) - n[0] * 4, 0.0, c[2] + t[2] * (f['length'] / 2 - 6) - n[2] * 4)
     m = Frame.look(pos, n)
-    tower_h, w = height + 18.0, 8.0
+    tower_h, w = height + 24.0, 9.0
     mb.box(m, (0, tower_h / 2, 0), (w, tower_h, w), STONE)
     # 모서리 기둥과 층 띠
     for sx in (-1, 1):
@@ -197,7 +204,7 @@ def clock_tower(mb, f, height):
 
 
 def observatory(mb, b, f):
-    r = max(4.0, min(min(f.half_u, f.half_v) * 0.6, 9.0))
+    r = max(5.5, min(min(f.half_u, f.half_v) * 0.7, 11.0))
     cx, cz = f.center
     base = (cx, b.h, cz)
     mb.ao_floor = b.h
@@ -249,7 +256,7 @@ def amphitheater(mb, f, to_pond, ground):
     center, spread = -math.pi / 2, math.radians(80)
     for i in range(tiers):
         r0 = 12 + i * 3.0
-        col = STONE if i % 2 == 0 else STEP
+        col = STONE if i % 2 == 0 else (0.52, 0.74, 0.28)   # 석재 단과 잔디 단을 번갈아 (컨셉아트)
         mb.arc_tier(m, (0, 0, 0), r0, r0 + 3, center - spread, center + spread, 0.6 * (i + 1), 24, col)
         # 가운데 통로 계단 (어두운 줄)
         mb.box(m, (0, 0.6 * (i + 1) + 0.01, -(r0 + 1.5)), (1.6, 0.04, 3.0), shade(STEP, 0.8), top=shade(STEP, 0.8))
@@ -266,6 +273,18 @@ def amphitheater(mb, f, to_pond, ground):
     mb.box(m, (0, 8.8, 7.6), (10, 1.2, 1.6), STONE)
     for s in (-1, 1):
         column(mb, m, (s * 10.2, 1.2, 6.2), 0.7, 6.0)
+    # 둘레 벚나무와 꽃 관목 (컨셉아트: 분홍 꽃에 둘러싸인 극장)
+    import random as _r
+    from .nature import draw_tree
+    rr = _r.Random(11)
+    for k in range(13):
+        aa = center - spread - 0.15 + (2 * spread + 0.3) * k / 12
+        for rad, kind in ((outer + 5.0, 'cherry'), (outer + 2.2, 'shrub')):
+            p = m.p((math.cos(aa) * rad, 0, math.sin(aa) * rad))
+            if ground.is_free(p[0], p[2], 1.0):
+                draw_tree(mb, kind, p[0], p[2], rr.uniform(0.9, 1.15), rr.uniform(0, 360), rr)
+                ground.occupy(p[0], p[2], 2.0, ao=0.35, ao_radius=2.6 if kind == 'cherry' else 1.4)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     # 나무가 들어오지 않게
     for k in range(0, int(outer) + 2, 3):
         for a in range(-80, 81, 10):
@@ -284,7 +303,7 @@ def gate(mb, f):
     thick = max(thick, 5.0)
     # 로컬 X = 문의 긴 방향
     m = Frame.look((f.center[0], 0.0, f.center[1]), (az, 0.0, -ax))
-    pillars, ph = 6, 13.0
+    pillars, ph = 6, 16.0
     for i in range(pillars):
         x = -length / 2 + 1.5 + (length - 3) * i / (pillars - 1)
         mb.box(m, (x, 0.6, 0), (3.6, 1.2, thick + 0.8), STEP)

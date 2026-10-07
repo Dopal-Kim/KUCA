@@ -13,7 +13,11 @@ using UnityEngine.Rendering;
 public class KeyArtGeometry : MonoBehaviour
 {
     public TextAsset geometry;
+    [Tooltip("버텍스 색 메시 재질 (KUCA/VertexColorLit)")]
     public Material material;
+    [Tooltip("이름이 Shell<스타일>_ 로 시작하는 메시(지붕 단차 블록)에 쓸 외벽 재질. shellStyles 와 같은 순서")]
+    public Material[] shellMaterials = new Material[0];
+    public string[] shellStyles = new string[0];
     public ShadowCastingMode castShadows = ShadowCastingMode.On;
 
     const float PosUnit = 0.02f;
@@ -78,12 +82,21 @@ public class KeyArtGeometry : MonoBehaviour
                 go.transform.localPosition = origin;
                 go.AddComponent<MeshFilter>().sharedMesh = mesh;
                 var r = go.AddComponent<MeshRenderer>();
-                r.sharedMaterial = material;
+                r.sharedMaterial = MaterialFor(name);
                 r.shadowCastingMode = castShadows;
                 r.receiveShadows = true;
                 parts.Add(go);
             }
         }
+    }
+
+    Material MaterialFor(string meshName)
+    {
+        if (meshName.StartsWith("Shell"))
+            for (int i = 0; i < shellStyles.Length && i < shellMaterials.Length; i++)
+                if (shellMaterials[i] != null && meshName.StartsWith("Shell" + shellStyles[i] + "_"))
+                    return shellMaterials[i];
+        return material;
     }
 
     void Clear()
