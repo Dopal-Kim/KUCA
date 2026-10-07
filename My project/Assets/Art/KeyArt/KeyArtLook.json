@@ -1,0 +1,22 @@
+{
+ "about": "키아트 조명·재질 값. Unity(KUCA → Map Style → Apply Key Art)와 웹 미리보기(tools/keyart/preview)가 같이 읽는다. 색은 sRGB, 세기는 리니어 배율.",
+ "sun": { "color": [1.0, 0.96, 0.88], "intensity": 0.62, "pitch": 45, "yaw": 60 },
+ "ambient": { "sky": [0.58, 0.62, 0.70], "ground": [0.64, 0.62, 0.54] },
+ "shadowStrength": 0.82,
+ "fog": { "color": [0.86, 0.92, 0.98], "start": 900, "end": 2600 },
+ "outerGrass": [0.55, 0.71, 0.22],
+ "grassDetail": { "tile": 7.0, "strength": 0.55 },
+ "camera": { "fov": 28, "distance": 420, "minDistance": 140, "maxDistance": 1400, "pitch": 42 },
+ "styles": {
+  "Default":   { "wall": [0.94, 0.90, 0.82], "trim": [0.99, 0.97, 0.92], "window": [0.36, 0.52, 0.64], "roof": [0.73, 0.72, 0.71],
+                 "floorHeight": 3.4, "spacing": 3.2, "windowWidth": 0.52, "windowHeight": 0.5, "pilasterEvery": 3, "brick": 0 },
+  "Classical": { "wall": [0.95, 0.91, 0.82], "trim": [0.99, 0.97, 0.91], "window": [0.32, 0.45, 0.56], "roof": [0.73, 0.72, 0.71],
+                 "floorHeight": 3.8, "spacing": 3.0, "windowWidth": 0.36, "windowHeight": 0.62, "pilasterEvery": 2, "brick": 0 },
+  "Modern":    { "wall": [0.96, 0.96, 0.94], "trim": [0.99, 0.99, 0.98], "window": [0.40, 0.60, 0.78], "roof": [0.73, 0.72, 0.71],
+                 "floorHeight": 3.5, "spacing": 3.0, "windowWidth": 0.97, "windowHeight": 0.4, "pilasterEvery": 0, "brick": 0 },
+  "Glass":     { "wall": [0.90, 0.91, 0.93], "trim": [0.97, 0.97, 0.98], "window": [0.36, 0.56, 0.74], "roof": [0.73, 0.72, 0.71],
+                 "floorHeight": 3.5, "spacing": 1.7, "windowWidth": 0.88, "windowHeight": 0.84, "pilasterEvery": 5, "brick": 0 },
+  "Brick":     { "wall": [0.72, 0.38, 0.27], "trim": [0.95, 0.91, 0.82], "window": [0.36, 0.50, 0.60], "roof": [0.73, 0.72, 0.71],
+                 "floorHeight": 3.2, "spacing": 2.8, "windowWidth": 0.48, "windowHeight": 0.52, "pilasterEvery": 4, "brick": 1 }
+ }
+}
