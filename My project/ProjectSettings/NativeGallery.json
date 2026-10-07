@@ -1,6 +1,6 @@
 {
     "AutomatedSetup": true,
     "PhotoLibraryUsageDescription": "장소 메모에 올릴 사진을 앨범에서 고르기 위해 사진 접근 권한을 사용합니다.",
-    "PhotoLibraryAdditionsUsageDescription": "",
+    "PhotoLibraryAdditionsUsageDescription": "경희몬과 함께 찍은 사진을 앨범에 저장하기 위해 사진 추가 권한을 사용합니다.",
     "DontAskLimitedPhotosPermissionAutomaticallyOnIos14": true
 }
