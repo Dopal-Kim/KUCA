@@ -91,6 +91,7 @@ class Builder:
         self.ao_floor = 0.0
         self.ao_height = 2.0
         self.ao_strength = 0.28
+        self.aux = None          # 외벽 메시만: 정점마다 (벽 위 위치 u, 벽 길이) — 셰이더가 창 배치에 씀
 
     @property
     def tri_count(self):
@@ -103,11 +104,16 @@ class Builder:
         t = 0.0 if t < 0 else (1.0 if t > 1 else t)
         return 1.0 - self.ao_strength * (1.0 - t) ** 2
 
-    def tri(self, m, a, b, d, col, inside):
-        """로컬 a, b, d. inside(로컬 안쪽 점) 반대쪽이 앞면이 되게 감는다."""
+    def tri(self, m, a, b, d, col, inside, aux=None):
+        """로컬 a, b, d. inside(로컬 안쪽 점) 반대쪽이 앞면이 되게 감는다. aux: 정점별 (u, 벽 길이)"""
         cen = ((a[0] + b[0] + d[0]) / 3, (a[1] + b[1] + d[1]) / 3, (a[2] + b[2] + d[2]) / 3)
         if _dot(_cross(_sub(b, a), _sub(d, a)), _sub(cen, inside)) < 0:
             b, d = d, b
+            if aux:
+                aux = (aux[0], aux[2], aux[1])
+        if self.aux is not None:
+            for q in (aux or ((0.0, 0.0),) * 3):
+                self.aux.extend(q)
         for v in (a, b, d):
             w = m.p(v)
             self.pos.extend(w)
@@ -357,9 +363,10 @@ def outward_normal(poly, i):
 class Layer:
     """지도를 grid x grid 칸으로 나눠 칸마다 Builder 하나 (Unity 에서 보이는 칸만 그리게)."""
 
-    def __init__(self, name, half_w, half_h, grid=6):
+    def __init__(self, name, half_w, half_h, grid=6, aux=False):
         self.name, self.hw, self.hh, self.grid = name, half_w, half_h, grid
         self.chunks = {}
+        self.with_aux = aux
 
     def at(self, x, z):
         g = self.grid
@@ -369,6 +376,8 @@ class Layer:
         b = self.chunks.get(key)
         if b is None:
             b = self.chunks[key] = Builder()
+            if self.with_aux:
+                b.aux = []
         return b
 
     def meshes(self):
@@ -381,10 +390,11 @@ class Layer:
 def write_bytes(path, meshes):
     """
     KUCA 지오메트리 파일 v2 (Unity KeyArtGeometry 컴포넌트, 웹 미리보기가 읽음)
-      'KUCA' int32 version=2, 이후 전부 gzip:
+      'KUCA' int32 version=3, 이후 전부 gzip:
       int32 meshCount
-      반복: int32 nameLen, utf8 name, float32[3] origin, int32 vertexCount,
-            int16[vc*3] position (origin 기준, 2 cm 단위), uint8[vc*4] sRGB color
+      반복: int32 nameLen, utf8 name, float32[3] origin, int32 vertexCount, int32 flags(1 = 벽 좌표 있음),
+            int16[vc*3] position (origin 기준, 2 cm 단위), uint8[vc*4] sRGB color,
+            (flags&1) uint16[vc*2] 벽 좌표 (u, 벽 길이) 10 cm 단위
     삼각형은 정점 3개씩 순서대로 (인덱스 없음). 법선은 읽는 쪽에서 면 법선으로 계산.
     """
     import gzip
@@ -403,14 +413,17 @@ def write_bytes(path, meshes):
         assert np.abs(q).max() < 32767, f'{name}: 청크가 너무 큼'
         body.write(struct.pack('<i', len(nb)))
         body.write(nb)
-        body.write(struct.pack('<fffi', *origin, vc))
+        has_aux = b.aux is not None and len(b.aux) == vc * 2
+        body.write(struct.pack('<fffii', *origin, vc, 1 if has_aux else 0))
         body.write(q.astype('<i2').tobytes())
         c = np.clip(np.asarray(b.col, np.float32).reshape(-1, 3) * 255 + 0.5, 0, 255).astype(np.uint8)
         c = np.concatenate([c, np.full((vc, 1), 255, np.uint8)], axis=1)
         body.write(c.tobytes())
+        if has_aux:
+            body.write(np.clip(np.round(np.asarray(b.aux, np.float64) * 10), 0, 65535).astype('<u2').tobytes())
     with open(path, 'wb') as f:
         f.write(b'KUCA')
-        f.write(struct.pack('<i', 2))
+        f.write(struct.pack('<i', 3))
         f.write(gzip.compress(body.getvalue(), 9))
     return total
 
@@ -455,19 +468,90 @@ def triangulate(poly):
 
 
 def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True):
-    """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다."""
+    """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다.
+    mb.aux 가 있으면 벽 정점마다 (u, 벽 길이): 거의 일직선으로 이어진 변들은 한 벽으로 친다."""
     n = len(poly)
+    runs = _wall_runs(poly)
     for i in range(n):
         a, b = poly[i], poly[(i + 1) % n]
         nx, nz = outward_normal(poly, i)
         mx, mz = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
         ins = (mx - nx, (y0 + y1) / 2, mz - nz)
-        mb.quad(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), (a[0], y1, a[1]), col, ins)
+        u0, u1, L = runs[i]
+        A, B = (u0, L), (u1, L)
+        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), col, ins, aux=(A, B, B))
+        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y1, b[1]), (a[0], y1, a[1]), col, ins, aux=(A, B, A))
     if roof:
         for ia, ib, ic in triangulate(poly):
             a, b, c = poly[ia], poly[ib], poly[ic]
             cx, cz = (a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3
             mb.tri(IDENT, (a[0], y1, a[1]), (b[0], y1, b[1]), (c[0], y1, c[1]), col, (cx, y1 - 1.0, cz))
+
+
+def _wall_runs(poly, max_turn_deg=12.0):
+    """변마다 (시작 u, 끝 u, 벽 전체 길이). 방향이 max_turn 이하로 꺾이는 변들은 한 벽으로 이어 센다."""
+    n = len(poly)
+    dirs = []
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        dirs.append((math.atan2(b[1] - a[1], b[0] - a[0]), math.hypot(b[0] - a[0], b[1] - a[1])))
+
+    def turn(i):
+        d = abs(dirs[i][0] - dirs[i - 1][0]) % (2 * math.pi)
+        return math.degrees(min(d, 2 * math.pi - d))
+    starts = [i for i in range(n) if turn(i) > max_turn_deg]
+    out = [None] * n
+    if not starts:
+        total = sum(l for _, l in dirs)
+        u = 0.0
+        for i in range(n):
+            out[i] = (u, u + dirs[i][1], total)
+            u += dirs[i][1]
+        return out
+    for k, s0 in enumerate(starts):
+        s1 = starts[(k + 1) % len(starts)]
+        idx = []
+        i = s0
+        while True:
+            idx.append(i)
+            i = (i + 1) % n
+            if i == s1:
+                break
+        total = sum(dirs[j][1] for j in idx)
+        u = 0.0
+        for j in idx:
+            out[j] = (u, u + dirs[j][1], total)
+            u += dirs[j][1]
+    return out
+
+
+def round_corners(poly, radius=2.6, segs=3, min_turn_deg=25.0):
+    """모서리를 둥글린 다각형 (귀여운 덩어리감). 짧은 변은 반지름을 줄이고, 완만한 꺾임은 그대로"""
+    n = len(poly)
+    if n < 3:
+        return list(poly)
+    out = []
+    for i in range(n):
+        p0, p1, p2 = poly[i - 1], poly[i], poly[(i + 1) % n]
+        e0 = (p1[0] - p0[0], p1[1] - p0[1])
+        e1 = (p2[0] - p1[0], p2[1] - p1[1])
+        l0, l1 = math.hypot(*e0), math.hypot(*e1)
+        if l0 < 1e-6 or l1 < 1e-6:
+            continue
+        cosang = (e0[0] * e1[0] + e0[1] * e1[1]) / (l0 * l1)
+        turn = math.degrees(math.acos(max(-1.0, min(1.0, cosang))))
+        r = min(radius, l0 * 0.35, l1 * 0.35)
+        if turn < min_turn_deg or r < 0.4:
+            out.append(p1)
+            continue
+        a = (p1[0] - e0[0] / l0 * r, p1[1] - e0[1] / l0 * r)
+        b = (p1[0] + e1[0] / l1 * r, p1[1] + e1[1] / l1 * r)
+        # 2차 베지에로 모서리를 잇는다 (원호와 거의 같고 오목한 모서리에도 안전)
+        for k in range(segs + 1):
+            t = k / segs
+            out.append(((1 - t) ** 2 * a[0] + 2 * (1 - t) * t * p1[0] + t * t * b[0],
+                        (1 - t) ** 2 * a[1] + 2 * (1 - t) * t * p1[1] + t * t * b[1]))
+    return out
 
 
 def rect_poly(center, u, v, half_u, half_v):

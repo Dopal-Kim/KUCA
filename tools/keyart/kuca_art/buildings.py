@@ -30,7 +30,7 @@ STYLES = {
 
 # 스타일별 색: 벽·띠는 KeyArtLook.json (셰이더 재질과 같은 값), 기단은 따로
 FLOOR_H = {}
-_BASE = {'Default': (0.80, 0.76, 0.69), 'Classical': (0.82, 0.77, 0.68), 'Modern': (0.74, 0.75, 0.75),
+_BASE = {'Outside': (0.82, 0.83, 0.84), 'Default': (0.80, 0.76, 0.69), 'Classical': (0.82, 0.77, 0.68), 'Modern': (0.74, 0.75, 0.75),
          'Glass': (0.72, 0.74, 0.76), 'Brick': (0.62, 0.56, 0.50)}
 PALETTE = {}
 
@@ -51,15 +51,37 @@ HEDGE = (0.30, 0.55, 0.19)
 FLOWERS = [(0.98, 0.62, 0.76), (1.0, 0.92, 0.94), (0.99, 0.84, 0.34), (0.40, 0.66, 0.24)]
 
 
+OUTSIDE_IDS = set()   # 캠퍼스 경계 밖 건물 (build_art 이 채움): 차분한 단순형
+
+
 def style_of(b):
+    if b.id in OUTSIDE_IDS:
+        return 'Outside'
     return STYLES.get(b.id, 'Default')
+
+
+def build_shells(buildings, shells, skip_ids):
+    """모든 건물 외벽 덩어리 (둥근 모서리 다각형 그대로 돌출). Unity 의 상자 건물 대신 보인다."""
+    for b in buildings:
+        if b.id in skip_ids or b.h <= b.min_h + 0.5:
+            continue
+        cx, cz = b.centroid
+        sh = shells[style_of(b)].at(cx, cz)
+        sh.ao_strength = 0.0
+        extrude_poly(sh, b.poly, b.min_h, b.h)
+        if b.min_h > 0.5:   # 떠 있는 건물(통로 등) 아랫면
+            from .mesh import triangulate
+            for ia, ib, ic in triangulate(b.poly):
+                a, bb, c = b.poly[ia], b.poly[ib], b.poly[ic]
+                sh.tri(IDENT, (a[0], b.min_h, a[1]), (bb[0], b.min_h, bb[1]), (c[0], b.min_h, c[1]), (1, 1, 1),
+                       ((a[0] + bb[0] + c[0]) / 3, b.min_h + 1, (a[1] + bb[1] + c[1]) / 3))
 
 
 def plan_entrances(buildings, ground, skip_ids):
     """건물마다 입구 (x, z, 바깥 법선, 변 번호). 길까지 포장도 ground 에 등록"""
     out = {}
     for b in buildings:
-        if b.id in skip_ids or b.h < 6 or b.area < 120 or b.id in out:
+        if b.id in skip_ids or b.id in OUTSIDE_IDS or b.h < 6 or b.area < 120 or b.id in out:
             continue
         cx, cz = b.centroid
         target = ground.nearest_walk_point(cx, cz, max_dist=80)
@@ -113,6 +135,12 @@ def build_details(buildings, layer, shells, entrances, skip_ids, rng):
         cx, cz = b.centroid
         mb = layer.at(cx, cz)
         H = b.h
+        if style == 'Outside':
+            # 캠퍼스 밖: 둥근 난간 하나만 (조용한 배경)
+            mb.ao_strength = 0.0
+            mb.band(b.poly, H - 0.05, H + 0.7, 0.1, 0.35, pal['trim'], top_col=shade(pal['trim'], 1.03),
+                    inner_col=shade(pal['wall'], 0.9))
+            continue
         small = b.area < 80
         mb.ao_floor, mb.ao_strength = 0.0, 0.25
         # 기단: 바깥으로 0.35 m, 높이 0.9 m
@@ -347,7 +375,7 @@ def build_hedges(buildings, layer, ground, entrances, skip_ids, rng):
     """건물 둘레 2.6 m 바깥에 산울타리 (모서리·입구·막힌 곳 비움)"""
     count = 0
     for b in buildings:
-        if b.id in skip_ids or b.h < 5 or b.area < 150:
+        if b.id in skip_ids or b.id in OUTSIDE_IDS or b.h < 5 or b.area < 150:
             continue
         ring = offset_polygon(b.poly, 2.6)
         ent = entrances.get(b.id)

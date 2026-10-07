@@ -143,8 +143,9 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
                     taken.append((x, z))
 
     # 3) 건물 모서리 정원수 (컨셉아트 아이콘의 원뿔 나무 무리)
+    from .buildings import OUTSIDE_IDS
     for b in buildings:
-        if b.id in skip_ids or b.h < 5 or b.area < 150:
+        if b.id in skip_ids or b.id in OUTSIDE_IDS or b.h < 5 or b.area < 150:
             continue
         ring = offset_polygon(b.poly, 5.5)
         for (x, z) in ring:

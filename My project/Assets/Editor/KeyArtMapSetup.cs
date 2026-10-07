@@ -61,18 +61,24 @@ public static class KeyArtMapSetup
     class Style
     {
         public float[] wall, trim, window, roof;
-        public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick;
+        public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick, arch;
     }
-    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick; }
+    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick, Outside; }
+    [System.Serializable]
+    class Sunny
+    {
+        public float wrap = 0.35f, warmTop = 0.16f, rim = 0.22f, saturation = 1.12f, wash = 0.1f;
+        public float[] shadowTint, washColor;
+    }
     [System.Serializable]
     class Look
     {
-        public Sun sun; public Ambient ambient; public float shadowStrength; public Fog fog;
+        public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
         public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
     }
     [System.Serializable] class StyleRow { public string id, style; }
     [System.Serializable] class HeightRow { public string id; public float scale = 1f; }
-    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; }
+    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; public bool replaceBuildings; }
 
     static Color Srgb(float[] c) => new Color(c[0], c[1], c[2]);   // Unity Color 는 감마(sRGB) 값
 
@@ -126,6 +132,8 @@ public static class KeyArtMapSetup
             { "Glass", StyleMaterial(Dir + "/KeyArtBuilding_Glass.mat", look.styles.Glass, hs) },
             { "Brick", StyleMaterial(Dir + "/KeyArtBuilding_Brick.mat", look.styles.Brick, hs) },
         };
+        if (look.styles.Outside != null)
+            styleMats["Outside"] = StyleMaterial(Dir + "/KeyArtBuilding_Outside.mat", look.styles.Outside, hs);
         Material vertexColor = LoadOrCreate(VertexColorMat, "KUCA/VertexColorLit");
         vertexColor.SetColor("_Tint", Color.white);
         EditorUtility.SetDirty(vertexColor);
@@ -209,6 +217,7 @@ public static class KeyArtMapSetup
         mat.SetFloat("_WindowHeight", st.windowHeight);
         mat.SetFloat("_PilasterEvery", st.pilasterEvery);
         mat.SetFloat("_Brick", st.brick);
+        mat.SetFloat("_Arch", st.arch);
         EditorUtility.SetDirty(mat);
         return mat;
     }
@@ -234,7 +243,8 @@ public static class KeyArtMapSetup
             if (r == null) continue;
             Undo.RecordObject(r, "Building style");
             r.sharedMaterial = mats[styleOf.TryGetValue(info.buildingId, out string s) && mats.ContainsKey(s) ? s : "Default"];
-            r.enabled = !hidden.Contains(info.buildingId);
+            // replaceBuildings: 둥근 모서리 Shell 메시가 대신 보이므로 상자는 모두 숨김 (충돌체·건물 정보·경희스팟 위치는 그대로)
+            r.enabled = !manifest.replaceBuildings && !hidden.Contains(info.buildingId);
             Undo.RecordObject(info.transform, "Building height");
             info.transform.localScale = new Vector3(1f, heightOf.TryGetValue(info.buildingId, out float hsc) ? hsc : 1f, 1f);
             r.shadowCastingMode = ShadowCastingMode.On;
@@ -335,6 +345,18 @@ public static class KeyArtMapSetup
             kl.skyAmbient = new Vector3(look.ambient.sky[0], look.ambient.sky[1], look.ambient.sky[2]);
             kl.groundAmbient = new Vector3(look.ambient.ground[0], look.ambient.ground[1], look.ambient.ground[2]);
             kl.shadowStrength = look.shadowStrength;
+            if (look.sunny != null)
+            {
+                kl.wrap = look.sunny.wrap;
+                kl.warmTop = look.sunny.warmTop;
+                kl.rim = look.sunny.rim;
+                kl.saturation = look.sunny.saturation;
+                kl.wash = look.sunny.wash;
+                if (look.sunny.shadowTint != null && look.sunny.shadowTint.Length >= 3)
+                    kl.shadowTint = new Vector3(look.sunny.shadowTint[0], look.sunny.shadowTint[1], look.sunny.shadowTint[2]);
+                if (look.sunny.washColor != null && look.sunny.washColor.Length >= 3)
+                    kl.washColor = Srgb(look.sunny.washColor);
+            }
             kl.Apply();
         }
 
@@ -422,7 +444,11 @@ public static class KeyArtMapSetup
         if (profile.TryGet(out Vignette vig))
             vig.intensity.Override(on ? 0.12f : 0.2f);
         if (profile.TryGet(out Bloom bloom))
-            bloom.intensity.Override(on ? 0.15f : 0.25f);
+        {
+            bloom.intensity.Override(on ? 0.3f : 0.25f);
+            bloom.threshold.Override(on ? 0.95f : 0.9f);
+            bloom.tint.Override(on ? new Color(1f, 0.95f, 0.85f) : Color.white);
+        }
         EditorUtility.SetDirty(profile);
         AssetDatabase.SaveAssets();
     }

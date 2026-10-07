@@ -1,5 +1,5 @@
 // 키아트 지면: CampusGround.jpg (tools/keyart/build_art.py) + 가까이서 보이는 잔디 결 디테일.
-// 디테일은 초록 부분(잔디)에만 겹친다. 지도 바깥 잔디는 _BaseMap 없이 _BaseColor 만 써도 된다.
+// 디테일은 초록 부분(잔디)에만 겹친다. 파란 부분(물)은 반짝인다. 지도 바깥 잔디는 _BaseMap 없이 _BaseColor 만 써도 된다.
 Shader "KUCA/StylizedGround"
 {
     Properties
@@ -63,7 +63,9 @@ Shader "KUCA/StylizedGround"
                 half greenness = saturate((albedo.g - max(albedo.r, albedo.b)) * 8.0);
                 half d = SAMPLE_TEXTURE2D(_DetailMap, sampler_DetailMap, i.positionWS.xz / _DetailTile).r;
                 albedo *= 1.0 + (d - 0.5) * _DetailStrength * greenness;
+                albedo = KucaWater(albedo, i.positionWS);   // 호수·연못 반짝임 (시간에 따라 움직임)
                 half3 color = KucaShade(albedo, normalize(i.normalWS), i.positionWS);
+                color = KucaSunWash(color, i.positionCS);
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

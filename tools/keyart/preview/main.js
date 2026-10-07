@@ -1,5 +1,5 @@
-// 키아트 지도 미리보기. Unity 셰이더(KUCAStylizedLighting.hlsl, StylizedBuilding.shader, StylizedGround.shader)와
-// 같은 조명 모델: 색 = 알베도 × (하늘/땅 반구 환경광 + 해 × max(N·L, 0) × 그림자(세기 shadowStrength))
+// 키아트 지도 미리보기. Unity 셰이더(KUCAStylizedLighting.hlsl, StylizedBuilding/StylizedGround/VertexColorLit)와
+// 같은 '햇살' 조명: 감싸는 빛 + 푸른 그늘 + 따뜻한 윗면 + 가장자리 빛 + 채도 + 화면 햇살 번짐.
 // 좌표: Unity (X 동, Y 위, Z 북) → three (X, Y, -Z)
 import * as THREE from 'three';
 
@@ -7,8 +7,8 @@ const q = new URLSearchParams(location.search);
 const num = (k, d) => (q.has(k) ? parseFloat(q.get(k)) : d);
 const ART = '/My%20project/Assets/Art/KeyArt/';
 
-const lin = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.SRGBColorSpace);   // sRGB → 리니어 Color
-const linRaw = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.LinearSRGBColorSpace);
+const lin = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.SRGBColorSpace);   // sRGB → 리니어
+const raw = (c) => new THREE.Vector3(c[0], c[1], c[2]);                                // 리니어 배율 그대로
 
 async function main() {
   const look = await (await fetch(ART + 'KeyArtLook.json')).json();
@@ -25,29 +25,31 @@ async function main() {
   scene.background = lin(look.fog.color);
   scene.fog = new THREE.Fog(lin(look.fog.color), look.fog.start, look.fog.end);
 
-  // 조명: 반구 환경광 + 해 (그림자 받는 몫 / 안 받는 몫으로 나눠 그림자 세기를 흉내)
-  const PI = Math.PI;
-  scene.add(new THREE.HemisphereLight(linRaw(look.ambient.sky), linRaw(look.ambient.ground), q.has('noamb') ? 0 : PI));
-  const sunCol = lin(look.sun.color);
+  // 해 하나 (그림자). 환경광·그늘색 등은 셰이더 uniform
   const p = THREE.MathUtils.degToRad(look.sun.pitch), y = THREE.MathUtils.degToRad(look.sun.yaw);
-  const toSun = new THREE.Vector3(-Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p));  // three 좌표
+  const toSun = new THREE.Vector3(-Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p));
   const target = new THREE.Vector3(num('x', 60), 0, -num('z', -352));
-  const s = look.shadowStrength;
-  const sunShadow = new THREE.DirectionalLight(sunCol, look.sun.intensity * s * PI);
-  const sunFill = new THREE.DirectionalLight(sunCol, look.sun.intensity * (1 - s) * PI);
-  for (const L of [sunShadow, sunFill]) {
-    L.position.copy(target).addScaledVector(toSun, 800);
-    L.target.position.copy(target);
-    scene.add(L, L.target);
-  }
+  const sun = new THREE.DirectionalLight(lin(look.sun.color), look.sun.intensity);
+  sun.position.copy(target).addScaledVector(toSun, 800);
+  sun.target.position.copy(target);
+  scene.add(sun, sun.target);
   const dist = num('dist', look.camera.distance);
   const ext = Math.max(160, dist * 0.75);
-  sunShadow.castShadow = true;
-  Object.assign(sunShadow.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 100, far: 2000 });
-  sunShadow.shadow.mapSize.set(4096, 4096);
-  sunShadow.shadow.bias = -0.0004;
-  sunShadow.shadow.normalBias = 0.6;
-  sunShadow.shadow.radius = 3;
+  sun.castShadow = true;
+  Object.assign(sun.shadow.camera, { left: -ext, right: ext, top: ext, bottom: -ext, near: 100, far: 2000 });
+  sun.shadow.mapSize.set(4096, 4096);
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.6;
+  sun.shadow.radius = 4;
+
+  const S = look.sunny;
+  const common = {
+    uSkyAmb: { value: raw(look.ambient.sky) }, uGroundAmb: { value: raw(look.ambient.ground) },
+    uShadowStrength: { value: look.shadowStrength }, uWrap: { value: S.wrap }, uShadowTint: { value: raw(S.shadowTint) },
+    uWarmTop: { value: S.warmTop }, uRim: { value: S.rim }, uSat: { value: S.saturation },
+    uWash: { value: S.wash }, uWashColor: { value: lin(S.washColor) }, uResolution: { value: new THREE.Vector2(W, H) },
+    uTime: { value: 0 },
+  };
 
   // 지면
   const texLoader = new THREE.TextureLoader();
@@ -55,73 +57,34 @@ async function main() {
   const [groundTex, detailTex] = await Promise.all([loadTex(ART + 'CampusGround.jpg', true), loadTex(ART + 'GrassDetail.png', false)]);
   groundTex.anisotropy = 8;
   detailTex.wrapS = detailTex.wrapT = THREE.RepeatWrapping;
-  const groundMat = new THREE.MeshLambertMaterial({ map: groundTex });
-  groundMat.onBeforeCompile = (sh) => {
-    sh.uniforms.uDetail = { value: detailTex };
-    sh.uniforms.uDetailTile = { value: look.grassDetail.tile };
-    sh.uniforms.uDetailStrength = { value: look.grassDetail.strength };
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
-      .replace('#include <fog_vertex>', '#include <fog_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\nuniform sampler2D uDetail; uniform float uDetailTile, uDetailStrength;')
-      .replace('#include <map_fragment>', `#include <map_fragment>
-        float greenness = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 8.0, 0.0, 1.0);
-        float d = texture2D(uDetail, vec2(vWPos.x, -vWPos.z) / uDetailTile).r;
-        diffuseColor.rgb *= 1.0 + (d - 0.5) * uDetailStrength * greenness;`);
-  };
+  const groundAlbedo = `
+    float greenness = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 8.0, 0.0, 1.0);
+    float dtl = texture2D(uDetail, vec2(vWPos.x, -vWPos.z) / uDetailTile).r;
+    diffuseColor.rgb *= 1.0 + (dtl - 0.5) * uDetailStrength * greenness;
+    diffuseColor.rgb = kucaWater(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z));`;
+  const groundMat = sunny(new THREE.MeshLambertMaterial({ map: groundTex }), common,
+    { uDetail: { value: detailTex }, uDetailTile: { value: look.grassDetail.tile }, uDetailStrength: { value: look.grassDetail.strength } },
+    'uniform sampler2D uDetail; uniform float uDetailTile, uDetailStrength;', groundAlbedo, '#include <map_fragment>');
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1418, 1548), groundMat);
-  ground.rotation.x = -PI / 2;
+  ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
-  const outer = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), new THREE.MeshLambertMaterial({ color: lin(look.outerGrass) }));
-  outer.rotation.x = -PI / 2;
+  const outer = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), sunny(new THREE.MeshLambertMaterial({ color: lin(look.outerGrass) }), common));
+  outer.rotation.x = -Math.PI / 2;
   outer.position.y = -0.3;
   outer.receiveShadow = true;
   scene.add(outer);
 
-  // 건물 외곽 (Unity CampusBuildings 와 같은 돌출) — 스타일별 재질
-  const blds = await (await fetch('./data/buildings.json')).json();
-  const byStyle = {};
-  for (const b of blds) (byStyle[b.style] ||= []).push(b);
-  for (const [style, list] of Object.entries(byStyle)) {
-    const pos = [];
-    for (const b of list) {
-      const P = b.poly.map(([x, z]) => new THREE.Vector2(x, -z));
-      const tris = THREE.ShapeUtils.triangulateShape(P, []);
-      for (const t of tris) {
-        const [a, c, d] = t.map((i) => P[i]);
-        // 위를 보게 감기
-        const cr = (c.x - a.x) * (d.y - a.y) - (c.y - a.y) * (d.x - a.x);
-        const tri = cr > 0 ? [a, d, c] : [a, c, d];
-        for (const v of tri) pos.push(v.x, b.h, v.y);
-      }
-      const n = P.length;
-      const area = THREE.ShapeUtils.area(P);
-      for (let i = 0; i < n; i++) {
-        let a = P[i], c = P[(i + 1) % n];
-        // 바깥을 보게: 변의 오른쪽 법선 (x, z) = (dz, -dx) 가 다각형 바깥이 되도록
-        if (area > 0) [a, c] = [c, a];
-        pos.push(a.x, b.min, a.y, c.x, b.min, c.y, c.x, b.h, c.y, a.x, b.min, a.y, c.x, b.h, c.y, a.x, b.h, a.y);
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    g.computeVertexNormals();
-    const mesh = new THREE.Mesh(g, buildingMaterial(look.styles[style] || look.styles.Default, look.buildingHeightScale || 1));
-    mesh.castShadow = mesh.receiveShadow = true;
-    scene.add(mesh);
-  }
-
-  // 키아트 지오메트리 (나무, 산울타리, 건물 디테일, 랜드마크)
+  // 지오메트리: Shell<스타일>_n 은 건물 외벽 재질, 나머지는 버텍스 색
   const buf = await (await fetch(ART + 'KeyArtGeometry.bytes')).arrayBuffer();
-  const vcMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+  const vcMat = sunny(new THREE.MeshLambertMaterial({ vertexColors: true }), common);
   const shellMats = {};
   for (const { name, g } of await parseGeometry(buf)) {
-    // Shell<스타일>_n: 지붕 단차 블록 → 건물 외벽 재질, 나머지는 버텍스 색
     const shell = name.match(/^Shell(\w+?)_\d+$/);
     let mat = vcMat;
     if (shell) {
       const st = shell[1];
-      mat = shellMats[st] ||= buildingMaterial(look.styles[st] || look.styles.Default, look.buildingHeightScale || 1);
+      mat = shellMats[st] ||= buildingMaterial(look.styles[st] || look.styles.Default, look.buildingHeightScale || 1, common);
     }
     const m = new THREE.Mesh(g, mat);
     m.castShadow = m.receiveShadow = true;
@@ -138,70 +101,131 @@ async function main() {
   window.__done = true;
 }
 
-function buildingMaterial(st, heightScale = 1) {
-  const mat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+// KUCAStylizedLighting.hlsl 와 같은 계산 (뷰 공간)
+const SUNNY_GLSL = `
+uniform vec3 uSkyAmb, uGroundAmb, uShadowTint, uWashColor;
+uniform float uShadowStrength, uWrap, uWarmTop, uRim, uSat, uWash, uTime;
+uniform vec2 uResolution;
+varying vec3 vWPos;
+vec3 kucaShade(vec3 albedo, vec3 N, vec3 L, vec3 sunCol, float atten, vec3 up, vec3 V) {
+  float lit = clamp((dot(N, L) + uWrap) / (1.0 + uWrap), 0.0, 1.0);
+  lit = lit * lit * (3.0 - 2.0 * lit);
+  float sun = lit * mix(1.0 - uShadowStrength, 1.0, atten);
+  float ny = dot(N, up);
+  vec3 amb = mix(uGroundAmb, uSkyAmb, ny * 0.5 + 0.5) * mix(uShadowTint, vec3(1.0), sun);
+  vec3 col = albedo * (amb + sunCol * sun);
+  col += albedo * sunCol * uWarmTop * max(ny, 0.0) * max(ny, 0.0) * sun;
+  float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
+  col += vec3(1.0, 0.96, 0.88) * uRim * rim * (0.35 + 0.65 * sun) * 0.5;
+  float l = dot(col, vec3(0.299, 0.587, 0.114));
+  return max(mix(vec3(l), col, uSat), 0.0);
+}
+vec3 kucaSunWash(vec3 col, vec2 uv) {
+  float d = clamp(1.0 - length((uv - vec2(0.0, 1.0)) * vec2(0.75, 1.0)), 0.0, 1.0);
+  return col + uWashColor * uWash * d * d;
+}
+vec3 kucaWater(vec3 albedo, vec3 p) {
+  float w = clamp((albedo.b - max(albedo.r, albedo.g) * 0.85) * 5.0, 0.0, 1.0);
+  float s = sin(dot(p.xz, vec2(0.9, 1.3)) * 1.7 + uTime * 1.5) * sin(dot(p.xz, vec2(-1.1, 0.7)) * 2.1 - uTime);
+  return albedo + vec3(0.9, 0.97, 1.0) * pow(clamp(s, 0.0, 1.0), 8.0) * 0.45 * w;
+}`;
+
+const SUNNY_LIGHT = `
+{
+  vec3 Nv = normalize(normal);
+  float atten = 1.0;
+  #if defined(USE_SHADOWMAP) && NUM_DIR_LIGHT_SHADOWS > 0
+    DirectionalLightShadow dls = directionalLightShadows[0];
+    atten = getShadow(directionalShadowMap[0], dls.shadowMapSize, dls.shadowBias, dls.shadowRadius, vDirectionalShadowCoord[0]);
+  #endif
+  vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
+  outgoingLight = kucaShade(diffuseColor.rgb, Nv, directionalLights[0].direction, directionalLights[0].color, atten, upV, normalize(vViewPosition));
+  outgoingLight = kucaSunWash(outgoingLight, gl_FragCoord.xy / uResolution);
+}
+#include <opaque_fragment>`;
+
+/** MeshLambertMaterial 의 조명을 햇살 조명으로 바꾼다. albedoCode 는 replaceChunk 뒤에 붙는다. */
+let sunnyId = 0;
+function sunny(mat, common, extraUniforms = {}, extraDecl = '', albedoCode = '', replaceChunk = null, vertexExtra = '') {
+  // three 는 onBeforeCompile 소스 문자열로 셰이더를 캐시하므로 재질마다 키를 달리 준다
+  const key = 'sunny' + (sunnyId++) + albedoCode.length;
+  mat.customProgramCacheKey = () => key;
   mat.onBeforeCompile = (sh) => {
-    const u = {
-      uWall: lin(st.wall), uTrim: lin(st.trim), uWindow: lin(st.window), uRoof: lin(st.roof),
-      uFloorH: st.floorHeight * heightScale, uSpacing: st.spacing, uWinW: st.windowWidth, uWinH: st.windowHeight,
-      uPilEvery: st.pilasterEvery, uBrick: st.brick,
-    };
-    for (const [k, v] of Object.entries(u)) sh.uniforms[k] = { value: v };
-    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos; varying vec3 vWN;')
-      .replace('#include <fog_vertex>', '#include <fog_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz; vWN = normalize(mat3(modelMatrix) * objectNormal);');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + BUILDING_GLSL)
-      .replace('#include <map_fragment>', 'diffuseColor.rgb = kucaBuilding(vec3(vWPos.x, vWPos.y, -vWPos.z), normalize(vec3(vWN.x, vWN.y, -vWN.z)));');
+    Object.assign(sh.uniforms, common, extraUniforms);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\n' + vertexExtra.split('@@')[0])
+      .replace('#include <fog_vertex>', '#include <fog_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\n' + (vertexExtra.split('@@')[1] || ''));
+    let f = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + SUNNY_GLSL + '\n' + extraDecl);
+    if (replaceChunk) f = f.replace(replaceChunk, replaceChunk === '#include <map_fragment>' ? '#include <map_fragment>\n' + albedoCode : albedoCode);
+    sh.fragmentShader = f.replace('#include <opaque_fragment>', SUNNY_LIGHT);
   };
   return mat;
 }
 
-// StylizedBuilding.shader 의 KucaBuildingAlbedo 와 같은 무늬 (Unity 좌표)
+function buildingMaterial(st, heightScale, common) {
+  const u = {
+    uWall: { value: lin(st.wall) }, uTrim: { value: lin(st.trim) }, uWindow: { value: lin(st.window) }, uRoof: { value: lin(st.roof) },
+    uFloorH: { value: st.floorHeight * heightScale }, uSpacing: { value: st.spacing }, uWinW: { value: st.windowWidth },
+    uWinH: { value: st.windowHeight }, uPilEvery: { value: st.pilasterEvery }, uBrick: { value: st.brick }, uArch: { value: st.arch || 0 },
+  };
+  return sunny(new THREE.MeshLambertMaterial({ color: 0xffffff }), common, u, BUILDING_GLSL,
+    'diffuseColor.rgb = kucaBuilding(vec3(vWPos.x, vWPos.y, -vWPos.z), normalize(vec3(vWN.x, vWN.y, -vWN.z)), vWall);',
+    '#include <map_fragment>',
+    'attribute vec2 wallUV; varying vec2 vWall; varying vec3 vWN;@@vWall = wallUV; vWN = normalize(mat3(modelMatrix) * objectNormal);');
+}
+
+// StylizedBuilding.shader 의 BuildingAlbedo 와 같은 무늬 (Unity 좌표, wall = (벽 위 위치, 벽 길이) m)
 const BUILDING_GLSL = `
-varying vec3 vWPos; varying vec3 vWN;
+varying vec2 vWall; varying vec3 vWN;
 uniform vec3 uWall, uTrim, uWindow, uRoof;
-uniform float uFloorH, uSpacing, uWinW, uWinH, uPilEvery, uBrick;
-vec3 kucaBuilding(vec3 p, vec3 n) {
+uniform float uFloorH, uSpacing, uWinW, uWinH, uPilEvery, uBrick, uArch;
+float sdRoundBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
+vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
+  float ao = mix(0.86, 1.0, clamp(p.y / 4.0, 0.0, 1.0));
   if (n.y > 0.6) {
-    vec2 g = abs(fract(p.xz / 4.0) - 0.5);
-    return uRoof * (1.0 - 0.05 * step(0.47, max(g.x, g.y)));
+    vec2 g = abs(fract(p.xz / 5.0) - 0.5);
+    return uRoof * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
   }
-  vec2 side = normalize(vec2(-n.z, n.x) + 1e-5);
-  float u = dot(p.xz, side) / uSpacing;
-  float v = p.y / uFloorH;
-  float fu = fract(u), fv = fract(v);
-  vec3 c = uWall;
-  if (uBrick > 0.5) c *= 1.0 - 0.08 * step(fract(p.y / 0.32), 0.14);
-  if (uPilEvery > 0.5) {
-    float colI = floor(u + 0.5);
-    float gap = abs(fract(u + 0.5) - 0.5);
-    if (mod(abs(colI), uPilEvery) < 0.5 && gap < 0.17 && p.y > 0.9) c = mix(c, uTrim, 0.85);
+  vec3 c = uWall * mix(0.93, 1.04, clamp(p.y / 24.0, 0.0, 1.0));
+  if (uBrick > 0.5) c *= 1.0 - 0.06 * step(fract(p.y / 0.34), 0.12);
+  float fv = fract(p.y / uFloorH), fl = floor(p.y / uFloorH);
+  if (fv < 0.05 && p.y > 2.0) c = mix(c, uTrim, 0.55);
+  float wl = wall.y, wu = wall.x;
+  if (wl < 0.5) { vec2 side = normalize(vec2(-n.z, n.x) + 1e-5); wu = dot(p.xz, side); wl = 100000.0; }
+  bool infinite = wl > 99999.0;
+  float margin = infinite ? 0.0 : clamp(wl * 0.12, 1.8, 3.2);
+  float nWin = infinite ? 100000.0 : floor((wl - 2.0 * margin) / uSpacing);
+  if (nWin < 1.0 || p.y < 1.2) return c * ao;
+  float lu = (wu - (infinite ? 0.0 : (wl - nWin * uSpacing) * 0.5)) / uSpacing;
+  if (lu < 0.0 || lu >= nWin) return mix(c, uTrim, 0.22) * ao;                       // 모서리 기둥 (창 없음)
+  float colI = floor(lu), fu = fract(lu);
+  if (uPilEvery > 0.5 && mod(colI, uPilEvery) > uPilEvery - 1.5) return mix(c, uTrim, 0.3) * ao;   // 창 묶음 사이 벽
+  vec2 qq = vec2((fu - 0.5) * uSpacing, (fv - 0.55) * uFloorH);
+  vec2 hb = vec2(uWinW * uSpacing * 0.5, uWinH * uFloorH * 0.5);
+  float d;
+  if (uArch > 0.5 && qq.y > hb.y - hb.x) d = length(qq - vec2(0.0, hb.y - hb.x)) - hb.x;
+  else d = sdRoundBox(qq, hb, min(hb.x, hb.y) * (uArch > 0.5 ? 0.2 : 0.42));
+  vec3 res = c * ao;
+  if (qq.y < -hb.y && qq.y > -hb.y - 0.24 && abs(qq.x) < hb.x + 0.22) res = uTrim * ao;    // 창턱
+  else if (d < 0.0) {
+    float t = clamp((qq.y + hb.y) / (2.0 * hb.y), 0.0, 1.0);
+    float h = fract(sin(dot(vec2(colI, fl), vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 gl = mix(uWindow * 0.72, mix(uWindow, vec3(0.88, 0.95, 1.0), 0.55), t);
+    gl = mix(gl, vec3(0.97, 0.99, 1.0), 0.4 * step(0.86, fract((qq.x * 0.7 + qq.y) * 0.45 + h)));
+    if (h > 0.8 && t > 0.5) gl = mix(gl, vec3(1.0, 0.93, 0.84), 0.55);
+    if (uWinW > 0.8 && abs(qq.x) < 0.06) gl = uTrim * 0.95;
+    res = gl;
   }
-  if (fv < 0.06 && p.y > 2.0) c = mix(c, uTrim, 0.7);
-  float hw = uWinW * 0.5, hh = uWinH * 0.5;
-  float du = abs(fu - 0.5), dv = abs(fv - 0.55);
-  bool above = p.y > 1.4;
-  if (above && du < hw + 0.05 && dv < hh + 0.07) {
-    c = uTrim * 0.96;
-    if (du < hw && dv < hh) {
-      float t = (fv - (0.55 - hh)) / (2.0 * hh);
-      float h = fract(sin(dot(floor(vec2(u, v)), vec2(12.9898, 78.233))) * 43758.5453);
-      vec3 gl = uWindow * (0.78 + 0.34 * t) * (0.88 + 0.24 * h);
-      float streak = step(0.8, fract((u * uSpacing + p.y) * 0.11));
-      gl = mix(gl, vec3(0.80, 0.88, 0.96), 0.25 * streak);
-      if (h > 0.82 && t > 0.45) gl = mix(gl, vec3(0.93, 0.91, 0.86), 0.6);   // 블라인드 내린 창
-      if (t > 0.84) gl *= 0.68;                                               // 창 윗부분 그늘 (깊이감)
-      if (uWinW > 0.8 && du < 0.012) gl = uTrim * 0.9;                        // 넓은 창 가운데 멀리언
-      c = gl;
-    }
-  }
-  if (above && du < hw + 0.1 && fv > 0.55 - hh - 0.12 && fv < 0.55 - hh - 0.06) c = uTrim;
-  return c * mix(0.84, 1.0, clamp(p.y / 4.0, 0.0, 1.0));
+  else if (d < 0.16) res = uTrim;
+  // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
+  float px = max(fwidth(qq.x), fwidth(qq.y));
+  vec3 avg = mix(c * ao, mix(uWindow, uTrim, 0.35), clamp(uWinW * uWinH * 1.4, 0.0, 0.7));
+  return mix(res, avg, clamp(px * 3.0 - 0.6, 0.0, 1.0));
 }`;
 
 async function parseGeometry(buf) {
-  // build_art.py write_bytes v2: 'KUCA' int32 2, 나머지 gzip
+  // build_art.py write_bytes v3: 'KUCA' int32 3, 나머지 gzip
   const head = new DataView(buf, 0, 8);
-  if (String.fromCharCode(...new Uint8Array(buf, 0, 4)) !== 'KUCA' || head.getInt32(4, true) !== 2) throw new Error('bad geometry file');
+  if (String.fromCharCode(...new Uint8Array(buf, 0, 4)) !== 'KUCA' || head.getInt32(4, true) !== 3) throw new Error('bad geometry file');
   const body = await new Response(new Blob([buf.slice(8)]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
   const dv = new DataView(body);
   let o = 0;
@@ -215,20 +239,25 @@ async function parseGeometry(buf) {
     const name = new TextDecoder().decode(new Uint8Array(body, o, nl)); o += nl;
     const ox = dv.getFloat32(o, true), oy = dv.getFloat32(o + 4, true), oz = dv.getFloat32(o + 8, true); o += 12;
     const vc = dv.getInt32(o, true); o += 4;
+    const flags = dv.getInt32(o, true); o += 4;
     const src = new Int16Array(body.slice(o, o + vc * 6)); o += vc * 6;
     const col = new Uint8Array(body, o, vc * 4); o += vc * 4;
-    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3);
+    let aux = null;
+    if (flags & 1) { aux = new Uint16Array(body.slice(o, o + vc * 4)); o += vc * 4; }
+    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3), wuv = new Float32Array(vc * 2);
     for (let t = 0; t < vc; t += 3) {
       const order = [t, t + 2, t + 1];   // z 를 뒤집으니 감는 방향도 뒤집는다
       for (let j = 0; j < 3; j++) {
         const s = order[j], d = t + j;
         pos[d * 3] = ox + src[s * 3] * UNIT; pos[d * 3 + 1] = oy + src[s * 3 + 1] * UNIT; pos[d * 3 + 2] = -(oz + src[s * 3 + 2] * UNIT);
         c[d * 3] = lut[col[s * 4]]; c[d * 3 + 1] = lut[col[s * 4 + 1]]; c[d * 3 + 2] = lut[col[s * 4 + 2]];
+        if (aux) { wuv[d * 2] = aux[s * 2] * 0.1; wuv[d * 2 + 1] = aux[s * 2 + 1] * 0.1; }
       }
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    g.setAttribute('wallUV', new THREE.BufferAttribute(wuv, 2));
     g.computeVertexNormals();
     out.push({ name, g });
   }

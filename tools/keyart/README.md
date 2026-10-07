@@ -5,7 +5,7 @@
 
 ```bash
 cd tools/keyart
-uv run --with numpy --with pillow --with scipy python build_art.py     # 약 2분
+uv run --with numpy --with pillow --with scipy --with scikit-image python build_art.py     # 약 2분 30초
 ```
 
 결과 (`My project/Assets/Art/KeyArt`):
@@ -14,7 +14,7 @@ uv run --with numpy --with pillow --with scipy python build_art.py     # 약 2�
 | --- | --- |
 | `CampusGround.jpg` | 지면 텍스처 3752×4096 (≈2.6 px/m): 잔디·포장·도로(중앙선·횡단보도)·물(석재 테)·운동장·화단, 건물·나무 둘레 그늘 |
 | `GrassDetail.png` | 가까이서 겹쳐 쓰는 잔디 결 |
-| `KeyArtGeometry.bytes` | 버텍스 색 로우폴리 메시 (gzip, 2 cm 정수 좌표): 나무·관목·산울타리, 건물 기단·코니스·옥상 난간·실외기·입구 캐노피, 랜드마크 |
+| `KeyArtGeometry.bytes` | 로우폴리 메시 v3 (gzip, 2 cm 정수 좌표): 둥근 모서리 건물 외벽(Shell, 벽 좌표 UV2 포함), 나무·관목·산울타리, 건물 기단·코니스·옥상 난간·실외기·입구 캐노피, 랜드마크, 호수 분수, 캠퍼스 담장 |
 | `KeyArtManifest.json` | 건물별 외벽 스타일, 랜드마크로 대신해 숨길 상자 건물 |
 | `KeyArtLook.json` | **직접 고치는 파일**: 해·환경광·그림자 세기·안개·카메라·건물 높이 배율(`buildingHeightScale`)·외벽 스타일 색과 창문 크기 |
 
@@ -22,7 +22,13 @@ uv run --with numpy --with pillow --with scipy python build_art.py     # 약 2�
 원래 Mapbox 지도로 되돌리려면 **KUCA → Map Style → Apply Mapbox**.
 
 - 지오메트리는 `KeyArtGeometry` 컴포넌트가 켜질 때 `.bytes` 에서 메시를 만듭니다 (씬·저장소에 큰 메시 에셋을 두지 않음).
-- 셰이더: `KUCA/StylizedGround`, `KUCA/StylizedBuilding`, `KUCA/VertexColorLit` — 공통 조명은 `Shaders/KUCAStylizedLighting.hlsl`.
+- 셰이더: `KUCA/StylizedGround`, `KUCA/StylizedBuilding`, `KUCA/VertexColorLit` — 공통 '햇살' 조명은 `Shaders/KUCAStylizedLighting.hlsl`
+  (감싸는 빛, 하늘빛 그늘, 따뜻한 윗면, 가장자리 빛, 채도, 화면 왼쪽 위 햇살 번짐, 물 반짝임). 값은 `KeyArtLook.json` 의 `sunny`.
+- 건물 외벽: 모든 건물을 둥근 모서리 Shell 메시로 다시 그리고 상자 건물은 숨깁니다(충돌체·정보는 유지).
+  창은 벽마다 가운데 정렬, 양끝은 창 없는 모서리 기둥, `pilasterEvery` 마다 창 없는 벽, 둥근 창(고전 양식은 아치 창).
+- 캠퍼스 경계: 대학 건물에서 넓혀 만든 부드러운 영역. 안은 채도·따뜻함을 올리고, 밖은 채도를 낮춘 파스텔(건물은 `Outside` 스타일 단순형).
+  경계선을 따라 크림 석재 담장·기둥(길과 만나는 곳은 등 기둥 문), 안쪽에 벚나무·원뿔 나무 띠.
+- 사색의 광장 호수: 광장 동쪽 둥근 호수, 석재 테, 3단 분수, 연잎·연꽃, 둘레 벤치.
 - `osm_ground.json`: 캠퍼스 범위의 도로·녹지·물·주차장 (Overpass API, 2026-10-06)
 
 ## 웹 미리보기 (Unity 없이 확인)

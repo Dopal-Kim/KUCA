@@ -56,6 +56,7 @@ Shader "KUCA/VertexColorLit"
             half4 frag (Varyings i) : SV_Target
             {
                 half3 color = KucaShade(i.color.rgb, normalize(i.normalWS), i.positionWS);
+                color = KucaSunWash(color, i.positionCS);
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

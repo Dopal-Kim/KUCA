@@ -37,7 +37,7 @@ const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle
 fs.mkdirSync(path.join(here, 'shots'), { recursive: true });
 for (const [name, [x, z, dist, yaw]] of Object.entries(views)) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
-  page.on('console', (m) => { if (m.type() === 'error') console.log('[page]', m.text()); });
+  page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text().slice(0, 600)); });
   await page.goto(`http://localhost:${port}/tools/keyart/preview/index.html?x=${x}&z=${z}&dist=${dist}&yaw=${yaw}${process.env.EXTRA || ""}`);
   await page.waitForFunction(() => window.__done || window.__error, null, { timeout: 600000 });
   const err = await page.evaluate(() => window.__error);

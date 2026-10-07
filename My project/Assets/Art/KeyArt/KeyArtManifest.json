@@ -5,6 +5,478 @@
    "style": "Brick"
   },
   {
+   "id": "way-1055000246",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000247",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000248",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000249",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000250",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000251",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000252",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000253",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000254",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000255",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000256",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000257",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000258",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000259",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000260",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000261",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000262",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000263",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000264",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000265",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000266",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000267",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000268",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000269",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000270",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000271",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000272",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000273",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000274",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000275",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000276",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000277",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055000278",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271929",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271930",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271931",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271932",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271933",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271934",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271935",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055271936",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055280450",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055280451",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684566",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684567",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684568",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684569",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684570",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684571",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684572",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684573",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684574",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684575",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684576",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684979",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684980",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684981",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684982",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684983",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684984",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684985",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684986",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684987",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1055684988",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038145",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038146",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038147",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038148",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038149",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038150",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038151",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038152",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038153",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038154",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038155",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038156",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038157",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038158",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038159",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038160",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038161",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038162",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038163",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038164",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038165",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038166",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038167",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038168",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038169",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038170",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038171",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038172",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038894",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038895",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038896",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038897",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038898",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038899",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038900",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1057038901",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312275",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312276",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312277",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312278",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312279",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312280",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1066312281",
+   "style": "Outside"
+  },
+  {
+   "id": "way-1481756494",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170402243",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170402256",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170432036",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170472031",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170472036",
+   "style": "Outside"
+  },
+  {
+   "id": "way-170480319",
+   "style": "Outside"
+  },
+  {
+   "id": "way-171984269",
+   "style": "Outside"
+  },
+  {
+   "id": "way-171984391",
+   "style": "Outside"
+  },
+  {
+   "id": "way-171984392",
+   "style": "Outside"
+  },
+  {
+   "id": "way-171984515",
+   "style": "Outside"
+  },
+  {
    "id": "way-455725718",
    "style": "Modern"
   },
@@ -15,6 +487,74 @@
   {
    "id": "way-455728922",
    "style": "Modern"
+  },
+  {
+   "id": "way-470106915",
+   "style": "Outside"
+  },
+  {
+   "id": "way-470106916",
+   "style": "Outside"
+  },
+  {
+   "id": "way-470106917",
+   "style": "Outside"
+  },
+  {
+   "id": "way-470106918",
+   "style": "Outside"
+  },
+  {
+   "id": "way-470106919",
+   "style": "Outside"
+  },
+  {
+   "id": "way-470106920",
+   "style": "Outside"
+  },
+  {
+   "id": "way-472246700",
+   "style": "Outside"
+  },
+  {
+   "id": "way-472246703",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960723",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960724",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960725",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960726",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960727",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960728",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960729",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960730",
+   "style": "Outside"
+  },
+  {
+   "id": "way-473960732",
+   "style": "Outside"
   },
   {
    "id": "way-474085534",
@@ -37,6 +577,146 @@
    "style": "Modern"
   },
   {
+   "id": "way-474086849",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086850",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086851",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086853",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086854",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086855",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086856",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086857",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086858",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086859",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086860",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086861",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086862",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086863",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086864",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086865",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086866",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086867",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086868",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086869",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086870",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086871",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086872",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086873",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086874",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086875",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086876",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086877",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086878",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086879",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086880",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086881",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086882",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086883",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474086884",
+   "style": "Outside"
+  },
+  {
    "id": "way-474521123",
    "style": "Classical"
   },
@@ -45,8 +725,1424 @@
    "style": "Classical"
   },
   {
+   "id": "way-474531016",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531017",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531018",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531019",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531020",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531021",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531022",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531023",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531024",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531025",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531026",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531027",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531028",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531029",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531030",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531031",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531032",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531033",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531034",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531035",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531036",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531037",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531038",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531039",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531040",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531041",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531042",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531043",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531044",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531045",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531046",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531047",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531048",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531049",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531050",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531051",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531052",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531053",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531054",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531055",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531056",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531057",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531058",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531059",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474531060",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474532048",
+   "style": "Outside"
+  },
+  {
+   "id": "way-474532408",
+   "style": "Outside"
+  },
+  {
    "id": "way-585696506",
    "style": "Classical"
+  },
+  {
+   "id": "way-713435485",
+   "style": "Outside"
+  },
+  {
+   "id": "way-713435486",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739019447",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739019448",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739019449",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083390",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083391",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083392",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083393",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083394",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083395",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083396",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083397",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083400",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739083401",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571216",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571217",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571218",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571219",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571220",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571221",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571224",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571226",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571235",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571259",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571260",
+   "style": "Outside"
+  },
+  {
+   "id": "way-739571264",
+   "style": "Outside"
+  },
+  {
+   "id": "way-753503631",
+   "style": "Outside"
+  },
+  {
+   "id": "way-762414725",
+   "style": "Outside"
+  },
+  {
+   "id": "way-764171416",
+   "style": "Outside"
+  },
+  {
+   "id": "way-765182662",
+   "style": "Outside"
+  },
+  {
+   "id": "way-765182663",
+   "style": "Outside"
+  },
+  {
+   "id": "way-765182667",
+   "style": "Outside"
+  },
+  {
+   "id": "way-765182670",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360171",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360172",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360173",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360174",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360175",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360176",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360177",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360178",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360179",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360180",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360181",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360182",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360183",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360184",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360185",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360186",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360187",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360188",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360189",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360190",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360191",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360192",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360193",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360194",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360195",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360196",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360197",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360198",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360199",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360200",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360201",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360202",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360203",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360204",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360205",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360207",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360208",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360217",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360218",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360219",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360220",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360221",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360222",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360223",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360224",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360225",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360226",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360227",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775360228",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364161",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364162",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364163",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364164",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364165",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364166",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364167",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364168",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364169",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364170",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364171",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364172",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364173",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364174",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364175",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364176",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364177",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364178",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364179",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364180",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364181",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364182",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364183",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364184",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364185",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364186",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364187",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364188",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364189",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364190",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364191",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364192",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364193",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364194",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364195",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364196",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364197",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364198",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364199",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364200",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364201",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364202",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364203",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364204",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364205",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364206",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364207",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364208",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364209",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364210",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364213",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364214",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364215",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364216",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364217",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364218",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364219",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364220",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364221",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364222",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364223",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364224",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364228",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364229",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775364230",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366527",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366528",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366529",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366530",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366531",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366532",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366533",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366534",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366535",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366536",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366537",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366538",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366539",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366981",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366982",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366983",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366984",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366985",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366986",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366987",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366988",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366989",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775366990",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386203",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386204",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386205",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386206",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386207",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386208",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386209",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386210",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386211",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386212",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386213",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386214",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775386215",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775387063",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775387064",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775387065",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775387066",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775387067",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389582",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389583",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389584",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389585",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389586",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389587",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389588",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389589",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389590",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775389591",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775390071",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775390072",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409659",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409660",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409661",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409662",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409663",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409664",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409665",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409666",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409667",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409668",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775409669",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411443",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411444",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411445",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411446",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411447",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411448",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411449",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411450",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411451",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411452",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411453",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411454",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411455",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411456",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411457",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411458",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411459",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411460",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411461",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411462",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411463",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411464",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411465",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411466",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411467",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411468",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411469",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411470",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411471",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411480",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411481",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411482",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411483",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775411484",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414415",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414416",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414417",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414418",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414419",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414420",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414421",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414422",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414423",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414424",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414425",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414426",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414427",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414428",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414429",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414430",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414431",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414432",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414433",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414434",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414435",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414436",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414437",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414438",
+   "style": "Outside"
+  },
+  {
+   "id": "way-775414439",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776043182",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776043183",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776043184",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776043185",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776043186",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776126854",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776126855",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776126856",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776126857",
+   "style": "Outside"
+  },
+  {
+   "id": "way-776126858",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799309609",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540275",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540276",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540277",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540278",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540279",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540280",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540281",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540282",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540283",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540284",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540285",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540286",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540287",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540288",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540289",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540290",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540291",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540819",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799540820",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799555416",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799555417",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799555418",
+   "style": "Outside"
+  },
+  {
+   "id": "way-799555419",
+   "style": "Outside"
+  },
+  {
+   "id": "way-819527574",
+   "style": "Outside"
+  },
+  {
+   "id": "way-820150093",
+   "style": "Outside"
   }
  ],
  "hidden": [
@@ -110,5 +2206,6 @@
    "id": "way-585696507",
    "scale": 0.9167
   }
- ]
+ ],
+ "replaceBuildings": true
 }

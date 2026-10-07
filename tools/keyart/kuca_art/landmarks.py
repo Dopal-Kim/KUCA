@@ -45,6 +45,15 @@ REAL_LEVELS = {
 }
 LEVEL_H = 3.3
 
+CAMPUS_NAMES = {'학생회관', '원자로센터', '실습농장동', '실험연구동', '생명과학대학', '원예생물공학온실', '애지원', '공학실험동',
+                '노천극장', '천문대', '선승관', '중앙도서관', '공학관', '멀티미디어교육관', '글로벌관', '우정원'}
+
+
+def is_campus_seed(b):
+    t = b.tags.get('building')
+    return t in ('college', 'university', 'dormitory') or b.id in REAL_LEVELS or b.name in CAMPUS_NAMES \
+        or '경희' in (b.name or '')
+
 HIDDEN = {THEATER, GATE}          # 상자 건물 대신 이 형태만 보인다 (충돌체·정보는 Unity 에 남김)
 NO_DETAILS = {THEATER, GATE, OBSERVATORY, CERAMICS}   # 공통 디테일(난간 등)을 붙이지 않을 건물
 
@@ -514,13 +523,20 @@ def plaza_ring(layer, ground, osm):
     cx = sum(p[0] for p in ring) / len(ring)
     cz = sum(p[1] for p in ring) / len(ring)
     for (x, z) in walk(offset_polygon(ring, -1.5), 20.0):
-        if not ground.has(ground.occupied, x, z):
+        if not ground.has(ground.occupied, x, z) and not ground.has(ground.water, x, z):
             draw_lamp(layer.at(x, z), x, z, math.degrees(math.atan2(cx - x, cz - z)))
             ground.occupy(x, z, 0.8, ao=0.25, ao_radius=0.6)
             n += 1
-    # 모서리 화단: 원형 석재 화분 + 꽃
-    for (x, z) in offset_polygon(ring, -4.0):
-        if ground.has(ground.occupied, x, z):
+    # 모서리 화단: 원형 석재 화분 + 꽃 (꺾임이 큰 모서리만)
+    inner = offset_polygon(ring, -4.0)
+    corners = []
+    for i, (x, z) in enumerate(inner):
+        a, b = inner[i - 1], inner[(i + 1) % len(inner)]
+        d0 = math.atan2(z - a[1], x - a[0])
+        d1 = math.atan2(b[1] - z, b[0] - x)
+        corners.append((abs((d1 - d0 + math.pi) % (2 * math.pi) - math.pi), x, z))
+    for turn, x, z in sorted(corners, reverse=True)[:4]:
+        if ground.has(ground.occupied, x, z) or ground.has(ground.water, x, z):
             continue
         mb = layer.at(x, z)
         mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.25
@@ -580,3 +596,194 @@ def arena_roof(mb, b, f):
             x1, y1 = -span / 2 * math.cos(a1), span * 0.28 * math.sin(a1)
             mb.box(m, ((x0 + x1) / 2, (y0 + y1) / 2 + 0.08, z), (abs(x1 - x0) + 0.2, abs(y1 - y0) + 0.25, 0.45), COLUMN, bottom=False)
     mb.ao_floor = 0.0
+
+
+# ---------- 사색의 광장 호수 ----------
+
+WATER_JET = (0.86, 0.95, 1.0)
+LILY = (0.36, 0.62, 0.26)
+
+
+def plan_lake(ground, osm):
+    """광장 다각형 안 동쪽에 둥근 호수 (오벨리스크는 서쪽 도서관 쪽). 반환: (중심, rx, rz)"""
+    from .geo import to_world
+    ring = None
+    for e in osm:
+        if e.get('tags', {}).get('place') == 'square' and e['type'] == 'way' and e.get('geometry'):
+            ring = [to_world(p['lon'], p['lat']) for p in e['geometry']][:-1]
+    if not ring:
+        return None
+    xs, zs = [p[0] for p in ring], [p[1] for p in ring]
+    w, h = max(xs) - min(xs), max(zs) - min(zs)
+    cx = (min(xs) + max(xs)) / 2 + w * 0.14
+    cz = (min(zs) + max(zs)) / 2
+    rx, rz = min(w * 0.24, 42.0), min(h * 0.3, 26.0)
+    ground.add_lake((cx, cz), rx, rz)
+    return (cx, cz), rx, rz
+
+
+def lake_features(layer, ground, lake):
+    """호수 둘레 낮은 석재 테, 가운데 3단 분수와 물줄기, 연잎"""
+    import random as _r
+    from .mesh import offset_polygon, signed_area
+    (cx, cz), rx, rz = lake
+    poly = list(ground.lake_poly)
+    if signed_area(poly) > 0:
+        poly.reverse()
+    mb = layer.at(cx, cz)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.5, 0.2
+    mb.band(poly, 0.0, 0.55, 1.3, 0.0, (0.92, 0.89, 0.83), top_col=(0.97, 0.95, 0.90))
+    mb.ao_strength = 0.0
+    # 분수: 받침 3단 + 물줄기 원뿔
+    base = (0.94, 0.92, 0.87)
+    mb.prism(IDENT, (cx, 0.0, cz), 5.0, 0.7, 16, base, caps=True)
+    mb.prism(IDENT, (cx, 0.7, cz), 4.4, 0.08, 16, (0.55, 0.80, 0.92), caps=True)
+    mb.prism(IDENT, (cx, 0.7, cz), 0.8, 2.4, 10, base)
+    mb.prism(IDENT, (cx, 3.1, cz), 2.6, 0.45, 14, base, caps=True)
+    mb.prism(IDENT, (cx, 3.55, cz), 0.45, 1.6, 8, base)
+    mb.prism(IDENT, (cx, 5.15, cz), 1.3, 0.35, 12, base, caps=True)
+    mb.cone(IDENT, (cx, 5.5, cz), 0.5, 3.4, 8, WATER_JET, bottom=False)
+    for k in range(8):
+        a = k * math.pi / 4
+        x, z = cx + math.cos(a) * 3.6, cz + math.sin(a) * 3.6
+        mb.cone(IDENT, (x, 0.75, z), 0.22, 1.6, 6, WATER_JET, bottom=False)
+    # 연잎과 분홍 연꽃
+    rr = _r.Random(5)
+    for k in range(22):
+        a = rr.uniform(0, 2 * math.pi)
+        t = rr.uniform(0.45, 0.85)
+        x, z = cx + math.cos(a) * rx * t, cz + math.sin(a) * rz * t
+        mb.prism(IDENT, (x, 0.05, z), rr.uniform(0.7, 1.2), 0.06, 8, LILY, caps=True)
+        if rr.random() < 0.35:
+            mb.ico(IDENT, (x, 0.3, z), (0.3, 0.22, 0.3), (0.98, 0.70, 0.82), var=0.0)
+    ground.occupy(cx, cz, max(rx, rz) + 2, ao=0.0)
+    # 호수 둘레 벤치 6개 (호수를 바라보게)
+    from .nature import draw_bench
+    for k in range(6):
+        a = k * math.pi / 3 + 0.3
+        x, z = cx + math.cos(a) * (rx + 4.5), cz + math.sin(a) * (rz + 4.5)
+        draw_bench(layer.at(x, z), x, z, math.degrees(math.atan2(cx - x, cz - z)))
+
+
+# ---------- 캠퍼스 경계 담장 ----------
+
+WALL = (0.95, 0.92, 0.85)
+WALL_CAP = (0.99, 0.97, 0.92)
+
+
+def campus_wall(layer, ground, rng):
+    """캠퍼스 경계선을 따라 크림 석재 담장(1.3 m) + 12 m 기둥, 길과 만나는 곳은 문처럼 비우고 기둥에 등.
+    담장 안쪽 5 m 에 벚나무·원뿔 나무를 번갈아 (경계 안이 특별한 공간으로 보이게)"""
+    from .ground import ROAD_W
+    from .nature import draw_tree
+    from .geo import MAP_W, MAP_H
+    walls = posts = trees = 0
+
+    def blocked(x, z):
+        return (not ground.inside(x, z, 20)) or ground.has(ground.road, x, z) or ground.has(ground.curb, x, z) \
+            or ground.has(ground.walk, x, z) or ground.has(ground.water, x, z) or ground.has(ground.buildings, x, z) \
+            or ground.has(ground.parking, x, z) or ground.has(ground.paved, x, z)
+
+    for line in ground.campus_contours():
+        if len(line) < 4:
+            continue
+        # 2 m 간격으로 다시 찍기
+        pts = [line[0]]
+        for p in line[1:]:
+            q = pts[-1]
+            L = math.hypot(p[0] - q[0], p[1] - q[1])
+            n = int(L // 2.0)
+            for k in range(1, n + 1):
+                pts.append((q[0] + (p[0] - q[0]) * k / max(n, 1), q[1] + (p[1] - q[1]) * k / max(n, 1)))
+        free = [not blocked(*p) for p in pts]
+        run = []
+        for i, p in enumerate(pts + [None]):
+            ok = p is not None and free[i]
+            if ok:
+                run.append(p)
+                continue
+            if len(run) >= 3:
+                # 열린 끝(길·문)에는 등 기둥
+                for end in (run[0], run[-1]):
+                    _post(layer.at(*end), end, lamp=True)
+                    posts += 1
+                for a, b in zip(*_merge_straight(run)):
+                    _wall_seg(layer.at(*a), a, b)
+                    walls += 1
+                for k in range(6, len(run) - 3, 6):
+                    _post(layer.at(*run[k]), run[k], lamp=False)
+                    ground.occupy(run[k][0], run[k][1], 1.2)
+                    posts += 1
+                for a, b in zip(run, run[1:]):
+                    ground.occupy_line(a, b, 1.6, ao=0.3)
+            run = []
+        # 안쪽 가로수 띠
+        for i in range(4, len(pts) - 4, 8):
+            (x0, z0), (x1, z1) = pts[i - 1], pts[i + 1]
+            L = math.hypot(x1 - x0, z1 - z0) or 1
+            nx, nz = -(z1 - z0) / L, (x1 - x0) / L
+            for sgn in (1, -1):
+                px, pz = pts[i][0] + nx * 5.5 * sgn, pts[i][1] + nz * 5.5 * sgn
+                if ground.has(ground.campus, px, pz) and ground.inside(px, pz) and ground.is_free(px, pz, 1.2):
+                    kind = 'cherry' if (i // 8) % 2 == 0 else 'small_cone'
+                    draw_tree(layer.at(px, pz), kind, px, pz, rng.uniform(1.0, 1.2), rng.uniform(0, 360), rng)
+                    ground.occupy(px, pz, 2.2, ao=0.35, ao_radius=2.6)
+                    trees += 1
+    return walls, posts, trees
+
+
+def _wall_seg(mb, a, b):
+    L = math.hypot(b[0] - a[0], b[1] - a[1])
+    if L < 0.2:
+        return
+    yaw = math.degrees(math.atan2(b[0] - a[0], b[1] - a[1]))
+    m = Frame.yaw(((a[0] + b[0]) / 2, 0.0, (a[1] + b[1]) / 2), yaw)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.22
+    mb.box(m, (0, 0.25, 0), (1.3, 0.5, L + 0.05), (0.86, 0.82, 0.74), bottom=False)
+    mb.box(m, (0, 1.0, 0), (1.0, 1.9, L + 0.05), WALL, bottom=False)
+    mb.ao_strength = 0.0
+    mb.bevel_box(m, (0, 2.08, 0), (1.35, 0.32, L + 0.1), 0.14, WALL_CAP)
+    mb.ao_strength = 0.25
+
+
+def _post(mb, p, lamp):
+    m = Frame((p[0], 0.0, p[1]))
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 1.0, 0.22
+    mb.box(m, (0, 1.4, 0), (2.0, 2.8, 2.0), WALL, bottom=False)
+    mb.ao_strength = 0.0
+    mb.bevel_box(m, (0, 2.95, 0), (2.4, 0.35, 2.4), 0.16, WALL_CAP)
+    if lamp:
+        mb.prism(m, (0, 3.1, 0), 0.3, 0.6, 6, (0.32, 0.34, 0.38))
+        mb.box(m, (0, 4.0, 0), (0.8, 0.9, 0.8), (1.0, 0.96, 0.82), top=(1.0, 0.96, 0.82))
+        mb.box(m, (0, 4.52, 0), (1.05, 0.16, 1.05), (0.32, 0.34, 0.38))
+    else:
+        mb.ico(m, (0, 3.6, 0), (0.6, 0.6, 0.6), WALL_CAP, var=0.04)
+    mb.ao_strength = 0.25
+
+
+def _merge_straight(run, tol=0.35, max_len=40.0):
+    """점 열을 거의 곧은 구간끼리 묶어 (시작점들, 끝점들). 담장 상자 수를 줄인다."""
+    starts, ends = [], []
+    i = 0
+    while i < len(run) - 1:
+        j = i + 1
+        while j + 1 < len(run):
+            a, b = run[i], run[j + 1]
+            L = math.hypot(b[0] - a[0], b[1] - a[1])
+            if L > max_len:
+                break
+            # 중간 점들이 직선에서 tol 이내인지
+            ok = True
+            for k in range(i + 1, j + 1):
+                p = run[k]
+                d = abs((b[0] - a[0]) * (a[1] - p[1]) - (a[0] - p[0]) * (b[1] - a[1])) / (L or 1)
+                if d > tol:
+                    ok = False
+                    break
+            if not ok:
+                break
+            j += 1
+        starts.append(run[i])
+        ends.append(run[j])
+        i = j
+    return starts, ends

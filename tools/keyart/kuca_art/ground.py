@@ -82,6 +82,9 @@ class Ground:
         self.road = self._stroke(self.road_lines, ROAD_W)
 
         self.apron = np.zeros((self.H, self.W), bool)
+        self.campus = np.ones((self.H, self.W), bool)
+        self.campus_soft = np.ones((self.H, self.W), np.float32)
+        self.lake = np.zeros((self.H, self.W), bool)
         self.buildings = np.zeros((self.H, self.W), bool)
         self.occupied = np.zeros((self.H, self.W), bool)
         self.ao_img = Image.new('L', (self.W, self.H), 0)
@@ -141,6 +144,63 @@ class Ground:
         if meters <= 0:
             return m
         return ndimage.distance_transform_edt(~m) <= meters * self.ppm
+
+    # ---------- 캠퍼스 영역 (경계 안은 화사하게, 밖은 차분하게) ----------
+
+    def compute_campus(self, seeds, smooth_m=18.0):
+        """캠퍼스 건물(seeds)을 90 m 넓혀 220 m 닫기 → 구멍 메우고 부드럽게. 결과: self.campus (bool), self.campus_soft (0~1)"""
+        img = Image.new('L', (self.W, self.H), 0)
+        d = ImageDraw.Draw(img)
+        for b in seeds:
+            d.polygon([self.r.px(*p) for p in b.poly], fill=255)
+        m = np.asarray(img) > 127
+        ppm = self.ppm
+        # 200 m 넓힌 뒤 110 m 줄이기 = 90 m 넓히기 + 220 m 이하 틈 메우기
+        big = ndimage.distance_transform_edt(~m) <= 200 * ppm
+        closed = ndimage.distance_transform_edt(big) > 110 * ppm
+        closed = ndimage.binary_fill_holes(closed)
+        # 캠퍼스와 맞닿은 숲(동쪽 산)도 캠퍼스 땅
+        lab, n = ndimage.label(self.forest)
+        touch = set(np.unique(lab[closed & self.forest])) - {0}
+        closed |= np.isin(lab, list(touch))
+        soft = ndimage.gaussian_filter(closed.astype(np.float32), smooth_m * ppm)
+        self.campus = soft > 0.5
+        self.campus_soft = np.clip((soft - 0.3) / 0.4, 0, 1)
+        return self.campus
+
+    def campus_contours(self):
+        """캠퍼스 경계선 (월드 좌표 폴리라인 목록, 지도 가장자리는 제외)"""
+        from skimage import measure
+        out = []
+        for c in measure.find_contours(self.campus.astype(np.float32), 0.5):
+            pts = [self.r.world(x, y) for y, x in c[::3]]
+            out.append(pts)
+        return out
+
+    def add_lake(self, center, rx, rz, yaw_deg=0.0):
+        """사색의 광장 호수: 둥근 타원 물 + 석재 테 (지면 마스크에 더함)"""
+        img = Image.new('L', (self.W, self.H), 0)
+        d = ImageDraw.Draw(img)
+        a = math.radians(yaw_deg)
+        pts = []
+        for k in range(72):
+            t = 2 * math.pi * k / 72
+            # 살짝 부푼 타원 (슈퍼엘립스) → 귀여운 연못 모양
+            c, s_ = math.cos(t), math.sin(t)
+            ex = math.copysign(abs(c) ** 0.8, c) * rx
+            ez = math.copysign(abs(s_) ** 0.8, s_) * rz
+            pts.append(self.r.px(center[0] + ex * math.cos(a) - ez * math.sin(a), center[1] + ex * math.sin(a) + ez * math.cos(a)))
+        d.polygon(pts, fill=255)
+        self.lake_poly = [self.r.world(x, y) for x, y in pts]
+        lake = np.asarray(img) > 127
+        self.water |= lake
+        around = self._grow(lake, 1.6)
+        self.square &= ~around
+        self.walk &= ~around          # 광장을 가로지르던 보행로 선이 호수 위에 그려지지 않게
+        self.walk_lines = [(hw, pts) for hw, pts in self.walk_lines
+                           if not any(self.has(lake, x, z) for x, z in pts)]
+        self.lake = lake
+        return lake
 
     # ---------- 배치 도우미 ----------
 
@@ -413,6 +473,14 @@ class Ground:
         # 나무·산울타리 아래 그늘
         ao = ndimage.gaussian_filter(np.asarray(self.ao_img).astype(np.float32) / 255, 0.9 * ppm)
         canvas *= (1 - ao)[..., None]
+
+        # 캠퍼스 경계 안팎 대비: 밖은 채도를 45% 빼고 밝은 회녹색 쪽으로, 안은 채도 +8% · 따뜻하게
+        cs = self.campus_soft[..., None]
+        lum = canvas.mean(axis=2, keepdims=True)
+        outside = lum + (canvas - lum) * 0.55
+        outside = outside * 0.86 + np.array([214, 220, 210], np.float32) * 0.14
+        inside = np.clip(lum + (canvas - lum) * 1.08 + np.array([3, 2, -3], np.float32), 0, 255)
+        canvas = outside * (1 - cs) + inside * cs
 
         out = np.clip(canvas, 0, 255).astype(np.uint8)
         Image.fromarray(out).save(out_path, quality=90)
