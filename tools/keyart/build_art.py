@@ -22,6 +22,7 @@ from kuca_art import buildings as bld, landmarks, nature
 from kuca_art.geo import MAP_H, MAP_W, load_buildings, load_osm
 from kuca_art.ground import Ground
 from kuca_art.mesh import Layer, round_corners, write_bytes
+from kuca_art.terrain import Terrain
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ASSETS = os.path.join(HERE, '..', '..', 'My project', 'Assets')
@@ -95,9 +96,20 @@ def main():
     print('props', nature.place_props(layer, ground, rng))
 
     ground.paint(os.path.join(OUT, 'CampusGround.jpg'), os.path.join(OUT, 'GrassDetail.png'))
+    # 지형: 큰 언덕(기숙사→도서관, 동쪽 숲 산)만 또렷하게, 건물·물·운동장 아래는 평평한 터
+    terrain = Terrain(ground, buildings)
+    for lay in [layer] + list(shells.values()):
+        for b in lay.chunks.values():
+            terrain.displace(b)
+    tlayer = Layer('Terrain', MAP_W / 2, MAP_H / 2, grid=6)
+    terrain.mesh_layer(tlayer)
+    terrain.write_heightmap(os.path.join(OUT, 'KeyArtHeight.bytes'))
+    print(f'terrain: max {terrain.h.max():.1f} m, min {terrain.h.min():.1f} m')
+
     meshes = list(layer.meshes())
     for sl in shells.values():
         meshes += list(sl.meshes())
+    meshes += list(tlayer.meshes())
     verts = write_bytes(os.path.join(OUT, 'KeyArtGeometry.bytes'), meshes)
     print(f'geometry: {len(meshes)} meshes, {verts} verts, {verts // 3} tris')
 
@@ -106,7 +118,9 @@ def main():
         'styles': [{'id': i, 'style': s} for i, s in styles],
         'hidden': sorted(landmarks.HIDDEN),
         'heights': [{'id': i, 'scale': v} for i, v in sorted(height_fix.items())],
-        'replaceBuildings': True,   # 상자 건물은 숨기고 Shell 메시(둥근 모서리)가 보인다
+        'replaceBuildings': True,
+        # 건물 터 높이 (Unity 는 상자 건물·충돌체를 이만큼 올려 경희스팟·탭 위치를 맞춘다)
+        'bases': [{'id': i, 'y': round(v, 2)} for i, v in sorted(terrain.pad_level.items())],   # 상자 건물은 숨기고 Shell 메시(둥근 모서리)가 보인다
     }
     with open(os.path.join(OUT, 'KeyArtManifest.json'), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=1)

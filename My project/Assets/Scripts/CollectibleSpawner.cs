@@ -86,7 +86,8 @@ public class CollectibleSpawner : MonoBehaviour
     bool TrySpawn(Vector3 center)
     {
         Vector2 offset = Random.insideUnitCircle.normalized * Random.Range(minSpawnDistance, spawnRadius);
-        Vector3 pos = new Vector3(center.x + offset.x, 0f, center.z + offset.y);
+        float px = center.x + offset.x, pz = center.z + offset.y;
+        Vector3 pos = new Vector3(px, KeyArtTerrain.HeightAt(px, pz), pz);   // 키아트 지형 언덕 위
 
         if (!IsInsideMap(pos) || IsOnBuilding(pos))
             return false;

@@ -65,10 +65,6 @@ async function main() {
   const groundMat = sunny(new THREE.MeshLambertMaterial({ map: groundTex }), common,
     { uDetail: { value: detailTex }, uDetailTile: { value: look.grassDetail.tile }, uDetailStrength: { value: look.grassDetail.strength } },
     'uniform sampler2D uDetail; uniform float uDetailTile, uDetailStrength;', groundAlbedo, '#include <map_fragment>');
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1418, 1548), groundMat);
-  ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
-  scene.add(ground);
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), sunny(new THREE.MeshLambertMaterial({ color: lin(look.outerGrass) }), common));
   outer.rotation.x = -Math.PI / 2;
   outer.position.y = -0.3;
@@ -82,6 +78,17 @@ async function main() {
   for (const { name, g } of await parseGeometry(buf)) {
     const shell = name.match(/^Shell(\w+?)_\d+$/);
     let mat = vcMat;
+    if (name.startsWith('Terrain')) {
+      // 지형 메시: 지면 텍스처를 월드 좌표로 붙인다 (Unity StylizedGround 의 _WorldUV 와 같음)
+      const P = g.getAttribute('position');
+      const uv = new Float32Array(P.count * 2);
+      for (let i = 0; i < P.count; i++) { uv[i * 2] = P.getX(i) / 1418 + 0.5; uv[i * 2 + 1] = -P.getZ(i) / 1548 + 0.5; }
+      g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+      const t = new THREE.Mesh(g, groundMat);
+      t.receiveShadow = true;
+      scene.add(t);
+      continue;
+    }
     if (shell) {
       const st = shell[1];
       mat = shellMats[st] ||= buildingMaterial(look.styles[st] || look.styles.Default, look.buildingHeightScale || 1, common);

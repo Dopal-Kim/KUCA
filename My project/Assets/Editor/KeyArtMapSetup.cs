@@ -18,6 +18,9 @@ public static class KeyArtMapSetup
     const string GroundTex = Dir + "/CampusGround.jpg";
     const string DetailTex = Dir + "/GrassDetail.png";
     const string GeometryFile = Dir + "/KeyArtGeometry.bytes";
+    const string HeightFile = Dir + "/KeyArtHeight.bytes";
+    const string TerrainMat = Dir + "/KeyArtTerrain.mat";
+    const string TerrainRoot = "KeyArtTerrain";
     const string ManifestFile = Dir + "/KeyArtManifest.json";
     const string LookFile = Dir + "/KeyArtLook.json";
     const string GroundMat = Dir + "/KeyArtGround.mat";
@@ -78,7 +81,8 @@ public static class KeyArtMapSetup
     }
     [System.Serializable] class StyleRow { public string id, style; }
     [System.Serializable] class HeightRow { public string id; public float scale = 1f; }
-    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; public bool replaceBuildings; }
+    [System.Serializable] class BaseRow { public string id; public float y; }
+    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; public BaseRow[] bases; public bool replaceBuildings; }
 
     static Color Srgb(float[] c) => new Color(c[0], c[1], c[2]);   // Unity Color 는 감마(sRGB) 값
 
@@ -113,6 +117,13 @@ public static class KeyArtMapSetup
         ground.SetFloat("_DetailTile", look.grassDetail.tile);
         ground.SetFloat("_DetailStrength", look.grassDetail.strength);
         EditorUtility.SetDirty(ground);
+
+        // 지형 메시용: 같은 지면 텍스처를 월드 좌표로
+        Material terrainMat = LoadOrCreate(TerrainMat, "KUCA/StylizedGround");
+        terrainMat.CopyPropertiesFromMaterial(ground);
+        terrainMat.SetFloat("_WorldUV", 1f);
+        terrainMat.SetVector("_MapSize", new Vector4(1418f, 1548f, 0f, 0f));
+        EditorUtility.SetDirty(terrainMat);
 
         Material outer = LoadOrCreate(OuterMat, "KUCA/StylizedGround");
         outer.SetTexture("_BaseMap", null);
@@ -151,6 +162,9 @@ public static class KeyArtMapSetup
         Undo.RecordObject(map.GetComponent<Renderer>(), "Key Art");
         map.GetComponent<Renderer>().sharedMaterial = ground;
         map.GetComponent<Renderer>().receiveShadows = true;
+        // 지형 메시(Terrain_*)가 지면을 그리므로 평평한 Map 은 숨긴다 (충돌체는 남김)
+        bool hasTerrain = System.IO.File.Exists(HeightFile);
+        map.GetComponent<Renderer>().enabled = !hasTerrain;
         // 실행할 때 Mapbox 지도를 다시 받아 덮어쓰지 않게 한다.
         var campusMap = Object.FindAnyObjectByType<CampusMap>();
         if (campusMap != null)
@@ -159,8 +173,9 @@ public static class KeyArtMapSetup
             campusMap.downloadOnStart = false;
         }
 
+        SetTerrain(hasTerrain);
         ApplyBuildingStyles(styleMats, manifest, hs);
-        BuildGeometry(vertexColor, styleMats);
+        BuildGeometry(vertexColor, styleMats, hasTerrain ? terrainMat : null);
         SetOuterGround(outer, true);
         SetLighting(look, sky, true);
         SetCamera(look.camera);
@@ -187,6 +202,9 @@ public static class KeyArtMapSetup
         {
             Undo.RecordObject(info.transform, "Mapbox");
             info.transform.localScale = Vector3.one;
+            Vector3 lp = info.transform.localPosition;
+            lp.y = 0f;
+            info.transform.localPosition = lp;
         }
         foreach (Renderer r in buildings.GetComponentsInChildren<Renderer>(true))
         {
@@ -196,6 +214,8 @@ public static class KeyArtMapSetup
         }
         DestroyIfExists(GeometryRoot);
         DestroyIfExists(LookRoot);
+        DestroyIfExists(TerrainRoot);
+        map.GetComponent<Renderer>().enabled = true;
         foreach (string n in OldRoots) DestroyIfExists(n);
         SetOuterGround(null, false);
         SetLighting(null, null, false);
@@ -232,6 +252,9 @@ public static class KeyArtMapSetup
         var heightOf = new Dictionary<string, float>();
         if (manifest.heights != null)
             foreach (HeightRow row in manifest.heights) heightOf[row.id] = row.scale;
+        var baseOf = new Dictionary<string, float>();
+        if (manifest.bases != null)
+            foreach (BaseRow row in manifest.bases) baseOf[row.id] = row.y;
 
         var root = GameObject.Find("Buildings");
         // 미니어처 비율: 건물 높이만 키운다 (build_art.py 도 같은 배율로 난간·지붕 디테일을 올림)
@@ -247,6 +270,10 @@ public static class KeyArtMapSetup
             r.enabled = !manifest.replaceBuildings && !hidden.Contains(info.buildingId);
             Undo.RecordObject(info.transform, "Building height");
             info.transform.localScale = new Vector3(1f, heightOf.TryGetValue(info.buildingId, out float hsc) ? hsc : 1f, 1f);
+            // 지형 터 높이만큼 올린다 (부모 Buildings 가 Y 로 heightScale 배라 나눠 준다)
+            Vector3 lp = info.transform.localPosition;
+            lp.y = baseOf.TryGetValue(info.buildingId, out float by) ? by / heightScale : 0f;
+            info.transform.localPosition = lp;
             r.shadowCastingMode = ShadowCastingMode.On;
             r.receiveShadows = true;
         }
@@ -258,7 +285,29 @@ public static class KeyArtMapSetup
         }
     }
 
-    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats)
+    static void SetTerrain(bool on)
+    {
+        var go = GameObject.Find(TerrainRoot);
+        if (!on)
+        {
+            if (go != null) Undo.DestroyObjectImmediate(go);
+            return;
+        }
+        if (go == null)
+        {
+            go = new GameObject(TerrainRoot);
+            Undo.RegisterCreatedObjectUndo(go, "Key Art terrain");
+        }
+        var t = go.GetComponent<KeyArtTerrain>();
+        if (t == null) t = Undo.AddComponent<KeyArtTerrain>(go);
+        Undo.RecordObject(t, "Key Art terrain");
+        t.heightmap = AssetDatabase.LoadAssetAtPath<TextAsset>(HeightFile);
+        t.Load();
+        t.enabled = false;   // OnEnable 로 활성 지형 등록
+        t.enabled = true;
+    }
+
+    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats, Material terrainMat)
     {
         foreach (string n in OldRoots) DestroyIfExists(n);
         var go = GameObject.Find(GeometryRoot);
@@ -274,6 +323,7 @@ public static class KeyArtMapSetup
         geo.material = mat;
         geo.shellStyles = new List<string>(styleMats.Keys).ToArray();
         geo.shellMaterials = new List<Material>(styleMats.Values).ToArray();
+        geo.terrainMaterial = terrainMat;
         geo.castShadows = ShadowCastingMode.On;
         geo.Build();
         Debug.Log($"[KeyArtMapSetup] 키아트 지오메트리 정점 {geo.VertexCount:N0}개");
