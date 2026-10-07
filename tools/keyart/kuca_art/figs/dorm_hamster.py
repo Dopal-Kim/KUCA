@@ -164,7 +164,7 @@ def build(fig, rng):
         f = Fg._frame_on(hc, HR * 0.98 + 0.05, s * 27, -8, -0.03)
         for k in range(13):
             t = k / 12 - 0.5
-            Fg._ellipsoid(fig.extra, (t * 1.05, 0.5 - (t * t) * 0.5 - s * t * 0.12, 0.0), (0.06, 0.045, 0.05), (0.32, 0.18, 0.15), 6, 4, f)
+            Fg._ellipsoid(fig.extra, (t * 1.0, 0.36 - (t * t) * 0.45 - s * t * 0.1, 0.06), (0.065, 0.05, 0.05), (0.32, 0.18, 0.15), 6, 4, f)
     nose_f = Fg._frame_on(hc, HR * 0.98 + 0.02, 0, -21, -0.02)
     Fg._ellipsoid(fig.extra, (0, 0, 0), (0.15, 0.1, 0.08), (1.0, 0.58, 0.64), 12, 6, nose_f)
     Fg.smile(fig, hc, HR * 0.98 + 0.06, pitch=-30, w=0.26, col=(0.36, 0.2, 0.18))

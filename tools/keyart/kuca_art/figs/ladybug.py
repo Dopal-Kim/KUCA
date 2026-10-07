@@ -37,7 +37,7 @@ def build(fig, rng):
              (-112, -32, 0.3), (112, -32, 0.3)]
     for yaw, pitch, r in spots:
         p, n = surf_point(shell, bc, yaw, pitch)
-        fig.add(S.intersect(lambda P: shell(P) - 0.025, S.sphere(p, r)), SPOT, k=0.02, layer='body')
+        fig.add(S.intersect(lambda P: shell(P) - 0.035, S.sphere(p, r)), SPOT, k=0.0, layer='spot')
     # ---- 팔다리 (짙은 갈색, 짧고 통통) ----
     LIMB = DARK
     for s in (-1, 1):

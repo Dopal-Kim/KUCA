@@ -77,17 +77,13 @@ def build(fig, rng):
     nb = lambda P: np.abs(core(P))
     # 귀 끝 털 (짙은 갈색, 뾰족하게 여러 가닥)
     for s, e, b, t, Re in ears:
-        for k in range(9):
-            a = (k - 4) * 9 + rng.uniform(-3, 3)
-            dvec = np.array((s * 0.35 + math.sin(math.radians(a)) * 1.0, 1.0, rng.uniform(-0.25, 0.2)))
-            dvec /= np.linalg.norm(dvec)
-            L = rng.uniform(1.0, 1.3) * (1.0 - 0.35 * abs(k - 4) / 4)
-            base = t - (t - b) / np.linalg.norm(t - b) * 0.3 + np.array((s * (k - 4) * 0.035, 0, rng.uniform(-0.08, 0.08)))
-            mid = base + dvec * L * 0.55 + np.array((s * 0.06, 0, 0))
-            fig.add(S.capsule(tuple(base), tuple(mid), 0.15, 0.08), FUR_D, k=0.1, layer='tuft')
-            fig.add(S.capsule(tuple(mid), tuple(base + dvec * L + np.array((s * 0.1, 0, 0))), 0.08, 0.015), FUR_D, k=0.06, layer='tuft')
-        tb = t - (t - b) / np.linalg.norm(t - b) * 0.35
-        fig.add(S.capsule(tuple(tb), tuple(tb + np.array((s * 0.3, 0.85, 0.0))), 0.26, 0.04), FUR_D, k=0.12, layer='tuft')
+        tb = t - (t - b) / np.linalg.norm(t - b) * 0.3
+        up = np.array((s * 0.28, 1.0, -0.05)); up /= np.linalg.norm(up)
+        fig.add(S.capsule(tuple(tb), tuple(tb + up * 1.2), 0.4, 0.05), FUR_D, k=0.2, layer='tuft')     # 붓 모양 중심
+        for k, (dx, dz, L, r) in enumerate(((-0.42, 0.05, 0.85, 0.14), (0.42, -0.05, 0.9, 0.14), (-0.2, 0.12, 1.05, 0.15),
+                                             (0.22, -0.12, 1.0, 0.15), (0.6, 0.0, 0.7, 0.12))):
+            dvec = up + np.array((s * dx * 0.9, 0, dz)); dvec /= np.linalg.norm(dvec)
+            fig.add(S.capsule(tuple(tb + up * 0.1), tuple(tb + up * 0.1 + dvec * L), r, 0.02), FUR_D, k=0.12, layer='tuft')
         fig.paint(masked(lambda P, b=b, t=t: S.capsule(tuple(b + (0, 0.35, 0)), tuple(t + (0, -0.3, 0)), 0.38, 0.08)(P) + ((P - b) @ Re[:, 2] < 0.0) * 1.0,
                          lambda P: np.abs(body_all(P)), 0.12), EAR_IN, soft=0.12)
         fig.paint(masked(lambda P, t=t: np.linalg.norm(P - t, axis=1) - 0.45, lambda P: np.abs(body_all(P)), 0.12), FUR_D, soft=0.3)
@@ -188,10 +184,10 @@ def build(fig, rng):
     # 고리: 끈 끝과 가방 연결
     fig.add(S.torus(tuple(bcn + (0.45, 0.55, -0.15)), 0.14, 0.05, Rm=S.rot(0, 0, 50)), KNIT, k=0.0, layer='bag3', metal=(KNIT, KNIT_HI))
     # 진홍 배지 (흰 도토리 문양)
-    bd = np.array((0.55, 0.15, 1.0)); bd /= np.linalg.norm(bd)
-    bp = bcn + (0.25, -0.05, 0.42)
-    fig.add(S.cylinder(tuple(bp), 0.2, 0.05, round_=0.03, R=axis_R(bd)), Fg.CRIMSON, k=0.0, layer='badge')
-    fig.add(S.torus(tuple(bp), 0.2, 0.035, Rm=axis_R(bd)), (0.95, 0.95, 0.97), k=0.0, layer='badge2', metal=((0.85, 0.85, 0.9), (1, 1, 1)))
+    bp, bd = surf_point(bag_body, bcn + (0, -0.12, 0), 28, -4)
+    bp = bp + bd * 0.03
+    fig.add(S.cylinder(tuple(bp), 0.24, 0.05, round_=0.03, R=axis_R(bd)), Fg.CRIMSON, k=0.0, layer='badge')
+    fig.add(S.torus(tuple(bp), 0.24, 0.035, Rm=axis_R(bd)), (0.95, 0.95, 0.97), k=0.0, layer='badge2', metal=((0.85, 0.85, 0.9), (1, 1, 1)))
     fig.paint(S.sphere(bp + bd * 0.06 - (0, 0.03, 0), 0.07), (1, 1, 1), soft=0.02)
     fig.paint(S.ellipsoid(bp + bd * 0.06 + (0, 0.05, 0), (0.1, 0.04, 0.1)), (1, 1, 1), soft=0.02)
 

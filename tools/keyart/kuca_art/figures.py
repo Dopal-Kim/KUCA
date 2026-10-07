@@ -404,10 +404,13 @@ def build(cid, tris=16000, seed=3, voxel=0.04):
     mb.pos = body.ravel().tolist() + extra.ravel().tolist()
     mb.col = C[F].reshape(-1, 3).ravel().tolist() + list(fig.extra.col)
     mb.nrm = N[F].reshape(-1, 3).ravel().tolist() + (smooth_normals(extra).ravel().tolist() if len(extra) else [])
+    # 밤에 빛나는 부품 (fig.extra.emissive 로 만든 정점, 예: 고슴도치 LED): 알파 0 을 그대로 옮긴다
+    ex_alpha = list(fig.extra.alpha) if len(fig.extra.alpha) == len(extra) else [1.0] * len(extra)
     sp, sn, sc = fig.smooth
     mb.pos += sp
     mb.nrm += sn
     mb.col += sc
+    mb.alpha = [1.0] * (len(F) * 3) + ex_alpha + [1.0] * (len(sp) // 3)
     glass = None
     if fig.glass[0]:
         glass = Builder()
