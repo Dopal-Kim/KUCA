@@ -1,6 +1,7 @@
 // 수집 동물 미리보기: CreatureMeshes.bytes 를 읽어 줄 세워 그린다 (?yaw=0&ids=a,b&cols=4)
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const q = new URLSearchParams(location.search);
 const W = +(q.get('w') || 1600), H = +(q.get('h') || 900);
@@ -18,12 +19,13 @@ const sun = new THREE.DirectionalLight(0xfff1dc, 2.2);
 sun.position.set(-30, 60, 40);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.radius = 4; sun.shadow.bias = -0.0005;
 Object.assign(sun.shadow.camera, { left: -60, right: 60, top: 60, bottom: -60 });
 scene.add(sun);
 
 const toLin = (c) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 async function load() {
-  const buf = await (await fetch('../../../My project/Assets/Resources/KUCA/CreatureMeshes.bytes')).arrayBuffer();
+  const buf = await (await fetch(q.get('file') || '../../../My project/Assets/Resources/KUCA/CreatureMeshes.bytes')).arrayBuffer();
   const body = await new Response(new Blob([buf.slice(8)]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
   const dv = new DataView(body);
   let o = 0;
@@ -55,15 +57,22 @@ async function load() {
 
 const geos = await load();
 const ids = (q.get('ids') || Object.keys(geos).join(',')).split(',');
-const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62, metalness: 0.0 });
-const sp = 12;
+// 비닐 토이 느낌: 부드러운 광택 + 클리어코트 + 방 반사 환경
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+const mat = q.get('toy') === '0' ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.62 })
+  : new THREE.MeshPhysicalMaterial({ vertexColors: true, roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.35, sheen: 0.3, sheenRoughness: 0.6, envMapIntensity: 0.55 });
+const sp = +(q.get('sp') || 12);
 ids.forEach((id, i) => {
   const m = new THREE.Mesh(geos[id], mat);
   m.castShadow = m.receiveShadow = true;
   const cx = (i % cols - (Math.min(cols, ids.length) - 1) / 2) * sp;
   const cz = Math.floor(i / cols) * sp * 1.2;
   m.position.set(cx, -Math.floor(i / cols) * 11, 0);
-  m.rotation.y = yaw;
+  const yl = (q.get('yaws') || '').split(',').filter(Boolean).map(Number);
+  m.rotation.y = yl.length ? yl[i % yl.length] * Math.PI / 180 : yaw;
   scene.add(m);
 });
 const rows = Math.ceil(ids.length / cols);
