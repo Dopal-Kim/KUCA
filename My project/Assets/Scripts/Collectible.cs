@@ -55,6 +55,15 @@ public class Collectible : MonoBehaviour
             body.transform.localScale = Vector3.one * CreatureScale;
             body.GetComponent<MeshFilter>().sharedMesh = mesh;
             body.GetComponent<MeshRenderer>().sharedMaterial = CreatureLibrary.Material;
+            if (CreatureLibrary.TryGetGlass(species, out Mesh glass) && CreatureLibrary.GlassMaterial != null)
+            {
+                var g = new GameObject("Glass", typeof(MeshFilter), typeof(MeshRenderer));
+                g.transform.SetParent(body.transform, false);
+                g.GetComponent<MeshFilter>().sharedMesh = glass;
+                var gr = g.GetComponent<MeshRenderer>();
+                gr.sharedMaterial = CreatureLibrary.GlassMaterial;
+                gr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            }
             c.visual = body.transform;
 
             var hitBox = root.AddComponent<SphereCollider>();

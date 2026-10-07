@@ -18,8 +18,27 @@ from kuca_art.mesh import write_bytes
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', 'My project', 'Assets', 'Resources', 'KUCA')
 
-meshes = creatures.build_all()
-n = write_bytes(os.path.join(OUT, 'CreatureMeshes.bytes'), meshes, pos_unit=creatures.POS_UNIT)
+import sys as _sys
+from kuca_art import figures
+
+# 고품질 피규어(kuca_art/figures.py, figs/)가 있으면 그것을, 없으면 예전 단순 모델을 쓴다.
+# 지도용은 가볍게 (삼각형 MAP_TRIS), 도감 확대용 고품질은 CreatureMeshesHQ.bytes (HQ_TRIS)
+MAP_TRIS, HQ_TRIS = 9000, 60000
+hq = '--hq' in _sys.argv
+only = [a.split('=')[1].split(',') for a in _sys.argv if a.startswith('--only=')]
+only = only[0] if only else None
+old = dict(creatures.build_all())
+meshes = []
+for cid in creatures.CREATURES:
+    if cid in figures.FIGURES and (only is None or cid in only):
+        mb, glass = figures.build(cid, HQ_TRIS if hq else MAP_TRIS, voxel=0.04 if hq else 0.05)
+        meshes.append((f'Creature_{cid}', mb))
+        if glass:
+            meshes.append((f'Creature_{cid}__glass', glass))
+        print('figure', cid)
+    else:
+        meshes.append((f'Creature_{cid}', old[f'Creature_{cid}']))
+n = write_bytes(os.path.join(OUT, 'CreatureMeshesHQ.bytes' if hq else 'CreatureMeshes.bytes'), meshes, pos_unit=creatures.POS_UNIT)
 for name, mb in meshes:
     print(f'{name}: {len(mb.pos) // 9} tris')
 info = [{'id': cid, 'name': nm, 'tier': tier} for cid, (nm, tier, _) in creatures.CREATURES.items()]

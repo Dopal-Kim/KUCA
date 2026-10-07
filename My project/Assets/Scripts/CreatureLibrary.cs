@@ -101,7 +101,7 @@ public static class CreatureLibrary
         return null;
     }
 
-    const float PosUnit = 0.02f;
+    const float PosUnit = 0.0005f;   // build_creatures.py 의 creatures.POS_UNIT (0.5 mm)
     static Dictionary<string, Mesh> meshes;
     static Material material;
 
@@ -118,6 +118,27 @@ public static class CreatureLibrary
             return material;
         }
     }
+
+    static Material glassMaterial;
+
+    /// <summary>헬멧 유리 같은 투명 부품 재질 (KUCA/CreatureGlass)</summary>
+    public static Material GlassMaterial
+    {
+        get
+        {
+            if (glassMaterial == null)
+                glassMaterial = Resources.Load<Material>("KUCA/CreatureGlass");   // 빌드에 셰이더가 포함되게 재질 에셋으로
+            if (glassMaterial == null)
+            {
+                Shader s = Shader.Find("KUCA/CreatureGlass");
+                if (s != null) glassMaterial = new Material(s) { name = "KUCA_CreatureGlass" };
+            }
+            return glassMaterial;
+        }
+    }
+
+    /// <summary>투명 부품 메시 (없으면 false). 이름 = Creature_<id>__glass</summary>
+    public static bool TryGetGlass(string id, out Mesh mesh) => TryGetMesh(id + "__glass", out mesh);
 
     public static string NameOf(string id) => id != null && Names.TryGetValue(id, out string n) ? n : id;
 
@@ -167,17 +188,19 @@ public static class CreatureLibrary
                 byte[] col = br.ReadBytes(vc * 4);
                 if ((flags & 1) != 0)
                     br.ReadBytes(vc * 4);
-                meshes[name.Replace("Creature_", "")] = BuildMesh(name, origin, vc, pos, col);
+                byte[] nrm = (flags & 2) != 0 ? br.ReadBytes(vc * 3) : null;   // 피규어: 조형 표면의 정확한 법선
+                meshes[name.Replace("Creature_", "")] = BuildMesh(name, origin, vc, pos, col, nrm);
             }
         }
     }
 
-    /// <summary>같은 (위치, 색) 정점을 하나로 합쳐 인덱스 메시를 만든다 → 부드러운 법선</summary>
-    static Mesh BuildMesh(string name, Vector3 origin, int vc, byte[] pos, byte[] col)
+    /// <summary>같은 (위치, 색, 법선) 정점을 하나로 합쳐 인덱스 메시를 만든다. 법선이 없으면 다시 계산 (부드러운 법선)</summary>
+    static Mesh BuildMesh(string name, Vector3 origin, int vc, byte[] pos, byte[] col, byte[] nrm)
     {
-        var map = new Dictionary<(short, short, short, int), int>(vc / 3);
+        var map = new Dictionary<(short, short, short, int, int), int>(vc / 3);
         var verts = new List<Vector3>(vc / 3);
         var cols = new List<Color32>(vc / 3);
+        var norms = nrm != null ? new List<Vector3>(vc / 3) : null;
         var tris = new int[vc];
         for (int i = 0; i < vc; i++)
         {
@@ -185,13 +208,16 @@ public static class CreatureLibrary
             short y = System.BitConverter.ToInt16(pos, i * 6 + 2);
             short z = System.BitConverter.ToInt16(pos, i * 6 + 4);
             int c = col[i * 4] | (col[i * 4 + 1] << 8) | (col[i * 4 + 2] << 16) | (col[i * 4 + 3] << 24);
-            var key = (x, y, z, c);
+            int n = nrm != null ? nrm[i * 3] | (nrm[i * 3 + 1] << 8) | (nrm[i * 3 + 2] << 16) : 0;
+            var key = (x, y, z, c, n);
             if (!map.TryGetValue(key, out int idx))
             {
                 idx = verts.Count;
                 map[key] = idx;
                 verts.Add(origin + new Vector3(x, y, z) * PosUnit);
                 cols.Add(new Color32(col[i * 4], col[i * 4 + 1], col[i * 4 + 2], col[i * 4 + 3]));
+                if (norms != null)
+                    norms.Add(new Vector3((sbyte)nrm[i * 3], (sbyte)nrm[i * 3 + 1], (sbyte)nrm[i * 3 + 2]) / 127f);
             }
             tris[i] = idx;
         }
@@ -201,7 +227,8 @@ public static class CreatureLibrary
         mesh.SetVertices(verts);
         mesh.SetColors(cols);
         mesh.SetTriangles(tris, 0);
-        mesh.RecalculateNormals();
+        if (norms != null) mesh.SetNormals(norms);
+        else mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         mesh.UploadMeshData(true);
         return mesh;
