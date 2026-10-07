@@ -142,6 +142,18 @@ def _rect_inside(poly, rect, margin):
         all(pip(x, z, poly) for x, z in pts)
 
 
+# 실제 건물 구조에 맞춘 덩어리 (기본 규칙 대신)
+#   center: 가운데 몸체 한 층 위 (공학관: 몸체 + 양팔)
+#   ends:   긴 축 양 끝을 반 층 위 (외국어대학관: 원통 두 개 + 막대 동, 반 층 엇갈림)
+#   none:   덩어리 없음 (랜드마크가 따로 처리)
+MASSING = {
+    'way-455725718': 'center',
+    'way-585696507': 'ends',
+    'way-585696506': 'none',      # 선승관: 배럴 볼트 체육관 지붕 (landmarks)
+    'way-474085534': 'center',    # 중앙도서관: 가운데 아트리움 블록
+}
+
+
 def _massing(mb, shell, b, style, pal, rng):
     """
     넓은 평지붕을 나눈다: 긴 건물은 양 끝 파빌리온을, 넓은 건물은 가운데 블록을 한 층 높인다
@@ -160,12 +172,30 @@ def _massing(mb, shell, b, style, pal, rng):
     shell.ao_strength = 0.0
     blocks = []
     cands = []
-    if L > 2.0 * Wd and L > 45:
+    mode = MASSING.get(b.id)
+    if mode == 'none':
+        return []
+    if mode == 'ends':
+        # 긴 축 양 끝 18% 를 잘라 반 층 높인다 (실제 외곽선 그대로)
+        from .mesh import clip_half_plane
+        for sgn in (-1, 1):
+            axis = (u[0] * sgn, u[1] * sgn)
+            part = clip_half_plane(b.poly, fp.center, axis, hu * 0.64)
+            if len(part) >= 3:
+                top = H + fh * 0.5
+                extrude_poly(shell, part, H - 0.1, top)
+                mb.band(part, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),
+                        inner_col=shade(pal['wall'], 0.86))
+                blocks.append((part, top))
+        return blocks
+    if mode == 'center':
+        cands.append((rect_poly(fp.center, u, v, hu * 0.3, hv * 0.6), 1))
+    elif L > 2.0 * Wd and L > 45:
         pl = min(L * 0.13, 11.0)
         for s in (-1, 1):
             c = (fp.center[0] + u[0] * s * (hu - pl - 0.6), fp.center[1] + u[1] * s * (hu - pl - 0.6))
             cands.append((rect_poly(c, u, v, pl, hv - 0.6), 1))
-    if not cands or b.area > 2500:
+    if mode is None and (not cands or b.area > 2500):
         cands.append((rect_poly(fp.center, u, v, hu * 0.42, hv * 0.55), 2 if b.area > 4000 and H < 40 else 1))
     for rect, floors in cands:
         if not _rect_inside(b.poly, rect, 0.5):

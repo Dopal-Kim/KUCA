@@ -40,6 +40,14 @@ def main():
     buildings = load_buildings(os.path.join(ASSETS, 'Data', 'CampusBuildings.json'))
     # 미니어처 비율: 건물 높이를 키운다 (Unity 는 Buildings 루트의 Y 배율로 같은 값을 적용)
     hs = look.get('buildingHeightScale', 1.0)
+    # 실제 층수로 높이 보정 (Unity 는 매니페스트 heights 로 건물마다 같은 배율을 적용)
+    height_fix = {}
+    for b in buildings:
+        lv = landmarks.REAL_LEVELS.get(b.id)
+        if lv and b.min_h < 0.5:
+            new_h = lv * landmarks.LEVEL_H
+            height_fix[b.id] = round(new_h / b.h, 4)
+            b.h = new_h
     for b in buildings:
         b.h *= hs
         b.min_h *= hs
@@ -57,6 +65,7 @@ def main():
     shells = {st: Layer(f'Shell{st}', MAP_W / 2, MAP_H / 2, grid=3) for st in bld.PALETTE}
     bld.HEIGHT_SCALE = hs
     landmarks.build(buildings, layer, ground)
+    print('axis', landmarks.gate_avenue(layer, ground), landmarks.plaza_ring(layer, ground, osm))
     bld.build_details(buildings, layer, shells, entrances, landmarks.NO_DETAILS, rng)
     hedges = bld.build_hedges(buildings, layer, ground, entrances, landmarks.NO_DETAILS, rng)
     print(f'hedges {hedges}  ({time.time() - t0:.0f}s)')
@@ -75,6 +84,7 @@ def main():
     manifest = {
         'styles': [{'id': i, 'style': s} for i, s in styles],
         'hidden': sorted(landmarks.HIDDEN),
+        'heights': [{'id': i, 'scale': v} for i, v in sorted(height_fix.items())],
     }
     with open(os.path.join(OUT, 'KeyArtManifest.json'), 'w', encoding='utf-8') as f:
         json.dump(manifest, f, ensure_ascii=False, indent=1)

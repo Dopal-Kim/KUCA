@@ -71,7 +71,8 @@ public static class KeyArtMapSetup
         public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
     }
     [System.Serializable] class StyleRow { public string id, style; }
-    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; }
+    [System.Serializable] class HeightRow { public string id; public float scale = 1f; }
+    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; }
 
     static Color Srgb(float[] c) => new Color(c[0], c[1], c[2]);   // Unity Color 는 감마(sRGB) 값
 
@@ -174,6 +175,11 @@ public static class KeyArtMapSetup
         var buildings = GameObject.Find("Buildings");
         Undo.RecordObject(buildings.transform, "Mapbox");
         buildings.transform.localScale = Vector3.one;
+        foreach (CampusBuildingInfo info in buildings.GetComponentsInChildren<CampusBuildingInfo>(true))
+        {
+            Undo.RecordObject(info.transform, "Mapbox");
+            info.transform.localScale = Vector3.one;
+        }
         foreach (Renderer r in buildings.GetComponentsInChildren<Renderer>(true))
         {
             Undo.RecordObject(r, "Mapbox");
@@ -213,6 +219,10 @@ public static class KeyArtMapSetup
         var styleOf = new Dictionary<string, string>();
         foreach (StyleRow row in manifest.styles) styleOf[row.id] = row.style;
         var hidden = new HashSet<string>(manifest.hidden);
+        // 실제 층수로 바로잡은 건물 높이 (건물 메시는 원점 기준 월드 좌표라 Y 배율만 주면 된다)
+        var heightOf = new Dictionary<string, float>();
+        if (manifest.heights != null)
+            foreach (HeightRow row in manifest.heights) heightOf[row.id] = row.scale;
 
         var root = GameObject.Find("Buildings");
         // 미니어처 비율: 건물 높이만 키운다 (build_art.py 도 같은 배율로 난간·지붕 디테일을 올림)
@@ -225,6 +235,8 @@ public static class KeyArtMapSetup
             Undo.RecordObject(r, "Building style");
             r.sharedMaterial = mats[styleOf.TryGetValue(info.buildingId, out string s) && mats.ContainsKey(s) ? s : "Default"];
             r.enabled = !hidden.Contains(info.buildingId);
+            Undo.RecordObject(info.transform, "Building height");
+            info.transform.localScale = new Vector3(1f, heightOf.TryGetValue(info.buildingId, out float hsc) ? hsc : 1f, 1f);
             r.shadowCastingMode = ShadowCastingMode.On;
             r.receiveShadows = true;
         }

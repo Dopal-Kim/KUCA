@@ -478,3 +478,34 @@ def rect_poly(center, u, v, half_u, half_v):
     if signed_area(pts) > 0:
         pts.reverse()
     return pts
+
+
+def vault(mb, m, length, width, rise, segs, col, end_col=None):
+    """반원통 지붕 (배럴 볼트). 로컬 Z 가 길이 방향, X 가 폭, 바닥 y=0"""
+    import math as _m
+    end_col = end_col or shade(col, 0.92)
+    hl = length / 2
+    pts = [(-width / 2 * _m.cos(_m.pi * k / segs), rise * _m.sin(_m.pi * k / segs)) for k in range(segs + 1)]
+    for k in range(segs):
+        (x0, y0), (x1, y1) = pts[k], pts[k + 1]
+        mid = ((x0 + x1) / 2, (y0 + y1) / 2)
+        mb.quad(m, (x0, y0, -hl), (x1, y1, -hl), (x1, y1, hl), (x0, y0, hl), shade(col, 0.94 + 0.1 * k / segs), (mid[0] * 0.5, mid[1] * 0.3, 0))
+        mb.tri(m, (0, 0, -hl), (x0, y0, -hl), (x1, y1, -hl), end_col, (0, rise * 0.3, 0))
+        mb.tri(m, (0, 0, hl), (x0, y0, hl), (x1, y1, hl), end_col, (0, rise * 0.3, 0))
+
+
+def clip_half_plane(poly, origin, axis, keep_ge):
+    """다각형을 (p - origin)·axis >= keep_ge 쪽만 남기게 자른다 (Sutherland–Hodgman)"""
+    def d(p):
+        return (p[0] - origin[0]) * axis[0] + (p[1] - origin[1]) * axis[1] - keep_ge
+    out = []
+    n = len(poly)
+    for i in range(n):
+        a, b = poly[i], poly[(i + 1) % n]
+        da, db = d(a), d(b)
+        if da >= 0:
+            out.append(a)
+        if (da >= 0) != (db >= 0):
+            t = da / (da - db)
+            out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+    return out

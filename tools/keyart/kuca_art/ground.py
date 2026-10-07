@@ -289,6 +289,24 @@ class Ground:
         dm = (dots_a.sum(axis=2) > 0)[..., None]
         canvas = np.where(dm, dots_a, canvas)
 
+        # 길가 꽃 띠: 공원 잔디에서 보행로 가장자리 1~2.5 m 에 분홍·노랑·흰 꽃 점 (지오메트리 없이 텍스처로)
+        d_walk = ndimage.distance_transform_edt(~(self.walk | self.square)) / ppm
+        strip = (d_walk > 1.0) & (d_walk < 2.5) & self.park & ~self.forest
+        ys, xs = np.nonzero(strip[::2, ::2])
+        if len(xs):
+            band = Image.new('RGB', (W, H), (0, 0, 0))
+            bd = ImageDraw.Draw(band)
+            # 길을 따라 띠가 끊겼다 이어지게: 큰 얼룩 노이즈로 구간 선택
+            sel = _smooth_noise((H, W), 160, 5)
+            for i in rng.choice(len(xs), size=min(len(xs), 120000), replace=False):
+                x, y = xs[i] * 2, ys[i] * 2
+                if sel[y, x] < 0.15 or rng.random() > 0.55:
+                    continue
+                rr = 0.24 * ppm
+                bd.ellipse((x - rr, y - rr, x + rr, y + rr), fill=palette[rng.integers(len(palette))])
+            ba = np.asarray(band).astype(np.float32)
+            canvas = np.where((ba.sum(axis=2) > 0)[..., None], ba, canvas)
+
         # 운동장: 붉은 트랙, 줄무늬 잔디 구장, 흰 선
         paving_t = self._tile('paving', 14)
         track_tex = _recolor(paving_t, TRACK)

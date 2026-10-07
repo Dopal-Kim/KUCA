@@ -26,6 +26,25 @@ POND = (327.0, -594.0)
 LIBRARY, ARTS, PE, SEONSEUNG = 'way-474085534', 'way-474085536', 'way-455726113', 'way-585696506'
 OBSERVATORY, CERAMICS, THEATER, GATE = 'way-474521125', 'way-474521123', 'way-474531805', 'way-473963422'
 
+# 실제 건물 층수 (나무위키 등 조사, 2026-10). OSM 에 층수가 없어 기본 높이가 틀린 건물을 바로잡는다.
+REAL_LEVELS = {
+    'relation-8269760': 7,   # 우정원: 지하1·지상7
+    'way-474085540': 7,      # 전자정보대학관: 지하1·지상7 (ㅁ자)
+    'way-474085537': 8,      # 멀티미디어교육관: 8층
+    'way-585696506': 5,      # 선승관: 지상 3층 대공간 체육관 (층고가 높아 5층 높이)
+    'way-585696507': 5,      # 외국어대학관
+    'way-474085534': 4,      # 중앙도서관 (연면적 17,498 m² / 바닥 5,500 m²)
+    'way-455726113': 4,      # 체육대학관
+    'way-474085536': 4,      # 예술디자인대학
+    'way-455725718': 4,      # 공학관
+    'way-455728922': 2,      # 공학실험동: 지하1·지상2
+    'way-474085539': 5,      # 국제대학 (국제·경영대학관)
+    'way-474085542': 4,      # 국제학관: OSM 4층
+    'way-474521123': 2,      # 도예관
+    'way-474521125': 2,      # 천문대 (돔 아래 기단 건물)
+}
+LEVEL_H = 3.3
+
 HIDDEN = {THEATER, GATE}          # 상자 건물 대신 이 형태만 보인다 (충돌체·정보는 Unity 에 남김)
 NO_DETAILS = {THEATER, GATE, OBSERVATORY, CERAMICS}   # 공통 디테일(난간 등)을 붙이지 않을 건물
 
@@ -52,13 +71,19 @@ def build(buildings, layer, ground):
         b, f = fp(bid)
         if b:
             face = f.face(PLAZA)
-            portico(builder_at(b), face, b.h, pediment, cols, grand=(bid == LIBRARY))
-            _occupy_face(ground, face, 16)
+            mb = builder_at(b)
+            portico(mb, face, b.h, pediment, cols, grand=bid in (LIBRARY, PE), flags=(bid == LIBRARY))
+            if bid == PE:
+                lions(mb, face)          # 체육대학관: 대계단 양옆 웃는 사자상
+            if bid == LIBRARY:
+                atrium(mb, b, f)         # 중앙도서관: 가운데 아트리움 천창
+            _occupy_face(ground, face, 18)
 
     b, f = fp(SEONSEUNG)
     if b:
         face = f.face(PLAZA)
         mb = builder_at(b)
+        arena_roof(mb, b, f)             # 실제: 대공간 종합체육관 → 배럴 볼트 지붕 (컨셉아트 아이콘도 둥근 지붕)
         arcade(mb, face, b.h)
         clock_tower(mb, face, b.h)
         _occupy_face(ground, face, 12)
@@ -117,7 +142,7 @@ def column(mb, m, base, r, h, col=COLUMN, fluted=True):
     mb.box(m, (x, y + h - 0.22, z), (r * 2.8, 0.45, r * 2.8), STONE)
 
 
-def portico(mb, f, height, pediment, max_cols, grand=False):
+def portico(mb, f, height, pediment, max_cols, grand=False, flags=False):
     """정면 열주 현관: 기단, 기둥, 엔태블러처, (페디먼트), 앞 계단. 로컬 X = 면 방향, Z = 바깥"""
     m = Frame.look(f['center'], f['normal'])
     width = min(f['length'] * 0.5, 44.0)
@@ -154,6 +179,7 @@ def portico(mb, f, height, pediment, max_cols, grand=False):
             x = s * (width / 2 + 3.2)
             mb.box(m, (x, 1.0, depth + 3.2), (1.4, 2.0, 7.5), STONE)
             mb.box(m, (x, 2.2, depth + 6.4), (1.8, 0.6, 1.8), COLUMN)
+    if flags:
         # 계단 앞 깃대 3기 (경희 진홍·흰색·하늘)
         for k, flag in zip((-1, 0, 1), ((0.68, 0.10, 0.18), (0.98, 0.98, 0.97), (0.36, 0.60, 0.86))):
             x, z = k * 7.0, depth + 7.5 + 7.0
@@ -363,3 +389,194 @@ def stadium(layer, ground):
     for k in range(-int(length / 2), int(length / 2) + 1, 3):
         p = m.p((k, 0, 0))
         ground.occupy(p[0], p[2], 4.0)
+
+
+# ---------- 정문 진입로와 사색의 광장 둘레 (키아트 메인 비주얼의 정돈된 축) ----------
+
+GATE_POS = (-138.0, 368.0)
+FORMAL = (0.22, 0.50, 0.18)
+HEDGE_C = (0.30, 0.55, 0.19)
+
+
+def formal_cone(mb, x, z, s=1.0):
+    """정원식 원뿔 나무 (가로수 열·광장 둘레): 짧은 줄기 + 길쭉한 원뿔 하나"""
+    m = Frame((x, 0.0, z), (s, 0, 0), (0, s, 0), (0, 0, s))
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 1.5, 0.3
+    mb.prism(m, (0, 0, 0), 0.25, 0.9, 5, (0.50, 0.36, 0.25))
+    mb.ao_strength = 0.0
+    mb.cone(m, (0, 0.6, 0), 1.7, 6.6, 8, FORMAL, bottom=False)
+    mb.ao_strength = 0.25
+
+
+def low_hedge(mb, p0, p1, h=0.8, w=1.0, col=HEDGE_C):
+    L = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+    if L < 1.5:
+        return
+    yaw = math.degrees(math.atan2(p1[0] - p0[0], p1[1] - p0[1]))
+    m = Frame.yaw(((p0[0] + p1[0]) / 2, 0.0, (p0[1] + p1[1]) / 2), yaw)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.3
+    mb.bevel_box(m, (0, h / 2, 0), (w, h, L), 0.22, col)
+    mb.ao_strength = 0.25
+
+
+def _free_run(ground, pts, step=1.0, radius=0.4):
+    """점 목록을 따라 비어 있는 구간들 [(시작점, 끝점)]"""
+    runs, cur = [], []
+    for p in pts:
+        ok = ground.inside(p[0], p[1]) and ground.is_free(p[0], p[1], radius, near_building=True) \
+            and not ground.has(ground.walk, p[0], p[1]) and not ground.has(ground.road, p[0], p[1])
+        if ok:
+            cur.append(p)
+        elif len(cur) >= 3:
+            runs.append((cur[0], cur[-1]))
+            cur = []
+        else:
+            cur = []
+    if len(cur) >= 3:
+        runs.append((cur[0], cur[-1]))
+    return runs
+
+
+def gate_avenue(layer, ground, length=280.0):
+    """정문을 지나는 큰길 양옆: 10 m 간격 원뿔 가로수 + 그 사이 낮은 생울타리"""
+    from .ground import ROAD_W
+    from .geo import dist_to_segment
+    count = 0
+    for hw, pts in ground.road_lines:
+        # 캠퍼스 밖 덕영대로(primary/secondary)는 빼고, 정문을 지나는 캠퍼스 안쪽 길만
+        if hw in ('primary', 'secondary') or len(pts) < 2:
+            continue
+        if min(dist_to_segment(GATE_POS[0], GATE_POS[1], a, b)[0] for a, b in zip(pts, pts[1:])) > 20:
+            continue
+        off = ROAD_W[hw] / 2 + 3.4
+        for a, b in zip(pts, pts[1:]):
+            L = math.hypot(b[0] - a[0], b[1] - a[1])
+            if L < 1:
+                continue
+            ux, uz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+            nx, nz = -uz, ux
+            t = 5.0
+            while t < L:
+                cx, cz = a[0] + ux * t, a[1] + uz * t
+                if math.hypot(cx - GATE_POS[0], cz - GATE_POS[1]) < length and math.hypot(cx - GATE_POS[0], cz - GATE_POS[1]) > 22:
+                    for s in (1, -1):
+                        px, pz = cx + nx * off * s, cz + nz * off * s
+                        if ground.inside(px, pz) and ground.is_free(px, pz, 1.0):
+                            formal_cone(layer.at(px, pz), px, pz, 1.0)
+                            ground.occupy(px, pz, 1.8, ao=0.4, ao_radius=1.9)
+                            count += 1
+                        # 나무 사이 생울타리 (길에서 1.6 m)
+                        h0 = (cx + ux * 1.6 + nx * (off - 1.8) * s, cz + uz * 1.6 + nz * (off - 1.8) * s)
+                        h1 = (cx + ux * 8.4 + nx * (off - 1.8) * s, cz + uz * 8.4 + nz * (off - 1.8) * s)
+                        if all(ground.inside(*q) and ground.is_free(q[0], q[1], 0.3, near_building=True) for q in (h0, h1)):
+                            low_hedge(layer.at(*h0), h0, h1)
+                            ground.occupy_line(h0, h1, 1.2, ao=0.35)
+                t += 10.0
+    return count
+
+
+def plaza_ring(layer, ground, osm):
+    """사색의 광장 가장자리: 바깥 2.5 m 생울타리, 6 m 원뿔 나무 열(12 m), 안쪽 1.5 m 가로등(20 m), 모서리 화단"""
+    from .geo import to_world
+    from .mesh import offset_polygon, signed_area
+    from .nature import draw_lamp, FLOWER
+    ring = None
+    for e in osm:
+        if e.get('tags', {}).get('place') == 'square' and e['type'] == 'way' and e.get('geometry'):
+            ring = [to_world(p['lon'], p['lat']) for p in e['geometry']][:-1]
+    if not ring:
+        return 0
+    if signed_area(ring) > 0:
+        ring.reverse()
+
+    def walk(poly, step):
+        out = []
+        for i in range(len(poly)):
+            a, b = poly[i], poly[(i + 1) % len(poly)]
+            L = math.hypot(b[0] - a[0], b[1] - a[1])
+            n = max(1, int(L // step))
+            for k in range(n):
+                t = k / n
+                out.append((a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t))
+        return out
+
+    n = 0
+    hedge_line = offset_polygon(ring, 2.5)
+    for a, b in _free_run(ground, walk(hedge_line, 1.0)):
+        low_hedge(layer.at(*a), a, b, h=0.9, w=1.1)
+        ground.occupy_line(a, b, 1.4, ao=0.35)
+        n += 1
+    for (x, z) in walk(offset_polygon(ring, 6.0), 12.0):
+        if ground.inside(x, z) and ground.is_free(x, z, 1.2):
+            formal_cone(layer.at(x, z), x, z, 1.1)
+            ground.occupy(x, z, 1.8, ao=0.4, ao_radius=2.0)
+            n += 1
+    cx = sum(p[0] for p in ring) / len(ring)
+    cz = sum(p[1] for p in ring) / len(ring)
+    for (x, z) in walk(offset_polygon(ring, -1.5), 20.0):
+        if not ground.has(ground.occupied, x, z):
+            draw_lamp(layer.at(x, z), x, z, math.degrees(math.atan2(cx - x, cz - z)))
+            ground.occupy(x, z, 0.8, ao=0.25, ao_radius=0.6)
+            n += 1
+    # 모서리 화단: 원형 석재 화분 + 꽃
+    for (x, z) in offset_polygon(ring, -4.0):
+        if ground.has(ground.occupied, x, z):
+            continue
+        mb = layer.at(x, z)
+        mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.25
+        mb.prism(IDENT, (x, 0, z), 2.4, 0.6, 12, (0.90, 0.87, 0.81), caps=True)
+        mb.ao_strength = 0.0
+        for k in range(6):
+            a = k * math.pi / 3
+            mb.ico(IDENT, (x + math.cos(a) * 1.3, 0.85, z + math.sin(a) * 1.3), (0.55, 0.4, 0.55), FLOWER[k % len(FLOWER)])
+        mb.ico(IDENT, (x, 1.1, z), (0.9, 0.7, 0.9), (0.36, 0.62, 0.22))
+        ground.occupy(x, z, 3.0, ao=0.3, ao_radius=2.6)
+        n += 1
+    return n
+
+
+def lions(mb, f):
+    """대계단 양옆 받침 위 사자상 (돌 색, 앉은 모습을 덩어리로)"""
+    m = Frame.look(f['center'], f['normal'])
+    width = min(f['length'] * 0.5, 44.0)
+    for sx in (-1, 1):
+        x, z = sx * (width / 2 + 5.0), 7.0 + 9.5
+        mb.box(m, (x, 0.9, z), (2.6, 1.8, 3.6), STEP)
+        mb.box(m, (x, 2.05, z), (2.9, 0.3, 3.9), COLUMN)
+        lion = (0.90, 0.86, 0.76)
+        mb.ico(m, (x, 3.0, z - 0.4), (0.9, 0.85, 1.3), lion)      # 몸
+        mb.ico(m, (x, 4.1, z + 0.6), (0.8, 0.8, 0.75), lion)      # 머리·갈기
+        mb.box(m, (x, 2.6, z + 0.9), (1.0, 0.7, 0.5), lion)       # 앞발
+
+
+def atrium(mb, b, f):
+    """가운데 블록 위 유리 박공 천창 (실제 중앙도서관 1층 중앙 로비가 트인 아트리움)"""
+    from .buildings import floor_height
+    top = b.h + floor_height('Classical') + 0.8
+    (ax, az), L, Wd = f.long_axis()
+    m = Frame.look((f.center[0], top, f.center[1]), (ax, 0.0, az))
+    mb.ao_floor = top
+    mb.box(m, (0, 0.3, 0), (Wd * 0.28 + 0.8, 0.6, L * 0.3 + 0.8), COLUMN)
+    mb.gable(m, (0, 0.6, 0), Wd * 0.28, L * 0.3, 2.6, GLASS, True, end_col=COLUMN)
+    mb.ao_floor = 0.0
+
+
+def arena_roof(mb, b, f):
+    """선승관: 체육관 몸체 위 반원통 지붕 + 지붕 꼭대기 천창 띠"""
+    (ax, az), L, Wd = f.long_axis()
+    m = Frame.look((f.center[0], b.h + 0.6, f.center[1]), (ax, 0.0, az))
+    span, length = Wd * 0.72, L * 0.7
+    mb.ao_floor = b.h
+    mb.box(m, (0, -0.2, 0), (span + 1.2, 0.8, length + 1.2), COLUMN)
+    from .mesh import vault
+    vault(mb, m, length, span, span * 0.28, 12, ROOF, end_col=STONE)
+    # 볼트 꼭대기 천창과 갈비뼈 띠
+    mb.box(m, (0, span * 0.28 + 0.15, 0), (2.4, 0.4, length - 2), GLASS, top=GLASS)
+    for k in range(-3, 4):
+        z = k * length / 7
+        for j in range(12):
+            a0, a1 = math.pi * j / 12, math.pi * (j + 1) / 12
+            x0, y0 = -span / 2 * math.cos(a0), span * 0.28 * math.sin(a0)
+            x1, y1 = -span / 2 * math.cos(a1), span * 0.28 * math.sin(a1)
+            mb.box(m, ((x0 + x1) / 2, (y0 + y1) / 2 + 0.08, z), (abs(x1 - x0) + 0.2, abs(y1 - y0) + 0.25, 0.45), COLUMN, bottom=False)
+    mb.ao_floor = 0.0
