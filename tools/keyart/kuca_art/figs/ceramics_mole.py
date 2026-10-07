@@ -121,6 +121,7 @@ def build(fig, rng):
         d = np.maximum(d, -(P[:, 2] + 0.15))
         d = np.maximum(d, y - (y0 + 3.5))
         d = np.maximum(d, (y0 + 0.75) - y)
+        d = np.maximum(d, -(np.minimum(S.capsule(shL, hdL, 0.48, 0.38)(P), S.capsule(shR, hdR, 0.48, 0.4)(P)) - 0.03))   # 팔 자리는 비움
         return d
     fig.add(apron, LINEN, k=0.0, layer='apron')
 

@@ -84,22 +84,26 @@ def build(fig, rng):
     nb = lambda P: np.abs(body_all(P))
 
     # ---- 무늬: 줄무늬 (뒤·옆, 머리 위) ----
-    def stripes_body(P):
-        y = P[:, 1]
-        wob = 0.12 * np.sin(P[:, 0] * 2.0) + 0.25 * np.abs(P[:, 0]) * 0.4
-        band = np.cos(2 * math.pi * (y - wob) / 0.62) - 0.45
-        back = -P[:, 2] - 0.2 * np.abs(P[:, 0]) + 0.6      # 앞쪽 흰 배에는 없음
-        return np.where((y < y0 + 4.45) & (back > 0), -band, 1.0) * 0.6
-    fig.paint(masked(stripes_body, nb, 0.08), STRIPE, soft=0.14)
+    # 줄무늬: 칠이 아니라 털 표면 위 0.04 얇은 판 (따로 layer → 가장자리가 또렷한 굵은 태비 줄)
+    def band_d(u, period, w):
+        t = u / period
+        return np.abs(t - np.round(t)) * period - w
 
-    def stripes_head(P):
+    def stripes_body(P):     # 등·옆 가로 줄, 앞 흰 배 쪽에서 끝남
+        y = P[:, 1]
+        d = band_d(y - 0.18 * np.abs(P[:, 0]), 0.8, 0.13)
+        back = -P[:, 2] - 0.25 * np.abs(P[:, 0]) + 0.55
+        return np.maximum(np.maximum(d, (0.35 - back) * 0.8), (y - (y0 + 4.3)) * 2)
+
+    head0 = head_parts[0]
+    def stripes_head(P):     # 머리 옆·뒤 줄 (얼굴 앞은 깨끗하게)
         q = P - hc
-        y = q[:, 1]
-        th = np.arctan2(q[:, 0], q[:, 2])
-        band = np.cos(2 * math.pi * (y + 0.25 * np.abs(np.sin(th))) / 0.6) - 0.3
-        side = (np.abs(th) > 1.15) | ((y > 0.7) & (np.abs(th) > 0.75))
-        return np.where(side & (y > -1.4) & (y < 1.75), -band, 1.0) * 0.6
-    fig.paint(masked(stripes_head, lambda P: np.abs(head_parts[0](P)), 0.12), STRIPE, soft=0.14)
+        th = np.abs(np.arctan2(q[:, 0], q[:, 2]))
+        d = band_d(q[:, 1] + 0.3 * np.sin(th), 0.72, 0.12)
+        clear = np.where(q[:, 1] < 0.75, 1.2 - th, 0.7 - th)
+        return np.maximum(np.maximum(d, clear * 1.2), (q[:, 1] - 1.65) * 2)
+    fig.add(lambda P: np.maximum(body_all(P) - 0.04, stripes_body(P)), STRIPE, k=0.0, layer='stripe')
+    fig.add(lambda P: np.maximum(head0(P) - 0.04, stripes_head(P)), STRIPE, k=0.0, layer='stripe')
     for x0, tilt in ((-0.45, 6), (0.0, 0), (0.45, -6)):   # 이마 'M' 줄
         p0, _ = surf_point(head_parts[0], hc, x0 * 22 + 0.0, 52)
         p1, _ = surf_point(head_parts[0], hc, x0 * 30, 30)

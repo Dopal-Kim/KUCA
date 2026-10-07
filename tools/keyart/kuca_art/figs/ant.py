@@ -66,7 +66,7 @@ def build(fig, rng):
     R = np.stack([np.cross((0, 1, 0), dvec), np.array((0, 1.0, 0)), dvec], axis=1)
     R = R @ S.rot(0, 0, 7)
     u0, u1 = -2.55, 1.95
-    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.5, 0.3, 0.58, 0.27, th=0.1, rib=0.06, tip_pow=0.9)
+    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.5, 0.17, 0.58, 0.27, th=0.1, rib=0.06, tip_pow=0.9)
     fig.add(lf, LEAF, k=0.0, layer='leaf')
     leaf_paints(fig, lf, local, height, width, u0, u1, under=(0.64, 0.86, 0.38), vein=LEAF_HI, spacing=0.6)
     pb, nb = to_world(u0 + 0.05, 0.0)
@@ -76,25 +76,25 @@ def build(fig, rng):
     neck = S.capsule((0, y0 + 3.2, 0.08), (0, y0 + 3.75, 0.1), 0.24)
     waist = S.capsule((0, y0 + 2.45, 0.02), (0, y0 + 2.2, -0.1), 0.2)
     gaster = S.ellipsoid((0, y0 + 1.6, -0.55), (0.95, 0.9, 1.0))
-    thighs = [S.ellipsoid((s * 0.48, y0 + 1.45, 0.22), (0.56, 0.66, 0.6)) for s in (-1, 1)]
+    thighs = [S.ellipsoid((s * 0.42, y0 + 1.3, 0.25), (0.42, 0.5, 0.46)) for s in (-1, 1)]
     def body(P):
         d = S.smin(S.smin(thor(P), neck(P), 0.15), waist(P), 0.12)
         g = S.smin(gaster(P), S.smin(thighs[0](P), thighs[1](P), 0.12), 0.25)
         yy = P[:, 1] - (y0 + 1.5)
-        groove = 0.045 * np.exp(-((yy - 0.38) / 0.06) ** 2) + 0.045 * np.exp(-((yy + 0.22) / 0.06) ** 2)
+        groove = 0.035 * np.exp(-((yy - 0.38) / 0.05) ** 2) * (P[:, 2] < 0.2)
         g = g + groove
         return S.smin(d, g, 0.14)
     fig.add(body, BODY, k=0.2, layer='ant')
     near_b = lambda P: np.abs(body(P))
-    for yy in (0.38, -0.22):
-        fig.paint(masked(lambda P, yy=yy: np.abs(P[:, 1] - (y0 + 1.5 + yy)) - 0.05, near_b, 0.05), BODY_D, soft=0.08)
+    fig.paint(masked(lambda P: np.maximum(np.abs(P[:, 1] - (y0 + 1.88)) - 0.05, P[:, 2] - 0.2), near_b, 0.05), BODY_D, soft=0.04)
+    fig.paint(masked(lambda P: np.maximum(np.abs(P[:, 1] - (y0 + 1.45)) - 0.05, P[:, 2] + 0.6), near_b, 0.05), BODY_D, soft=0.04)
     cp, cn = surf_point(thor, (0, y0 + 2.9, 0.08), 0, 0)
     fig.add(S.sphere(tuple(cp + cn * 0.02), 0.15), (0.78, 0.08, 0.10), k=0.0, layer='dot')
     # ---- 팔 (가는 팔, 바깥 아래로, 손가락 3) ----
     for s in (-1, 1):
         sh = np.array((s * 0.45, y0 + 3.05, 0.08))
-        el = np.array((s * 1.25, y0 + 2.72, 0.15))
-        wr = np.array((s * 1.75, y0 + 2.42, 0.35))
+        el = np.array((s * 1.1, y0 + 2.55, 0.2))
+        wr = np.array((s * 1.45, y0 + 2.0, 0.45))
         fig.add(S.capsule(tuple(sh), tuple(el), 0.21, 0.18), LIMB, k=0.1, layer='ant')
         fig.add(S.capsule(tuple(el), tuple(wr), 0.18, 0.16), LIMB, k=0.1, layer='ant')
         fig.add(S.sphere(tuple(wr + (s * 0.08, -0.05, 0.03)), 0.2), LIMB, k=0.1, layer='ant')

@@ -296,7 +296,7 @@ def stripe_line(a, b, ra, rb, refdir, ang, w=0.065):
     u /= np.linalg.norm(u)
     v = np.cross(ax, u)
     d = u * math.cos(ang) + v * math.sin(ang)
-    return S.capsule(a + d * (ra - w * 0.35), b + d * (rb - w * 0.35), w)
+    return S.capsule(a + d * (ra + 0.01), b + d * (rb + 0.01), w)
 
 
 def stairs(fig, c, yaw):
@@ -401,13 +401,13 @@ def build(fig, rng):
     MR = np.array((2.45, 2.55, 1.95))
     mb = S.subtract(S.ellipsoid(mc, MR), S.ellipsoid(hc + (0, -0.25, 1.15), (1.95, 1.85, 1.5)), k=0.35)
     locks = []
-    for i in range(10):
+    for i in range(8):
         el_ = -58 + i * 13.5
         n = int(round(17 * math.cos(math.radians(el_)))) + 4
         for j in range(n):
             az = 360 * (j + 0.5 * (i % 2)) / n
             d = _dir(az, el_)
-            if d[2] > 0.3 and el_ < 35:
+            if d[2] > 0.3 and el_ < 35 or d[2] > -0.1 and el_ >= 35:
                 continue
             p = mc + d * MR * 0.97
             tang = np.array((0, -1.0, 0)) + d * d[1]
@@ -422,14 +422,14 @@ def build(fig, rng):
             b0 = p + R @ np.array((0, -0.2, -0.08))
             locks.append(S.capsule(b0, b0 + R @ np.array((0, L * 1.0, 0)), 0.4, 0.16))
     # 정수리: 앞(밴드 뒤)에서 뒤로 빗어 넘긴 긴 갈기 결 (돔을 따라 흐르는 굵은 → 가는 관)
-    for u in (-1.05, -0.7, -0.35, 0.0, 0.35, 0.7, 1.05):
+    for u in (-1.2, -0.9, -0.6, -0.3, 0.0, 0.3, 0.6, 0.9, 1.2):
         pts = []
         for t in np.linspace(0, 1, 7):
             th = math.radians(62 + 88 * t + 6 * abs(u))
             d = np.array((u * (0.62 - 0.12 * t), math.sin(th), math.cos(th)))
             d /= np.linalg.norm(d)
             pts.append(mc + d * MR * (1.03 + 0.05 * math.sin(math.pi * t)))
-        rr = [0.4 - 0.27 * t for t in np.linspace(0, 1, 7)]
+        rr = [0.2 + 0.2 * math.sin(math.pi * min(1.0, t * 1.6)) * (1 - 0.55 * t) + 0.1 * (1 - t) for t in np.linspace(0, 1, 7)]
         locks += [S.capsule(pts[i], pts[i + 1], rr[i], rr[i + 1]) for i in range(6)]
     lk = U(locks, 0.12)
     mane = lambda P: S.smin(mb(P), lk(P), 0.25)

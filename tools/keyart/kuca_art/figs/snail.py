@@ -19,7 +19,7 @@ LEAF = (0.42, 0.76, 0.22)
 LEAF_HI = (0.58, 0.86, 0.34)
 LEAF_UNDER = (0.56, 0.84, 0.32)
 STEM = (0.40, 0.70, 0.20)
-BROW = (0.70, 0.47, 0.28)
+BROW = (0.62, 0.40, 0.22)
 
 
 def leaf_fn(O, R, u0, u1, Wm, k_tip, k_base, k_cup, th=0.08, rib=0.05, tip_pow=0.75, k_cup_pos=None):
@@ -144,7 +144,7 @@ def build(fig, rng):
     for s in (-1, 1):
         p0 = face_frame(fig, hc, s * 17, 6).o
         p1 = face_frame(fig, hc, s * 31, 3).o
-        fig.paint(masked(S.capsule(p0, p1, 0.075, 0.05), near_body, 0.12), BROW, soft=0.03)
+        fig.paint(masked(S.capsule(p0, p1, 0.09, 0.06), near_body, 0.15), BROW, soft=0.03)
     # 눈자루 끝: 반쯤 감긴 졸린 눈 (eye_at droopy, 크림색 눈꺼풀)
     for s, bc in zip((-1, 1), balls):
         f = face_frame(fig, bc, s * 6, -6, 'body', out=-0.06)

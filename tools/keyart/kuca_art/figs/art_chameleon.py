@@ -92,15 +92,16 @@ def build(fig, rng):
     # ---------- 무지개 칠: 또렷한 사선 띠 (몸 layer 에만) ----------
     lp = lambda f, c, soft: layer_paint(fig, 'body', f, c, soft, tol=0.05)
     bands = (PINKP, PEACH, YELLOWP, MINT, BLUEP, LILAC)
-    BW = 0.62                                         # 띠 폭
+    BW = 0.8                                         # 띠 폭
 
     def coord(P):                                     # 띠 좌표: 위로 갈수록 + 앞뒤로 약간 기울어짐 + 살짝 물결
-        return P[:, 1] * 0.92 - P[:, 2] * 0.38 + P[:, 0] * 0.12 + 0.08 * np.sin(P[:, 0] * 2.3 + P[:, 2] * 1.7)
+        return P[:, 1] * 0.92 - P[:, 2] * 0.38 + P[:, 0] * 0.12 + 0.04 * np.sin(P[:, 0] * 2.3 + P[:, 2] * 1.7)
     for i in range(-2, 16):
         col = bands[i % len(bands)]
         c0 = y0 + i * BW
         lp(lambda P, c0=c0: np.abs(coord(P) - c0 - BW / 2) - BW / 2, col, 0.05)
-    # 배·턱 (크림, 또렷한 경계)
+    # 얼굴 앞 (차분한 민트 가면) · 배·턱 (크림, 또렷한 경계)
+    lp(S.ellipsoid(tuple(hc + (0, -0.05, 1.45)), (1.1, 0.85, 0.75)), MINT, 0.04)
     lp(S.ellipsoid((0, y0 + 2.05, 0.95), (0.62, 0.95, 0.34)), BELLY, 0.04)
     lp(S.ellipsoid(tuple(hc + (0, -1.0, 1.25)), (1.25, 0.5, 0.9)), BELLY, 0.04)
 

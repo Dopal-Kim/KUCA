@@ -10,7 +10,7 @@ from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell,
 
 TIER = 'blue'
 
-FUR = (0.60, 0.39, 0.24)
+FUR = (0.55, 0.39, 0.29)
 FUR_D = (0.36, 0.24, 0.16)
 FUR_L = (0.70, 0.52, 0.38)
 CREAM = (0.98, 0.91, 0.79)
@@ -114,7 +114,7 @@ def build(fig, rng):
     for s in (-1, 1):   # 살짝 걱정스러운 눈썹 (안쪽이 올라감)
         p0 = face_frame(fig, hc, s * 13, 25).o
         p1 = face_frame(fig, hc, s * 33, 19).o
-        fig.paint(masked(S.capsule(p0, p1, 0.08, 0.045), nb, 0.1), (0.30, 0.19, 0.12), soft=0.05)
+        fig.paint(masked(S.capsule(p0, p1, 0.1, 0.06), nb, 0.12), (0.26, 0.15, 0.09), soft=0.03)
     fn_ = face_frame(fig, hc, 0, -14, 'body', out=-0.02)
     ell(fig.extra, fn_, (0, 0, 0), (0.13, 0.09, 0.07), (0.96, 0.58, 0.58), 12, 6)
     mouth_w(fig, face_frame(fig, hc, 0, -22, 'body'), w=0.22, th=0.045)
@@ -132,8 +132,7 @@ def build(fig, rng):
         return d + fuzz(P, 0.015, 3.0)
     fig.add(tail, FUR, k=0.3)
     nt = lambda P: np.abs(tail(P))
-    fig.paint(masked(lambda P: (P[:, 2] + 3.35) * 3.0, nt, 0.15), FUR_L, soft=0.25)          # 꼬리 바깥 끝 테두리 밝게
-    fig.paint(masked(lambda P: np.abs(P[:, 0]) - 0.35 + (P[:, 2] + 1.6) * 0.0, nt, 0.15), FUR_D, soft=0.6)  # 꼬리 등줄 짙게
+    fig.paint(masked(lambda P: (P[:, 2] + 3.85) * 3.0, nt, 0.15), FUR_L, soft=0.25)          # 꼬리 바깥 끝 테두리 밝게
 
     # ---- 파란 털모자 (머리 위, 골지 테 + 방울) ----
     top, tn = surf_point(head0, hc, 0, 75)
@@ -157,19 +156,12 @@ def build(fig, rng):
     pa = np.array((0.8, y0 + 3.75, 0.0)); pb = np.array((-1.05, y0 + 2.0, 0.0))
     dd = pb - pa; dd /= np.linalg.norm(dd)
     pn = np.cross(dd, (0, 0, 1)); pn /= np.linalg.norm(pn)
-    for side in (0, 180):
-        pts = []
-        for t in np.linspace(-0.05, 1.0, 12):
-            c = pa + (pb - pa) * t
-            c = np.array((c[0], c[1], 0.0))
-            p, n = surf_point(shell_core, c, side, 0)
-            pts.append(p + n * 0.07)
-        pts.append(np.array((-1.05, y0 + 2.42, 0.95)) if side == 0 else np.array((-1.35, y0 + 2.1, 0.5)))
-        for a, b in zip(pts, pts[1:]):
-            fig.add(S.capsule(tuple(a), tuple(b), 0.12), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
-    over = [surf_point(shell_core, np.array((pa[0] * 0.9, pa[1] - 0.15, z)), 0, 90)[0] for z in (-0.8, -0.4, 0.0, 0.4, 0.8)]
-    for a, b in zip(over, over[1:]):
-        fig.add(S.capsule(tuple(a + (0, 0.06, 0)), tuple(b + (0, 0.06, 0)), 0.1), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
+    # 대각선 끈: 몸통을 비스듬히 감는 납작한 띠 (평면으로 자른 껍질 → 또렷한 가장자리)
+    def sash(P):
+        shell_d = np.abs(shell_core(P) - 0.06) - 0.065
+        plane = np.abs((P - pa) @ pn) - 0.12
+        return np.maximum(shell_d, plane)
+    fig.add(sash, KNIT, k=0.0, layer='strap', metal=(KNIT, KNIT_HI))
     bcn = np.array((-1.25, y0 + 1.8, 0.9))
     bag_body = S.ellipsoid(tuple(bcn + (0, -0.12, 0)), (0.62, 0.62, 0.5))
     fig.add(bag_body, KNIT, k=0.0, layer='bag', metal=(KNIT, KNIT_HI))

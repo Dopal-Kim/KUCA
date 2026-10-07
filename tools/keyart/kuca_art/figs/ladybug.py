@@ -38,7 +38,7 @@ def build(fig, rng):
              (-112, -30, 0.34), (112, -30, 0.34)]
     for yaw, pitch, r in spots:
         p, n = surf_point(shell, bc, yaw, pitch)
-        fig.add(S.intersect(lambda P: shell(P) - 0.06, S.sphere(p, r)), SPOT, k=0.0, layer='spot')   # 또렷한 검은 점 (얇은 판)
+        fig.add(S.intersect(lambda P: shell(P) - 0.08, S.sphere(p, r)), SPOT, k=0.0, layer='spot')   # 또렷한 검은 점 (얇은 판)
     # ---- 팔다리 (짙은 갈색, 짧고 통통) ----
     LIMB = DARK
     for s in (-1, 1):
@@ -61,10 +61,9 @@ def build(fig, rng):
     fig.add(face0, SKIN, k=0.0, layer='face')
     # 활짝 웃는 'D' 입: 또렷한 부품 (짙은 입 안 + 분홍 혀), 표면에 붙임
     fmo = face_frame(fig, fc, 0, -23, 'face', out=-0.03)
-    for k in range(7):
-        t = -1 + 2 * k / 6
-        ell(fig.extra, fmo, (t * 0.16, -0.1 * (1 - t * t) * 0.9, 0.0), (0.09, 0.09 + 0.06 * (1 - t * t), 0.06), (0.50, 0.12, 0.15), 10, 6)
-    ell(fig.extra, fmo, (0, -0.13, 0.03), (0.13, 0.07, 0.05), (1.0, 0.52, 0.58), 12, 6)
+    ell(fig.extra, fmo, (0, -0.06, 0.0), (0.27, 0.2, 0.05), (0.42, 0.09, 0.12), 18, 8)          # 입 안
+    ell(fig.extra, fmo, (0, 0.1, 0.01), (0.3, 0.1, 0.06), SKIN, 18, 8)                          # 윗입술 (위를 평평하게 → 'D')
+    ell(fig.extra, fmo, (0, -0.15, 0.025), (0.15, 0.08, 0.04), (1.0, 0.50, 0.58), 14, 6)        # 혀
     eye_pair(fig, fc, 25, 2, 'round', 0.42, iris=(0.40, 0.21, 0.09), layer='face', sink=0.14)
     blush_paint(fig, fc, 42, -18, 'face', size=0.36, soft=0.4)
     fig.paint(S.sphere(face_frame(fig, fc, 0, -11, 'face').o, 0.06), (0.88, 0.62, 0.55), soft=0.05)
@@ -97,9 +96,10 @@ def build(fig, rng):
             return np.maximum(np.maximum(shell_d, plane), low)
         fig.add(band, PACK, k=0.0, layer='strap')
     # 진홍 꽃 단추 (-x 멜빵 가슴)
-    fbt = Fg.surface_frame(fig, (-0.98, bc[1] + 0.85, 6.0), (0, 0, -1), layer='strap')
-    bp, bn = np.array(fbt.o), np.array(fbt.z)
-    bp = bp + bn * 0.05
+    bx_, by_ = -0.98, 0.85
+    bz_ = 1.8 * math.sqrt(1 - (bx_ / 2.05) ** 2 - (by_ / 1.95) ** 2)
+    bn = np.array((bx_ / 2.05 ** 2, by_ / 1.95 ** 2, bz_ / 1.8 ** 2)); bn /= np.linalg.norm(bn)
+    bp = bc + np.array((bx_, by_, bz_)) + bn * 0.18
     Rb = axis_R(bn)
     fig.add(S.cylinder(tuple(bp), 0.3, 0.07, round_=0.05, R=Rb), Fg.CRIMSON, k=0.0, layer='button')
     for k in range(5):

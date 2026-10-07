@@ -251,9 +251,9 @@ def feather_scales(P, y_top, rows, n_around=20, H=0.24, hh=0.21, w=0.36, A=0.085
 def pigeon_eye(fig, f, size, side, iris=(0.42, 0.22, 0.09), lid_col=GREY, lid_drop=0.75):
     """멍한 비둘기 눈: 흰자 + eye_at('droopy') 홍채 + 흰자 위를 반쯤 덮는 회색 눈꺼풀 (바깥쪽이 처짐)"""
     b = fig.extra
-    ell(b, f, (0, 0, 0), (size * 1.18, size * 1.08, size * 0.34), (0.99, 0.985, 0.975), 26, 12)
+    ell(b, f, (0, 0, 0), (size * 1.18, size * 1.08, size * 0.28), (0.99, 0.985, 0.975), 26, 12)
     # 홍채: 아래로 살짝 (멍하게 앞을 봄)
-    fi = Frame(f.p((side * size * 0.04, -size * 0.12, size * 0.08)), f.x, f.y, f.z)
+    fi = Frame(f.p((side * size * 0.04, -size * 0.12, size * 0.05)), f.x, f.y, f.z)
     Fg.eye_at(fig, fi, 'droopy', size * 0.8, iris, side=side, lid=lid_col)
     # 눈꺼풀: 흰자 위쪽을 덮는 두꺼운 덮개, 아래 경계는 바깥쪽이 처진 완만한 곡선
     ang = math.radians(-side * 9)
@@ -261,8 +261,8 @@ def pigeon_eye(fig, f, size, side, iris=(0.42, 0.22, 0.09), lid_col=GREY, lid_dr
                tuple(-np.array(f.x) * math.sin(ang) + np.array(f.y) * math.cos(ang)), f.z)
     ly = size * (1.0 - lid_drop)            # 눈꺼풀 아래 경계 높이
     hh = (size * 1.06 - ly) / 2 + size * 0.02
-    ell(b, fl, (0, ly + hh, size * 0.02), (size * 1.17, hh, size * 0.36), lid_col, 26, 12)
-    ell(b, fl, (0, ly + hh - size * 0.05, size * 0.01), (size * 1.18, hh, size * 0.355), LID_EDGE, 26, 12)
+    ell(b, fl, (0, ly + hh, size * 0.04), (size * 1.17, hh, size * 0.44), lid_col, 26, 12)
+    ell(b, fl, (0, ly + hh - size * 0.05, size * 0.03), (size * 1.18, hh, size * 0.435), LID_EDGE, 26, 12)
 
 
 def build(fig, rng):
@@ -300,7 +300,7 @@ def build(fig, rng):
 
     # ---- 얼굴: 멍한 반쯤 감긴 눈 (흰자 + 처진 눈꺼풀), 짧은 부리 + 흰 납막, 칠한 볼터치 ----
     for s in (-1, 1):
-        f = face_frame(fig, hc, s * 31, 4, 'body', out=-0.1)
+        f = face_frame(fig, hc, s * 31, 4, 'body', out=0.0)
         pigeon_eye(fig, f, 0.56, s)
     for s in (-1, 1):   # 이마 짧은 주름 선
         p0 = face_frame(fig, hc, s * 20, 36, 'body').o

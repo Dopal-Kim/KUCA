@@ -276,10 +276,10 @@ def build(fig, rng):
     fig.add(U(tuft, 0.08), INK, k=0.25)
     # 화난 눈썹 능선 (안쪽 끝이 아래로)
     for s in (-1, 1):
-        a = surf(head, hc, s * 8, 14, -0.07)
-        m = surf(head, hc, s * 21, 20, -0.06)
-        b = surf(head, hc, s * 36, 22, -0.08)
-        fig.add(U([S.capsule(a, m, 0.16, 0.15), S.capsule(m, b, 0.15, 0.09)], 0.08), INK_HI, k=0.2)
+        a = surf(head, hc, s * 8, 13, -0.04)
+        m = surf(head, hc, s * 20, 18.5, -0.04)
+        b = surf(head, hc, s * 33, 19.5, -0.05)
+        fig.add(U([S.capsule(a, m, 0.12, 0.12), S.capsule(m, b, 0.12, 0.06)], 0.06), (0.42, 0.42, 0.48), k=0.0, layer='brow')
     # 다리·발
     for s in (-1, 1):
         x = s * 0.78
@@ -316,7 +316,7 @@ def build(fig, rng):
     face_eyes(fig, hc, spread=24, pitch=0, style='almond', size=0.76, iris=(0.38, 0.21, 0.11), tilt=7)
     for s in (-1, 1):
         p = surf(head, hc, s * 41, -18)
-        fig.paint(S.sphere(p, 0.33), (1.0, 0.60, 0.66), soft=0.3)
+        fig.paint(S.ellipsoid(p, (0.36, 0.26, 0.3)), (1.0, 0.58, 0.64), soft=0.3)
     # 목도리: 목을 감는 두툼한 관 + 매듭 + 두 끝 (술 장식)
     p0 = np.array((0, y0 + 3.75, 0.0))
     nrm = np.array((0, 1.0, 0.3))

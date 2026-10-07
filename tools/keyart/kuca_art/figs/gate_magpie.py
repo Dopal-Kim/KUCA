@@ -322,9 +322,9 @@ def build(fig, rng):
     head = lambda P: S.smin(head_up(P), head_lo(P), 0.5)
     # 날씬하지만 배는 둥근 몸: 아래 둥근 배 → 위로 갈수록 좁아지는 가슴
     belly = S.ellipsoid((0, y0 + 2.15, 0.15), (1.82, 1.62, 1.66))
-    chest = S.ellipsoid((0, y0 + 3.45, 0.12), (1.55, 1.3, 1.42))
+    chest = S.ellipsoid((0, y0 + 3.8, 0.12), (1.62, 1.4, 1.48))
     trunk = lambda P: S.smin(belly(P), chest(P), 0.7)
-    core = lambda P: S.smin(head(P), trunk(P), 0.55)
+    core = lambda P: S.smin(head(P), trunk(P), 0.65)
     fig.add(core, INK, k=0.3)
     # 흰 무늬: 볼 (눈 아래·옆) + 가슴·배
     for s in (-1, 1):

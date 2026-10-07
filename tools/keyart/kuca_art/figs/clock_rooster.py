@@ -9,7 +9,7 @@ from .. import figures as Fg
 TIER = 'gold'
 
 WHITE = (0.985, 0.975, 0.965)
-CREAM = (0.97, 0.88, 0.70)
+CREAM = (0.99, 0.93, 0.79)
 COMB = (0.90, 0.16, 0.15)
 COMB_DK = (0.78, 0.10, 0.11)
 BEAK = (1.0, 0.72, 0.14)
@@ -47,8 +47,10 @@ def _grid(h=0.3):
     return _GRID
 
 
-def bounded(f, m=0.8, thr=0.45, h=0.3):
-    """f 가 음수/표면 근처인 곳의 상자(+m) 안에서만 f 를 계산, 밖은 m (참 거리의 하한)"""
+def bounded(f, m=1.6, thr=0.45, h=0.3):
+    """f 가 음수/표면 근처인 곳의 상자(+m) 안에서만 f 를 계산, 밖은 m (참 거리의 하한).
+    m 은 부드러운 합의 k 보다 충분히 커야 한다: 밖의 상수값 여러 개가 smin 으로 겹쳐도 (m - k/4 ...) 다른 부품 표면에
+    닿지 않아야 상자 경계에서 주름(고리 자국)이 생기지 않는다."""
     G = _grid()
     sel = G[f(G) < thr]
     if not len(sel):
@@ -221,7 +223,7 @@ def build(fig, rng):
     for c, r in torso:
         fig.add(S.ellipsoid(c, r), WHITE, k=0.45)
 
-    NECK = ((0, y0 + 3.95, 0.25), (1.2, 0.62, 1.1))
+    NECK = ((0, y0 + 3.85, 0.2), (1.45, 0.7, 1.25))
 
     def body_f(P):
         d = S.ellipsoid(*torso[0])(P)
@@ -238,15 +240,20 @@ def build(fig, rng):
     # ---------- 조끼 (크림): 몸 전체를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
     yv = y0 + 2.85                   # V 트임 꼭짓점
     hem_y = y0 + 1.12
-    top_y = y0 + 3.5
+    top_y = y0 + 3.38
     slope = 0.55
+
+    def top_f(P):        # 목둘레: 뒤가 높고 앞이 낮게 기운 선
+        return top_y + 0.12 - 0.2 * np.clip(P[:, 2], -1.5, 1.5)
+
+    def vopen_f(P):      # 앞 V (양수 = 비움)
+        return np.minimum(P[:, 2] - 0.6, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))
 
     def vest(P):
         d = np.abs(shell_f(P) - 0.11) - 0.07
         d = rmax(d, hem_y - P[:, 1], 0.05)
-        d = rmax(d, P[:, 1] - top_y, 0.05)
-        vopen = np.minimum(P[:, 2] - 0.6, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))      # 앞 V (양수 = 비움)
-        return np.maximum(d, vopen)
+        d = rmax(d, P[:, 1] - top_f(P), 0.05)
+        return np.maximum(d, vopen_f(P))
     fig.add(vest, CREAM, k=0.0, layer='vest')
 
     def vz(x, y, out=0.0, back=False):
@@ -259,10 +266,10 @@ def build(fig, rng):
             y = yv + 0.03 + (top_y - 0.08 - yv) * k / 7
             x = s * (y - yv) * slope + s * 0.02
             pts.append((x, y, vz(x, y, -0.02)))
-        chain(fig, pts, 0.07, Fg.GOLD, 'trim', metal=G)
+        chain(fig, pts, 0.08, Fg.GOLD, 'trim', metal=G)
     # 앞 여밈선 (V 꼭짓점 → 아랫단) 금테 + 금 단추
     pts = [(0.0, y, vz(0.0, y, -0.02)) for y in np.linspace(yv, hem_y + 0.06, 9)]
-    chain(fig, pts, 0.045, Fg.GOLD, 'trim', metal=G)
+    chain(fig, pts, 0.055, Fg.GOLD, 'trim', metal=G)
     for y in (y0 + 2.4, y0 + 1.95, y0 + 1.5):
         fig.add(S.sphere((-0.17, y, vz(-0.17, y, 0.02)), 0.11), Fg.GOLD, k=0.0, layer='btn', metal=G)
     # 아랫단 금테 (둘레 전체)
@@ -340,7 +347,7 @@ def build(fig, rng):
             fig.add(S.ellipsoid(tuple((a_ + b_) / 2), (w * 1.05, L * 0.8, w * 0.7), R=R), col, k=0.1, layer='tail%d' % i)
 
     # ---------- 머리: 달걀형 (위가 좁고 아래 볼 쪽이 부드럽게 넓음), 볼 구 없음 ----------
-    hc = np.array((0, y0 + 5.55, 0.1))
+    hc = np.array((0, y0 + 5.38, 0.12))
     fig.add(S.ellipsoid(tuple(hc), (1.7, 1.76, 1.68)), WHITE, k=0.6)
     fig.add(S.ellipsoid(tuple(hc + (0, -0.6, 0.12)), (1.84, 1.2, 1.62)), WHITE, k=0.6)       # 아래쪽 볼 볼륨
     fig.add(S.ellipsoid(*NECK), WHITE, k=0.5)                                                # 목
@@ -372,7 +379,7 @@ def build(fig, rng):
     # 볼터치: 표면 칠만
     for s in (-1, 1):
         q = np.asarray(face_frame(fig, hc, s * 42, -16).o)
-        layer_paint(fig, 'body', S.sphere(q, 0.45), Fg.BLUSH, 0.45, tol=0.08)
+        layer_paint(fig, 'body', S.sphere(q, 0.4), Fg.BLUSH, 0.18, tol=0.08)
 
     # ---------- 받침: 바닥 시계판 + 돌 ----------
     cc = np.array((2.45, y0 + 0.3, 2.25))

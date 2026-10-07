@@ -317,10 +317,11 @@ def build(fig, rng):
     for s in (-1, 1):
         fig.paint(S.ellipsoid(surf(face, hc, s * 22, 20), (0.75, 0.42, 0.6), R=S.rot(0, 0, -s * 14)), CREAM, soft=0.08)
         fig.paint(S.ellipsoid(surf(face, hc, s * 25.5, -6.5, -0.1), (0.8, 0.64, 0.7), R=S.rot(s * 25, 0, s * 22)), FUR_DK, soft=0.05)
-    fig.paint(S.ellipsoid(surf(face, hc, 0, 24), (0.1, 0.2, 0.3)), FUR_DK, soft=0.05)
+    fig.paint(S.sphere(surf(face, hc, 0, 22), 0.13), FUR_DK, soft=0.04)
     # 가슴 흰 털 (V 자 + 삐죽 끝)
-    for (x, y, rx, ry) in ((0, 2.75, 0.8, 0.55), (-0.3, 2.3, 0.35, 0.45), (0.3, 2.3, 0.35, 0.45), (0, 2.15, 0.3, 0.5)):
-        fig.paint(lambda P, e=S.ellipsoid((x, y0 + y, 1.3), (rx, ry, 0.6)): np.maximum(e(P), np.abs(core(P)) - 0.06), CREAM, soft=0.15)
+    bib = lambda P: np.minimum(S.ellipsoid((0, y0 + 2.6, 1.3), (0.78, 0.72, 0.7))(P),
+                               np.maximum(S.ellipsoid((0, y0 + 2.05, 1.3), (0.5, 0.6, 0.7))(P), 0.12 - np.abs(np.sin(P[:, 0] * 7.5)) * 0.3 - (y0 + 2.0 - P[:, 1])))
+    fig.paint(lambda P: np.maximum(bib(P), np.abs(core(P)) - 0.06), CREAM, soft=0.05)
     # 눈·코·입·볼
     # 작고 동그란 눈 (짙은 가면 안에서 반짝)
     face_eyes(fig, hc, spread=25, pitch=-5, style='round', size=0.47, iris=(0.24, 0.14, 0.10))

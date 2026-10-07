@@ -9,7 +9,7 @@ from .clock_rooster import Fast, hit, layer_paint, face_frame, surf_beads, frame
 
 TIER = 'gold'
 
-GREEN = (0.47, 0.76, 0.26)
+GREEN = (0.42, 0.74, 0.22)
 CREAMY = (0.99, 0.95, 0.68)
 BOW = (0.76, 0.12, 0.16)
 BOW_DK = (0.62, 0.08, 0.12)
@@ -85,8 +85,8 @@ def build(fig, rng):
 
     # 크림 턱·배
     lp = lambda f, c, soft, tol=0.06: layer_paint(fig, 'body', f, c, soft, tol=tol)
-    lp(S.ellipsoid((0, y0 + 3.25, 1.2), (1.85, 0.95, 1.2)), CREAMY, 0.1)
-    lp(S.ellipsoid((0, y0 + 1.75, 1.0), (1.05, 1.0, 0.5)), CREAMY, 0.1)
+    lp(S.ellipsoid((0, y0 + 3.25, 1.2), (1.85, 0.95, 1.2)), CREAMY, 0.025)
+    lp(S.ellipsoid((0, y0 + 1.75, 1.0), (1.05, 1.0, 0.5)), CREAMY, 0.025)
 
     # 눈 (눈 언덕 안의 흰 눈알 + 동그란 갈색 눈, 살짝 바깥을 봄)
     for s, dc in domes:
@@ -109,10 +109,10 @@ def build(fig, rng):
     # 분홍 볼 (칠만, 표면과 같은 높이)
     for s in (-1, 1):
         q = np.asarray(face_frame(fig, hc, s * 50, -6).o)
-        lp(S.sphere(tuple(q), 0.4), (1.0, 0.58, 0.60), 0.12, tol=0.08)
+        lp(S.sphere(tuple(q), 0.38), (1.0, 0.56, 0.60), 0.03, tol=0.08)
 
     # ---------- 나비넥타이 (턱 아래 목) ----------
-    bc = hit(fig, (0, y0 + 2.72, 4.5), (0, 0, -1)) + (0, 0, 0.2)
+    bc = hit(fig, (0, y0 + 2.66, 4.5), (0, 0, -1)) + (0, 0, 0.3)
     for s in (-1, 1):
         lobe = S.capsule(tuple(bc + (s * 0.1, 0, 0)), tuple(bc + (s * 0.6, 0.0, -0.06)), 0.1, 0.32)
         lobe = S.intersect(lobe, lambda P, z=bc[2] - 0.03: np.abs(P[:, 2] - z) - 0.14)

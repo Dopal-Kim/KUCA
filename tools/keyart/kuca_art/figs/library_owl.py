@@ -302,11 +302,10 @@ def build(fig, rng):
             sc = lambda P, p=p: np.maximum(np.abs(np.linalg.norm(P - p, axis=1) - 0.27) - 0.035, P[:, 1] - p[1] + 0.02)
             fig.paint(on(sc), SCALE, soft=0.05)
     # 얼굴 원반: 짙은 테두리 → 크림 원 2개 + 아래 → 이마 갈색 V
+    # 얼굴판: 눈 둘레 크림 원 두 개 + 부리 아래 크림 (또렷한 경계)
     for s in (-1, 1):
-        fig.paint(on(S.sphere(surf(head, hc, s * 25, -4, -0.3), 1.56)), (0.56, 0.38, 0.27), soft=0.06)
-    for s in (-1, 1):
-        fig.paint(on(S.sphere(surf(head, hc, s * 25, -4, -0.3), 1.46)), CREAM, soft=0.06)
-    fig.paint(on(S.sphere(surf(head, hc, 0, -24, -0.3), 1.0)), CREAM, soft=0.1)
+        fig.paint(on(S.sphere(surf(head, hc, s * 24, -3, -0.3), 1.38)), CREAM, soft=0.04)
+    fig.paint(on(S.sphere(surf(head, hc, 0, -26, -0.3), 0.95)), CREAM, soft=0.04)
     fig.paint(on(S.ellipsoid(surf(head, hc, 0, 26, 0), (0.38, 0.8, 0.6))), FUR, soft=0.12)
     # 귀뿔 (깃털 3장씩, 위·바깥으로)
     for s in (-1, 1):
@@ -364,8 +363,8 @@ def build(fig, rng):
     cb = lambda P: S.smin(core(P), bell(P), 0.3)
     edge = lambda P: y0 + 2.4 + 0.55 * np.clip(P[:, 2], 0, None) / 1.9 - 0.1 * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 8) * 0
     front_open = lambda P: np.maximum(np.abs(P[:, 0]) - 0.04 - 0.25 * np.clip(y0 + 3.45 - P[:, 1], 0, None), -P[:, 2])
-    flare = lambda P: 0.1 + 0.42 * np.clip((y0 + 3.75 - P[:, 1]) / 1.3, 0, 1) ** 1.3     # 아래로 갈수록 퍼지는 케이프
-    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 3.95), -front_open(P)))
+    flare = lambda P: 0.08 + 0.45 * np.clip((y0 + 3.95 - P[:, 1]) / 1.45, 0, 1) ** 1.15     # 아래로 갈수록 퍼지는 케이프
+    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 3.8), -front_open(P)))
     fig.add(cape, NAVY, k=0.0, layer='cape')
     trim = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P) - 0.01) - 0.11, np.abs(P[:, 1] - edge(P) - 0.03) - 0.06), -front_open(P))
     fig.add(trim, Fg.GOLD, k=0.0, layer='trim', metal=GLD)

@@ -18,8 +18,8 @@ TOP = 1.05
 # ---------- 팔레트 (sRGB) ----------
 WHITE = (0.985, 0.975, 0.965)
 SUIT = (0.96, 0.955, 0.95)
-GOLD = (0.96, 0.62, 0.06)
-GOLD_HI = (1.0, 0.91, 0.48)
+GOLD = (0.98, 0.70, 0.10)
+GOLD_HI = (1.0, 0.93, 0.55)
 SILVER = (0.80, 0.82, 0.86)
 PINK = (0.99, 0.70, 0.74)
 BLUSH = (1.0, 0.62, 0.66)
@@ -41,9 +41,9 @@ def metal_shade(C, N, base, hi):
     """금속 부위: 위를 볼수록 밝은 반사, 옆 아래는 짙은 색 + 가로 반사 띠"""
     ny = N[:, 1]
     nz = N[:, 2]
-    t = np.clip(0.5 + 0.5 * ny + 0.15 * nz, 0, 1) ** 2.0
-    band = np.exp(-((ny - 0.35) / 0.1) ** 2) * 0.45 + np.exp(-((ny + 0.25) / 0.08) ** 2) * 0.12
-    dark = np.asarray(base) * 0.58
+    t = np.clip(0.55 + 0.5 * ny + 0.15 * nz, 0, 1) ** 1.4
+    band = np.exp(-((ny - 0.35) / 0.1) ** 2) * 0.4 + np.exp(-((ny + 0.25) / 0.08) ** 2) * 0.1
+    dark = np.asarray(base) * 0.8
     col = dark[None, :] * (1 - t[:, None]) + np.asarray(hi)[None, :] * t[:, None]
     return np.clip(col + band[:, None] * 0.6, 0, 1)
 

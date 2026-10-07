@@ -173,7 +173,7 @@ def build(fig, rng):
     b0 = hd + np.array((0.12, 0.4, 0.22))
     b1 = hd + np.array((-0.5, -0.95, 0.5))
     fig.add(S.subtract(S.capsule(tuple(b0), tuple(b1), 0.15), S.capsule(tuple(b0 - (b1 - b0) * 0.1), tuple(b1 + (b1 - b0) * 0.1), 0.1)),
-            BATON, k=0.0, layer='baton', metal=RB)
+            BATON, k=0.0, layer='baton')
     for k in range(3):   # 손가락이 감쌈
         p = hd + np.array((0.04, 0.08 - k * 0.15, 0.28))
         fig.add(S.sphere(tuple(p), 0.13), FUR, k=0.08)
