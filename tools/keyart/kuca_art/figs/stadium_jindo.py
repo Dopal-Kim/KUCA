@@ -6,7 +6,7 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .clock_rooster import Fast, hit, layer_paint, eye_on, beads, rmax
+from .clock_rooster import Fast, hit, layer_paint, beads, rmax, face_frame, surf_beads
 
 TIER = 'gold'
 
@@ -74,152 +74,153 @@ def build(fig, rng):
         for p, q in zip(pts, pts[1:]):
             fig.add(S.capsule(p, q, 0.035), (0.99, 0.99, 0.99), k=0.0, layer='lane')
 
+    # ---------- 체형: 다리 긴 날씬한 스포츠 체형 (약 2.4 등신) ----------
+    LEG_TOP = y0 + 2.35          # 다리 위 (엉덩이)
     # ---------- 운동화 (빨강 + 흰 밑창·줄·끈) ----------
     for s in (-1, 1):
-        x = s * 0.72
-        fig.add(S.ellipsoid((x, y0 + 0.13, 0.35), (0.56, 0.16, 0.78)), (0.99, 0.99, 0.99), k=0.0, layer='sole')
-        fig.add(S.ellipsoid((x, y0 + 0.42, 0.3), (0.52, 0.36, 0.72)), RED, k=0.15, layer='shoe')
-        fig.add(S.capsule((x, y0 + 0.5, 0.0), (x, y0 + 0.75, -0.05), 0.44), RED, k=0.15, layer='shoe')
-        fig.add(S.torus((x, y0 + 0.86, -0.05), 0.4, 0.07), (0.99, 0.99, 0.99), k=0.0, layer='sole')
+        x = s * 0.6
+        fig.add(S.ellipsoid((x, y0 + 0.13, 0.32), (0.5, 0.16, 0.74)), (0.99, 0.99, 0.99), k=0.0, layer='sole')
+        fig.add(S.ellipsoid((x, y0 + 0.4, 0.28), (0.46, 0.34, 0.68)), RED, k=0.15, layer='shoe')
+        fig.add(S.capsule((x, y0 + 0.48, 0.0), (x, y0 + 0.72, -0.05), 0.38), RED, k=0.15, layer='shoe')
+        fig.add(S.torus((x, y0 + 0.83, -0.05), 0.34, 0.065), (0.99, 0.99, 0.99), k=0.0, layer='sole')
         for j in range(3):   # 끈
-            zc = 0.72 - j * 0.15
+            zc = 0.66 - j * 0.15
             q = hit(fig, (x, y0 + 0.95, zc), (0, -1, 0.0))
-            beads(fig, [q + (-0.17, 0.02, 0), q + (0.17, 0.02, 0)], 0.04, (1, 1, 1))
+            beads(fig, [q + (-0.15, 0.02, 0), q + (0.15, 0.02, 0)], 0.038, (1, 1, 1))
         for j in range(2):   # 옆 흰 줄 두 개
             off = j * 0.2
-            for sd in (s,):
-                a = hit(fig, (x + sd * 1.5, y0 + 0.32, 0.45 - off), (-sd, 0, 0))
-                b = hit(fig, (x + sd * 1.5, y0 + 0.62, 0.15 - off), (-sd, 0, 0))
-                fig.add(S.capsule(tuple(a), tuple(b), 0.05), (0.99, 0.99, 0.99), k=0.0, layer='stripe')
+            a = hit(fig, (x + s * 1.5, y0 + 0.3, 0.42 - off), (-s, 0, 0))
+            b = hit(fig, (x + s * 1.5, y0 + 0.6, 0.12 - off), (-s, 0, 0))
+            fig.add(S.capsule(tuple(a), tuple(b), 0.05), (0.99, 0.99, 0.99), k=0.0, layer='stripe')
 
-    # ---------- 다리 ----------
+    # ---------- 다리 (길고 가는 다리, 종아리 살짝) ----------
     for s in (-1, 1):
-        fig.add(S.capsule((s * 0.72, y0 + 0.85, -0.02), (s * 0.74, y0 + 1.6, 0.0), 0.38, 0.45), FUR, k=0.2)
+        fig.add(S.capsule((s * 0.6, y0 + 0.8, -0.04), (s * 0.6, y0 + 1.45, 0.0), 0.3, 0.33), FUR, k=0.15)
+        fig.add(S.capsule((s * 0.6, y0 + 1.45, 0.0), (s * 0.64, LEG_TOP, 0.0), 0.33, 0.4), FUR, k=0.2)
 
-    # ---------- 몸통 ----------
-    torso = [((0, y0 + 2.55, 0.0), (1.32, 1.25, 1.1)), ((0, y0 + 1.75, 0.02), (1.3, 0.7, 1.05))]
+    # ---------- 몸통: 어깨가 살짝 넓고 허리가 잘록한 날씬한 몸 ----------
+    torso = [((0, y0 + 3.3, 0.0), (1.08, 0.95, 0.82)), ((0, y0 + 2.5, 0.0), (0.98, 0.62, 0.78))]
     for c, r in torso:
-        fig.add(S.ellipsoid(c, r), FUR, k=0.45)
+        fig.add(S.ellipsoid(c, r), FUR, k=0.4)
 
     def torso_f(P):
-        return S.smin(S.ellipsoid(*torso[0])(P), S.ellipsoid(*torso[1])(P), 0.45)
+        return S.smin(S.ellipsoid(*torso[0])(P), S.ellipsoid(*torso[1])(P), 0.4)
 
     # 반바지 (빨강) + 다리통
+    SH_Y = y0 + 2.42
+
     def shorts(P):
-        d = np.abs(torso_f(P) - 0.09) - 0.07
-        return rmax(d, np.abs(P[:, 1] - (y0 + 1.62)) - 0.42, 0.05)
+        d = np.abs(torso_f(P) - 0.08) - 0.06
+        return rmax(d, np.abs(P[:, 1] - SH_Y) - 0.4, 0.05)
     fig.add(shorts, RED, k=0.0, layer='shorts')
     for s in (-1, 1):
-        fig.add(S.intersect(S.capsule((s * 0.75, y0 + 1.15, 0.0), (s * 0.7, y0 + 1.9, 0.0), 0.56), lambda P: (y0 + 1.15) - P[:, 1]),
+        fig.add(S.intersect(S.capsule((s * 0.62, y0 + 1.8, 0.0), (s * 0.6, y0 + 2.6, 0.0), 0.47), lambda P: (y0 + 1.8) - P[:, 1]),
                 RED, k=0.12, layer='shorts')
-        fig.add(S.torus((s * 0.75, y0 + 1.17, 0.0), 0.5, 0.06), RED_DK, k=0.0, layer='shortshem')
+        fig.add(S.torus((s * 0.62, y0 + 1.82, 0.0), 0.43, 0.055), RED_DK, k=0.0, layer='shortshem')
     # 반바지 옆 흰 줄
     for s in (-1, 1):
-        pts = [hit(fig, (s * 4.5, y, 0.0), (-s, 0, 0)) for y in np.linspace(y0 + 1.22, y0 + 1.98, 8)]
+        pts = [hit(fig, (s * 4.5, y, -0.05), (-s, 0, 0)) for y in np.linspace(y0 + 1.86, y0 + 2.75, 8)]
         for a, b in zip(pts, pts[1:]):
-            fig.add(S.capsule(tuple(a), tuple(b), 0.06), (0.99, 0.99, 0.99), k=0.0, layer='stripe')
+            fig.add(S.capsule(tuple(a), tuple(b), 0.055), (0.99, 0.99, 0.99), k=0.0, layer='stripe')
 
     # 민소매 (흰 껍질) + 빨간 테
+    T_TOP = y0 + 4.08
+
     def tank(P):
-        d = np.abs(torso_f(P) - 0.2) - 0.07
-        d = rmax(d, (y0 + 1.9) - P[:, 1], 0.06)
-        d = np.maximum(d, P[:, 1] - (y0 + 3.75))
-        # 앞 목둘레 U 파임
-        neck = np.maximum(np.hypot(P[:, 0] / 0.62, (P[:, 1] - (y0 + 3.75)) / 0.55) - 1.0, -(P[:, 2] - 0.2))
+        d = np.abs(torso_f(P) - 0.17) - 0.065
+        d = rmax(d, (y0 + 2.62) - P[:, 1], 0.06)
+        d = np.maximum(d, P[:, 1] - T_TOP)
+        neck = np.maximum(np.hypot(P[:, 0] / 0.48, (P[:, 1] - T_TOP) / 0.34) - 1.0, -(P[:, 2] - 0.15))
         d = np.maximum(d, -neck * 0.5)
         return d
     fig.add(tank, SHIRT, k=0.0, layer='tank')
-    # 목 테 (U)
     pts = []
     for a in np.linspace(-math.pi * 0.5, math.pi * 0.5, 15):
-        x = math.sin(a) * 0.62
-        y = y0 + 3.75 - math.cos(a) * 0.55
-        pts.append(hit(fig, (x, y, 4.5), (0, 0, -1), field=tank))
+        x = math.sin(a) * 0.5
+        y = T_TOP - math.cos(a) * 0.36
+        pts.append(hit(fig, (x, y, 4.5), (0, 0, -1), field=tank) + (0, 0, -0.03))
     for a, b in zip(pts, pts[1:]):
-        fig.add(S.capsule(tuple(a), tuple(b), 0.07), RED, k=0.02, layer='trim')
-    # 밑단 테
+        fig.add(S.capsule(tuple(a), tuple(b), 0.055), RED, k=0.02, layer='trim')
 
-    # ---------- 팔 + 손목밴드 ----------
+    # ---------- 팔 (가늘고 김) + 손목밴드 ----------
     arms = {}
     arm_holes = []
     for s in (-1, 1):
-        sh = (s * 1.18, y0 + 3.3, 0.05)
-        el = (s * 1.6, y0 + 2.55, 0.25)
-        hd = (s * 1.82, y0 + 1.95, 0.5)
-        fig.add(S.sphere(sh, 0.45), FUR, k=0.25)
-        fig.add(S.capsule(sh, el, 0.4, 0.36), FUR, k=0.25)
-        fig.add(S.capsule(el, hd, 0.36, 0.34), FUR, k=0.2)
-        fig.add(S.sphere(hd, 0.38), FUR, k=0.15)
+        sh = (s * 1.02, y0 + 3.75, 0.02)
+        el = (s * 1.35, y0 + 2.95, 0.18)
+        hd = (s * 1.55, y0 + 2.25, 0.42)
+        fig.add(S.sphere(sh, 0.36), FUR, k=0.2)
+        fig.add(S.capsule(sh, el, 0.31, 0.28), FUR, k=0.2)
+        fig.add(S.capsule(el, hd, 0.28, 0.27), FUR, k=0.18)
+        fig.add(S.sphere(hd, 0.31), FUR, k=0.12)
         arms[s] = (sh, el, hd)
-        ad = np.array(el) - np.array(sh)
-        ad /= np.linalg.norm(ad)
-        arm_holes.append((S.capsule(sh, el, 0.4, 0.36), S.sphere(sh, 0.62)))
+        arm_holes.append((S.capsule(sh, el, 0.31, 0.28), S.sphere(sh, 0.52)))
         u = np.array(hd) - np.array(el)
         u /= np.linalg.norm(u)
-        wc = np.array(el) + u * 0.48
-        R = S.rot(0, 0, s * 20)
-        fig.add(S.cylinder(tuple(wc), 0.42, 0.15, round_=0.06, R=R), RED, k=0.0, layer='band')
+        wc = np.array(el) + u * 0.45
+        R = S.rot(0, 0, s * 16)
+        fig.add(S.cylinder(tuple(wc), 0.34, 0.13, round_=0.05, R=R), RED, k=0.0, layer='band')
 
-    for ah, near in arm_holes:   # 소매 둘레 빨간 테 (민소매 껍질 위, 어깨 근처만)
-        layer_paint(fig, 'tank', lambda P, ah=ah, near=near: np.maximum(np.abs(ah(P) - 0.08) - 0.11, near(P)), RED, 0.03, tol=0.03)
+    for ah, near in arm_holes:   # 소매 둘레 빨간 테
+        layer_paint(fig, 'tank', lambda P, ah=ah, near=near: np.maximum(np.abs(ah(P) - 0.08) - 0.1, near(P)), RED, 0.03, tol=0.03)
     # ---------- 바통 (왼손, 화면 왼쪽) ----------
     hd = np.array(arms[-1][2])
-    b0 = hd + np.array((0.15, 0.45, 0.25))
-    b1 = hd + np.array((-0.55, -1.05, 0.55))
-    fig.add(S.subtract(S.capsule(tuple(b0), tuple(b1), 0.17), S.capsule(tuple(b0 - (b1 - b0) * 0.1), tuple(b1 + (b1 - b0) * 0.1), 0.11)),
+    b0 = hd + np.array((0.12, 0.4, 0.22))
+    b1 = hd + np.array((-0.5, -0.95, 0.5))
+    fig.add(S.subtract(S.capsule(tuple(b0), tuple(b1), 0.15), S.capsule(tuple(b0 - (b1 - b0) * 0.1), tuple(b1 + (b1 - b0) * 0.1), 0.1)),
             BATON, k=0.0, layer='baton', metal=RB)
     for k in range(3):   # 손가락이 감쌈
-        p = hd + np.array((0.05, 0.1 - k * 0.17, 0.35))
-        fig.add(S.sphere(tuple(p), 0.15), FUR, k=0.08)
+        p = hd + np.array((0.04, 0.08 - k * 0.15, 0.28))
+        fig.add(S.sphere(tuple(p), 0.13), FUR, k=0.08)
 
     # ---------- 꼬리 (등 위로 말린 진돗개 꼬리) ----------
-    tail = [((0, y0 + 2.2, -1.0), 0.32), ((0, y0 + 2.75, -1.55), 0.4), ((0.05, y0 + 3.4, -1.75), 0.45),
-            ((0.12, y0 + 3.85, -1.45), 0.42), ((0.2, y0 + 3.8, -1.05), 0.34), ((0.25, y0 + 3.5, -0.85), 0.25)]
+    tail = [((0, y0 + 2.55, -0.7), 0.26), ((0, y0 + 3.0, -1.2), 0.34), ((0.05, y0 + 3.55, -1.38), 0.38),
+            ((0.12, y0 + 3.95, -1.12), 0.36), ((0.18, y0 + 3.92, -0.8), 0.28), ((0.22, y0 + 3.65, -0.66), 0.2)]
     for (a, ra), (b, rb) in zip(tail, tail[1:]):
         fig.add(S.capsule(a, b, ra, rb), FUR, k=0.25, layer='tail')
 
-    # ---------- 머리 ----------
-    hc = (0, y0 + 5.45, 0.1)
-    hr = (2.02, 1.8, 1.85)
-    fig.add(S.ellipsoid(hc, hr), FUR, k=0.5)
-    fig.add(S.ellipsoid((0, y0 + 3.85, 0.1), (1.0, 0.5, 0.85)), FUR, k=0.5)
-    for s in (-1, 1):   # 볼살
-        fig.add(S.sphere((s * 1.1, hc[1] - 1.0, hc[2] + 0.8), 0.7), FUR, k=0.6)
-    fig.add(S.ellipsoid((0, y0 + 4.78, 1.75), (0.62, 0.44, 0.55)), FUR, k=0.3)       # 주둥이
-    # 귀: 짧고 뾰족한 세모, 바짝 섬 (진돗개)
+    # ---------- 머리: 주둥이가 앞으로 나온 진돗개 두상 (볼 구 없음, 아래 볼 볼륨만) ----------
+    hc = np.array((0, y0 + 5.55, 0.0))
+    cran = (tuple(hc), (1.5, 1.42, 1.42))
+    fig.add(S.ellipsoid(*cran), FUR, k=0.45)
+    fig.add(S.ellipsoid(tuple(hc + (0, -0.45, 0.1)), (1.5, 0.98, 1.32)), FUR, k=0.5)               # 아래 볼 볼륨
+    fig.add(S.ellipsoid(tuple(hc + (0, -0.55, 1.42)), (0.66, 0.5, 0.78)), FUR, k=0.38)              # 주둥이 (앞으로)
+    fig.add(S.ellipsoid(tuple(hc + (0, -0.2, 1.1)), (0.52, 0.45, 0.7)), FUR, k=0.4)                 # 콧등 (stop)
+    fig.add(S.ellipsoid((0, y0 + 4.2, 0.0), (0.7, 0.4, 0.62)), FUR, k=0.4)                           # 목
+    # 귀: 짧고 뾰족한 세모, 바짝 섬
     for s in (-1, 1):
-        R = S.rot(s * 10, 6, -s * 14)
-        base_c = (s * 1.05, hc[1] + 1.28, -0.05)
-        ear = tri_ear(base_c, R, 0.66, 1.15, 0.22, 0.13)
-        inner = tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.2))), R, 0.36, 0.85, 0.08, 0.05)
+        R = S.rot(s * 12, 4, -s * 16)
+        base_c = (s * 0.9, hc[1] + 1.05, -0.12)
+        ear = tri_ear(base_c, R, 0.56, 1.0, 0.2, 0.12)
+        inner = tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.18))), R, 0.3, 0.74, 0.07, 0.05)
         fig.add(S.subtract(ear, inner, k=0.05), FUR, k=0.25, layer='ear')
-        fig.paint(tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.14))), R, 0.4, 0.92, 0.12, 0.05), EAR_IN, soft=0.05)
+        fig.paint(tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.13))), R, 0.34, 0.8, 0.11, 0.05), EAR_IN, soft=0.05)
 
     # 머리띠 (이마를 두른 빨간 밴드, 귀 아래)
-    hb_c = np.array((0, hc[1] + 1.0, hc[2]))
-    Rh = S.rot(0, -4, 0)
+    hb_c = hc + (0, 0.78, 0)
+    Rh = S.rot(0, -6, 0)
 
     def headband(P):
-        d = np.abs(S.ellipsoid(hc, (hr[0] + 0.06, hr[1] + 0.06, hr[2] + 0.06))(P)) - 0.11
+        d = np.abs(S.ellipsoid(*cran)(P) - 0.06) - 0.1
         q = (P - hb_c) @ Rh
-        return rmax(d, np.abs(q[:, 1]) - 0.27, 0.07)
+        return rmax(d, np.abs(q[:, 1]) - 0.24, 0.07)
     fig.add(headband, RED, k=0.0, layer='headband')
 
-    # 얼굴
+    # ---------- 얼굴: 밝은 아몬드 눈 (눈꼬리 살짝 올라감) ----------
     for s in (-1, 1):
-        eye_on(fig, hc, s * 27, -2, size=0.58, tall=1.1, side=s, sink=-0.04)
-    nz = hit(fig, (0, y0 + 4.98, 4.5), (0, 0, -1))
-    Fg._ellipsoid(fig.extra, tuple(nz + (0, 0, 0.02)), (0.2, 0.14, 0.12), NOSE, 12, 6)
-    Fg._ellipsoid(fig.extra, tuple(nz + (-0.06, 0.06, 0.1)), (0.05, 0.03, 0.03), (0.7, 0.6, 0.6), 6, 4)
+        f = face_frame(fig, hc, s * 29, 4, out=-0.06)
+        Fg.eye_at(fig, f, style='almond', size=0.44, iris=(0.42, 0.23, 0.09), side=s, tilt=13)
+    fn = face_frame(fig, hc + (0, -0.45, 0), 0, 0)          # 주둥이 끝
+    no, nn = np.asarray(fn.o), np.asarray(fn.z)
+    Fg._ellipsoid(fig.extra, tuple(no + nn * 0.02 + (0, 0.02, 0)), (0.2, 0.14, 0.13), NOSE, 12, 6)
+    Fg._ellipsoid(fig.extra, tuple(no + nn * 0.13 + (-0.06, 0.08, 0)), (0.05, 0.03, 0.03), (0.7, 0.6, 0.6), 6, 4)
+    fm = face_frame(fig, hc + (0, -0.45, 0), 0, -13)
+    mo = np.asarray(fm.o)
+    pts2 = [(0, 0.1), (0, -0.02)]
+    surf_beads(fig, fm, pts2, 0.03, (0.32, 0.18, 0.16))
     for s in (-1, 1):
-        pts = []
-        for k in range(8):
-            a = math.pi * k / 7
-            x = s * (0.14 + math.cos(a) * 0.14)
-            y = y0 + 4.7 - math.sin(a) * 0.12
-            pts.append(hit(fig, (x, y, 4.5), (0, 0, -1)))
-        beads(fig, pts, 0.035, (0.32, 0.18, 0.16))
-    beads(fig, [nz + (0, -0.1, 0), hit(fig, (0, y0 + 4.71, 4.5), (0, 0, -1))], 0.03, (0.32, 0.18, 0.16))
+        surf_beads(fig, fm, [(s * (0.13 + math.cos(math.pi * k / 7) * 0.13), -0.02 - math.sin(math.pi * k / 7) * 0.1) for k in range(8)],
+                   0.032, (0.32, 0.18, 0.16))
     for s in (-1, 1):
-        q = hit(fig, (s * 1.3, y0 + 4.85, 4.5), (0, 0, -1))
-        layer_paint(fig, 'body', S.sphere(tuple(q), 0.42), Fg.BLUSH, 0.5, tol=0.1)
+        q = np.asarray(face_frame(fig, hc, s * 46, -18).o)
+        layer_paint(fig, 'body', S.sphere(tuple(q), 0.38), Fg.BLUSH, 0.45, tol=0.08)

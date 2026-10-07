@@ -5,7 +5,8 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, kawaii_eyes2, smile2, blush2)
+from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, kawaii_eyes2, smile2, blush2,
+                     soft_head, face_frame, eye_pair, mouth_w, blush_paint)
 
 TIER = 'blue'
 
@@ -29,25 +30,23 @@ def build(fig, rng):
     Fg.base(fig, rng, flowers=8)
     y0 = Fg.TOP
     # ---- 머리 ----
-    hc = np.array((0.0, y0 + 5.85, 0.15))
-    head0 = S.ellipsoid(hc, (2.02, 1.78, 1.85))
-    cheeks = [S.ellipsoid((s * 1.15, y0 + 5.2, 0.8), (0.95, 0.75, 0.9)) for s in (-1, 1)]
-
-    def head(P):
-        return S.smin(S.smin(head0(P), cheeks[0](P), 0.6), cheeks[1](P), 0.6)
-    # ---- 몸통 / 다리 / 팔 ----
-    torso = S.ellipsoid((0, y0 + 2.6, 0.0), (1.3, 1.55, 1.15))
-    belly = S.ellipsoid((0, y0 + 2.4, 0.3), (1.15, 1.25, 1.0))
+    # 작은 머리 (아래 볼 쪽이 살짝 넓은 한 덩어리, 따로 붙인 볼 없음) — 약 2.35 등신
+    hc = np.array((0.0, y0 + 5.55, 0.15))
+    head0 = soft_head(hc, (1.66, 1.48, 1.52), flare=0.12, taper=0.04, flare_y=-0.45)
+    head = head0
+    # ---- 몸통 / 다리 / 팔: 작고 가는 몸, 통통한 허벅지 ----
+    torso = S.ellipsoid((0, y0 + 2.5, -0.05), (1.02, 1.32, 0.92))
+    belly = S.ellipsoid((0, y0 + 2.3, 0.2), (0.9, 1.05, 0.8))
     parts = []
     for s in (-1, 1):
-        parts.append(S.ellipsoid((s * 0.78, y0 + 1.15, 0.0), (0.75, 0.85, 0.95)))                     # 허벅지
-        parts.append(S.ellipsoid((s * 0.8, y0 + 0.28, 0.55), (0.42, 0.3, 0.78), R=S.rot(s * 10, 0, 0)))   # 발
+        parts.append(S.ellipsoid((s * 0.62, y0 + 1.1, 0.0), (0.6, 0.72, 0.8)))                       # 허벅지
+        parts.append(S.ellipsoid((s * 0.68, y0 + 0.26, 0.5), (0.36, 0.26, 0.68), R=S.rot(s * 10, 0, 0)))   # 발
     hands = {}
     for s in (-1, 1):
-        sh = np.array((s * 1.1, y0 + 3.55, 0.15))
-        el = np.array((s * 1.75, y0 + 3.0, 0.3))
-        hd = np.array((s * 2.3, y0 + 2.55, 0.5))
-        parts += [S.capsule(sh, el, 0.42, 0.34), S.capsule(el, hd, 0.34, 0.28), S.sphere(hd, 0.3)]
+        sh = np.array((s * 0.85, y0 + 3.3, 0.1))
+        el = np.array((s * 1.4, y0 + 2.85, 0.3))
+        hd = np.array((s * 1.85, y0 + 2.5, 0.5))
+        parts += [S.capsule(sh, el, 0.32, 0.26), S.capsule(el, hd, 0.26, 0.22), S.sphere(hd, 0.25)]
         hands[s] = hd
 
     def core(P):
@@ -58,10 +57,10 @@ def build(fig, rng):
     # ---- 귀 + 귀 끝 털 ----
     ears = []
     for s in (-1, 1):
-        b = np.array((s * 1.2, y0 + 7.2, -0.1))
-        t = np.array((s * 1.72, y0 + 8.75, -0.15))
+        b = np.array((s * 1.0, y0 + 6.6, -0.1))
+        t = np.array((s * 1.45, y0 + 8.05, -0.15))
         Re = axis_R(t - b, (s * 0.1, 0, 1))
-        cone = S.capsule(tuple(b), tuple(t), 0.72, 0.22)
+        cone = S.capsule(tuple(b), tuple(t), 0.62, 0.2)
         slab = S.box(tuple((b + t) / 2), (2, 2, 0.3), R=Re)
         ear = S.intersect(cone, slab)
         inner = S.capsule(tuple(b + (0, 0.25, 0.45)), tuple(t + (-s * 0.05, -0.3, 0.45)), 0.45, 0.06)
@@ -90,45 +89,47 @@ def build(fig, rng):
 
     # 볼 옆 복슬 털 뭉치 (바깥 아래로 삐죽)
     for s in (-1, 1):
-        for k, (yw, pt, L) in enumerate(((72, -20, 0.42), (80, -8, 0.36), (62, -32, 0.38), (86, 6, 0.3))):
+        for k, (yw, pt, L) in enumerate(((74, -24, 0.34), (84, -10, 0.28), (64, -36, 0.3))):
             p, n = surf_point(head, hc, s * yw, pt)
-            dvec = n + np.array((s * 0.2, -0.6, 0.0)); dvec /= np.linalg.norm(dvec)
-            fig.add(S.capsule(tuple(p - n * 0.25), tuple(p + dvec * L), 0.32, 0.06), FUR, k=0.25, layer='body')
+            dvec = n + np.array((s * 0.2, -0.7, 0.0)); dvec /= np.linalg.norm(dvec)
+            fig.add(S.capsule(tuple(p - n * 0.2), tuple(p + dvec * L), 0.24, 0.05), FUR, k=0.2, layer='body')
     for k, (yw, pt) in enumerate(((-12, 82), (10, 84))):   # 정수리 털
         p, n = surf_point(head0, hc, yw, pt)
         fig.add(S.capsule(tuple(p - n * 0.1), tuple(p + n * 0.35 + np.array((yw * 0.01, 0, -0.1))), 0.15, 0.03), FUR, k=0.12, layer='body')
     # ---- 크림: 주둥이·볼 아래, 가슴·배, 눈 둘레 ----
     def muzzle(P):
-        q = P - (hc + (0, -0.85, 1.25))
-        return np.hypot(q[:, 0] / 1.6, q[:, 1] / 0.9) - 1.0 + np.clip(-q[:, 2], 0, None) * 0.6
+        q = P - (hc + (0, -0.72, 1.1))
+        return np.hypot(q[:, 0] / 1.35, q[:, 1] / 0.78) - 1.0 + np.clip(-q[:, 2], 0, None) * 0.6
     fig.paint(masked(muzzle, nb, 0.12), CREAM, soft=0.3)
     def belly_p(P):
-        q = P - np.array((0, y0 + 2.4, 1.0))
-        return np.hypot(q[:, 0] / 0.9, q[:, 1] / 1.55) - 1.0 + np.clip(0.4 - P[:, 2], 0, None) * 2
+        q = P - np.array((0, y0 + 2.3, 0.9))
+        return np.hypot(q[:, 0] / 0.72, q[:, 1] / 1.3) - 1.0 + np.clip(0.35 - P[:, 2], 0, None) * 2
     fig.paint(masked(belly_p, nb, 0.12), CREAM, soft=0.3)
     # 등·정수리 조금 짙게
     fig.paint(masked(lambda P: (P[:, 2] + 0.6) * 1.5, nb, 0.12), (0.50, 0.34, 0.23), soft=1.2)
 
     # ---- 얼굴 ----
-    kawaii_eyes2(fig, head, hc, spread=26, pitch=-4, size=0.6, iris=(0.34, 0.19, 0.09), tall=1.1)
-    for s in (-1, 1):   # 살짝 찌푸린 눈썹 (안쪽이 올라감)
-        p0, _ = surf_point(head, hc, s * 13, 21)
-        p1, _ = surf_point(head, hc, s * 34, 16)
-        fig.paint(masked(S.capsule(p0, p1, 0.1, 0.05), nb, 0.1), (0.30, 0.19, 0.12), soft=0.05)
-    fn_, on_, Rn_ = surf_frame(head, hc, 0, -15, 0.02)
-    ell(fig.extra, fn_, (0, 0, 0), (0.15, 0.1, 0.08), (0.96, 0.58, 0.58), 12, 6)
-    smile2(fig, head, hc, pitch=-23, w=0.26)
-    blush2(fig, head, hc, spread=44, pitch=-19, size=0.38, soft=0.55)
+    # 경계하는 초롱초롱한 눈: 동그랗고 반짝임 큰 round, 조금 위·바깥을 봄
+    eye_pair(fig, hc, 28, 0, 'round', 0.5, iris=(0.30, 0.16, 0.07), layer='body', sink=0.14)
+    for s in (-1, 1):   # 살짝 걱정스러운 눈썹 (안쪽이 올라감)
+        p0 = face_frame(fig, hc, s * 13, 25).o
+        p1 = face_frame(fig, hc, s * 33, 19).o
+        fig.paint(masked(S.capsule(p0, p1, 0.08, 0.045), nb, 0.1), (0.30, 0.19, 0.12), soft=0.05)
+    fn_ = face_frame(fig, hc, 0, -14, 'body', out=-0.02)
+    ell(fig.extra, fn_, (0, 0, 0), (0.13, 0.09, 0.07), (0.96, 0.58, 0.58), 12, 6)
+    mouth_w(fig, face_frame(fig, hc, 0, -22, 'body'), w=0.22, th=0.045)
+    blush_paint(fig, hc, 44, -20, 'body', size=0.36, soft=0.5)
 
     # ---- 꼬리 (등 아래에서 뒤로 → 크게 솟아 끝이 뒤로 말림) ----
-    tp = [((0.0, y0 + 1.2, -0.95), 0.55), ((0.05, y0 + 1.85, -1.9), 1.05), ((0.1, y0 + 3.0, -2.4), 1.5),
-          ((0.1, y0 + 4.45, -2.5), 1.6), ((0.05, y0 + 5.6, -2.85), 1.35), ((0.0, y0 + 6.1, -3.45), 0.95), ((0.0, y0 + 5.55, -3.75), 0.55)]
+    # 아주 큰 꼬리: 몸보다 크게, 머리 뒤까지 솟아 끝이 뒤로 말림
+    tp = [((0.0, y0 + 1.15, -0.75), 0.5), ((0.05, y0 + 1.85, -1.55), 1.12), ((0.1, y0 + 3.1, -2.1), 1.62),
+          ((0.1, y0 + 4.6, -2.3), 1.78), ((0.05, y0 + 6.0, -2.55), 1.55), ((0.0, y0 + 6.75, -3.15), 1.08), ((0.0, y0 + 6.2, -3.6), 0.62)]
     def tail(P):
         d = None
         for (a, ra), (b, rb) in zip(tp, tp[1:]):
             g = S.capsule(a, b, ra, rb)(P)
             d = g if d is None else S.smin(d, g, 0.4)
-        return d + fuzz(P, 0.06, 2.6)
+        return d + fuzz(P, 0.045, 2.6)
     fig.add(tail, FUR, k=0.3)
     fig.paint(masked(lambda P: -(np.abs(tail(P)) - 0.0) * 0 + (np.hypot(P[:, 0] - 0.4, (P[:, 2] + 2.6)) - 0.9), lambda P: np.abs(tail(P)), 0.15), FUR_L, soft=0.8)
 
@@ -136,22 +137,22 @@ def build(fig, rng):
     top, tn = surf_point(head0, hc, 0, 75)
     Rh = axis_R(tn, (0, 0, 1))
     hcen = top + tn * 0.05
-    dome = S.ellipsoid(tuple(hcen + tn * 0.15), (0.95, 0.8, 0.85), R=Rh)
+    dome = S.ellipsoid(tuple(hcen + tn * 0.15), (0.86, 0.74, 0.78), R=Rh)
     def hat(P):
         q = (P - hcen) @ Rh
         rib = 0.035 * np.cos(np.arctan2(q[:, 0], q[:, 2]) * 20)
         d = np.maximum(dome(P), -q[:, 1] - 0.05)
-        brim = S.torus(tuple(hcen + tn * 0.1), 0.86, 0.22, Rm=Rh)(P) - rib
+        brim = S.torus(tuple(hcen + tn * 0.1), 0.78, 0.21, Rm=Rh)(P) - rib
         knit = 0.025 * np.cos(np.arctan2(q[:, 0], q[:, 2]) * 16)
         return S.smin(d - knit, brim, 0.08)
     fig.add(hat, KNIT, k=0.0, layer='hat')
-    pom = hcen + tn * 1.15
-    fig.add(lambda P: S.sphere(tuple(pom), 0.4)(P) + fuzz(P, 0.012, 14.0), KNIT, k=0.08, layer='hat')
+    pom = hcen + tn * 1.05
+    fig.add(lambda P: S.sphere(tuple(pom), 0.36)(P) + fuzz(P, 0.012, 14.0), KNIT, k=0.08, layer='hat')
     fig.paint(masked(lambda P: ((P - hcen) @ Rh[:, 1]) - 0.3, lambda P: np.abs(hat(P)), 0.05), (0.24, 0.52, 0.88), soft=0.2)
 
     # ---- 도토리 가방 (-x 허리) + 대각선 끈 (+x 어깨 → -x 허리) ----
     shell_core = lambda P: S.smin(torso(P), belly(P), 0.4)
-    pa = np.array((1.0, y0 + 4.05, 0.0)); pb = np.array((-1.3, y0 + 2.2, 0.0))
+    pa = np.array((0.8, y0 + 3.75, 0.0)); pb = np.array((-1.05, y0 + 2.0, 0.0))
     dd = pb - pa; dd /= np.linalg.norm(dd)
     pn = np.cross(dd, (0, 0, 1)); pn /= np.linalg.norm(pn)
     for side in (0, 180):
@@ -161,13 +162,13 @@ def build(fig, rng):
             c = np.array((c[0], c[1], 0.0))
             p, n = surf_point(shell_core, c, side, 0)
             pts.append(p + n * 0.07)
-        pts.append(np.array((-1.25, y0 + 2.62, 1.0)) if side == 0 else np.array((-1.55, y0 + 2.3, 0.5)))
+        pts.append(np.array((-1.05, y0 + 2.42, 0.95)) if side == 0 else np.array((-1.35, y0 + 2.1, 0.5)))
         for a, b in zip(pts, pts[1:]):
             fig.add(S.capsule(tuple(a), tuple(b), 0.1), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
     over = [surf_point(shell_core, np.array((pa[0] * 0.9, pa[1] - 0.15, z)), 0, 90)[0] for z in (-0.8, -0.4, 0.0, 0.4, 0.8)]
     for a, b in zip(over, over[1:]):
         fig.add(S.capsule(tuple(a + (0, 0.06, 0)), tuple(b + (0, 0.06, 0)), 0.1), KNIT, k=0.05, layer='strap', metal=(KNIT, KNIT_HI))
-    bcn = np.array((-1.45, y0 + 2.0, 0.95))
+    bcn = np.array((-1.25, y0 + 1.8, 0.9))
     bag_body = S.ellipsoid(tuple(bcn + (0, -0.12, 0)), (0.62, 0.62, 0.5))
     fig.add(bag_body, KNIT, k=0.0, layer='bag', metal=(KNIT, KNIT_HI))
     cap = S.ellipsoid(tuple(bcn + (0, 0.25, 0)), (0.8, 0.45, 0.66))

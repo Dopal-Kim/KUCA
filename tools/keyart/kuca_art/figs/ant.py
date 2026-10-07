@@ -5,8 +5,10 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, smile2, blush2, tuft)
+from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, smile2, blush2, tuft,
+                     soft_head, face_frame, blush_paint)
 from .snail import leaf_fn, leaf_paints
+from ..mesh import Frame
 
 TIER = 'green'
 
@@ -18,87 +20,79 @@ LEAF = (0.42, 0.76, 0.16)
 LEAF_HI = (0.55, 0.84, 0.28)
 
 
-def googly_eye(fig, fn, hc, s, yaw, pitch, size, iris=(0.36, 0.20, 0.10), look=(0.0, 0.0), sink=0.12):
-    f, o, R = surf_frame(fn, hc, s * yaw, pitch, -size * sink)
-    b = fig.extra
-    lx, ly = look[0] * s, look[1]
-    ell(b, f, (0, 0, 0), (size, size * 1.06, size * 0.36), (0.99, 0.98, 0.97), 24, 12)
-    ell(b, f, (lx * size, ly * size, size * 0.2), (size * 0.66, size * 0.7, size * 0.18), iris, 22, 11)
-    ell(b, f, (lx * size, ly * size - size * 0.3, size * 0.26), (size * 0.44, size * 0.3, size * 0.14),
-        tuple(min(1, c * 1.6) for c in iris), 16, 8)
-    ell(b, f, (lx * size, ly * size + size * 0.04, size * 0.3), (size * 0.36, size * 0.4, size * 0.12), Fg.PUPIL, 18, 9)
-    ell(b, f, (lx * size - size * 0.2 * s, ly * size + size * 0.25, size * 0.38), (size * 0.18, size * 0.18, size * 0.06), Fg.SHINE, 12, 6)
-    ell(b, f, (lx * size + size * 0.24 * s, ly * size - size * 0.28, size * 0.36), (size * 0.08, size * 0.08, size * 0.04), Fg.SHINE, 8, 4)
-    return f, o, R
+def dazed_eye(fig, f, size, side, iris=(0.34, 0.18, 0.08)):
+    """멍한 큰 눈: 큰 흰자 + 가운데 조금 아래 eye_at('round') 홍채 (초점 없이 앞을 봄)"""
+    ell(fig.extra, f, (0, 0, 0), (size, size * 1.04, size * 0.3), (0.99, 0.98, 0.97), 26, 12)
+    fi = Frame(f.p((-side * size * 0.03, -size * 0.08, size * 0.2)), f.x, f.y, f.z)
+    Fg.eye_at(fig, fi, 'round', size * 0.72, iris, side=side)
 
 
 def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     y0 = Fg.TOP
-    # ---- 머리 ----
-    hc = np.array((0.0, y0 + 5.35, 0.1))
-    head = S.ellipsoid(hc, (2.0, 1.78, 1.82))
+    # ---- 머리: 몸에 비해 아주 큰 동그란 머리 (아래가 살짝 통통), 약 2.0 등신 ----
+    hc = np.array((0.0, y0 + 5.3, 0.1))
+    head = soft_head(hc, (1.92, 1.8, 1.78), flare=0.06, flare_y=-0.35)
     fig.add(head, HEAD, k=0.2, layer='head')
     near_head = lambda P: np.abs(head(P))
     fig.paint(masked(lambda P: (y0 + 6.3 - P[:, 1]) * 2, near_head, 0.1), (0.76, 0.43, 0.22), soft=1.0)   # 정수리 조금 짙게
-    googly_eye(fig, head, hc, -1, 25, -7, 0.68, look=(0.1, -0.05))
-    googly_eye(fig, head, hc, 1, 25, -7, 0.68, look=(0.1, -0.05))
+    for s in (-1, 1):
+        f = face_frame(fig, hc, s * 24, -6, 'head', out=-0.1)
+        dazed_eye(fig, f, 0.66, s)
     # 눈썹 점 (짧은 짙은 점 두 개씩)
     for s in (-1, 1):
-        for a, p in ((18, 24), (30, 22)):
-            pp, _ = surf_point(head, hc, s * a, p)
-            fig.paint(S.sphere(pp, 0.08), (0.62, 0.34, 0.16), soft=0.06)
-    # 'o' 입 + 콧구멍 점 + 볼터치
-    fm, om, Rm = surf_frame(head, hc, 0, -24, -0.02)
-    ell(fig.extra, fm, (0, 0, 0), (0.13, 0.17, 0.06), (0.30, 0.10, 0.10), 14, 8)
-    ell(fig.extra, fm, (0, -0.06, 0.02), (0.08, 0.07, 0.05), (0.85, 0.40, 0.42), 10, 6)
+        for a, p in ((17, 25), (29, 23)):
+            fig.paint(S.sphere(face_frame(fig, hc, s * a, p, 'head').o, 0.08), (0.62, 0.34, 0.16), soft=0.06)
+    # 'o' 입 + 콧구멍 점 + 칠한 볼터치
+    fm = face_frame(fig, hc, 0, -25, 'head', out=-0.03)
+    ell(fig.extra, fm, (0, 0, 0), (0.12, 0.155, 0.06), (0.30, 0.10, 0.10), 14, 8)
+    ell(fig.extra, fm, (0, -0.055, 0.02), (0.075, 0.065, 0.05), (0.85, 0.40, 0.42), 10, 6)
     for s in (-1, 1):
-        pp, _ = surf_point(head, hc, s * 3, -12)
-        fig.paint(S.sphere(pp, 0.04), (0.45, 0.22, 0.10), soft=0.03)
-    blush2(fig, head, hc, spread=40, pitch=-20, size=0.45, soft=0.55)
-    # ---- 더듬이 (위로 → 바깥으로 꺾여 끝이 둥글다) ----
+        fig.paint(S.sphere(face_frame(fig, hc, s * 3, -13, 'head').o, 0.04), (0.45, 0.22, 0.10), soft=0.03)
+    blush_paint(fig, hc, 42, -20, 'head', size=0.4, soft=0.55)
+    # ---- 더듬이 (이마 위에서 솟아 → 바깥으로 꺾이고 끝이 둥글다) ----
     for s in (-1, 1):
-        a, an = surf_point(head, hc, s * 17, 36)
-        b = np.array((s * 0.8, y0 + 6.75, 2.45))
-        c = np.array((s * 1.05, y0 + 7.85, 2.55))
-        c2 = np.array((s * 1.45, y0 + 8.4, 2.35))
-        d = np.array((s * 1.9, y0 + 8.3, 2.1))
-        for p, q in ((a - an * 0.2, b), (b, c), (c, c2), (c2, d)):
+        fa = face_frame(fig, hc, s * 16, 40, 'head')
+        a, an = np.array(fa.o), np.array(fa.z)
+        b = np.array((s * 0.75, y0 + 7.35, 1.75))
+        c2 = np.array((s * 1.05, y0 + 8.25, 1.9))
+        d = np.array((s * 1.55, y0 + 8.5, 1.95))
+        for p, q in ((a - an * 0.2, b), (b, c2), (c2, d)):
             fig.add(S.capsule(tuple(p), tuple(q), 0.13, 0.12), LIMB, k=0.12, layer='ant')
-        fig.add(S.sphere(tuple(d), 0.17), LIMB, k=0.1, layer='ant')
-    # ---- 잎 모자 (머리 위에 덮여 뒤로 늘어지고, 앞 오른쪽 끝이 처짐) ----
-    O = np.array((-0.15, y0 + 7.7, -0.25))
-    dvec = np.array((1.0, 0.0, -0.12)); dvec /= np.linalg.norm(dvec)
+        fig.add(S.sphere(tuple(d), 0.16), LIMB, k=0.1, layer='ant')
+    # ---- 잎 모자: 머리를 두건처럼 덮음 (잎맥이 앞→뒤, 뒤쪽 끝이 목덜미까지, +x 쪽이 조금 더 내려옴) ----
+    O = np.array((0.05, y0 + 7.42, -0.25))
+    dvec = np.array((-0.12, 0.0, 1.0)); dvec /= np.linalg.norm(dvec)
     R = np.stack([np.cross((0, 1, 0), dvec), np.array((0, 1.0, 0)), dvec], axis=1)
-    R = R @ S.rot(0, 0, 0)
-    u0, u1 = -2.9, 3.3
-    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.85, 0.36, 0.09, 0.14, th=0.09, rib=0.06, tip_pow=0.8, k_cup_pos=0.42)
+    R = R @ S.rot(0, 0, 9)
+    u0, u1 = -2.55, 1.45
+    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 2.45, 0.42, 0.58, 0.36, th=0.09, rib=0.06, tip_pow=0.85)
     fig.add(lf, LEAF, k=0.0, layer='leaf')
-    leaf_paints(fig, lf, local, height, width, u0, u1, under=(0.64, 0.86, 0.38), vein=LEAF_HI, spacing=0.7)
+    leaf_paints(fig, lf, local, height, width, u0, u1, under=(0.64, 0.86, 0.38), vein=LEAF_HI, spacing=0.6)
     pb, nb = to_world(u0 + 0.05, 0.0)
-    fig.add(S.capsule(tuple(pb), tuple(pb + np.array((0.0, -0.35, -0.2))), 0.1, 0.08), (0.46, 0.74, 0.22), k=0.05, layer='leaf')
-    # ---- 몸: 가슴(진홍 점) + 마디진 배 (앞 두 볼록 + 뒤 배) ----
-    thor = S.ellipsoid((0, y0 + 2.85, 0.05), (0.62, 0.62, 0.55))
-    neck = S.capsule((0, y0 + 3.2, 0.05), (0, y0 + 3.8, 0.1), 0.32)
-    gaster = S.ellipsoid((0, y0 + 1.75, -0.55), (1.0, 0.95, 1.05))
-    thighs = [S.ellipsoid((s * 0.5, y0 + 1.55, 0.25), (0.62, 0.72, 0.66)) for s in (-1, 1)]
+    fig.add(S.capsule(tuple(pb), tuple(pb + np.array((0.05, -0.4, -0.05))), 0.1, 0.08), (0.46, 0.74, 0.22), k=0.05, layer='leaf')
+    # ---- 몸: 가는 목 → 작은 가슴(진홍 점) → 아주 가는 허리 마디 → 둥근 배 + 통통한 허벅지 ----
+    thor = S.ellipsoid((0, y0 + 2.9, 0.08), (0.55, 0.6, 0.5))
+    neck = S.capsule((0, y0 + 3.2, 0.08), (0, y0 + 3.75, 0.1), 0.24)
+    waist = S.capsule((0, y0 + 2.45, 0.02), (0, y0 + 2.2, -0.1), 0.2)
+    gaster = S.ellipsoid((0, y0 + 1.6, -0.55), (0.95, 0.9, 1.0))
+    thighs = [S.ellipsoid((s * 0.48, y0 + 1.45, 0.22), (0.56, 0.66, 0.6)) for s in (-1, 1)]
     def body(P):
-        d = S.smin(thor(P), neck(P), 0.2)
-        g = S.smin(gaster(P), S.smin(thighs[0](P), thighs[1](P), 0.15), 0.3)
-        # 마디 홈 (가로 띠)
-        yy = P[:, 1] - (y0 + 1.6)
+        d = S.smin(S.smin(thor(P), neck(P), 0.15), waist(P), 0.12)
+        g = S.smin(gaster(P), S.smin(thighs[0](P), thighs[1](P), 0.12), 0.25)
+        yy = P[:, 1] - (y0 + 1.5)
         groove = 0.045 * np.exp(-((yy - 0.38) / 0.06) ** 2) + 0.045 * np.exp(-((yy + 0.22) / 0.06) ** 2)
         g = g + groove
-        return S.smin(d, g, 0.2)
+        return S.smin(d, g, 0.14)
     fig.add(body, BODY, k=0.2, layer='ant')
     near_b = lambda P: np.abs(body(P))
     for yy in (0.38, -0.22):
-        fig.paint(masked(lambda P, yy=yy: np.abs(P[:, 1] - (y0 + 1.6 + yy)) - 0.05, near_b, 0.05), BODY_D, soft=0.08)
-    cp, cn = surf_point(thor, (0, y0 + 2.85, 0.05), 0, 0)
-    fig.add(S.sphere(tuple(cp + cn * 0.02), 0.16), (0.78, 0.08, 0.10), k=0.0, layer='dot')
+        fig.paint(masked(lambda P, yy=yy: np.abs(P[:, 1] - (y0 + 1.5 + yy)) - 0.05, near_b, 0.05), BODY_D, soft=0.08)
+    cp, cn = surf_point(thor, (0, y0 + 2.9, 0.08), 0, 0)
+    fig.add(S.sphere(tuple(cp + cn * 0.02), 0.15), (0.78, 0.08, 0.10), k=0.0, layer='dot')
     # ---- 팔 (가는 팔, 바깥 아래로, 손가락 3) ----
     for s in (-1, 1):
-        sh = np.array((s * 0.5, y0 + 3.0, 0.05))
+        sh = np.array((s * 0.45, y0 + 3.05, 0.08))
         el = np.array((s * 1.25, y0 + 2.72, 0.15))
         wr = np.array((s * 1.75, y0 + 2.42, 0.35))
         fig.add(S.capsule(tuple(sh), tuple(el), 0.21, 0.18), LIMB, k=0.1, layer='ant')

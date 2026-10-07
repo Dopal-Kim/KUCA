@@ -100,6 +100,27 @@ def surf(f, c, yaw, pitch, out=0.0):
     return np.asarray(c, np.float64) + d * (hit(f, c, d) + out)
 
 
+def sface(fig, c, yaw, pitch, out=0.0, layer='body', up=(0, 1, 0)):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 조형 표면 Frame (바깥에서 안으로 광선, Fg.surface_frame)"""
+    d = _dir(yaw, pitch)
+    return Fg.surface_frame(fig, np.asarray(c, np.float64) + d * 8.0, -d, up=up, out=out, layer=layer)
+
+
+def face_eyes(fig, c, spread, pitch, style, size, iris=Fg.IRIS, tilt=0.0, lid=None, layer='body', sink=0.14):
+    """성격별 눈 한 쌍 (Fg.eye_at) 을 실제 표면에 붙인다. sink = 표면 아래로 묻는 비율 (size 배)"""
+    for s in (-1, 1):
+        f = sface(fig, c, s * spread, pitch, -size * sink, layer)
+        Fg.eye_at(fig, f, style=style, size=size, iris=iris, side=s, tilt=tilt, lid=lid)
+
+
+def mouth_w(fig, f, w=0.24, col=(0.30, 0.16, 0.16), r=0.05):
+    """표면 Frame f 위 'w' 입 (작은 곡선 두 개, 표면에 얕게 박음)"""
+    for s in (-1, 1):
+        for k in range(9):
+            a = math.pi * k / 8
+            Fg._ellipsoid(fig.extra, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.0), (r, r, r * 0.7), col, 6, 4, f)
+
+
 def frame_at(f, c, yaw, pitch, out=0.0):
     """머리 표면 위 (yaw, pitch) 지점의 Frame (Z = 바깥)"""
     t = hit(f, c, _dir(yaw, pitch))
@@ -268,15 +289,21 @@ def build(fig, rng):
                            S.cylinder(pc + (-0.55, 0, 0.55), 0.55, 0.05, round_=0.04)(P), 0.3)
     clear_grass(fig, lambda C: pud(np.column_stack([C[:, 0], np.full(len(C), y0), C[:, 2]])) < 0.12)
     fig = Fast(fig)
-    hc = np.array((0.0, y0 + 5.45, 0.1))
-    head = S.ellipsoid(hc, (2.15, 1.95, 2.0))
-    torso = S.ellipsoid((0, y0 + 2.15, 0.0), (1.45, 1.5, 1.4))
-    core = lambda P: S.smin(head(P), torso(P), 0.7)
+    hc = np.array((0.0, y0 + 5.55, 0.1))
+    # 세로 달걀형 머리: 위가 길쭉하고 아래(볼 쪽)가 살짝 넓음 (볼 구 없음)
+    head_up = S.ellipsoid(hc, (1.9, 2.12, 1.88))
+    head_lo = S.ellipsoid(hc + np.array((0, -0.62, 0.08)), (2.04, 1.42, 1.82))
+    head = lambda P: S.smin(head_up(P), head_lo(P), 0.55)
+    # 동글동글 통통한 몸 (배가 앞으로 빵빵)
+    torso = S.ellipsoid((0, y0 + 2.2, 0.0), (1.66, 1.58, 1.58))
+    belly = S.ellipsoid((0, y0 + 1.98, 0.28), (1.52, 1.32, 1.46))
+    trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
+    core = lambda P: S.smin(head(P), trunk(P), 0.7)
     fig.add(core, WHITE, k=0.3)
     # 모자: 단단한 둥근 머리통 + 아래로 처진 챙 (뒤로 기울임) + 솔기 + 빨간 단추 + 흰 컬 꼭지
     Rh = S.rot(0, -18, 5)
-    Hc = hc + np.array((0, 0.72, -0.3))
-    crown = lambda P: np.maximum(S.ellipsoid(Hc, (2.3, 1.55, 2.26), R=Rh)(P), -((P - Hc) @ Rh[:, 1]) - 0.55)
+    Hc = hc + np.array((0, 0.9, -0.3))
+    crown = lambda P: np.maximum(S.ellipsoid(Hc, (2.18, 1.55, 2.24), R=Rh)(P), -((P - Hc) @ Rh[:, 1]) - 0.55)
     fig.add(crown, HAT, k=0.0, layer='hat')
 
     def brim(P):
@@ -304,12 +331,13 @@ def build(fig, rng):
     fig.add(curl(top - Rh[:, 1] * 0.15, S.rot(25, 0, 0) @ Rh, 0.27, 0.42), WHITE, k=0.0, layer='curl')
     fig.add(curl(surf(head, hc, -15, 5, -0.08), S.rot(-15, 4, 14), 0.14, 0.22), WHITE, k=0.16)
     # 얼굴: 눈·부리·볼
-    eyes(fig, head, hc, spread=25, pitch=-13, size=0.56, tall=1.08, sclera=False)
-    bf = frame_at(head, hc, 0, -27)
+    # 작고 반짝이는 까만 구슬 눈
+    face_eyes(fig, hc, spread=27, pitch=-11, style='bead', size=0.6, sink=0.1)
+    bf = sface(fig, hc, 0, -27)
     bp, fwd, up = np.array(bf.p((0, 0, 0.0))), np.array(bf.dir((0, 0, 1))), np.array(bf.dir((0, 1, 0)))
     Rb = axes(up, fwd)
-    fig.add(S.ellipsoid(bp + fwd * 0.28 + up * 0.04, (0.66, 0.2, 0.52), R=Rb), BILL, k=0.08, layer='bill')
-    fig.add(S.ellipsoid(bp + fwd * 0.2 - up * 0.17, (0.5, 0.13, 0.42), R=Rb), BILL_DK, k=0.06, layer='bill')
+    fig.add(S.ellipsoid(bp + fwd * 0.3 + up * 0.04, (0.8, 0.19, 0.56), R=Rb), BILL, k=0.08, layer='bill')
+    fig.add(S.ellipsoid(bp + fwd * 0.22 - up * 0.16, (0.62, 0.13, 0.45), R=Rb), BILL_DK, k=0.06, layer='bill')
     for s in (-1, 1):
         fig.paint(S.sphere(surf(head, hc, s * 40, -24), 0.42), Fg.BLUSH, soft=0.35)
     # 다리·물갈퀴
@@ -321,20 +349,20 @@ def build(fig, rng):
         foot = [S.ellipsoid(fc, (0.55, 0.12, 0.6), R=R)] + [S.sphere(fc + R @ np.array((u, 0.0, 0.48)), 0.17) for u in (-0.36, 0, 0.36)]
         fig.add(U(foot, 0.12), BILL, k=0.06, layer='feet')
     # 꼬리 (뒤로 살짝 올라간 흰 깃)
-    fig.add(S.capsule((0, y0 + 2.65, -1.15), (0, y0 + 3.15, -1.75), 0.36, 0.12), WHITE, k=0.3)
+    fig.add(S.capsule((0, y0 + 2.6, -1.35), (0, y0 + 3.1, -1.95), 0.36, 0.12), WHITE, k=0.3)
     # 튜브: 허리 노란 고리 + 앞쪽 오리 얼굴
     rc = np.array((0, y0 + 2.0, 0.1))
     Rr = S.rot(0, 4, 0)
-    fig.add(S.torus(rc, 1.78, 0.56, Rm=Rr), RING, k=0.0, layer='ring')
-    fig.paint(S.torus(rc + (0, 0.42, 0), 1.6, 0.22, Rm=Rr), (1.0, 0.94, 0.62), soft=0.25)
-    ff = rc + Rr @ np.array((0, 0.05, 1.78 + 0.53))
+    fig.add(S.torus(rc, 1.95, 0.56, Rm=Rr), RING, k=0.0, layer='ring')
+    fig.paint(S.torus(rc + (0, 0.42, 0), 1.77, 0.22, Rm=Rr), (1.0, 0.94, 0.62), soft=0.25)
+    ff = rc + Rr @ np.array((0, 0.05, 1.95 + 0.53))
     for s in (-1, 1):
         fig.add(S.sphere(ff + np.array((s * 0.33, 0.14, -0.03)), 0.11), (0.12, 0.08, 0.06), k=0.0, layer='ringface')
     fig.add(S.ellipsoid(ff + np.array((0, -0.08, 0.04)), (0.27, 0.1, 0.16)), BILL, k=0.0, layer='ringbill')
     # 날개: 튜브 위에 얹은 작은 흰 날개 (깃 끝 3)
     for s in (-1, 1):
-        sh = np.array((s * 1.25, y0 + 3.2, 0.2))
-        tip = np.array((s * 1.62, y0 + 2.62, 1.15))
+        sh = np.array((s * 1.45, y0 + 3.2, 0.2))
+        tip = np.array((s * 1.8, y0 + 2.62, 1.2))
         R = axes(tip - sh, (s * 0.8, 0.2, 0.3))
         w = [S.ellipsoid((sh + tip) / 2, (0.32, 0.62, 0.42), R=R)]
         for u in (-0.2, 0.05, 0.28):

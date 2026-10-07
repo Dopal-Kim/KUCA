@@ -175,41 +175,77 @@ def beads(fig, pts, r, col, seg=6):
     Fg._ellipsoid(fig.extra, tuple(pts[-1]), (r, r, r), col, seg, 4)
 
 
+def face_frame(fig, c, yaw, pitch, out=0.0, layer='body', up=(0, 1, 0)):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 표면(layer) 점 Frame (밖에서 광선을 쏴서 찾음)"""
+    yr, pr = math.radians(yaw), math.radians(pitch)
+    d = np.array((math.cos(pr) * math.sin(yr), math.sin(pr), math.cos(pr) * math.cos(yr)))
+    return Fg.surface_frame(fig, np.asarray(c, np.float64) + d * 6.0, -d, up=up, out=out, layer=layer)
+
+
+def frame_pts(f, pts):
+    """Frame 로컬 점들 → 세계 점"""
+    o, x, y, z = (np.asarray(v, np.float64) for v in (f.o, f.x, f.y, f.z))
+    return [o + x * a + y * b + z * c for a, b, c in pts]
+
+
+def surf_beads(fig, f0, pts2d, r, col, layer='body', out=0.0):
+    """얼굴 위 선 (눈썹·입): f0 Frame 의 로컬 (u, v) 점들을 표면으로 투영해 구슬 줄로"""
+    o, x, y, z = (np.asarray(v, np.float64) for v in (f0.o, f0.x, f0.y, f0.z))
+    pts = []
+    for u, v in pts2d:
+        q = Fg.surface_frame(fig, o + x * u + y * v + z * 1.5, -z, layer=layer, out=out)
+        pts.append(np.asarray(q.o))
+    beads(fig, pts, r, col)
+    return pts
+
+
 def build(fig, rng):
     fig = Fast(fig)
     Fg.base(fig, rng, flowers=8)
     y0 = Fg.TOP
 
-    # ---------- 다리·발 (노란 발, 앞 발가락 3 + 뒤 1) ----------
+    # ---------- 다리·발 (노란 발, 앞 발가락 3 + 뒤 1): 통통한 몸에 짧고 굵은 다리 ----------
     for s in (-1, 1):
-        x = s * 0.72
-        fig.add(S.capsule((x, y0 + 0.35, 0.15), (x * 0.95, y0 + 1.25, 0.05), 0.24, 0.3), FOOT, k=0.1, layer='feet')
-        fig.add(S.ellipsoid((x, y0 + 0.24, 0.35), (0.42, 0.24, 0.42)), FOOT, k=0.15, layer='feet')
+        x = s * 0.7
+        fig.add(S.capsule((x, y0 + 0.35, 0.18), (x * 0.95, y0 + 1.3, 0.08), 0.23, 0.3), FOOT, k=0.1, layer='feet')
+        fig.add(S.ellipsoid((x, y0 + 0.24, 0.38), (0.42, 0.24, 0.42)), FOOT, k=0.15, layer='feet')
         for a in (-32, 0, 32):
             R = S.rot(a + s * 6, 0, 0)
-            tip = np.array((x, y0 + 0.17, 0.35)) + R @ np.array((0, 0, 0.78))
-            fig.add(S.capsule((x, y0 + 0.2, 0.35), tuple(tip), 0.2, 0.17), FOOT, k=0.12, layer='feet')
-        fig.add(S.capsule((x, y0 + 0.2, 0.2), (x, y0 + 0.17, -0.3), 0.17, 0.14), FOOT, k=0.1, layer='feet')
+            tip = np.array((x, y0 + 0.17, 0.38)) + R @ np.array((0, 0, 0.78))
+            fig.add(S.capsule((x, y0 + 0.2, 0.38), tuple(tip), 0.2, 0.17), FOOT, k=0.12, layer='feet')
+        fig.add(S.capsule((x, y0 + 0.2, 0.23), (x, y0 + 0.17, -0.3), 0.17, 0.14), FOOT, k=0.1, layer='feet')
 
-    # ---------- 몸통 (흰 통통한 배) ----------
-    bc, br = (0, y0 + 2.3, 0.0), (1.55, 1.38, 1.35)
-    fig.add(S.ellipsoid(bc, br), WHITE, k=0.4)
-    fig.add(S.ellipsoid((0, y0 + 1.55, 0.05), (1.25, 0.75, 1.15)), WHITE, k=0.4)
-    # 가슴 깃털 (목 앞 보송한 흰 털)
-    for x, y, z, r in ((0, y0 + 3.45, 0.95, 0.55), (-0.45, y0 + 3.35, 0.85, 0.42), (0.45, y0 + 3.35, 0.85, 0.42)):
-        fig.add(S.sphere((x, y, z), r), WHITE, k=0.3)
+    # ---------- 몸통: 가슴이 앞으로 나온 통통한 몸 (뒤는 둥근 엉덩이) ----------
+    torso = [((0, y0 + 2.4, -0.05), (1.6, 1.42, 1.38)), ((0, y0 + 1.62, 0.0), (1.32, 0.78, 1.2)),
+             ((0, y0 + 2.9, 0.42), (1.3, 1.12, 1.12))]
+    for c, r in torso:
+        fig.add(S.ellipsoid(c, r), WHITE, k=0.45)
 
-    # ---------- 조끼 (크림): 몸 전체(앞·옆·뒤)를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
-    body_f = lambda P: S.smin(S.ellipsoid(bc, br)(P), S.ellipsoid((0, y0 + 1.55, 0.05), (1.25, 0.75, 1.15))(P), 0.4)
-    yv = y0 + 2.75                   # V 트임 꼭짓점
-    hem_y = y0 + 1.08
+    NECK = ((0, y0 + 3.95, 0.25), (1.2, 0.62, 1.1))
+
+    def body_f(P):
+        d = S.ellipsoid(*torso[0])(P)
+        for c, r in torso[1:]:
+            d = S.smin(d, S.ellipsoid(c, r)(P), 0.45)
+        return d
+
+    def shell_f(P):      # 조끼가 따라갈 표면 (몸 + 목)
+        return S.smin(body_f(P), S.ellipsoid(*NECK)(P), 0.5)
+    # 가슴 깃털 (V 트임에서 보이는 보송한 흰 털): 한 덩어리로 부드럽게
+    q = hit(fig, (0, y0 + 3.4, 4.5), (0, 0, -1), field=body_f)
+    fig.add(S.ellipsoid((0, y0 + 3.4, q[2] - 0.3), (0.62, 0.48, 0.4)), WHITE, k=0.35)
+
+    # ---------- 조끼 (크림): 몸 전체를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
+    yv = y0 + 2.85                   # V 트임 꼭짓점
+    hem_y = y0 + 1.12
+    top_y = y0 + 3.5
     slope = 0.55
 
     def vest(P):
-        d = np.abs(body_f(P) - 0.11) - 0.07
+        d = np.abs(shell_f(P) - 0.11) - 0.07
         d = rmax(d, hem_y - P[:, 1], 0.05)
-        d = rmax(d, P[:, 1] - (y0 + 3.5), 0.05)
-        vopen = np.minimum(P[:, 2] - 0.5, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))      # 앞 V (양수 = 비움)
+        d = rmax(d, P[:, 1] - top_y, 0.05)
+        vopen = np.minimum(P[:, 2] - 0.6, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))      # 앞 V (양수 = 비움)
         return np.maximum(d, vopen)
     fig.add(vest, CREAM, k=0.0, layer='vest')
 
@@ -220,28 +256,28 @@ def build(fig, rng):
     for s in (-1, 1):
         pts = []
         for k in range(8):
-            y = yv + 0.03 + (y0 + 3.42 - yv) * k / 7
+            y = yv + 0.03 + (top_y - 0.08 - yv) * k / 7
             x = s * (y - yv) * slope + s * 0.02
             pts.append((x, y, vz(x, y, -0.02)))
         chain(fig, pts, 0.07, Fg.GOLD, 'trim', metal=G)
     # 앞 여밈선 (V 꼭짓점 → 아랫단) 금테 + 금 단추
     pts = [(0.0, y, vz(0.0, y, -0.02)) for y in np.linspace(yv, hem_y + 0.06, 9)]
     chain(fig, pts, 0.045, Fg.GOLD, 'trim', metal=G)
-    for y in (y0 + 2.3, y0 + 1.88, y0 + 1.46):
+    for y in (y0 + 2.4, y0 + 1.95, y0 + 1.5):
         fig.add(S.sphere((-0.17, y, vz(-0.17, y, 0.02)), 0.11), Fg.GOLD, k=0.0, layer='btn', metal=G)
     # 아랫단 금테 (둘레 전체)
-    fig.add(S.intersect(S.onion(lambda P: body_f(P) - 0.11, 0.085), lambda P: np.abs(P[:, 1] - (hem_y + 0.05)) - 0.065),
+    fig.add(S.intersect(S.onion(lambda P: shell_f(P) - 0.11, 0.085), lambda P: np.abs(P[:, 1] - (hem_y + 0.05)) - 0.065),
             Fg.GOLD, k=0.0, layer='trim', metal=G)
-    # 진홍 보석 (V 꼭짓점 브로치) + 뒤 단추
-    gx, gy = -0.62, y0 + 2.45
+    # 진홍 보석 + 뒤 단추
+    gx, gy = -0.62, y0 + 2.55
     gz = vz(gx, gy)
     Rg = S.rot(math.degrees(math.atan2(gx, 1.4)), 80, 0)
     fig.add(S.sphere((gx, gy, gz + 0.05), 0.19), Fg.CRIMSON, k=0.0, layer='gem')
     fig.add(S.torus((gx, gy, gz + 0.0), 0.2, 0.06, Rm=Rg), Fg.GOLD, k=0.0, layer='trim', metal=G)
-    for y in (y0 + 2.6, y0 + 2.1):
+    for y in (y0 + 2.7, y0 + 2.2):
         fig.add(S.sphere((0, y, vz(0, y, 0.0, back=True)), 0.1), Fg.GOLD, k=0.0, layer='btn', metal=G)
     # 오른쪽 주머니 (덮개 + 금테)
-    px, py = 0.8, y0 + 2.3
+    px, py = 0.8, y0 + 2.4
     pz = vz(px, py)
     Rp = S.rot(math.degrees(math.atan2(px, pz)) * 0.9, 0, 0)
     fig.add(S.box((px, py - 0.12, pz - 0.04), (0.36, 0.24, 0.09), round_=0.05, R=Rp), (0.95, 0.85, 0.66), k=0.0, layer='pocket')
@@ -249,7 +285,7 @@ def build(fig, rng):
                       tuple(np.array((px, py + 0.12, pz + 0.03)) + Rp @ np.array((0.35, 0, 0))), 0.05), Fg.GOLD, k=0.0, layer='trim', metal=G)
 
     # ---------- 회중시계 (금색, 주머니에서 늘어진 사슬) ----------
-    wc = (0.9, y0 + 1.45, vz(0.9, y0 + 1.45, 0.12))
+    wc = (0.9, y0 + 1.5, vz(0.9, y0 + 1.5, 0.12))
     Rw = S.rot(26, 82, 0)                    # 원기둥 Y축 → 앞쪽 (살짝 오른쪽)
     fig.add(S.cylinder(wc, 0.56, 0.09, round_=0.05, R=Rw), Fg.GOLD, k=0.0, layer='watch', metal=G)
     fig.add(S.torus(np.array(wc) + Rw @ np.array((0, 0.08, 0)), 0.5, 0.06, Rm=Rw), Fg.GOLD, k=0.0, layer='watch', metal=G)
@@ -271,8 +307,8 @@ def build(fig, rng):
 
     # ---------- 날개: 조끼 아래 옆구리에서 바깥으로 펼친 적갈색 깃 부채 ----------
     for s in (-1, 1):
-        root = np.array((s * 1.45, y0 + 2.55, 0.0))
-        fan = ((28, 1.45, RUST_DK), (48, 1.7, RUST), (68, 1.75, DKRED), (88, 1.6, RUST), (108, 1.3, RUST_LT))
+        root = np.array((s * 1.5, y0 + 2.65, 0.0))
+        fan = ((28, 1.4, RUST_DK), (48, 1.65, RUST), (68, 1.7, DKRED), (88, 1.55, RUST), (108, 1.25, RUST_LT))
         for i, (ang, L, col) in enumerate(fan):
             a_ = math.radians(ang)
             d = np.array((s * math.sin(a_), -math.cos(a_), 0.0))
@@ -280,7 +316,7 @@ def build(fig, rng):
             fig.add(S.ellipsoid(tuple(mid), (0.36, L * 0.56, 0.15), R=S.rot(s * 6, 0, s * ang)), col, k=0.06, layer='wing%d' % (i % 2))
 
     # ---------- 꼬리: 따로 떨어진 낫깃 부채 (뒤에서 보면 펼쳐짐) ----------
-    tb = np.array((0.0, y0 + 2.35, -1.05))
+    tb = np.array((0.0, y0 + 2.45, -1.2))
     tails = ((-58, 0.85, RUST), (-38, 1.05, DKRED), (-19, 1.2, RUST_DK), (0, 1.32, RUST), (19, 1.2, DKRED), (38, 1.05, RUST_DK), (58, 0.85, RUST))
     for i, (phi, h, col) in enumerate(tails):
         ph = math.radians(phi)
@@ -303,34 +339,40 @@ def build(fig, rng):
             R = np.stack([nperp, tt, wide], axis=1)
             fig.add(S.ellipsoid(tuple((a_ + b_) / 2), (w * 1.05, L * 0.8, w * 0.7), R=R), col, k=0.1, layer='tail%d' % i)
 
-    # ---------- 머리 ----------
-    hc, HR = (0, y0 + 5.05, 0.1), 2.0
-    fig.add(S.ellipsoid(hc, (HR * 1.05, HR * 0.96, HR * 0.98)), WHITE, k=0.5)
-    fig.add(S.ellipsoid((0, y0 + 3.85, 0.2), (1.35, 0.7, 1.15)), WHITE, k=0.5)      # 목
-    for s in (-1, 1):   # 볼살
-        fig.add(S.sphere((s * 1.0, hc[1] - 0.75, hc[2] + 0.95), 0.75), WHITE, k=0.6)
+    # ---------- 머리: 달걀형 (위가 좁고 아래 볼 쪽이 부드럽게 넓음), 볼 구 없음 ----------
+    hc = np.array((0, y0 + 5.55, 0.1))
+    fig.add(S.ellipsoid(tuple(hc), (1.7, 1.76, 1.68)), WHITE, k=0.6)
+    fig.add(S.ellipsoid(tuple(hc + (0, -0.6, 0.12)), (1.84, 1.2, 1.62)), WHITE, k=0.6)       # 아래쪽 볼 볼륨
+    fig.add(S.ellipsoid(*NECK), WHITE, k=0.5)                                                # 목
+    top = hc[1] + 1.72
     # 볏 (빨간 세 봉우리)
-    for z, h, r in ((0.9, 1.2, 0.55), (0.1, 1.8, 0.66), (-0.75, 1.45, 0.6)):
-        fig.add(S.ellipsoid((0, hc[1] + HR * 0.8 + h * 0.6, hc[2] + z), (0.5, h * 0.62, r), R=S.rot(0, -z * 20, 0)), COMB, k=0.25, layer='comb')
-    fig.add(S.ellipsoid((0, hc[1] + HR * 0.9, hc[2] - 0.0), (0.45, 0.4, 1.2)), COMB, k=0.25, layer='comb')
-    fig.add(S.ellipsoid((0.32, hc[1] + HR * 0.8 + 0.8, hc[2] + 0.45), (0.34, 0.62, 0.42), R=S.rot(0, 0, -28)), COMB, k=0.2, layer='comb')
-    # 눈·눈썹·부리·볏살·볼터치
-    Fg.kawaii_eyes(fig, hc, HR + 0.0, spread=26, pitch=3, size=0.6, tall=1.1)
+    for z, h, r in ((0.8, 1.15, 0.52), (0.05, 1.75, 0.62), (-0.75, 1.4, 0.56)):
+        fig.add(S.ellipsoid((0, top - 0.2 + h * 0.6, hc[2] + z), (0.46, h * 0.62, r), R=S.rot(0, -z * 20, 0)), COMB, k=0.25, layer='comb')
+    fig.add(S.ellipsoid((0, top - 0.05, hc[2] - 0.05), (0.42, 0.4, 1.1)), COMB, k=0.25, layer='comb')
+    fig.add(S.ellipsoid((0.3, top + 0.6, hc[2] + 0.45), (0.32, 0.6, 0.4), R=S.rot(0, 0, -28)), COMB, k=0.2, layer='comb')
+
+    # ---------- 얼굴: 동그란 눈 (조금 작게, 높게) + 짧은 눈썹 (조급함: 안쪽이 살짝 올라감) ----------
     for s in (-1, 1):
-        f = Fg._frame_on(hc, HR, s * 27, 28, -0.03)
-        for k in range(13):
-            t = (k - 6) / 6
-            Fg._ellipsoid(fig.extra, (t * 0.27, -t * t * 0.07, 0), (0.07 - 0.02 * abs(t), 0.055 - 0.015 * abs(t), 0.05), BROW, 6, 4, f)
-    bk = np.array(Fg._frame_on(hc, HR, 0, -10, -0.15).p((0, 0, 0)))
-    fig.add(S.cone(tuple(bk), tuple(bk + (0, -0.15, 0.72)), 0.38, 0.07), BEAK, k=0.0, layer='beak')
-    fig.add(S.ellipsoid(tuple(bk + (0, -0.05, 0.05)), (0.42, 0.3, 0.34)), BEAK, k=0.12, layer='beak')
+        f = face_frame(fig, hc, s * 25, 1, out=-0.075)
+        Fg.eye_at(fig, f, style='round', size=0.53, side=s)
+        fb = face_frame(fig, hc, s * 26, 17)
+        o = np.asarray(fb.o)
+        surf_beads(fig, fb, [(s * (-0.21 + 0.42 * k / 6), 0.08 * (1 - k / 6) + 0.03 * math.sin(math.pi * k / 6)) for k in range(7)],
+                   0.055, BROW, out=0.02)
+    # 부리 (표면에서 앞으로)
+    fb = face_frame(fig, hc, 0, -12)
+    bo, bn = np.asarray(fb.o), np.asarray(fb.z)
+    fig.add(S.cone(tuple(bo - bn * 0.15), tuple(bo + bn * 0.62 + np.array((0, -0.16, 0))), 0.36, 0.07), BEAK, k=0.0, layer='beak')
+    fig.add(S.ellipsoid(tuple(bo + bn * 0.05 + np.array((0, -0.04, 0))), (0.4, 0.28, 0.3)), BEAK, k=0.12, layer='beak')
+    # 볏살 (부리 아래 늘어진 빨간 살)
     for s in (-1, 1):
-        w = bk + (s * 0.15, -0.6, 0.2)
-        fig.add(S.ellipsoid(tuple(w), (0.2, 0.34, 0.18), R=S.rot(0, 0, s * 8)), COMB, k=0.15, layer='wattle')
-    fig.add(S.capsule(tuple(bk + (-0.12, -0.25, 0.15)), tuple(bk + (0.12, -0.25, 0.15)), 0.12), COMB, k=0.15, layer='wattle')
+        w = bo + (s * 0.14, -0.62, 0.12)
+        fig.add(S.ellipsoid(tuple(w), (0.19, 0.33, 0.17), R=S.rot(0, 0, s * 8)), COMB, k=0.15, layer='wattle')
+    fig.add(S.capsule(tuple(bo + (-0.12, -0.28, 0.08)), tuple(bo + (0.12, -0.28, 0.08)), 0.12), COMB, k=0.15, layer='wattle')
+    # 볼터치: 표면 칠만
     for s in (-1, 1):
-        p = np.array(Fg._frame_on(hc, HR, s * 44, -12, 0).p((0, 0, 0)))
-        fig.paint(S.sphere(p, 0.5), Fg.BLUSH, soft=0.6)
+        q = np.asarray(face_frame(fig, hc, s * 42, -16).o)
+        layer_paint(fig, 'body', S.sphere(q, 0.45), Fg.BLUSH, 0.45, tol=0.08)
 
     # ---------- 받침: 바닥 시계판 + 돌 ----------
     cc = np.array((2.45, y0 + 0.3, 2.25))

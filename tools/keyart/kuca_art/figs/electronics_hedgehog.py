@@ -60,50 +60,64 @@ def spine_field(spines, bound_c, bound_r, inner_r, pad=0.5):
     return f
 
 
+def head_frame(fig, c, yaw, pitch, layer='body', out=0.0, parts=None):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 조형 표면 위 Frame (가시 넣기 전에 부른다)"""
+    y, p = math.radians(yaw), math.radians(pitch)
+    d = np.array((math.cos(p) * math.sin(y), math.sin(p), math.cos(p) * math.cos(y)))
+    return Fg.surface_frame(fig, np.asarray(c) + d * 7.0, -d, out=out, layer=layer)
+
+
+def w_mouth(fig, f, w, col):
+    for s in (-1, 1):
+        for k in range(9):
+            a = math.pi * k / 8
+            Fg._ellipsoid(fig.extra, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.01), (0.045, 0.045, 0.04), col, 6, 4, f)
+
+
 def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     y0 = Fg.TOP
     g = (Fg.GOLD, Fg.GOLD_HI)
-    # ---- 다리·발 ----
+    # ---- 다리·발: 짧고 통통 ----
     for s in (-1, 1):
-        x = s * 0.68
-        fig.add(S.ellipsoid((x, y0 + 0.3, 0.25), (0.52, 0.32, 0.62)), CREAM, k=0.1, layer='feet')
-        fig.add(S.capsule((x, y0 + 0.55, 0.05), (x, y0 + 1.45, 0.0), 0.5, 0.56), BROWN, k=0.25)
-    # ---- 몸통: 갈색 + 크림 배 ----
-    hips = S.ellipsoid((0, y0 + 1.95, 0.0), (1.42, 0.95, 1.18))
-    chest = S.ellipsoid((0, y0 + 2.8, 0.0), (1.28, 1.0, 1.08))
-    fig.add(hips, BROWN, k=0.4)
+        x = s * 0.66
+        fig.add(S.ellipsoid((x, y0 + 0.28, 0.28), (0.5, 0.3, 0.6)), CREAM, k=0.1, layer='feet')
+        fig.add(S.capsule((x, y0 + 0.5, 0.05), (x, y0 + 1.15, 0.0), 0.5, 0.56), BROWN, k=0.12)
+    # ---- 몸통: 동그란 공 + 크림 배 ----
+    BC, BR = (0, y0 + 2.2, 0.0), (1.48, 1.32, 1.3)
+    ball = S.ellipsoid(BC, BR)
+    hips = ball
+    chest = S.ellipsoid((0, y0 + 2.7, 0.0), (1.2, 0.95, 1.05))
+    fig.add(ball, BROWN, k=0.4)
     fig.add(chest, BROWN, k=0.45)
     # 조끼: 앞이 트인 회청색 조끼 + 진홍 스티치
-    VR = (1.5, 1.2, 1.27)
     vest0 = lambda P: S.smin(hips(P), chest(P), 0.45) - 0.1
-    vest = S.intersect(vest0, lambda P: np.maximum((y0 + 1.75) - P[:, 1], P[:, 1] - (y0 + 3.6)))
-    opening = lambda P: (np.abs(P[:, 0]) - 0.3 - 0.25 * np.clip((P[:, 1] - (y0 + 2.4)) / 1.1, 0, 1)) * 1.0
+    vest = S.intersect(vest0, lambda P: np.maximum((y0 + 1.5) - P[:, 1], P[:, 1] - (y0 + 3.45)))
+    opening = lambda P: (np.abs(P[:, 0]) - 0.32 - 0.28 * np.clip((P[:, 1] - (y0 + 2.3)) / 1.1, 0, 1)) * 1.0
     vest = S.subtract(vest, S.intersect(opening, lambda P: 0.15 - P[:, 2]), k=0.05)
     for s in (-1, 1):     # 팔 구멍
-        vest = S.subtract(vest, S.ellipsoid((s * 1.42, y0 + 3.2, 0.05), (0.42, 0.55, 0.55)), k=0.05)
+        vest = S.subtract(vest, S.ellipsoid((s * 1.38, y0 + 3.0, 0.05), (0.42, 0.55, 0.55)), k=0.05)
     fig.add(vest, VEST, k=0.0, layer='vest')
-    fig.paint(lambda P: np.maximum(S.ellipsoid((0, y0 + 2.2, 0.9), (0.95, 1.3, 0.8))(P), 0.25 - 6 * vest(P)), CREAM, soft=0.2)
-    # 스티치: 앞트임·밑단을 따라 진홍 점선
+    fig.paint(lambda P: np.maximum(S.ellipsoid((0, y0 + 2.2, 1.0), (0.95, 1.3, 0.8))(P), 0.25 - 6 * vest(P)), CREAM, soft=0.2)
     vest_shell = lambda P: np.abs(vest(P)) - 0.04
     def stitch(P):
         ax = np.abs(P[:, 0])
-        edge = np.abs(ax - (0.38 + 0.25 * np.clip((P[:, 1] - (y0 + 2.4)) / 1.1, 0, 1)))
-        hem = np.abs(P[:, 1] - (y0 + 1.86))
+        edge = np.abs(ax - (0.4 + 0.28 * np.clip((P[:, 1] - (y0 + 2.3)) / 1.1, 0, 1)))
+        hem = np.abs(P[:, 1] - (y0 + 1.6))
         line = np.minimum(np.where(P[:, 2] > 0.3, edge, 9), hem)
         return np.maximum(line - 0.05, vest_shell(P))
     fig.paint(stitch, Fg.CRIMSON, soft=0.04)
-    # ---- 팔: 갈색 + 크림 손 ----
+    # ---- 팔: 짧은 갈색 팔 + 크림 손 ----
     hands = {}
     for s in (-1, 1):
-        sh = np.array((s * 1.18, y0 + 3.15, 0.05))
+        sh = np.array((s * 1.2, y0 + 2.95, 0.05))
         if s > 0:   # 오른손(+x): 기판을 가슴 앞으로 들어 올림
-            el, wr = np.array((1.75, y0 + 2.5, 0.45)), np.array((1.45, y0 + 2.75, 1.05))
+            el, wr = np.array((1.72, y0 + 2.3, 0.45)), np.array((1.48, y0 + 2.5, 1.1))
         else:
-            el, wr = np.array((-1.65, y0 + 2.55, 0.15)), np.array((-1.95, y0 + 2.0, 0.35))
-        fig.add(S.sphere(tuple(sh), 0.46), BROWN, k=0.3)
-        fig.add(S.capsule(tuple(sh), tuple(el), 0.42, 0.38), BROWN, k=0.25)
-        fig.add(S.capsule(tuple(el), tuple(wr), 0.38, 0.36), BROWN, k=0.2)
+            el, wr = np.array((-1.68, y0 + 2.35, 0.15)), np.array((-1.95, y0 + 1.8, 0.4))
+        fig.add(S.sphere(tuple(sh), 0.46), BROWN, k=0.15)
+        fig.add(S.capsule(tuple(sh), tuple(el), 0.42, 0.38), BROWN, k=0.12)
+        fig.add(S.capsule(tuple(el), tuple(wr), 0.38, 0.36), BROWN, k=0.1)
         hand = wr + (wr - el) / np.linalg.norm(wr - el) * 0.25
         fig.add(S.sphere(tuple(hand), 0.36), CREAM, k=0.12, layer='paw')
         hands[s] = hand
@@ -117,18 +131,23 @@ def build(fig, rng):
         fig.add(S.cylinder(tuple(bc + Rb @ np.array((cx, cy, 0.03))), 0.07, 0.03, R=Rb @ S.rot(0, 90, 0)), Fg.GOLD, k=0.0, layer='pin', metal=g)
     for cx, cy, w, h in ((-0.32, -0.42, 0.12, 0.08), (0.34, 0.44, 0.12, 0.07)):
         fig.add(S.box(tuple(bc + Rb @ np.array((cx, cy, 0.06))), (w, h, 0.035), round_=0.01, R=Rb), (0.22, 0.22, 0.24), k=0.0, layer='chip')
-    # 엄지가 기판을 잡도록
-    # ---- 머리 ----
-    hc = (0, y0 + 5.45, 0.05)
-    HR = 2.0
-    head_f = S.ellipsoid(hc, (HR * 1.08, HR * 0.97, HR))
-    fig.add(head_f, BROWN, k=0.5)
-    fig.add(S.capsule((0, y0 + 3.4, 0), (0, hc[1] - 1.4, 0.05), 0.75), BROWN, k=0.3)
-    for s in (-1, 1):
-        fig.add(S.sphere((s * 1.0, hc[1] - 0.85, hc[2] + 0.95), 0.72), BROWN, k=0.55)
-    fig.add(S.ellipsoid((0, hc[1] - 0.6, hc[2] + 1.62), (0.6, 0.45, 0.5)), BROWN, k=0.45)   # 작은 주둥이
-    face = S.ellipsoid((0, hc[1] - 0.2, hc[2] + 1.2), (1.8, 1.65, 1.35))
-    fig.paint(lambda P: np.maximum.reduce([face(P), -S.ellipsoid((0, hc[1] + 1.45, hc[2] + 1.5), (0.3, 0.55, 0.9))(P), head_f(P) - 0.4, (hc[1] - 2.1) - P[:, 1]]), CREAM, soft=0.06)
+    # ---- 머리: 둥근 뒤통수 + 앞으로 뾰족하게 나온 주둥이 (볼은 머리 아래 볼륨으로만) ----
+    hc = (0, y0 + 5.1, 0.05)
+    HR = 1.95
+    HRX = (HR * 1.06, HR * 0.95, HR * 0.98)
+    head_f = S.ellipsoid(hc, HRX)
+    fig.add(head_f, BROWN, k=0.3)
+    fig.add(S.ellipsoid((0, hc[1] - 0.5, hc[2] + 0.25), (HR * 1.0, HR * 0.7, HR * 0.85)), BROWN, k=0.8)
+    fig.add(S.capsule((0, y0 + 3.2, 0), (0, hc[1] - 1.3, 0.05), 0.75), BROWN, k=0.2)
+    snout_a, snout_b = np.array((0, hc[1] - 0.5, hc[2] + 1.0)), np.array((0, hc[1] - 0.72, hc[2] + 2.55))
+    fig.add(S.capsule(tuple(snout_a), tuple(snout_b), 0.78, 0.17), BROWN, k=0.45)
+    face = S.ellipsoid((0, hc[1] - 0.25, hc[2] + 1.3), (1.75, 1.6, 1.5))
+    fig.paint(lambda P: np.maximum.reduce([face(P), -S.ellipsoid((0, hc[1] + 1.4, hc[2] + 1.5), (0.3, 0.55, 0.9))(P), (hc[1] - 2.0) - P[:, 1]]), CREAM, soft=0.06)
+    # 얼굴 부품 자리 (가시·헤드셋 넣기 전에 표면을 구한다)
+    eye_f = {s: head_frame(fig, hc, s * 28, 0) for s in (-1, 1)}
+    nose_f = head_frame(fig, hc, 0, -14.5)
+    mouth_f = head_frame(fig, hc, 0, -23)
+    blush_p = {s: np.array(head_frame(fig, hc, s * 46, -18).o) for s in (-1, 1)}
     # ---- 가시: 머리 위·뒤 + 등. 끝마다 LED ----
     spines = []
     tips = []
@@ -140,20 +159,20 @@ def build(fig, rng):
             continue
         if abs(d[0]) > 0.8 and abs(d[1]) < 0.3 and abs(d[2]) < 0.45:      # 헤드셋 컵 자리
             continue
-        p = np.array(hc) + d * np.array((HR * 1.08, HR * 0.97, HR)) * 0.95
+        p = np.array(hc) + d * np.array(HRX) * 0.95
         dd = d + np.array((0, 0.15, -0.25))
         dd /= np.linalg.norm(dd)
         L = 1.0 + 0.15 * rng.random()
         tip = p + dd * L
         spines.append((p, tip, 0.5, 0.12))
         tips.append(tip + dd * 0.06)
-    fig.add(spine_field(spines, hc, (HR * 1.08 + 1.4, HR * 0.97 + 1.4, HR + 1.4), (HR * 0.75, HR * 0.7, HR * 0.75)), SPINE, k=0.12)
+    fig.add(spine_field(spines, hc, (HRX[0] + 1.4, HRX[1] + 1.4, HRX[2] + 1.4), (HR * 0.75, HR * 0.7, HR * 0.75)), SPINE, k=0.12)
     bspines = []
-    bc_ = np.array((0, y0 + 2.7, 0.0))
+    bc_ = np.array((0, y0 + 2.4, 0.0))
     for d in fib_dirs(52):
         if d[2] > -0.35 or d[1] < -0.45 or d[1] > 0.8:
             continue
-        p = bc_ + d * np.array((1.5, 1.2, 1.27)) * 0.9
+        p = bc_ + d * np.array((1.55, 1.3, 1.36)) * 0.9
         dd = d + np.array((0, 0.25, -0.3))
         dd /= np.linalg.norm(dd)
         tip = p + dd * (0.9 + 0.1 * rng.random())
@@ -177,28 +196,26 @@ def build(fig, rng):
     fig.add(band, HP_W, k=0.0, layer='hp')
     Rc = S.rot(0, 0, 90)
     for s in (-1, 1):
-        cx = s * (HR * 1.08)
+        cx = s * (HR * 1.06)
         fig.add(S.torus((cx + s * 0.12, hc[1] - 0.15, hc[2] - 0.05), 0.55, 0.25, Rm=Rc), Fg.CRIMSON, k=0.0, layer='cush')
         fig.add(S.cylinder((cx + s * 0.42, hc[1] - 0.15, hc[2] - 0.05), 0.72, 0.17, round_=0.12, R=Rc), HP_W, k=0.0, layer='hp')
         fig.add(S.torus((cx + s * 0.56, hc[1] - 0.15, hc[2] - 0.05), 0.52, 0.07, Rm=Rc), Fg.GOLD, k=0.0, layer='hpg', metal=g)
         fig.add(S.cylinder((cx + s * 0.58, hc[1] - 0.15, hc[2] - 0.05), 0.46, 0.05, round_=0.04, R=Rc), Fg.CRIMSON, k=0.0, layer='cush')
         fig.add(S.cylinder((s * 2.64, hc[1] + 0.75, hc[2] + 0.1), 0.24, 0.17, round_=0.06), Fg.GOLD, k=0.0, layer='hpg', metal=g)
     # 마이크 (왼쪽 컵 → 입 옆)
-    m0 = np.array((-(HR * 1.08 + 0.45), hc[1] - 0.45, hc[2] + 0.3))
+    m0 = np.array((-(HR * 1.06 + 0.45), hc[1] - 0.45, hc[2] + 0.3))
     m1 = np.array((-1.6, hc[1] - 1.05, hc[2] + 1.35))
     m2 = np.array((-0.85, hc[1] - 1.05, hc[2] + 1.85))
     fig.add(S.capsule(tuple(m0), tuple(m1), 0.06), (0.25, 0.25, 0.28), k=0.04, layer='mic')
     fig.add(S.capsule(tuple(m1), tuple(m2), 0.06), (0.25, 0.25, 0.28), k=0.04, layer='mic')
     fig.add(S.sphere(tuple(m2 + np.array((0.08, 0.0, 0.03))), 0.2), (0.16, 0.16, 0.18), k=0.03, layer='mic')
-    # ---- 얼굴 ----
-    Fg.kawaii_eyes(fig, hc, HR + 0.02, spread=25, pitch=-6, size=0.52, tall=1.1)
-    nf = Fg._frame_on((0, hc[1] - 0.6, hc[2] + 1.62), 0.5, 0, 12, -0.02)
-    Fg._ellipsoid(fig.extra, (0, 0, 0), (0.16, 0.12, 0.12), (0.14, 0.09, 0.08), 12, 6, nf)
-    Fg._ellipsoid(fig.extra, (-0.05, 0.05, 0.08), (0.05, 0.03, 0.03), (0.6, 0.6, 0.6), 6, 4, nf)
-    Fg.smile(fig, (0, hc[1] - 0.6, hc[2] + 1.62), 0.5 + 0.03, pitch=-38, w=0.18, col=(0.3, 0.14, 0.12))
+    # ---- 얼굴: 작고 반짝이는 까만 구슬 눈, 주둥이 끝 까만 코, 작은 입, 볼터치는 칠만 ----
     for s in (-1, 1):
-        p = np.array(Fg._frame_on(hc, HR * 1.04, s * 44, -22, 0).p((0, 0, 0)))
-        fig.paint(S.sphere(p, 0.45), Fg.BLUSH, soft=0.55)
+        Fg.eye_at(fig, eye_f[s], 'bead', size=0.4, side=s)
+        fig.paint(S.sphere(blush_p[s], 0.45), Fg.BLUSH, soft=0.55)
+    Fg._ellipsoid(fig.extra, (0, 0, 0.02), (0.2, 0.15, 0.14), (0.12, 0.08, 0.07), 12, 6, nose_f)
+    Fg._ellipsoid(fig.extra, (-0.06, 0.06, 0.12), (0.06, 0.035, 0.03), (0.6, 0.6, 0.6), 6, 4, nose_f)
+    w_mouth(fig, mouth_f, 0.18, (0.3, 0.14, 0.12))
     # ---- 받침 소품: 마이크로칩 (왼쪽 앞) + 회색 돌 ----
     cx_, cz_ = -2.5, 1.9
     Rk = S.rot(25, 0, 0)

@@ -5,7 +5,8 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, sleepy_eye, kawaii_eyes2, smile2, blush2, tuft)
+from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, sleepy_eye, kawaii_eyes2, smile2, blush2, tuft,
+                     soft_head, face_frame, eye_pair, mouth_w, blush_paint)
 
 TIER = 'green'
 
@@ -104,51 +105,50 @@ def spiral_shell(c, axis, Rin, Rax, turns_a=0.42, A=0.12):
 def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     y0 = Fg.TOP
-    # ---- 몸 (말랑한 마시멜로: 큰 머리 + 작은 몸 + 짧은 다리) ----
-    hc = np.array((0.0, y0 + 4.75, 0.1))
-    head = S.ellipsoid(hc, (2.0, 1.85, 1.78))
-    torso = S.ellipsoid((0, y0 + 2.0, 0.0), (1.35, 1.35, 1.15))
+    # ---- 몸: 말랑한 물방울형 머리가 목 없이 아래로 넓어지며 몸으로 흘러내리는 덩어리 (약 1.9 등신) ----
+    hc = np.array((0.0, y0 + 4.55, 0.1))
+    head = soft_head(hc, (1.75, 1.8, 1.6), flare=0.1, taper=0.11, flare_y=-0.55)
+    torso = S.ellipsoid((0, y0 + 2.05, 0.0), (1.5, 1.4, 1.22))
     parts = [head, torso]
     for s in (-1, 1):
-        parts.append(S.ellipsoid((s * 0.62, y0 + 0.5, 0.18), (0.55, 0.52, 0.62)))
-    sh_r, sh_l = np.array((1.1, y0 + 2.75, 0.25)), np.array((-1.1, y0 + 2.75, 0.15))
-    hand_r = np.array((1.72, y0 + 2.6, 0.95))
-    hand_l = np.array((-1.85, y0 + 2.05, 0.45))
+        parts.append(S.ellipsoid((s * 0.66, y0 + 0.48, 0.18), (0.58, 0.5, 0.64)))
+    sh_r, sh_l = np.array((1.15, y0 + 2.7, 0.25)), np.array((-1.15, y0 + 2.7, 0.15))
+    hand_r = np.array((1.78, y0 + 2.55, 0.95))
+    hand_l = np.array((-1.9, y0 + 2.0, 0.45))
     parts += [S.capsule(sh_r, hand_r, 0.4, 0.34), S.sphere(hand_r, 0.4),
               S.capsule(sh_l, hand_l, 0.4, 0.34), S.sphere(hand_l, 0.38)]
-    # 눈자루 + 눈 공
+    # 눈자루 + 눈 공 (정수리에서 V 자로)
     balls = []
     for s in (-1, 1):
-        b0 = np.array((s * 0.7, y0 + 6.1, 0.05))
-        bc = np.array((s * 1.0, y0 + 7.6, 0.22))
-        parts.append(S.capsule(b0, bc, 0.36, 0.3))
+        b0 = np.array((s * 0.55, y0 + 5.9, 0.0))
+        bc = np.array((s * 0.98, y0 + 7.3, 0.2))
+        parts.append(S.capsule(b0, bc, 0.34, 0.28))
         balls.append(bc)
-        parts.append(S.sphere(bc, 0.6))
+        parts.append(S.ellipsoid(bc, (0.6, 0.56, 0.56)))
 
     def core(P):
-        d = parts[0](P)
-        for i, g in enumerate(parts[1:]):
-            d = S.smin(d, g(P), 0.5 if i < 3 else 0.25)
+        d = S.smin(parts[0](P), parts[1](P), 0.9)
+        for i, g in enumerate(parts[2:]):
+            d = S.smin(d, g(P), 0.45 if i < 2 else 0.25)
         return d
     fig.add(core, CREAM, k=0.2)
     near_body = lambda P: np.abs(core(P))
-    # 배 살짝 밝게, 손발 끝 살짝 짙게
+    # 배 살짝 밝게
     fig.paint(masked(lambda P: np.hypot(P[:, 0] / 1.0, (P[:, 1] - y0 - 2.0) / 1.0) - 0.9 + (0.6 - P[:, 2]) * 2, near_body, 0.1),
               (1.0, 0.97, 0.88), soft=0.6)
 
-    # ---- 얼굴: 큰 짙은 갈색 눈 + 작은 입 + 볼터치 + 엷은 눈썹 ----
-    kawaii_eyes2(fig, core, hc, spread=27, pitch=-8, size=0.5, iris=(0.30, 0.16, 0.08), tall=1.08)
-    smile2(fig, core, hc, pitch=-26, w=0.2, th=0.045)
-    blush2(fig, core, hc, spread=40, pitch=-20, size=0.5, soft=0.7)
+    # ---- 얼굴: 동그랗고 짙은 눈 (넓게, 조금 아래), 작은 'w' 입, 칠한 볼터치, 엷은 팔자 눈썹 ----
+    eye_pair(fig, hc, 25, -12, 'round', 0.44, iris=(0.24, 0.13, 0.07), layer='body', sink=0.16)
+    mouth_w(fig, face_frame(fig, hc, 0, -27, 'body', out=0.005), w=0.2, th=0.042)
+    blush_paint(fig, hc, 41, -24, 'body', size=0.42, soft=0.6)
     for s in (-1, 1):
-        p0, _ = surf_point(core, hc, s * 19, 14)
-        p1, _ = surf_point(core, hc, s * 33, 12)
-        fig.paint(masked(S.capsule(p0, p1, 0.07, 0.05), near_body, 0.1), BROW, soft=0.05)
-    # 눈자루 끝: 졸린 반쯤 감긴 눈 (정면)
+        p0 = face_frame(fig, hc, s * 17, 6).o
+        p1 = face_frame(fig, hc, s * 31, 3).o
+        fig.paint(masked(S.capsule(p0, p1, 0.06, 0.045), near_body, 0.1), BROW, soft=0.05)
+    # 눈자루 끝: 반쯤 감긴 졸린 눈 (eye_at droopy, 크림색 눈꺼풀)
     for s, bc in zip((-1, 1), balls):
-        ballf = S.sphere(bc, 0.6)
-        sleepy_eye(fig, ballf, bc, 1, yaw=0, pitch=-6, size=0.4, lid_cut=0.0, droop=-s * 6, lid_col=CREAM,
-                   iris=(0.32, 0.18, 0.09), look=(0.0, -0.18), layer='body', lid_k=0.08, lid_z=0.42)
+        f = face_frame(fig, bc, s * 6, -6, 'body', out=-0.06)
+        Fg.eye_at(fig, f, 'droopy', 0.36, (0.30, 0.17, 0.08), side=s, lid=(0.93, 0.79, 0.58))
 
     # ---- 껍데기 (등, 나선 면이 -x/뒤를 향함) + 진홍 점 ----
     axis = np.array((-1.0, 0.12, -0.85)); axis /= np.linalg.norm(axis)
@@ -165,7 +165,7 @@ def build(fig, rng):
             metal=((0.80, 0.10, 0.12), (1.0, 0.6, 0.6)))
 
     # ---- 잎 우산 (오른손 +x 으로 줄기를 쥠) ----
-    O = np.array((0.3, y0 + 10.25, 0.0))
+    O = np.array((0.3, y0 + 10.05, 0.0))
     d = np.array((1.0, 0.0, 0.3)); d /= np.linalg.norm(d)
     R = np.stack([np.cross((0, 1, 0), d), np.array((0, 1.0, 0)), d], axis=1)
     u0, u1 = -2.9, 3.4
@@ -181,7 +181,7 @@ def build(fig, rng):
     # 줄기: 손 아래 → 손 → 위로 휘어 잎 밑면 중심
     top, _ = to_world(0.0, 0.0, -0.05)
     pts = [hand_r + (0.12, -0.95, 0.05), hand_r + (0.05, 0.0, 0.0), hand_r + (-0.05, 1.6, -0.1),
-           np.array((1.35, y0 + 6.8, 0.55)), np.array((1.05, y0 + 8.3, 0.35)), top]
+           np.array((1.4, y0 + 6.6, 0.6)), np.array((1.15, y0 + 8.0, 0.4)), top]
     for a, b in zip(pts, pts[1:]):
         fig.add(S.capsule(tuple(a), tuple(b), 0.13, 0.12), STEM, k=0.15, layer='stem')
     # 손가락 (줄기를 감싼 짧은 손가락 두 개)

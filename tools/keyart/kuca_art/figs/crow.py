@@ -98,6 +98,27 @@ def surf(f, c, yaw, pitch, out=0.0):
     return np.asarray(c, np.float64) + d * (hit(f, c, d) + out)
 
 
+def sface(fig, c, yaw, pitch, out=0.0, layer='body', up=(0, 1, 0)):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 조형 표면 Frame (바깥에서 안으로 광선, Fg.surface_frame)"""
+    d = _dir(yaw, pitch)
+    return Fg.surface_frame(fig, np.asarray(c, np.float64) + d * 8.0, -d, up=up, out=out, layer=layer)
+
+
+def face_eyes(fig, c, spread, pitch, style, size, iris=Fg.IRIS, tilt=0.0, lid=None, layer='body', sink=0.14):
+    """성격별 눈 한 쌍 (Fg.eye_at) 을 실제 표면에 붙인다. sink = 표면 아래로 묻는 비율 (size 배)"""
+    for s in (-1, 1):
+        f = sface(fig, c, s * spread, pitch, -size * sink, layer)
+        Fg.eye_at(fig, f, style=style, size=size, iris=iris, side=s, tilt=tilt, lid=lid)
+
+
+def mouth_w(fig, f, w=0.24, col=(0.30, 0.16, 0.16), r=0.05):
+    """표면 Frame f 위 'w' 입 (작은 곡선 두 개, 표면에 얕게 박음)"""
+    for s in (-1, 1):
+        for k in range(9):
+            a = math.pi * k / 8
+            Fg._ellipsoid(fig.extra, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.0), (r, r, r * 0.7), col, 6, 4, f)
+
+
 def frame_at(f, c, yaw, pitch, out=0.0):
     """머리 표면 위 (yaw, pitch) 지점의 Frame (Z = 바깥)"""
     t = hit(f, c, _dir(yaw, pitch))
@@ -232,15 +253,19 @@ def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     fig = Fast(fig)
     y0 = Fg.TOP
-    hc = np.array((0.0, y0 + 5.85, 0.1))                    # 머리 중심
-    head = S.ellipsoid(hc, (2.45, 2.2, 2.2))
-    torso = S.ellipsoid((0, y0 + 2.2, 0.0), (1.85, 1.72, 1.65))
-    belly = S.ellipsoid((0, y0 + 1.9, 0.3), (1.62, 1.4, 1.45))
+    hc = np.array((0.0, y0 + 5.62, 0.1))                    # 머리 중심
+    # 둥근 머리: 위는 둥글고 아래(볼 쪽)가 살짝 넓은 하나의 덩어리 — 볼 구 없이 두상 자체 볼륨
+    head_up = S.ellipsoid(hc, (2.1, 1.98, 1.95))
+    head_lo = S.ellipsoid(hc + np.array((0, -0.55, 0.12)), (2.28, 1.42, 1.8))
+    head = lambda P: S.smin(head_up(P), head_lo(P), 0.55)
+    # 통통한 몸: 아래가 빵빵한 배
+    torso = S.ellipsoid((0, y0 + 2.25, 0.0), (1.98, 1.78, 1.78))
+    belly = S.ellipsoid((0, y0 + 1.92, 0.32), (1.82, 1.5, 1.6))
     trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
-    core = lambda P: S.smin(head(P), trunk(P), 0.7)
+    core = lambda P: S.smin(head(P), trunk(P), 0.6)
     fig.add(core, INK, k=0.3)
     # 정수리 깃털 (가운데 위로, 양옆으로 휘어진 뾰족한 깃 + 뒤 작은 깃)
-    top = hc + np.array((0, 2.05, -0.15))
+    top = hc + np.array((0, 1.88, -0.15))
     tuft = []
     for (yaw, pitch, roll, L, w) in ((0, -28, 0, 1.25, 0.34), (0, -20, 42, 1.0, 0.3), (0, -20, -42, 1.0, 0.3), (180, -35, 0, 0.8, 0.28)):
         R = S.rot(yaw, pitch, roll)
@@ -251,9 +276,10 @@ def build(fig, rng):
     fig.add(U(tuft, 0.08), INK, k=0.25)
     # 화난 눈썹 능선 (안쪽 끝이 아래로)
     for s in (-1, 1):
-        a = surf(head, hc, s * 9, 15, -0.06)
-        b = surf(head, hc, s * 36, 23, -0.06)
-        fig.add(S.capsule(a, b, 0.13, 0.09), INK_HI, k=0.16)
+        a = surf(head, hc, s * 8, 14, -0.07)
+        m = surf(head, hc, s * 21, 20, -0.06)
+        b = surf(head, hc, s * 36, 22, -0.08)
+        fig.add(U([S.capsule(a, m, 0.16, 0.15), S.capsule(m, b, 0.15, 0.09)], 0.08), INK_HI, k=0.2)
     # 다리·발
     for s in (-1, 1):
         x = s * 0.78
@@ -265,7 +291,7 @@ def build(fig, rng):
         fig.add(S.capsule(ank + np.array((0, -0.12, 0)), ank + np.array((0, -0.18, -0.5)), 0.12, 0.08), FEET, k=0.08, layer='feet')
     # 날개: 어깨에서 옆·아래로 펼친 큰 깃 (어깨 덩어리 + 윗깃 3 + 첫째 깃 5), 몸 앞쪽으로 살짝 감싸게
     for s in (-1, 1):
-        piv = np.array((s * 1.6, y0 + 3.35, 0.45))
+        piv = np.array((s * 1.8, y0 + 3.35, 0.4))
         fig.add(S.ellipsoid(piv + np.array((s * 0.1, -0.45, -0.1)), (0.6, 1.0, 0.5), R=S.rot(s * 20, 0, s * 28)), INK, k=0.3, layer='wing')
         prim = []
         for i, roll in enumerate((18, 34, 50, 66, 82)):
@@ -282,14 +308,15 @@ def build(fig, rng):
     bp = np.array(bf.p((0, 0, -0.12)))
     fwd = np.array(bf.dir((0, 0, 1)))
     up = np.array(bf.dir((0, 1, 0)))
-    fig.add(S.capsule(bp + up * 0.05, bp + fwd * 1.0 - up * 0.14, 0.38, 0.05), BEAK, k=0.12, layer='beak')
+    fig.add(S.capsule(bp + up * 0.05, bp + fwd * 1.05 - up * 0.16, 0.42, 0.06), BEAK, k=0.12, layer='beak')
     fig.add(S.ellipsoid(bp + fwd * 0.18 + up * 0.06, (0.45, 0.28, 0.34)), BEAK, k=0.15, layer='beak')
     fig.add(S.capsule(bp - up * 0.24, bp + fwd * 0.6 - up * 0.32, 0.21, 0.05), (0.40, 0.40, 0.43), k=0.08, layer='beak')
     # 눈·볼
-    eyes(fig, head, hc, spread=25, pitch=1, size=0.68, tall=1.08)
+    # 당돌한 아몬드 눈 (눈꼬리 살짝 올라감, 눈썹 능선이 안쪽으로 찡그림)
+    face_eyes(fig, hc, spread=24, pitch=0, style='almond', size=0.76, iris=(0.38, 0.21, 0.11), tilt=7)
     for s in (-1, 1):
-        p = surf(head, hc, s * 41, -13)
-        fig.paint(S.sphere(p, 0.4), (1.0, 0.60, 0.66), soft=0.3)
+        p = surf(head, hc, s * 41, -18)
+        fig.paint(S.sphere(p, 0.33), (1.0, 0.60, 0.66), soft=0.3)
     # 목도리: 목을 감는 두툼한 관 + 매듭 + 두 끝 (술 장식)
     p0 = np.array((0, y0 + 3.75, 0.0))
     nrm = np.array((0, 1.0, 0.3))

@@ -101,6 +101,27 @@ def surf(f, c, yaw, pitch, out=0.0):
     return np.asarray(c, np.float64) + d * (hit(f, c, d) + out)
 
 
+def sface(fig, c, yaw, pitch, out=0.0, layer='body', up=(0, 1, 0)):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 조형 표면 Frame (바깥에서 안으로 광선, Fg.surface_frame)"""
+    d = _dir(yaw, pitch)
+    return Fg.surface_frame(fig, np.asarray(c, np.float64) + d * 8.0, -d, up=up, out=out, layer=layer)
+
+
+def face_eyes(fig, c, spread, pitch, style, size, iris=Fg.IRIS, tilt=0.0, lid=None, layer='body', sink=0.14):
+    """성격별 눈 한 쌍 (Fg.eye_at) 을 실제 표면에 붙인다. sink = 표면 아래로 묻는 비율 (size 배)"""
+    for s in (-1, 1):
+        f = sface(fig, c, s * spread, pitch, -size * sink, layer)
+        Fg.eye_at(fig, f, style=style, size=size, iris=iris, side=s, tilt=tilt, lid=lid)
+
+
+def mouth_w(fig, f, w=0.24, col=(0.30, 0.16, 0.16), r=0.05):
+    """표면 Frame f 위 'w' 입 (작은 곡선 두 개, 표면에 얕게 박음)"""
+    for s in (-1, 1):
+        for k in range(9):
+            a = math.pi * k / 8
+            Fg._ellipsoid(fig.extra, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.0), (r, r, r * 0.7), col, 6, 4, f)
+
+
 def frame_at(f, c, yaw, pitch, out=0.0):
     """머리 표면 위 (yaw, pitch) 지점의 Frame (Z = 바깥)"""
     t = hit(f, c, _dir(yaw, pitch))
@@ -260,12 +281,17 @@ def build(fig, rng):
     Fg.base(fig, rng, flowers=7)
     fig = Fast(fig)
     y0 = Fg.TOP
-    hc = np.array((0.0, y0 + 5.55, 0.1))
-    head = S.ellipsoid(hc, (2.35, 2.05, 2.1))
-    torso = S.ellipsoid((0, y0 + 2.3, 0.05), (1.85, 1.78, 1.65))
-    belly = S.ellipsoid((0, y0 + 2.0, 0.3), (1.6, 1.45, 1.45))
-    trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
-    core = lambda P: S.smin(head(P), trunk(P), 0.8)
+    hc = np.array((0.0, y0 + 5.3, 0.1))
+    # 넓적한 머리: 위가 납작하고 옆으로 넓으며, 목 없이 어깨로 그대로 이어진다
+    head_up = S.ellipsoid(hc, (2.42, 1.78, 2.02))
+    head_lo = S.ellipsoid(hc + np.array((0, -0.5, 0.06)), (2.5, 1.3, 1.88))
+    head = lambda P: S.smin(head_up(P), head_lo(P), 0.55)
+    # 서양배형 몸: 아래가 넓고 위로 갈수록 좁아져 머리와 한 덩어리
+    torso = S.ellipsoid((0, y0 + 2.1, 0.05), (2.12, 1.95, 1.82))
+    belly = S.ellipsoid((0, y0 + 1.92, 0.3), (1.8, 1.55, 1.6))
+    chest = S.ellipsoid((0, y0 + 3.55, 0.05), (1.85, 1.25, 1.6))
+    trunk = lambda P: S.smin(S.smin(torso(P), belly(P), 0.4), chest(P), 0.8)
+    core = lambda P: S.smin(head(P), trunk(P), 1.1)
     fig.add(core, FUR, k=0.3)
     on = lambda g: (lambda P: np.maximum(g(P), np.abs(core(P)) - 0.06))
     # 배: 크림색 + 비늘 깃 무늬 (U 자 줄 3줄)
@@ -284,7 +310,7 @@ def build(fig, rng):
     fig.paint(on(S.ellipsoid(surf(head, hc, 0, 26, 0), (0.38, 0.8, 0.6))), FUR, soft=0.12)
     # 귀뿔 (깃털 3장씩, 위·바깥으로)
     for s in (-1, 1):
-        piv = hc + np.array((s * 1.35, 1.55, -0.2))
+        piv = hc + np.array((s * 1.5, 1.32, -0.2))
         fs = []
         for (roll, L, w) in ((2, 0.85, 0.33), (-26, 1.1, 0.38), (-54, 0.85, 0.32)):
             R = S.rot(s * -15, -10, s * roll)
@@ -292,7 +318,8 @@ def build(fig, rng):
         fig.add(U(fs, 0.1), FUR, k=0.35)
         fig.paint(S.sphere(piv + S.rot(0, 0, s * -40) @ np.array((0, 1.25, 0)), 0.55), FUR_DK, soft=0.25)
     # 눈 (호박색) · 부리 · 볼
-    eyes(fig, head, hc, spread=24, pitch=-2, size=0.68, iris=(0.56, 0.26, 0.06), iris_hi=(0.93, 0.56, 0.18), tall=1.04, sclera=False)
+    # 크고 동그란 눈, 주황 홍채 (안경 안)
+    face_eyes(fig, hc, spread=24, pitch=-1, style='round', size=0.72, iris=(0.66, 0.32, 0.07), sink=0.16)
     bf = frame_at(head, hc, 0, -13)
     bp, fwd, up = np.array(bf.p((0, 0, -0.08))), np.array(bf.dir((0, 0, 1))), np.array(bf.dir((0, 1, 0)))
     fig.add(S.capsule(bp + up * 0.1, bp + fwd * 0.55 - up * 0.5, 0.32, 0.06), BEAKC, k=0.1, layer='beak')
@@ -318,10 +345,10 @@ def build(fig, rng):
     for p, q in zip(br, br[1:]):
         fig.add(S.capsule(p, q, 0.055), Fg.GOLD, k=0.02, layer='glasses', metal=GLD)
     # 날개 (망토 아래로 나와 앞으로 모아 책을 받침): 어깨 덩어리 + 깃 + 밝은 깃끝
-    bc = np.array((0.15, y0 + 2.15, 2.0))
+    bc = np.array((0.15, y0 + 2.15, 2.22))
     for s in (-1, 1):
-        sh = np.array((s * 1.45, y0 + 2.8, 0.1))
-        tip = np.array((s * 1.25, y0 + 1.75, 1.75))
+        sh = np.array((s * 1.75, y0 + 2.75, 0.1))
+        tip = np.array((s * 1.35, y0 + 1.75, 1.95))
         mid = (sh + tip) / 2 + np.array((s * 0.45, 0, 0))
         fig.add(S.capsule(sh, mid, 0.5, 0.52), FUR, k=0.25, layer='wing')
         fig.add(S.capsule(mid, tip, 0.55, 0.36), FUR, k=0.25, layer='wing')
@@ -333,15 +360,16 @@ def build(fig, rng):
     # 펼친 책 (배 앞, 보는 사람 쪽으로 기울임)
     open_book(fig, bc, S.rot(0, 42, 0))
     # 망토: 어깨를 덮는 남색 케이프 + 아래 가장자리 금 테 + 앞 여밈 보석
-    bell = S.capsule((0, y0 + 3.75, -0.05), (0, y0 + 2.25, -0.05), 1.4, 2.2)
+    bell = S.capsule((0, y0 + 3.9, -0.05), (0, y0 + 2.3, -0.05), 1.3, 2.25)
     cb = lambda P: S.smin(core(P), bell(P), 0.3)
     edge = lambda P: y0 + 2.4 + 0.55 * np.clip(P[:, 2], 0, None) / 1.9 - 0.1 * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 8) * 0
     front_open = lambda P: np.maximum(np.abs(P[:, 0]) - 0.04 - 0.25 * np.clip(y0 + 3.45 - P[:, 1], 0, None), -P[:, 2])
-    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - 0.1) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.0), -front_open(P)))
+    flare = lambda P: 0.1 + 0.42 * np.clip((y0 + 3.75 - P[:, 1]) / 1.3, 0, 1) ** 1.3     # 아래로 갈수록 퍼지는 케이프
+    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 3.95), -front_open(P)))
     fig.add(cape, NAVY, k=0.0, layer='cape')
-    trim = lambda P: np.maximum(np.maximum(np.abs(cb(P) - 0.11) - 0.11, np.abs(P[:, 1] - edge(P) - 0.03) - 0.06), -front_open(P))
+    trim = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P) - 0.01) - 0.11, np.abs(P[:, 1] - edge(P) - 0.03) - 0.06), -front_open(P))
     fig.add(trim, Fg.GOLD, k=0.0, layer='trim', metal=GLD)
-    cl = surf(cb, np.array((0, y0 + 3.4, 0)), 0, 0, 0.25)
+    cl = surf(cb, np.array((0, y0 + 3.4, 0)), 0, 0, 0.3)
     fig.add(S.torus(cl, 0.2, 0.06, Rm=S.rot(0, 80, 0)), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     fig.add(S.ellipsoid(cl + np.array((0, 0, 0.04)), (0.19, 0.19, 0.13)), GEM, k=0.0, layer='gem')
     fig.paint(S.sphere(cl + np.array((-0.07, 0.08, 0.15)), 0.05), (1.0, 0.75, 0.75), soft=0.04)

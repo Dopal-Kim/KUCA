@@ -13,9 +13,9 @@ GREY = (0.60, 0.60, 0.645)
 GREY_D = (0.40, 0.40, 0.46)
 GREY_L = (0.74, 0.74, 0.79)
 BELLY = (0.95, 0.94, 0.93)
-IRI_G = (0.30, 0.72, 0.46)
+IRI_G = (0.26, 0.76, 0.46)
 IRI_T = (0.32, 0.62, 0.66)
-IRI_P = (0.52, 0.38, 0.78)
+IRI_P = (0.55, 0.36, 0.86)
 FOOT = (0.94, 0.46, 0.44)
 BEAK = (0.30, 0.30, 0.35)
 BAG = (0.52, 0.68, 0.25)
@@ -150,6 +150,66 @@ def blush2(fig, fn, hc, spread=42, pitch=-16, size=0.5, soft=0.65, col=Fg.BLUSH)
         fig.paint(S.sphere(p, size), col, soft=soft)
 
 
+# ---------- 2차: 두상 · 표면 위 눈/입 도우미 ----------
+
+def soft_head(c, r, flare=0.08, taper=0.0, flare_y=-0.4, R=None, front=0.0):
+    """
+    한 덩어리 두상 (따로 붙인 볼 구 없음): 타원체인데 볼 높이(flare_y, 반지름 비율)가 flare 만큼 옆으로 넓고,
+    위쪽은 taper 만큼 좁아진다 (달걀·물방울·넓적형). front 는 아래쪽이 앞으로 살짝 나오는 정도 (주둥이 볼륨).
+    """
+    c = np.asarray(c, np.float64)
+    r = np.asarray(r, np.float64)
+    base_e = S.ellipsoid((0, 0, 0), r)
+
+    def f(P):
+        q = P - c if R is None else (P - c) @ R
+        yn = np.clip(q[:, 1] / r[1], -1.3, 1.3)
+        s = 1.0 + flare * np.exp(-((yn - flare_y) / 0.55) ** 2) - taper * np.clip(yn, 0, None) ** 1.5
+        sz = 1.0 + (s - 1.0) * 0.5 + front * np.exp(-((yn - flare_y) / 0.5) ** 2)
+        Q = np.stack([q[:, 0] / s, q[:, 1], q[:, 2] / sz], axis=1)
+        return base_e(Q) * np.minimum(np.minimum(s, sz), 1.0)
+    return f
+
+
+def dir_of(yaw, pitch):
+    cy, sy = math.cos(math.radians(yaw)), math.sin(math.radians(yaw))
+    cp, sp = math.cos(math.radians(pitch)), math.sin(math.radians(pitch))
+    return np.array((cp * sy, sp, cp * cy))
+
+
+def face_frame(fig, c, yaw, pitch, layer='body', out=0.0, up=(0, 1, 0), reach=7.0):
+    """머리 중심 c 에서 (yaw, pitch) 방향의 실제 조형 표면(layer) 위 Frame — 바깥에서 광선을 쏴 표면에 붙인다"""
+    d = dir_of(yaw, pitch)
+    o = np.asarray(c, np.float64) + d * reach
+    return Fg.surface_frame(fig, tuple(o), tuple(-d), up=up, out=out, layer=layer)
+
+
+def eye_pair(fig, c, yaw, pitch, style, size, iris=Fg.IRIS, layer='body', tilt=0.0, lid=None, sink=0.14, look=0.0):
+    """양쪽 눈 (figures.eye_at) 을 실제 머리 표면에 붙인다. 반환: [(side, Frame)]"""
+    out = []
+    for s in (-1, 1):
+        f = face_frame(fig, c, s * yaw + look, pitch, layer, out=-size * sink)
+        Fg.eye_at(fig, f, style, size, iris, side=s, tilt=tilt, lid=lid)
+        out.append((s, f))
+    return out
+
+
+def mouth_w(fig, f, w=0.26, col=(0.30, 0.16, 0.16), th=0.05):
+    """'w' 입 — f 는 표면 Frame (face_frame)"""
+    b = fig.extra
+    for s in (-1, 1):
+        for k in range(9):
+            a = math.pi * k / 8
+            ell(b, f, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.0), (th, th, th * 0.7), col, 6, 4)
+
+
+def blush_paint(fig, c, yaw, pitch, layer='body', size=0.45, soft=0.6, col=Fg.BLUSH):
+    """볼터치: 표면에 칠만 (모양 변화 없음)"""
+    for s in (-1, 1):
+        f = face_frame(fig, c, s * yaw, pitch, layer)
+        fig.paint(S.sphere(f.o, size), col, soft=soft)
+
+
 def tuft(fig, x, z, rng, col=(0.30, 0.60, 0.16), n=5, h=0.7, layer='tuft'):
     """받침 위 뾰족 잎 덤불"""
     for k in range(n):
@@ -188,21 +248,41 @@ def feather_scales(P, y_top, rows, n_around=20, H=0.24, hh=0.21, w=0.36, A=0.085
     return best, row
 
 
+def pigeon_eye(fig, f, size, side, iris=(0.42, 0.22, 0.09), lid_col=GREY, lid_drop=0.75):
+    """멍한 비둘기 눈: 흰자 + eye_at('droopy') 홍채 + 흰자 위를 반쯤 덮는 회색 눈꺼풀 (바깥쪽이 처짐)"""
+    b = fig.extra
+    ell(b, f, (0, 0, 0), (size * 1.18, size * 1.08, size * 0.34), (0.99, 0.985, 0.975), 26, 12)
+    # 홍채: 아래로 살짝 (멍하게 앞을 봄)
+    fi = Frame(f.p((side * size * 0.04, -size * 0.12, size * 0.08)), f.x, f.y, f.z)
+    Fg.eye_at(fig, fi, 'droopy', size * 0.8, iris, side=side, lid=lid_col)
+    # 눈꺼풀: 흰자 위쪽을 덮는 두꺼운 덮개, 아래 경계는 바깥쪽이 처진 완만한 곡선
+    ang = math.radians(-side * 9)
+    fl = Frame(f.o, tuple(np.array(f.x) * math.cos(ang) + np.array(f.y) * math.sin(ang)),
+               tuple(-np.array(f.x) * math.sin(ang) + np.array(f.y) * math.cos(ang)), f.z)
+    ly = size * (1.0 - lid_drop)            # 눈꺼풀 아래 경계 높이
+    hh = (size * 1.06 - ly) / 2 + size * 0.02
+    ell(b, fl, (0, ly + hh, size * 0.02), (size * 1.17, hh, size * 0.36), lid_col, 26, 12)
+    ell(b, fl, (0, ly + hh - size * 0.05, size * 0.01), (size * 1.18, hh, size * 0.355), LID_EDGE, 26, 12)
+
+
 def build(fig, rng):
     Fg.base(fig, rng, flowers=7)
     y0 = Fg.TOP
-    hc = np.array((0.0, y0 + 5.8, 0.1))
-    head = S.ellipsoid(hc, (2.1, 2.05, 1.98))
-    belly = S.ellipsoid((0, y0 + 2.7, 0.02), (2.0, 2.0, 1.85))
-    core = lambda P: S.smin(head(P), belly(P), 1.3)
-    Y_TOP, ROWS = y0 + 4.72, 6
+    # ---- 체형: 몸에 비해 작은 달걀형 머리 + 가슴이 앞으로 나온 통통한 몸 (약 2.3 등신) ----
+    hc = np.array((0.0, y0 + 6.2, 0.3))
+    head = soft_head(hc, (1.62, 1.74, 1.58), flare=0.07, taper=0.05, flare_y=-0.5)
+    belly = S.ellipsoid((0, y0 + 2.75, -0.1), (2.15, 2.15, 1.95))
+    chest = S.ellipsoid((0, y0 + 3.6, 0.95), (1.7, 1.65, 1.6))
+    def core(P):
+        return S.smin(S.smin(belly(P), chest(P), 0.6), head(P), 0.8)
+    Y_TOP, ROWS = y0 + 4.85, 6
 
-    sc = lambda P: feather_scales(P, Y_TOP, ROWS)
+    sc = lambda P: feather_scales(P, Y_TOP, ROWS, Rr=2.0, cz=0.2)
     fig.add(lambda P: core(P) - sc(P)[0], GREY, k=0.3)
     near_body = lambda P: np.abs(core(P))
     yb = Y_TOP - (ROWS - 1) * 0.24 - 0.42
-    # 흰 배 (비늘 아래)
     fig.paint(masked(lambda P: (P[:, 1] - (yb + 0.1)) * 2.5, near_body, 0.2), BELLY, soft=0.6)
+    fig.paint(masked(lambda P: (P[:, 1] - (y0 + 6.9)) * -1.5, near_body, 0.2), (0.66, 0.66, 0.71), soft=1.4)   # 정수리 살짝 밝게
 
     def row_paint(kset, thr=0.012):
         def f(P):
@@ -212,35 +292,32 @@ def build(fig, rng):
     fig.paint(row_paint([0, 1]), IRI_G, soft=0.5)
     fig.paint(row_paint([2]), IRI_T, soft=0.5)
     fig.paint(row_paint([3, 4, 5]), IRI_P, soft=0.5)
-    # 비늘 아래 끝 밝게 / 겹친 틈 짙게
     def edge_f(P):
         b, row = sc(P)
         return np.where((row >= 0) & (b < 0.035) & (P[:, 1] > yb - 0.1), -1.0, 1.0)
     fig.paint(masked(edge_f, near_body, 0.2), (0.30, 0.34, 0.50), soft=1.2)
     fig.paint(row_paint([0]), (0.50, 0.80, 0.62), soft=1.4)
 
-    # ---- 얼굴 ----
+    # ---- 얼굴: 멍한 반쯤 감긴 눈 (흰자 + 처진 눈꺼풀), 짧은 부리 + 흰 납막, 칠한 볼터치 ----
     for s in (-1, 1):
-        sleepy_eye(fig, core, hc, s, yaw=29, pitch=5, size=0.86, lid_cut=0.06, droop=7, look=(0.0, -0.12),
-                   iris=(0.34, 0.17, 0.07), lid_col=GREY, lid_z=0.55, lid_k=0.15)
+        f = face_frame(fig, hc, s * 31, 4, 'body', out=-0.1)
+        pigeon_eye(fig, f, 0.56, s)
     for s in (-1, 1):   # 이마 짧은 주름 선
-        p0, _ = surf_point(core, hc, s * 22, 30)
-        p1, _ = surf_point(core, hc, s * 33, 29)
+        p0 = face_frame(fig, hc, s * 20, 36, 'body').o
+        p1 = face_frame(fig, hc, s * 32, 34, 'body').o
         fig.paint(masked(S.capsule(p0, p1, 0.04), near_body, 0.1), GREY_D, soft=0.05)
-    # 부리 (짧고 짙은 회색, 끝이 살짝 아래) + 흰 납막
-    fb, ob, Rb = surf_frame(core, hc, 0, -10)
-    n = Rb[:, 2]
+    fb = face_frame(fig, hc, 0, -12, 'body')
+    ob, n = np.array(fb.o), np.array(fb.z)
     m1 = ob + n * 0.2 + np.array((0, -0.03, 0))
-    tip = ob + n * 0.44 + np.array((0, -0.2, 0))
-    fig.add(S.capsule(tuple(ob - n * 0.1), tuple(m1), 0.25, 0.17), BEAK, k=0.12, layer='beak')
-    fig.add(S.capsule(tuple(m1), tuple(tip), 0.16, 0.05), BEAK, k=0.12, layer='beak')
+    tip = ob + n * 0.42 + np.array((0, -0.2, 0))
+    fig.add(S.capsule(tuple(ob - n * 0.1), tuple(m1), 0.23, 0.16), BEAK, k=0.12, layer='beak')
+    fig.add(S.capsule(tuple(m1), tuple(tip), 0.15, 0.05), BEAK, k=0.12, layer='beak')
     fig.paint(S.box(tuple(ob + n * 0.3 + np.array((0, -0.08, 0))), (0.3, 0.012, 0.4)), (0.16, 0.16, 0.2), soft=0.03)
-    fc, oc, Rc = surf_frame(core, hc, 0, -4.5)
-    for x, yy, r in ((-0.12, 0.0, 0.13), (0.12, 0.0, 0.13), (0.0, 0.07, 0.12), (0.0, -0.08, 0.12)):
-        fig.add(S.sphere(tuple(oc + Rc[:, 0] * x + Rc[:, 1] * yy + Rc[:, 2] * 0.12), r), (0.97, 0.96, 0.95), k=0.1, layer='cere')
-    for s in (-1, 1):
-        p, _ = surf_point(core, hc, s * 42, -14)
-        fig.paint(S.sphere(p, 0.5), Fg.BLUSH, soft=0.65)
+    fcere = face_frame(fig, hc, 0, -5, 'body')
+    oc = np.array(fcere.o)
+    for x, yy, r in ((-0.11, 0.0, 0.12), (0.11, 0.0, 0.12), (0.0, 0.065, 0.11), (0.0, -0.07, 0.11)):
+        fig.add(S.sphere(tuple(oc + np.array(fcere.x) * x + np.array(fcere.y) * yy + np.array(fcere.z) * 0.08), r), (0.97, 0.96, 0.95), k=0.1, layer='cere')
+    blush_paint(fig, hc, 46, -17, 'body', size=0.34, soft=0.5)
 
     # ---- 날개 (넓적한 노 모양 + 짙은 깃 끝 3개 + 날개 띠 2줄) ----
     WING = (0.64, 0.64, 0.665)
@@ -249,8 +326,7 @@ def build(fig, rng):
         top, bot = np.asarray(top, float), np.asarray(bot, float)
         dirv = bot - top
         L = np.linalg.norm(dirv)
-        Rw = axis_R(dirv, out_dir)          # 로컬 y = 아래 방향, z = 바깥
-        Rw = np.stack([Rw[:, 2], Rw[:, 1], Rw[:, 0]], axis=1) if False else Rw
+        Rw = axis_R(dirv, out_dir)
         c = top + dirv * 0.5
         we = S.ellipsoid(tuple(c), (0.95, L * 0.6, 0.36), R=Rw)
         fig.add(we, WING, k=0.25, layer=f'wing{s}')
@@ -263,13 +339,11 @@ def build(fig, rng):
         for t in (0.36, 0.55):
             cc = top + dirv * t
             fig.paint(masked(lambda P, cc=cc, nn=dirv / L: np.abs((P - cc) @ nn) - 0.08, wmask, 0.08), GREY_D, soft=0.08)
-    # 오른쪽 (-x): 옆으로 살짝 벌려 내림
-    wing(-1, (-1.85, y0 + 4.2, -0.05), (-2.55, y0 + 2.2, 0.15),
-         [(-2.95, y0 + 1.75, -0.2), (-2.95, y0 + 1.7, 0.25), (-2.75, y0 + 1.8, 0.65)], (-1, 0.0, 0.0))
-    # 왼쪽 (+x): 주머니 테를 쥠
-    bx, by, bz = 2.12, y0 + 2.2, 1.12
-    wing(1, (1.85, y0 + 4.2, 0.0), (2.5, y0 + 2.95, 0.6),
-         [(2.15, y0 + 3.05, 1.55), (2.55, y0 + 2.95, 1.6), (2.85, y0 + 2.8, 1.25)], (1, 0.0, 0.0))
+    wing(-1, (-2.05, y0 + 4.2, -0.05), (-2.75, y0 + 2.2, 0.15),
+         [(-3.15, y0 + 1.75, -0.2), (-3.15, y0 + 1.7, 0.25), (-2.95, y0 + 1.8, 0.65)], (-1, 0.0, 0.0))
+    bx, by, bz = 2.42, y0 + 2.2, 1.22
+    wing(1, (2.05, y0 + 4.2, 0.0), (2.8, y0 + 2.95, 0.7),
+         [(2.45, y0 + 3.05, 1.65), (2.85, y0 + 2.95, 1.7), (3.15, y0 + 2.8, 1.35)], (1, 0.0, 0.0))
 
     # ---- 주머니 (초록 천, 접힌 두꺼운 테, 빵부스러기, 진홍 보석 단추) ----
     bc = np.array((bx, by, bz))
@@ -295,8 +369,8 @@ def build(fig, rng):
 
     # ---- 꼬리 (등 아래 부채꼴: 회색 + 짙은 끝) ----
     for ax in (-0.45, 0.0, 0.45):
-        a = np.array((ax * 0.45, y0 + 2.0, -1.35))
-        b = np.array((ax * 1.2, y0 + 0.75, -2.25))
+        a = np.array((ax * 0.45, y0 + 2.0, -1.6))
+        b = np.array((ax * 1.2, y0 + 0.75, -2.55))
         Rt = axis_R(b - a, (0, 0.4, -1))
         te = S.ellipsoid(tuple((a + b) / 2), (0.42, 0.85, 0.17), R=Rt)
         fig.add(te, (0.52, 0.52, 0.56), k=0.15, layer='tail')
@@ -304,7 +378,7 @@ def build(fig, rng):
 
     # ---- 발 (짧은 분홍 다리 + 앞발가락 3 + 뒷발가락) ----
     for s in (-1, 1):
-        x = s * 0.62
+        x = s * 0.7
         fig.add(S.capsule((x, y0 + 1.0, 0.3), (x * 1.02, y0 + 0.25, 0.4), 0.17, 0.14), FOOT, k=0.1, layer='feet')
         for a in (-30, 0, 30):
             d = np.array((math.sin(math.radians(a + s * 8)), 0, math.cos(math.radians(a + s * 8))))

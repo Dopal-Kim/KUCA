@@ -5,7 +5,8 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, kawaii_eyes2, smile2, blush2)
+from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell, kawaii_eyes2, smile2, blush2,
+                     soft_head, face_frame, eye_pair, mouth_w, blush_paint)
 
 TIER = 'blue'
 
@@ -23,29 +24,28 @@ def build(fig, rng):
     Fg.base(fig, rng, flowers=8)
     y0 = Fg.TOP
     # ---- 머리 ----
-    hc = np.array((0.0, y0 + 6.05, 0.1))
-    head_parts = [S.ellipsoid(hc, (2.25, 1.9, 1.95))]
-    for s in (-1, 1):   # 볼털 (아래 옆으로 통통)
-        head_parts.append(S.ellipsoid((s * 1.2, y0 + 5.35, 0.75), (1.0, 0.8, 0.95)))
-    # ---- 몸통 / 다리 / 팔 ----
-    torso = S.ellipsoid((0, y0 + 2.65, 0.0), (1.4, 1.6, 1.22))
-    chest = S.ellipsoid((0, y0 + 3.2, 0.35), (1.1, 1.0, 0.95))
+    # 넓적한 고양이 두상: 볼 쪽(아래 옆)이 넓은 한 덩어리 (따로 붙인 볼 없음), 위는 살짝 평평
+    hc = np.array((0.0, y0 + 6.25, 0.1))
+    head_parts = [soft_head(hc, (2.12, 1.72, 1.8), flare=0.14, taper=0.05, flare_y=-0.45)]
+    # ---- 몸통 / 다리 / 팔: 날씬하고 유연한 몸, 다리가 조금 긴 편 (약 2.2 등신) ----
+    torso = S.ellipsoid((0, y0 + 2.95, 0.0), (1.1, 1.55, 0.95))
+    chest = S.ellipsoid((0, y0 + 3.5, 0.28), (0.88, 0.9, 0.8))
     legs = []
     for s in (-1, 1):
-        legs.append(S.ellipsoid((s * 0.72, y0 + 1.25, 0.05), (0.72, 0.9, 0.8)))
-        legs.append(S.capsule((s * 0.72, y0 + 1.0, 0.25), (s * 0.75, y0 + 0.4, 0.35), 0.5, 0.48))
-        legs.append(S.ellipsoid((s * 0.75, y0 + 0.33, 0.55), (0.52, 0.33, 0.62)))
-    sh_l, sh_r = np.array((-1.2, y0 + 3.7, 0.15)), np.array((1.2, y0 + 3.7, 0.15))
-    paw_l = np.array((-2.1, y0 + 3.15, 0.95))
-    el_r = np.array((2.1, y0 + 3.0, 0.55))
-    paw_r = np.array((2.45, y0 + 3.75, 1.0))
-    arms = [S.capsule(sh_l, paw_l, 0.5, 0.42), S.ellipsoid(tuple(paw_l), (0.48, 0.5, 0.36), R=basis((-0.3, 0.1, 1.0))),
-            S.capsule(sh_r, el_r, 0.5, 0.44), S.capsule(el_r, paw_r, 0.44, 0.42), S.sphere(paw_r, 0.45)]
+        legs.append(S.ellipsoid((s * 0.6, y0 + 1.55, 0.02), (0.56, 0.85, 0.64)))
+        legs.append(S.capsule((s * 0.6, y0 + 1.2, 0.15), (s * 0.63, y0 + 0.42, 0.28), 0.4, 0.37))
+        legs.append(S.ellipsoid((s * 0.64, y0 + 0.31, 0.48), (0.44, 0.3, 0.56)))
+    sh_l, sh_r = np.array((-0.95, y0 + 3.95, 0.12)), np.array((0.95, y0 + 3.95, 0.12))
+    paw_l = np.array((-1.85, y0 + 3.35, 0.95))
+    el_r = np.array((1.75, y0 + 3.25, 0.5))
+    paw_r = np.array((2.1, y0 + 4.0, 1.0))
+    arms = [S.capsule(sh_l, paw_l, 0.4, 0.34), S.ellipsoid(tuple(paw_l), (0.42, 0.44, 0.32), R=basis((-0.3, 0.1, 1.0))),
+            S.capsule(sh_r, el_r, 0.4, 0.35), S.capsule(el_r, paw_r, 0.35, 0.34), S.sphere(paw_r, 0.39)]
     # 꼬리 (뒤에서 +x 쪽으로 감아 올림)
-    tail_pts = [np.array(p) for p in ((0.1, y0 + 1.35, -1.0), (0.55, y0 + 1.05, -1.75), (0.85, y0 + 1.6, -2.25),
-                                       (0.85, y0 + 2.6, -2.25), (0.6, y0 + 3.35, -1.95))]
-    tail = [S.capsule(tuple(a), tuple(b), 0.42, 0.42) for a, b in zip(tail_pts, tail_pts[1:])]
-    tail.append(S.sphere(tuple(tail_pts[-1]), 0.44))
+    tail_pts = [np.array(p) for p in ((0.1, y0 + 1.7, -0.8), (0.55, y0 + 1.2, -1.6), (0.9, y0 + 1.7, -2.2),
+                                       (0.95, y0 + 2.7, -2.3), (0.7, y0 + 3.5, -2.0))]
+    tail = [S.capsule(tuple(a), tuple(b), 0.36, 0.38) for a, b in zip(tail_pts, tail_pts[1:])]
+    tail.append(S.sphere(tuple(tail_pts[-1]), 0.4))
 
     def core(P):
         d = S.smin(torso(P), chest(P), 0.5)
@@ -53,10 +53,7 @@ def build(fig, rng):
             d = S.smin(d, g(P), 0.3)
         for g in arms:
             d = S.smin(d, g(P), 0.25)
-        h = head_parts[0](P)
-        for g in head_parts[1:]:
-            h = S.smin(h, g(P), 0.6)
-        d = S.smin(d, h, 0.55)
+        d = S.smin(d, head_parts[0](P), 0.5)
         t = tail[0](P)
         for g in tail[1:]:
             t = S.smin(t, g(P), 0.3)
@@ -65,8 +62,8 @@ def build(fig, rng):
     # ---- 귀 (세모, 안쪽 분홍 오목) — 왼쪽(+x) 귀 끝은 TNR 컷 ----
     ear_fs = []
     for s in (-1, 1):
-        b = np.array((s * 1.25, y0 + 7.3, -0.05))
-        t = np.array((s * 1.95, y0 + 9.15, -0.05))
+        b = np.array((s * 1.25, y0 + 7.35, -0.05))
+        t = np.array((s * 1.9, y0 + 9.05, -0.05))
         Re = axis_R(t - b, (s * 0.15, 0, 1))
         cone = S.capsule(tuple(b), tuple(t), 0.95, 0.1)
         slab = S.box(tuple((b + t) / 2), (2, 2, 0.32), round_=0.0, R=Re)
@@ -92,7 +89,7 @@ def build(fig, rng):
         wob = 0.12 * np.sin(P[:, 0] * 2.0) + 0.25 * np.abs(P[:, 0]) * 0.4
         band = np.cos(2 * math.pi * (y - wob) / 0.62) - 0.45
         back = -P[:, 2] - 0.2 * np.abs(P[:, 0]) + 0.6      # 앞쪽 흰 배에는 없음
-        return np.where((y < y0 + 4.3) & (back > 0), -band, 1.0) * 0.6
+        return np.where((y < y0 + 4.45) & (back > 0), -band, 1.0) * 0.6
     fig.paint(masked(stripes_body, nb, 0.08), STRIPE, soft=0.14)
 
     def stripes_head(P):
@@ -100,7 +97,7 @@ def build(fig, rng):
         y = q[:, 1]
         th = np.arctan2(q[:, 0], q[:, 2])
         band = np.cos(2 * math.pi * (y + 0.25 * np.abs(np.sin(th))) / 0.55) - 0.35
-        side = np.abs(th) > 0.85
+        side = (np.abs(th) > 1.1) | (y > 0.75)
         return np.where(side & (y > -1.4) & (y < 1.75), -band, 1.0) * 0.6
     fig.paint(masked(stripes_head, lambda P: np.abs(head_parts[0](P)), 0.12), STRIPE, soft=0.14)
     for x0, tilt in ((-0.45, 6), (0.0, 0), (0.45, -6)):   # 이마 'M' 줄
@@ -138,8 +135,8 @@ def build(fig, rng):
             fig.paint(masked(lambda P, s=s, yy=yy: np.maximum(np.abs(P[:, 1] - yy - 0.15 * (P[:, 2])) - 0.08, (0.45 - s * P[:, 0]) * 3), nb, 0.08), STRIPE, soft=0.08)
     # ---- 흰 부분: 주둥이·볼 아래, 이마 가운데, 가슴·배, 발, 꼬리 끝 ----
     def muzzle(P):
-        q = P - (hc + (0, -0.75, 1.3))
-        return np.hypot(q[:, 0] / 1.45, q[:, 1] / 0.95) - 1.0 + np.clip(-q[:, 2], 0, None) * 0.8
+        q = P - (hc + (0, -0.8, 1.25))
+        return np.hypot(q[:, 0] / 1.7, q[:, 1] / 1.0) - 1.0 + np.clip(-q[:, 2], 0, None) * 0.8
     fig.paint(masked(muzzle, nb, 0.1), WHITE, soft=0.3)
     fig.paint(masked(lambda P: np.hypot(P[:, 0] / (0.12 + 0.3 * np.clip((hc[1] + 0.75 - P[:, 1]) / 0.8, 0, 1)), (P[:, 1] - (hc[1] - 0.1)) / 0.85) - 1.0 + np.clip(1.4 - P[:, 2], 0, None) * 2, nb, 0.1), WHITE, soft=0.4)
     def belly(P):
@@ -163,17 +160,18 @@ def build(fig, rng):
         fig.add(S.capsule(tuple(p - Re[:, 1] * 0.1), tuple(p + Re[:, 1] * 0.16 + Re[:, 0] * dx * 0.4), 0.13, 0.06), WHITE, k=0.1, layer='tuft')
 
     # ---- 얼굴 ----
-    face = head_parts[0]
-    face_all = lambda P: S.smin(S.smin(head_parts[0](P), head_parts[1](P), 0.6), head_parts[2](P), 0.6)
-    kawaii_eyes2(fig, face_all, hc, spread=27, pitch=-3, size=0.6, tall=1.1)
-    fn_, on_, Rn_ = surf_frame(face_all, hc, 0, -16, 0.02)
-    ell(fig.extra, fn_, (0, 0, 0), (0.15, 0.1, 0.08), PAD, 12, 6)
-    smile2(fig, face_all, hc, pitch=-24, w=0.3)
-    blush2(fig, face_all, hc, spread=44, pitch=-18, size=0.5, soft=0.65)
+    face_all = head_parts[0]
+    # 고양이 눈: 호박색 큰 홍채 + 세로 동공, 눈꼬리 살짝 올라감
+    eye_pair(fig, hc, 28, -4, 'cat', 0.56, iris=(0.88, 0.56, 0.12), layer='body', tilt=8, sink=0.15)
+    fn_ = face_frame(fig, hc, 0, -17, 'body', out=-0.02)
+    Fg._ellipsoid(fig.extra, (0, 0.02, 0), (0.15, 0.1, 0.08), PAD, 12, 6, fn_)
+    mouth_w(fig, face_frame(fig, hc, 0, -24, 'body', out=0.0), w=0.3)
+    blush_paint(fig, hc, 45, -20, 'body', size=0.45, soft=0.6)
     # 수염 (가는 흰 선, 양쪽 3가닥)
     for s in (-1, 1):
         for k, (dy, ang) in enumerate(((0.12, 8), (0.0, 0), (-0.12, -8))):
-            p0, n0 = surf_point(face_all, hc, s * 38, -16 + k * -3)
+            ff = face_frame(fig, hc, s * 40, -18 + k * -3, 'body')
+            p0, n0 = np.array(ff.o), np.array(ff.z)
             dvec = np.array((s * math.cos(math.radians(ang)), math.sin(math.radians(ang)), 0.25))
             dvec /= np.linalg.norm(dvec)
             for j in range(22):
@@ -200,7 +198,7 @@ def build(fig, rng):
         fig.add(S.ellipsoid(tuple(on_paw(dx, dy)), (0.08, 0.085, 0.06), R=Rp), PAD, k=0.0, layer='pad')
 
     # ---- 목줄 (몸 표면을 따라 도는 파란 띠) + 금방울 + 진홍 이름표 ----
-    yc = y0 + 4.02
+    yc = y0 + 4.42
     neck = lambda P: S.smin(S.smin(torso(P), chest(P), 0.5), head_parts[0](P), 0.55)
     ax_ = surf_point(neck, (0, yc, 0.0), 90, 0)[0][0]
     az_ = surf_point(neck, (0, yc, 0.0), 0, 0)[0][2]
