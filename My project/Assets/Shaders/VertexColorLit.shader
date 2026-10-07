@@ -55,7 +55,13 @@ Shader "KUCA/VertexColorLit"
 
             half4 frag (Varyings i) : SV_Target
             {
-                half3 color = KucaShade(i.color.rgb, normalize(i.normalWS), i.positionWS);
+                float3 nrm = normalize(i.normalWS);
+                half3 albedo = KucaSeasonFoliage(i.color.rgb, i.positionWS, nrm);
+                half3 color = KucaShade(albedo, nrm, i.positionWS);
+                color += KucaNightLight(albedo, i.positionWS, 0.6h);   // 근처 등불이 나무·벤치에 비침
+                color = KucaSunWash(color, i.positionCS);
+                // 버텍스 알파 0 = 가로등 머리·유리문 등 밤에 빛나는 부분
+                color += i.color.rgb * _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (1.0 - i.color.a) * 2.0;
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

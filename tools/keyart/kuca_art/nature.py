@@ -18,7 +18,7 @@ SHRUB = [(0.34, 0.60, 0.20), (0.40, 0.66, 0.23), (0.30, 0.56, 0.19)]
 FLOWER = [(0.98, 0.62, 0.76), (1.0, 0.94, 0.95), (0.99, 0.85, 0.36)]
 
 # 종류: (차지 반지름 m, 바닥 그늘 반지름 m, 그늘 세기)
-KINDS = {'cone': (2.6, 2.8, 0.42), 'round': (3.0, 3.2, 0.40), 'cherry': (2.9, 3.0, 0.36),
+KINDS = {'cone_lo': (2.6, 2.8, 0.42), 'round_lo': (3.0, 3.2, 0.40), 'cone': (2.6, 2.8, 0.42), 'round': (3.0, 3.2, 0.40), 'cherry': (2.9, 3.0, 0.36),
          'small_cone': (1.3, 1.5, 0.35), 'shrub': (1.2, 1.5, 0.32)}
 
 
@@ -40,7 +40,6 @@ def draw_tree(mb, kind, x, z, s, rot, rng):
         mb.ao_strength = 0.0
         mb.ico(m, (0, 4.7, 0), (3.0, 2.6, 3.0), base)
         mb.ico(m, (1.3, 5.6, 0.5), (1.9, 1.7, 1.9), shade(mix(base, (0.62, 0.82, 0.32), 0.3), 1.03))
-        mb.ico(m, (-1.2, 4.3, -0.9), (1.8, 1.5, 1.8), shade(base, 0.95))
     elif kind == 'cherry':
         mb.prism(m, (0, 0, 0), 0.36, 2.3, 5, TRUNK, r_top=0.26)
         mb.prism(m, (0.2, 2.1, 0), 0.18, 1.2, 5, TRUNK)
@@ -48,18 +47,29 @@ def draw_tree(mb, kind, x, z, s, rot, rng):
         mb.ico(m, (0, 4.4, 0), (2.7, 2.1, 2.7), pick(BLOSSOM))
         mb.ico(m, (1.5, 3.8, 0.6), (1.8, 1.5, 1.8), pick(BLOSSOM))
         mb.ico(m, (-1.3, 3.9, -0.8), (1.8, 1.4, 1.8), pick(BLOSSOM))
-        mb.ico(m, (0.2, 5.4, -0.4), (1.5, 1.2, 1.5), shade(pick(BLOSSOM), 1.04))
     elif kind == 'small_cone':
         base = pick(EVERGREEN)
         mb.prism(m, (0, 0, 0), 0.18, 0.6, 4, TRUNK)
         mb.ao_strength = 0.0
         mb.cone(m, (0, 0.4, 0), 1.25, 3.0, 6, shade(base, 1.02), rot=rng.uniform(0, 60), jitter=jit, bottom=False)
+    elif kind == 'cone_lo':
+        # 멀리 있는 숲·지도 바깥용: 줄기 없이 원뿔 두 단 (정점 36개)
+        base = pick(EVERGREEN)
+        mb.ao_strength = 0.3
+        mb.cone(m, (0, 0.0, 0), 3.0, 5.6, 6, shade(base, 0.92), rot=rng.uniform(0, 60), jitter=jit, bottom=False)
+        mb.ao_strength = 0.0
+        mb.cone(m, (0, 3.6, 0), 2.1, 4.4, 6, base, rot=rng.uniform(0, 60), bottom=False)
+    elif kind == 'round_lo':
+        base = pick(LEAFY)
+        mb.prism(m, (0, 0, 0), 0.38, 2.6, 4, TRUNK, r_top=0.28)
+        mb.ao_strength = 0.0
+        mb.ico(m, (0, 4.7, 0), (3.1, 2.7, 3.1), base)
     else:  # shrub
         base = pick(SHRUB)
         mb.ao_strength = 0.3
         mb.ao_height = 1.0
         mb.ico(m, (0, 0.7, 0), (1.25, 0.95, 1.25), base)
-        if rng.random() < 0.35:   # 꽃 핀 관목
+        if rng.random() < 0.22:   # 꽃 핀 관목
             fc = pick(FLOWER)
             for k in range(3):
                 a = rng.uniform(0, 6.28)
@@ -111,12 +121,13 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
             if L < 1:
                 continue
             nx, nz = -(b[1] - a[1]) / L, (b[0] - a[0]) / L
-            n = int(L // 18)
+            n = int(L // 14)
             for i in range(n):
                 t = (i + 0.5) / max(n, 1)
                 cx, cz = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
                 for sgn in (1, -1):
-                    p.add(cx + nx * off * sgn, cz + nz * off * sgn, rng.choices(['cherry', 'round', 'cone'], [0.7, 0.2, 0.1])[0])
+                    kind = rng.choices(['cherry', 'round', 'cone'], [0.75, 0.15, 0.1])[0]
+                    p.add(cx + nx * off * sgn, cz + nz * off * sgn, kind, scale=rng.uniform(1.05, 1.3) if kind == 'cherry' else None)
 
     # 2) 대운동장 둘레 벚꽃길: 트랙 바깥 6 m, 9 m 간격
     if g.track.any():
@@ -132,8 +143,9 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
                     taken.append((x, z))
 
     # 3) 건물 모서리 정원수 (컨셉아트 아이콘의 원뿔 나무 무리)
+    from .buildings import OUTSIDE_IDS
     for b in buildings:
-        if b.id in skip_ids or b.h < 5 or b.area < 150:
+        if b.id in skip_ids or b.id in OUTSIDE_IDS or b.h < 5 or b.area < 150:
             continue
         ring = offset_polygon(b.poly, 5.5)
         for (x, z) in ring:
@@ -144,7 +156,12 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
                           rng.choices(['small_cone', 'cone', 'shrub'], [0.55, 0.25, 0.2])[0], scale=rng.uniform(0.8, 1.1))
 
     # 4) 숲, 공원, 그 밖의 잔디
-    p.scatter(11, forest, 0.85, [0.65, 0.3, 0.05])
+    deep = _deep_forest(g)
+    p.scatter(11, lambda x, z: forest(x, z) and not g.has(deep, x, z), 0.85, [0.65, 0.3, 0.05])
+    p.scatter(11, lambda x, z: g.has(deep, x, z), 0.85, [0.7, 0.3], kinds=('cone_lo', 'round_lo'))
+    # 숲 가장자리 층: 바깥 0~5 m 에 관목·작은 원뿔을 촘촘히
+    edge = _forest_edge(g)
+    p.scatter(4.5, lambda x, z: g.has(edge, x, z), 0.55, [0.55, 0.45], kinds=('shrub', 'small_cone'))
     p.scatter(13, park, 0.5, [0.35, 0.25, 0.4])
     p.scatter(20, other, 0.28, [0.45, 0.25, 0.3])
 
@@ -159,8 +176,22 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
                 continue
             if rng.random() < 0.8:
                 px, pz = x + rng.uniform(-5, 5), z + rng.uniform(-5, 5)
-                p.add(px, pz, rng.choices(['cone', 'round', 'cherry'], [0.65, 0.3, 0.05])[0], ignore_block=True)
+                p.add(px, pz, rng.choices(['cone_lo', 'round_lo'], [0.7, 0.3])[0], ignore_block=True)
     return p.counts
+
+
+def _deep_forest(g):
+    """숲 안쪽: 길·건물·숲 가장자리에서 25 m 이상 (카메라에서 덩어리로만 보이는 곳)"""
+    from scipy import ndimage
+    d_edge = ndimage.distance_transform_edt(g.forest) / g.ppm
+    d_env = ndimage.distance_transform_edt(~(g.blocked_env | g.buildings)) / g.ppm
+    return (d_edge > 25) & (d_env > 25)
+
+
+def _forest_edge(g):
+    from scipy import ndimage
+    d_out = ndimage.distance_transform_edt(~g.forest) / g.ppm
+    return (d_out > 0.5) & (d_out < 5.0)
 
 
 def _near(g, x, z):
@@ -175,6 +206,8 @@ def _near(g, x, z):
 
 # ---------- 소품: 가로등, 벤치 ----------
 
+LIGHTS = []   # 밤 바닥 불빛 웅덩이: (x, z, 반지름 m, 세기) — build_art 가 KeyArtLights.png 로 그린다
+
 LAMP_POLE = (0.32, 0.34, 0.38)
 LAMP_HEAD = (1.0, 0.97, 0.86)
 WOOD = (0.66, 0.47, 0.30)
@@ -183,12 +216,16 @@ METAL = (0.36, 0.38, 0.42)
 
 def draw_lamp(mb, x, z, face_yaw):
     m = Frame.yaw((x, 0.0, z), face_yaw)
+    hx, _, hz = m.p((0, 0, 0.75))
+    LIGHTS.append((hx, hz, 6.0, 0.9))
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.2
     mb.prism(m, (0, 0, 0), 0.28, 0.45, 6, LAMP_POLE)
     mb.ao_strength = 0.0
     mb.prism(m, (0, 0.45, 0), 0.13, 4.6, 6, LAMP_POLE, r_top=0.1)
     mb.box(m, (0, 5.0, 0.35), (0.14, 0.12, 0.8), LAMP_POLE)
+    mb.emissive = True
     mb.box(m, (0, 4.75, 0.75), (0.55, 0.45, 0.55), LAMP_HEAD, top=LAMP_HEAD)
+    mb.emissive = False
     mb.box(m, (0, 5.05, 0.75), (0.75, 0.14, 0.75), LAMP_POLE)
     mb.ao_strength = 0.25
 

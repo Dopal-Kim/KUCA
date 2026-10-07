@@ -18,6 +18,10 @@ public static class KeyArtMapSetup
     const string GroundTex = Dir + "/CampusGround.jpg";
     const string DetailTex = Dir + "/GrassDetail.png";
     const string GeometryFile = Dir + "/KeyArtGeometry.bytes";
+    const string HeightFile = Dir + "/KeyArtHeight.bytes";
+    const string LightsTex = Dir + "/KeyArtLights.png";
+    const string TerrainMat = Dir + "/KeyArtTerrain.mat";
+    const string TerrainRoot = "KeyArtTerrain";
     const string ManifestFile = Dir + "/KeyArtManifest.json";
     const string LookFile = Dir + "/KeyArtLook.json";
     const string GroundMat = Dir + "/KeyArtGround.mat";
@@ -61,17 +65,75 @@ public static class KeyArtMapSetup
     class Style
     {
         public float[] wall, trim, window, roof;
-        public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick;
+        public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick, arch;
     }
-    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick; }
+    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick, Outside; }
+    [System.Serializable]
+    class Sunny
+    {
+        public float wrap = 0.35f, warmTop = 0.16f, rim = 0.22f, saturation = 1.12f, wash = 0.1f;
+        public float[] shadowTint, washColor;
+    }
+    [System.Serializable] class ModeSky { public float[] tint; public float exposure = 1.3f; }
+    [System.Serializable]
+    class ModePreset
+    {
+        public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
+        public float night; public ModeSky sky;
+    }
+    [System.Serializable] class Modes { public ModePreset day, sunset, night; }
+    [System.Serializable] class SeasonRow { public float[] leaf, blossom, grass; public float autumn, snow; }
+    [System.Serializable] class Seasons { public SeasonRow spring, summer, autumn, winter; }
+    [System.Serializable] class Glow { public float[] color; public float litWindows = 0.55f, strength = 1.6f, groundLight = 0.9f; }
     [System.Serializable]
     class Look
     {
-        public Sun sun; public Ambient ambient; public float shadowStrength; public Fog fog;
+        public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
+        public Modes modes; public Glow glow; public Seasons seasons;
         public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
     }
+
+    static Vector3 V3(float[] c) => new Vector3(c[0], c[1], c[2]);
+
+    static KeyArtLook.SeasonPalette ToSeason(SeasonRow r)
+    {
+        var p = new KeyArtLook.SeasonPalette();
+        if (r == null) return p;
+        if (r.leaf != null && r.leaf.Length >= 3) p.leaf = V3(r.leaf);
+        if (r.grass != null && r.grass.Length >= 3) p.grass = V3(r.grass);
+        if (r.blossom != null && r.blossom.Length >= 4)
+        {
+            p.blossom = Srgb(r.blossom);
+            p.blossomMix = r.blossom[3];
+        }
+        p.autumn = r.autumn;
+        p.snow = r.snow;
+        return p;
+    }
+
+    /// <summary>JSON 모드 프리셋 → KeyArtLook.Preset</summary>
+    static KeyArtLook.Preset ToPreset(ModePreset m)
+    {
+        var p = new KeyArtLook.Preset
+        {
+            sunColor = Srgb(m.sun.color), sunIntensity = m.sun.intensity, sunPitch = m.sun.pitch, sunYaw = m.sun.yaw,
+            skyAmbient = V3(m.ambient.sky), groundAmbient = V3(m.ambient.ground), shadowStrength = m.shadowStrength,
+            wrap = m.sunny.wrap, warmTop = m.sunny.warmTop, rim = m.sunny.rim, saturation = m.sunny.saturation, wash = m.sunny.wash,
+            fogColor = Srgb(m.fog.color), fogStart = m.fog.start, fogEnd = m.fog.end, night = m.night,
+        };
+        if (m.sunny.shadowTint != null && m.sunny.shadowTint.Length >= 3) p.shadowTint = V3(m.sunny.shadowTint);
+        if (m.sunny.washColor != null && m.sunny.washColor.Length >= 3) p.washColor = Srgb(m.sunny.washColor);
+        if (m.sky != null && m.sky.tint != null && m.sky.tint.Length >= 3)
+        {
+            p.skyTint = Srgb(m.sky.tint);
+            p.skyExposure = m.sky.exposure;
+        }
+        return p;
+    }
     [System.Serializable] class StyleRow { public string id, style; }
-    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; }
+    [System.Serializable] class HeightRow { public string id; public float scale = 1f; }
+    [System.Serializable] class BaseRow { public string id; public float y; }
+    [System.Serializable] class Manifest { public StyleRow[] styles; public string[] hidden; public HeightRow[] heights; public BaseRow[] bases; public bool replaceBuildings; }
 
     static Color Srgb(float[] c) => new Color(c[0], c[1], c[2]);   // Unity Color 는 감마(sRGB) 값
 
@@ -105,7 +167,22 @@ public static class KeyArtMapSetup
         ground.SetTexture("_DetailMap", AssetDatabase.LoadAssetAtPath<Texture2D>(DetailTex));
         ground.SetFloat("_DetailTile", look.grassDetail.tile);
         ground.SetFloat("_DetailStrength", look.grassDetail.strength);
+        var lImp = AssetImporter.GetAtPath(LightsTex) as TextureImporter;
+        if (lImp != null)
+        {
+            lImp.sRGBTexture = false;
+            lImp.wrapMode = TextureWrapMode.Clamp;
+            lImp.textureCompression = TextureImporterCompression.CompressedHQ;
+            lImp.SaveAndReimport();
+        }
         EditorUtility.SetDirty(ground);
+
+        // 지형 메시용: 같은 지면 텍스처를 월드 좌표로
+        Material terrainMat = LoadOrCreate(TerrainMat, "KUCA/StylizedGround");
+        terrainMat.CopyPropertiesFromMaterial(ground);
+        terrainMat.SetFloat("_WorldUV", 1f);
+        terrainMat.SetVector("_MapSize", new Vector4(1418f, 1548f, 0f, 0f));
+        EditorUtility.SetDirty(terrainMat);
 
         Material outer = LoadOrCreate(OuterMat, "KUCA/StylizedGround");
         outer.SetTexture("_BaseMap", null);
@@ -125,6 +202,8 @@ public static class KeyArtMapSetup
             { "Glass", StyleMaterial(Dir + "/KeyArtBuilding_Glass.mat", look.styles.Glass, hs) },
             { "Brick", StyleMaterial(Dir + "/KeyArtBuilding_Brick.mat", look.styles.Brick, hs) },
         };
+        if (look.styles.Outside != null)
+            styleMats["Outside"] = StyleMaterial(Dir + "/KeyArtBuilding_Outside.mat", look.styles.Outside, hs);
         Material vertexColor = LoadOrCreate(VertexColorMat, "KUCA/VertexColorLit");
         vertexColor.SetColor("_Tint", Color.white);
         EditorUtility.SetDirty(vertexColor);
@@ -142,6 +221,9 @@ public static class KeyArtMapSetup
         Undo.RecordObject(map.GetComponent<Renderer>(), "Key Art");
         map.GetComponent<Renderer>().sharedMaterial = ground;
         map.GetComponent<Renderer>().receiveShadows = true;
+        // 지형 메시(Terrain_*)가 지면을 그리므로 평평한 Map 은 숨긴다 (충돌체는 남김)
+        bool hasTerrain = System.IO.File.Exists(HeightFile);
+        map.GetComponent<Renderer>().enabled = !hasTerrain;
         // 실행할 때 Mapbox 지도를 다시 받아 덮어쓰지 않게 한다.
         var campusMap = Object.FindAnyObjectByType<CampusMap>();
         if (campusMap != null)
@@ -150,8 +232,10 @@ public static class KeyArtMapSetup
             campusMap.downloadOnStart = false;
         }
 
+        SetTerrain(hasTerrain);
+        SetSpotGlow();
         ApplyBuildingStyles(styleMats, manifest, hs);
-        BuildGeometry(vertexColor, styleMats);
+        BuildGeometry(vertexColor, styleMats, hasTerrain ? terrainMat : null);
         SetOuterGround(outer, true);
         SetLighting(look, sky, true);
         SetCamera(look.camera);
@@ -161,6 +245,50 @@ public static class KeyArtMapSetup
         EditorSceneManager.MarkSceneDirty(map.scene);
         EditorSceneManager.SaveScene(map.scene);
         Debug.Log("[KeyArtMapSetup] 키아트 스타일을 적용했습니다.");
+    }
+
+    // ---------- 시간대 ----------
+
+    [MenuItem("KUCA/Time of Day/Auto (기기 시계)")] static void TimeAuto() => SetTime(KeyArtLook.Mode.Auto);
+    [MenuItem("KUCA/Time of Day/Day 낮")] static void TimeDay() => SetTime(KeyArtLook.Mode.Day);
+    [MenuItem("KUCA/Time of Day/Sunset 노을")] static void TimeSunset() => SetTime(KeyArtLook.Mode.Sunset);
+    [MenuItem("KUCA/Time of Day/Night 밤")] static void TimeNight() => SetTime(KeyArtLook.Mode.Night);
+
+    static void SetTime(KeyArtLook.Mode m)
+    {
+        var kl = Object.FindAnyObjectByType<KeyArtLook>();
+        if (kl == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", "먼저 KUCA → Map Style → Apply Key Art 를 실행하세요.", "확인");
+            return;
+        }
+        Undo.RecordObject(kl, "Time of day");
+        if (kl.sun != null) Undo.RecordObject(kl.sun, "Time of day");
+        kl.SetMode(m);
+        EditorUtility.SetDirty(kl);
+        EditorSceneManager.MarkSceneDirty(kl.gameObject.scene);
+        SceneView.RepaintAll();
+    }
+
+    [MenuItem("KUCA/Season/Auto (기기 날짜)")] static void SeasonAuto() => SetSeason(KeyArtLook.Season.Auto);
+    [MenuItem("KUCA/Season/Spring 봄")] static void SeasonSpring() => SetSeason(KeyArtLook.Season.Spring);
+    [MenuItem("KUCA/Season/Summer 여름")] static void SeasonSummer() => SetSeason(KeyArtLook.Season.Summer);
+    [MenuItem("KUCA/Season/Autumn 가을")] static void SeasonAutumn() => SetSeason(KeyArtLook.Season.Autumn);
+    [MenuItem("KUCA/Season/Winter 겨울")] static void SeasonWinter() => SetSeason(KeyArtLook.Season.Winter);
+
+    static void SetSeason(KeyArtLook.Season season)
+    {
+        var kl = Object.FindAnyObjectByType<KeyArtLook>();
+        if (kl == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", "먼저 KUCA → Map Style → Apply Key Art 를 실행하세요.", "확인");
+            return;
+        }
+        Undo.RecordObject(kl, "Season");
+        kl.SetSeason(season);
+        EditorUtility.SetDirty(kl);
+        EditorSceneManager.MarkSceneDirty(kl.gameObject.scene);
+        SceneView.RepaintAll();
     }
 
     [MenuItem("KUCA/Map Style/Apply Mapbox")]
@@ -174,6 +302,14 @@ public static class KeyArtMapSetup
         var buildings = GameObject.Find("Buildings");
         Undo.RecordObject(buildings.transform, "Mapbox");
         buildings.transform.localScale = Vector3.one;
+        foreach (CampusBuildingInfo info in buildings.GetComponentsInChildren<CampusBuildingInfo>(true))
+        {
+            Undo.RecordObject(info.transform, "Mapbox");
+            info.transform.localScale = Vector3.one;
+            Vector3 lp = info.transform.localPosition;
+            lp.y = 0f;
+            info.transform.localPosition = lp;
+        }
         foreach (Renderer r in buildings.GetComponentsInChildren<Renderer>(true))
         {
             Undo.RecordObject(r, "Mapbox");
@@ -182,6 +318,8 @@ public static class KeyArtMapSetup
         }
         DestroyIfExists(GeometryRoot);
         DestroyIfExists(LookRoot);
+        DestroyIfExists(TerrainRoot);
+        map.GetComponent<Renderer>().enabled = true;
         foreach (string n in OldRoots) DestroyIfExists(n);
         SetOuterGround(null, false);
         SetLighting(null, null, false);
@@ -203,6 +341,7 @@ public static class KeyArtMapSetup
         mat.SetFloat("_WindowHeight", st.windowHeight);
         mat.SetFloat("_PilasterEvery", st.pilasterEvery);
         mat.SetFloat("_Brick", st.brick);
+        mat.SetFloat("_Arch", st.arch);
         EditorUtility.SetDirty(mat);
         return mat;
     }
@@ -213,6 +352,13 @@ public static class KeyArtMapSetup
         var styleOf = new Dictionary<string, string>();
         foreach (StyleRow row in manifest.styles) styleOf[row.id] = row.style;
         var hidden = new HashSet<string>(manifest.hidden);
+        // 실제 층수로 바로잡은 건물 높이 (건물 메시는 원점 기준 월드 좌표라 Y 배율만 주면 된다)
+        var heightOf = new Dictionary<string, float>();
+        if (manifest.heights != null)
+            foreach (HeightRow row in manifest.heights) heightOf[row.id] = row.scale;
+        var baseOf = new Dictionary<string, float>();
+        if (manifest.bases != null)
+            foreach (BaseRow row in manifest.bases) baseOf[row.id] = row.y;
 
         var root = GameObject.Find("Buildings");
         // 미니어처 비율: 건물 높이만 키운다 (build_art.py 도 같은 배율로 난간·지붕 디테일을 올림)
@@ -224,7 +370,14 @@ public static class KeyArtMapSetup
             if (r == null) continue;
             Undo.RecordObject(r, "Building style");
             r.sharedMaterial = mats[styleOf.TryGetValue(info.buildingId, out string s) && mats.ContainsKey(s) ? s : "Default"];
-            r.enabled = !hidden.Contains(info.buildingId);
+            // replaceBuildings: 둥근 모서리 Shell 메시가 대신 보이므로 상자는 모두 숨김 (충돌체·건물 정보·경희스팟 위치는 그대로)
+            r.enabled = !manifest.replaceBuildings && !hidden.Contains(info.buildingId);
+            Undo.RecordObject(info.transform, "Building height");
+            info.transform.localScale = new Vector3(1f, heightOf.TryGetValue(info.buildingId, out float hsc) ? hsc : 1f, 1f);
+            // 지형 터 높이만큼 올린다 (부모 Buildings 가 Y 로 heightScale 배라 나눠 준다)
+            Vector3 lp = info.transform.localPosition;
+            lp.y = baseOf.TryGetValue(info.buildingId, out float by) ? by / heightScale : 0f;
+            info.transform.localPosition = lp;
             r.shadowCastingMode = ShadowCastingMode.On;
             r.receiveShadows = true;
         }
@@ -236,7 +389,41 @@ public static class KeyArtMapSetup
         }
     }
 
-    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats)
+    /// <summary>경희스팟 배지 뒤 후광 재질을 만들어 KyungHeeSpots 에 넣는다</summary>
+    static void SetSpotGlow()
+    {
+        var spots = Object.FindAnyObjectByType<KyungHeeSpots>();
+        if (spots == null) return;
+        Material glow = LoadOrCreate(Dir + "/KeyArtSpotGlow.mat", "KUCA/SpotGlow");
+        glow.SetColor("_Color", new Color(1f, 0.86f, 0.55f));
+        EditorUtility.SetDirty(glow);
+        Undo.RecordObject(spots, "Spot glow");
+        spots.glowMaterial = glow;
+    }
+
+    static void SetTerrain(bool on)
+    {
+        var go = GameObject.Find(TerrainRoot);
+        if (!on)
+        {
+            if (go != null) Undo.DestroyObjectImmediate(go);
+            return;
+        }
+        if (go == null)
+        {
+            go = new GameObject(TerrainRoot);
+            Undo.RegisterCreatedObjectUndo(go, "Key Art terrain");
+        }
+        var t = go.GetComponent<KeyArtTerrain>();
+        if (t == null) t = Undo.AddComponent<KeyArtTerrain>(go);
+        Undo.RecordObject(t, "Key Art terrain");
+        t.heightmap = AssetDatabase.LoadAssetAtPath<TextAsset>(HeightFile);
+        t.Load();
+        t.enabled = false;   // OnEnable 로 활성 지형 등록
+        t.enabled = true;
+    }
+
+    static void BuildGeometry(Material mat, Dictionary<string, Material> styleMats, Material terrainMat)
     {
         foreach (string n in OldRoots) DestroyIfExists(n);
         var go = GameObject.Find(GeometryRoot);
@@ -252,6 +439,7 @@ public static class KeyArtMapSetup
         geo.material = mat;
         geo.shellStyles = new List<string>(styleMats.Keys).ToArray();
         geo.shellMaterials = new List<Material>(styleMats.Values).ToArray();
+        geo.terrainMaterial = terrainMat;
         geo.castShadows = ShadowCastingMode.On;
         geo.Build();
         Debug.Log($"[KeyArtMapSetup] 키아트 지오메트리 정점 {geo.VertexCount:N0}개");
@@ -320,10 +508,27 @@ public static class KeyArtMapSetup
             var kl = lookGo.GetComponent<KeyArtLook>();
             if (kl == null) kl = Undo.AddComponent<KeyArtLook>(lookGo);
             Undo.RecordObject(kl, "Key Art look");
-            kl.skyAmbient = new Vector3(look.ambient.sky[0], look.ambient.sky[1], look.ambient.sky[2]);
-            kl.groundAmbient = new Vector3(look.ambient.ground[0], look.ambient.ground[1], look.ambient.ground[2]);
-            kl.shadowStrength = look.shadowStrength;
-            kl.Apply();
+            kl.day = ToPreset(look.modes.day);
+            kl.sunset = ToPreset(look.modes.sunset);
+            kl.night = ToPreset(look.modes.night);
+            if (look.glow != null)
+            {
+                if (look.glow.color != null && look.glow.color.Length >= 3) kl.glowColor = Srgb(look.glow.color);
+                kl.litWindows = look.glow.litWindows;
+                kl.glowStrength = look.glow.strength;
+                kl.groundLight = look.glow.groundLight;
+            }
+            kl.skybox = sky;
+            kl.lightMap = AssetDatabase.LoadAssetAtPath<Texture2D>(LightsTex);
+            if (look.seasons != null)
+            {
+                kl.spring = ToSeason(look.seasons.spring);
+                kl.summer = ToSeason(look.seasons.summer);
+                kl.autumn = ToSeason(look.seasons.autumn);
+                kl.winter = ToSeason(look.seasons.winter);
+            }
+            var dirSun = Object.FindAnyObjectByType<Light>();
+            kl.sun = dirSun != null && dirSun.type == LightType.Directional ? dirSun : null;
         }
 
         var sun = Object.FindAnyObjectByType<Light>();
@@ -337,6 +542,9 @@ public static class KeyArtMapSetup
             sun.shadowStrength = 1f;   // 그림자 세기는 셰이더(_KucaShadowStrength)가 정한다
             sun.transform.rotation = on ? Quaternion.Euler(look.sun.pitch, look.sun.yaw, 0f) : Quaternion.Euler(50f, 330f, 0f);
         }
+        // 지금 모드(Auto 면 시각)에 맞춰 해·안개·하늘·전역 값을 다시 적용
+        var lookComp = Object.FindAnyObjectByType<KeyArtLook>();
+        if (on && lookComp != null) lookComp.Apply();
     }
 
     /// <summary>디오라마 카메라: 좁은 화각으로 멀리서 (원근 왜곡이 적은 미니어처 느낌)</summary>
@@ -410,7 +618,11 @@ public static class KeyArtMapSetup
         if (profile.TryGet(out Vignette vig))
             vig.intensity.Override(on ? 0.12f : 0.2f);
         if (profile.TryGet(out Bloom bloom))
-            bloom.intensity.Override(on ? 0.15f : 0.25f);
+        {
+            bloom.intensity.Override(on ? 0.3f : 0.25f);
+            bloom.threshold.Override(on ? 0.95f : 0.9f);
+            bloom.tint.Override(on ? new Color(1f, 0.95f, 0.85f) : Color.white);
+        }
         EditorUtility.SetDirty(profile);
         AssetDatabase.SaveAssets();
     }

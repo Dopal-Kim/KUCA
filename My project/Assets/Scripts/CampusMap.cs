@@ -413,7 +413,7 @@ public class CampusMap : MonoBehaviour
 
         float x = (float)((u - 0.5) * mapWidth);
         float z = (float)((v - 0.5) * mapHeight);
-        return new Vector3(x, playerHeight, z);
+        return new Vector3(x, playerHeight + KeyArtTerrain.HeightAt(x, z), z);   // 키아트 지형 언덕 위
     }
 
     /// <summary>위경도 → 지도 평면(y = 0) 위 좌표. 범위 밖도 그대로 계산한다.</summary>

@@ -1,5 +1,5 @@
 // 키아트 지면: CampusGround.jpg (tools/keyart/build_art.py) + 가까이서 보이는 잔디 결 디테일.
-// 디테일은 초록 부분(잔디)에만 겹친다. 지도 바깥 잔디는 _BaseMap 없이 _BaseColor 만 써도 된다.
+// 디테일은 초록 부분(잔디)에만 겹친다. 파란 부분(물)은 반짝인다. 지도 바깥 잔디는 _BaseMap 없이 _BaseColor 만 써도 된다.
 Shader "KUCA/StylizedGround"
 {
     Properties
@@ -9,6 +9,8 @@ Shader "KUCA/StylizedGround"
         _DetailMap ("Grass Detail (회색, 평균 0.5)", 2D) = "gray" {}
         _DetailTile ("Detail Tile (m)", Float) = 7
         _DetailStrength ("Detail Strength", Range(0, 1.5)) = 0.55
+        _WorldUV ("World UV (지형 메시: 0/1)", Float) = 0
+        _MapSize ("Map Size (m)", Vector) = (1418, 1548, 0, 0)
     }
     SubShader
     {
@@ -33,7 +35,8 @@ Shader "KUCA/StylizedGround"
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
                 half4 _BaseColor;
-                float _DetailTile, _DetailStrength;
+                float _DetailTile, _DetailStrength, _WorldUV;
+                float4 _MapSize;
             CBUFFER_END
 
             struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 uv : TEXCOORD0; };
@@ -59,11 +62,18 @@ Shader "KUCA/StylizedGround"
 
             half4 frag (Varyings i) : SV_Target
             {
-                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, i.uv).rgb * _BaseColor.rgb;
+                // 지형 메시는 UV 가 없어 월드 좌표로 지도 텍스처를 붙인다 (지도 중심이 원점)
+                float2 uv = _WorldUV > 0.5 ? i.positionWS.xz / _MapSize.xy + 0.5 : i.uv;
+                half3 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, uv).rgb * _BaseColor.rgb;
                 half greenness = saturate((albedo.g - max(albedo.r, albedo.b)) * 8.0);
                 half d = SAMPLE_TEXTURE2D(_DetailMap, sampler_DetailMap, i.positionWS.xz / _DetailTile).r;
                 albedo *= 1.0 + (d - 0.5) * _DetailStrength * greenness;
+                albedo = KucaSeasonGround(albedo, i.positionWS);   // 계절 (잔디색·눈·얼음)
+                albedo = KucaWater(albedo, i.positionWS);   // 호수·연못 반짝임 (시간에 따라 움직임)
                 half3 color = KucaShade(albedo, normalize(i.normalWS), i.positionWS);
+                color = KucaSunWash(color, i.positionCS);
+                // 밤: 가로등·현관·담장 등 아래 빛 웅덩이와 넓게 번지는 따뜻한 빛
+                color += KucaNightLight(albedo, i.positionWS, 1.0h);
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

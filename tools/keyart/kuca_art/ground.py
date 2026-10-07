@@ -82,6 +82,9 @@ class Ground:
         self.road = self._stroke(self.road_lines, ROAD_W)
 
         self.apron = np.zeros((self.H, self.W), bool)
+        self.campus = np.ones((self.H, self.W), bool)
+        self.campus_soft = np.ones((self.H, self.W), np.float32)
+        self.lake = np.zeros((self.H, self.W), bool)
         self.buildings = np.zeros((self.H, self.W), bool)
         self.occupied = np.zeros((self.H, self.W), bool)
         self.ao_img = Image.new('L', (self.W, self.H), 0)
@@ -141,6 +144,63 @@ class Ground:
         if meters <= 0:
             return m
         return ndimage.distance_transform_edt(~m) <= meters * self.ppm
+
+    # ---------- 캠퍼스 영역 (경계 안은 화사하게, 밖은 차분하게) ----------
+
+    def compute_campus(self, seeds, smooth_m=18.0):
+        """캠퍼스 건물(seeds)을 90 m 넓혀 220 m 닫기 → 구멍 메우고 부드럽게. 결과: self.campus (bool), self.campus_soft (0~1)"""
+        img = Image.new('L', (self.W, self.H), 0)
+        d = ImageDraw.Draw(img)
+        for b in seeds:
+            d.polygon([self.r.px(*p) for p in b.poly], fill=255)
+        m = np.asarray(img) > 127
+        ppm = self.ppm
+        # 200 m 넓힌 뒤 110 m 줄이기 = 90 m 넓히기 + 220 m 이하 틈 메우기
+        big = ndimage.distance_transform_edt(~m) <= 200 * ppm
+        closed = ndimage.distance_transform_edt(big) > 110 * ppm
+        closed = ndimage.binary_fill_holes(closed)
+        # 캠퍼스와 맞닿은 숲(동쪽 산)도 캠퍼스 땅
+        lab, n = ndimage.label(self.forest)
+        touch = set(np.unique(lab[closed & self.forest])) - {0}
+        closed |= np.isin(lab, list(touch))
+        soft = ndimage.gaussian_filter(closed.astype(np.float32), smooth_m * ppm)
+        self.campus = soft > 0.5
+        self.campus_soft = np.clip((soft - 0.3) / 0.4, 0, 1)
+        return self.campus
+
+    def campus_contours(self):
+        """캠퍼스 경계선 (월드 좌표 폴리라인 목록, 지도 가장자리는 제외)"""
+        from skimage import measure
+        out = []
+        for c in measure.find_contours(self.campus.astype(np.float32), 0.5):
+            pts = [self.r.world(x, y) for y, x in c[::3]]
+            out.append(pts)
+        return out
+
+    def add_lake(self, center, rx, rz, yaw_deg=0.0):
+        """사색의 광장 호수: 둥근 타원 물 + 석재 테 (지면 마스크에 더함)"""
+        img = Image.new('L', (self.W, self.H), 0)
+        d = ImageDraw.Draw(img)
+        a = math.radians(yaw_deg)
+        pts = []
+        for k in range(72):
+            t = 2 * math.pi * k / 72
+            # 살짝 부푼 타원 (슈퍼엘립스) → 귀여운 연못 모양
+            c, s_ = math.cos(t), math.sin(t)
+            ex = math.copysign(abs(c) ** 0.8, c) * rx
+            ez = math.copysign(abs(s_) ** 0.8, s_) * rz
+            pts.append(self.r.px(center[0] + ex * math.cos(a) - ez * math.sin(a), center[1] + ex * math.sin(a) + ez * math.cos(a)))
+        d.polygon(pts, fill=255)
+        self.lake_poly = [self.r.world(x, y) for x, y in pts]
+        lake = np.asarray(img) > 127
+        self.water |= lake
+        around = self._grow(lake, 1.6)
+        self.square &= ~around
+        self.walk &= ~around          # 광장을 가로지르던 보행로 선이 호수 위에 그려지지 않게
+        self.walk_lines = [(hw, pts) for hw, pts in self.walk_lines
+                           if not any(self.has(lake, x, z) for x, z in pts)]
+        self.lake = lake
+        return lake
 
     # ---------- 배치 도우미 ----------
 
@@ -289,6 +349,24 @@ class Ground:
         dm = (dots_a.sum(axis=2) > 0)[..., None]
         canvas = np.where(dm, dots_a, canvas)
 
+        # 길가 꽃 띠: 공원 잔디에서 보행로 가장자리 1~2.5 m 에 분홍·노랑·흰 꽃 점 (지오메트리 없이 텍스처로)
+        d_walk = ndimage.distance_transform_edt(~(self.walk | self.square)) / ppm
+        strip = (d_walk > 1.0) & (d_walk < 2.5) & self.park & ~self.forest
+        ys, xs = np.nonzero(strip[::2, ::2])
+        if len(xs):
+            band = Image.new('RGB', (W, H), (0, 0, 0))
+            bd = ImageDraw.Draw(band)
+            # 길을 따라 띠가 끊겼다 이어지게: 큰 얼룩 노이즈로 구간 선택
+            sel = _smooth_noise((H, W), 160, 5)
+            for i in rng.choice(len(xs), size=min(len(xs), 120000), replace=False):
+                x, y = xs[i] * 2, ys[i] * 2
+                if sel[y, x] < 0.15 or rng.random() > 0.55:
+                    continue
+                rr = 0.24 * ppm
+                bd.ellipse((x - rr, y - rr, x + rr, y + rr), fill=palette[rng.integers(len(palette))])
+            ba = np.asarray(band).astype(np.float32)
+            canvas = np.where((ba.sum(axis=2) > 0)[..., None], ba, canvas)
+
         # 운동장: 붉은 트랙, 줄무늬 잔디 구장, 흰 선
         paving_t = self._tile('paving', 14)
         track_tex = _recolor(paving_t, TRACK)
@@ -396,6 +474,30 @@ class Ground:
         ao = ndimage.gaussian_filter(np.asarray(self.ao_img).astype(np.float32) / 255, 0.9 * ppm)
         canvas *= (1 - ao)[..., None]
 
+        # 담장 안쪽 꽃 띠: 캠퍼스 경계에서 안으로 2~5 m (길·물 제외)
+        d_in = ndimage.distance_transform_edt(self.campus) / ppm
+        band = (d_in > 2.0) & (d_in < 5.0) & ~(self.road | self.curb | self.walk | self.water | self.buildings | self.parking)
+        ys, xs = np.nonzero(band[::2, ::2])
+        if len(xs):
+            fl = Image.new('RGB', (W, H), (0, 0, 0))
+            fd = ImageDraw.Draw(fl)
+            for i in rng.choice(len(xs), size=min(len(xs), 90000), replace=False):
+                x, y = xs[i] * 2, ys[i] * 2
+                rr = 0.26 * ppm
+                fd.ellipse((x - rr, y - rr, x + rr, y + rr), fill=palette[rng.integers(len(palette))])
+            fa = np.asarray(fl).astype(np.float32)
+            bed_m = ndimage.gaussian_filter(band.astype(np.float32), 0.6 * ppm)[..., None]
+            canvas = canvas * (1 - 0.12 * bed_m)
+            canvas = np.where((fa.sum(axis=2) > 0)[..., None], fa, canvas)
+
+        # 캠퍼스 경계 안팎 대비: 밖은 채도를 45% 빼고 밝은 회녹색 쪽으로, 안은 채도 +8% · 따뜻하게
+        cs = self.campus_soft[..., None]
+        lum = canvas.mean(axis=2, keepdims=True)
+        outside = lum + (canvas - lum) * 0.55
+        outside = outside * 0.86 + np.array([214, 220, 210], np.float32) * 0.14
+        inside = np.clip(lum + (canvas - lum) * 1.08 + np.array([3, 2, -3], np.float32), 0, 255)
+        canvas = outside * (1 - cs) + inside * cs
+
         out = np.clip(canvas, 0, 255).astype(np.uint8)
         Image.fromarray(out).save(out_path, quality=90)
         g = out[self.park & ~self.forest]
@@ -403,6 +505,28 @@ class Ground:
 
         if detail_path:
             self._detail(detail_path)
+
+    def paint_lights(self, path, lights, size=2048):
+        """밤 바닥 불빛 지도 (회색 1채널, 지면 텍스처와 같은 배치): 가로등·현관·담장 등 아래 부드러운 빛 웅덩이"""
+        h = size
+        w = round(size * self.W / self.H)
+        ppm = h / self.H * self.ppm
+        acc = np.zeros((h, w), np.float32)
+        img = Image.new('L', (w, h), 0)
+        d = ImageDraw.Draw(img)
+        for x, z, r, s in lights:
+            px, py = self.r.px(x, z)
+            px, py = px * w / self.W, py * h / self.H
+            rr = r * ppm
+            d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=int(255 * min(1.0, s)))
+        pts = np.asarray(img).astype(np.float32) / 255
+        # 등 아래 또렷한 웅덩이 + 25 m 에 걸쳐 넓게 번지는 따뜻한 빛 (등이 모인 곳일수록 밝은 동네 불빛)
+        tight = ndimage.gaussian_filter(pts, 2.5 * ppm)
+        wide = ndimage.gaussian_filter(pts, 14.0 * ppm)
+        wide = wide / (np.percentile(wide[wide > 0.001], 95) + 1e-6) if (wide > 0.001).any() else wide
+        acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.45, 0, 1) ** 0.85
+        Image.fromarray((acc * 255).astype(np.uint8)).save(path)
+        print('lights', len(lights), path)
 
     def _crosswalks(self, md):
         """보행로가 차도를 가로지르는 곳에 얼룩말 무늬"""
