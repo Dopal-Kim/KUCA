@@ -279,22 +279,46 @@ def observatory(mb, b, f):
 
 
 def pitched_roof(mb, b, f):
-    """도예관: 박공지붕 + 지붕창 (dormer)"""
+    """도예관 (키아트): 연회색 금속 박공지붕 (세로 이음 줄) + 지붕면에 납작한 천창 3개 + 박공 끝 환기창"""
     (ax, az), length, width = f.long_axis()
     m = Frame.look((f.center[0], b.h, f.center[1]), (ax, 0.0, az))
     L, Wd = length + 1.6, width + 1.6
     rh = max(3.0, min(Wd * 0.3, 6.5))
+    metal = (0.76, 0.80, 0.85)
     mb.ao_floor = b.h
-    mb.gable(m, (0, 0, 0), Wd, L, rh, ROOF, True, end_col=STONE)
+    mb.gable(m, (0, 0, 0), Wd, L, rh, metal, True, end_col=STONE)
     # 처마 띠
     mb.box(m, (0, -0.2, 0), (Wd + 0.2, 0.4, L + 0.2), COLUMN)
-    n = max(2, int(L / 9))
+    # 세로 이음 줄 (처마 → 용마루) 과 용마루 덮개
+    half = Wd / 2
+    n_seam = max(4, int(L / 1.8))
+    for sgn in (-1, 1):
+        for i in range(n_seam + 1):
+            z = -L / 2 + 0.4 + (L - 0.8) * i / n_seam
+            p0 = (sgn * half, 0.02, z)
+            p1 = (0.0, rh + 0.02, z)
+            mb.quad(m, (p0[0], p0[1] + 0.04, z - 0.06), (p0[0], p0[1] + 0.04, z + 0.06), (p1[0], p1[1] + 0.04, z + 0.06),
+                    (p1[0], p1[1] + 0.04, z - 0.06), shade(metal, 1.08), (0, -1.0, z))
+    mb.box(m, (0, rh + 0.05, 0), (0.6, 0.18, L + 0.3), shade(metal, 0.92))
+
+    def on_slope(sgn, t, z):          # t: 처마 0 → 용마루 1
+        return (sgn * half * (1 - t), rh * t + 0.07, z)
+    n = 3 if L > 18 else 2
     for i in range(n):
-        z = -L / 2 + L * (i + 0.5) / n
-        dm = m.child((-Wd * 0.22, rh * 0.42, z), 0)
-        mb.box(dm, (0, 0.6, 0), (1.6, 1.4, 2.2), STONE)
-        mb.box(dm, (-0.82, 0.6, 0), (0.05, 0.9, 1.4), GLASS, top=GLASS)
-        mb.gable(dm, (0, 1.3, 0), 1.8, 2.4, 0.8, ROOF, False)
+        z0 = -L / 2 + L * (i + 0.5) / n
+        for sgn in (-1, 1):
+            if sgn > 0 and i != n // 2:
+                continue
+            a0, a1 = on_slope(sgn, 0.38, z0 - 1.3), on_slope(sgn, 0.72, z0 - 1.3)
+            b0, b1 = on_slope(sgn, 0.38, z0 + 1.3), on_slope(sgn, 0.72, z0 + 1.3)
+            fa0, fa1 = on_slope(sgn, 0.34, z0 - 1.55), on_slope(sgn, 0.76, z0 - 1.55)
+            fb0, fb1 = on_slope(sgn, 0.34, z0 + 1.55), on_slope(sgn, 0.76, z0 + 1.55)
+            mb.quad(m, fa0, fb0, fb1, fa1, COLUMN, (0, -1.0, z0))
+            lift = lambda p: (p[0], p[1] + 0.05, p[2])
+            mb.quad(m, lift(a0), lift(b0), lift(b1), lift(a1), (0.42, 0.62, 0.80), (0, -1.0, z0))
+    # 박공 끝 둥근 환기창
+    for sgn in (-1, 1):
+        mb.disc(m.child((0, 0, 0), 0 if sgn > 0 else 180), (0, rh * 0.45, L / 2 + 0.05), 0.7, 0.05, 12, (0.42, 0.62, 0.80))
     mb.ao_floor = 0.0
     mb.band(b.poly, 0.0, 0.9, 0.35, 0.0, (0.82, 0.77, 0.68))
 

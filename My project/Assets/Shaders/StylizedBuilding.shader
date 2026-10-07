@@ -1,4 +1,4 @@
-// 키아트 건물 외벽: 둥근 창(고전 양식은 아치 창), 창턱, 모서리 기둥(벽 양끝은 창 없음), 창 묶음 사이 벽, 층 띠, 벽돌 줄눈, 지붕 판넬.
+// 키아트 건물 외벽 (벽 버텍스 색 R 로 커튼월·석재 슬릿 벽 선택): 둥근 창(고전 양식은 아치 창), 창턱, 모서리 기둥(벽 양끝은 창 없음), 창 묶음 사이 벽, 층 띠, 벽돌 줄눈, 지붕 판넬.
 // 창 배치는 메시 UV2 = (벽 위 위치 m, 벽 전체 길이 m) 로 벽마다 가운데 정렬 (tools/keyart 의 Shell 메시).
 // UV2 가 없으면(길이 0) 월드 좌표로 반복. 지붕색에는 버텍스 색 × 1.1 을 곱한다 (건물마다 파스텔). 웹 미리보기 main.js 의 kucaBuilding 과 같은 무늬.
 Shader "KUCA/StylizedBuilding"
@@ -89,6 +89,43 @@ Shader "KUCA/StylizedBuilding"
                 {
                     float2 side = normalize(float2(-n.z, n.x) + 1e-5);
                     wu = dot(p.xz, side);
+                }
+                // 벽 버텍스 색 R = 벽 종류: 1 보통 창, 0.5 커튼월(전면 유리), 0 석재 + 세로 슬릿 창 (멀티미디어·글로벌관)
+                half wmode = roofTint.r;
+                if (wmode < 0.75 && !infinite)
+                {
+                    if (p.y < 1.2) return c * ao;
+                    if (wmode < 0.25)
+                    {
+                        half3 s = lerp(_WallColor.rgb, half3(0.95, 0.91, 0.84), 0.75) * lerp(0.95h, 1.03h, saturate(p.y / 24.0));
+                        float sp = 3.2, nS = max(1.0, floor((wl - 3.0) / sp));
+                        float lu2 = (wu - (wl - nS * sp) * 0.5) / sp;
+                        if (lu2 < 0.0 || lu2 >= nS) return s * ao;
+                        float ci = floor(lu2), qx = (frac(lu2) - 0.5) * sp;
+                        half3 resS = s * ao;
+                        if (abs(qx) < 0.42 && fv > 0.1)
+                        {
+                            float h = frac(sin(dot(float2(ci, fl), float2(12.9898, 78.233))) * 43758.5453);
+                            resS = lerp(_WindowColor.rgb * 0.7, lerp(_WindowColor.rgb, half3(0.88, 0.95, 1.0), 0.5), fv) * lerp(1.0, 0.45, _KucaNight);
+                            if (h < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * 0.8;
+                        }
+                        else if (abs(qx) < 0.58) resS = _TrimColor.rgb;
+                        float fadeS = saturate(fwidth(qx) * 3.0 - 0.6);
+                        emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.25, fadeS);
+                        return lerp(resS, lerp(s * ao, _WindowColor.rgb, 0.25), fadeS);
+                    }
+                    if (min(wu, wl - wu) < 0.7) return _TrimColor.rgb * ao;
+                    float mu = frac(wu / 1.6), cg = floor(wu / 1.6);
+                    float hg = frac(sin(dot(float2(cg, fl), float2(12.9898, 78.233))) * 43758.5453);
+                    half3 gl = lerp(_WindowColor.rgb * 0.62, lerp(_WindowColor.rgb, half3(0.86, 0.94, 1.0), 0.6), fv);
+                    gl = lerp(gl, half3(0.96, 0.99, 1.0), 0.22 * step(0.88, frac((wu * 0.5 + p.y) * 0.035)));
+                    gl *= lerp(1.0, 0.45, _KucaNight);
+                    if (hg < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (0.6 + 0.4 * fv);
+                    half3 resG = gl;
+                    if (abs(mu - 0.5) > 0.46 || fv < 0.06) resG = _TrimColor.rgb * 0.94;
+                    float fadeG = saturate(fwidth(wu) * 2.0 - 0.6);
+                    emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.7, fadeG);
+                    return lerp(resG, lerp(gl, _TrimColor.rgb, 0.15), fadeG);
                 }
                 float margin = infinite ? 0.0 : clamp(wl * 0.12, 1.8, 3.2);
                 float nWin = infinite ? 100000.0 : floor((wl - 2.0 * margin) / _WindowSpacing);

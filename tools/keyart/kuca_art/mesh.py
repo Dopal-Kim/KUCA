@@ -475,7 +475,26 @@ def triangulate(poly):
     return tris
 
 
-def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None, inward=False):
+def glass_mix_cols(poly, min_run=6.0):
+    """유리 건물 벽 종류 (변마다 버텍스 색): 긴 벽을 번갈아 커튼월(0.5) · 석재 슬릿(0), 모서리 짧은 벽은 석재.
+    외벽 셰이더가 R 값으로 무늬를 고른다 (멀티미디어·글로벌관 키아트: 유리 덩어리와 돌 덩어리가 엇갈린다)."""
+    runs = _wall_runs(poly)
+    n = len(runs)
+    ids, rid = [None] * n, -1
+    for i, (u0, _, _) in enumerate(runs):
+        if u0 == 0.0:
+            rid += 1
+        ids[i] = rid
+    ids = [rid if r < 0 else r for r in ids]     # 0 번 변 앞에서 시작한 벽은 마지막 벽에 이어진다
+    long_ids = []
+    for i in range(n):
+        if runs[i][2] >= min_run and ids[i] not in long_ids:
+            long_ids.append(ids[i])
+    return [(0.5, 0.5, 0.5) if runs[i][2] >= min_run and long_ids.index(ids[i]) % 2 == 0 else (0.0, 0.0, 0.0)
+            for i in range(n)]
+
+
+def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None, inward=False, wall_cols=None):
     """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다.
     mb.aux 가 있으면 벽 정점마다 (u, 벽 길이): 거의 일직선으로 이어진 변들은 한 벽으로 친다."""
     n = len(poly)
@@ -488,8 +507,9 @@ def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None
         ins = (mx - nx * k, (y0 + y1) / 2, mz - nz * k)
         u0, u1, L = runs[i]
         A, B = (u0, L), (u1, L)
-        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), col, ins, aux=(A, B, B))
-        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y1, b[1]), (a[0], y1, a[1]), col, ins, aux=(A, B, A))
+        wc = wall_cols[i] if wall_cols else col
+        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), wc, ins, aux=(A, B, B))
+        mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y1, b[1]), (a[0], y1, a[1]), wc, ins, aux=(A, B, A))
     if roof:
         for ia, ib, ic in triangulate(poly):
             a, b, c = poly[ia], poly[ib], poly[ic]

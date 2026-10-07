@@ -259,6 +259,40 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float wl = wall.y, wu = wall.x;
   if (wl < 0.5) { vec2 side = normalize(vec2(-n.z, n.x) + 1e-5); wu = dot(p.xz, side); wl = 100000.0; }
   bool infinite = wl > 99999.0;
+  // 벽 버텍스 색 R = 벽 종류: 1 보통 창, 0.5 커튼월(전면 유리), 0 석재 + 세로 슬릿 창 (멀티미디어·글로벌관)
+  float wmode = vRoofTint.r;
+  if (wmode < 0.75 && !infinite) {
+    if (p.y < 1.2) return c * ao;
+    if (wmode < 0.25) {
+      vec3 s = mix(uWall, vec3(0.95, 0.91, 0.84), 0.75) * mix(0.95, 1.03, clamp(p.y / 24.0, 0.0, 1.0));
+      float sp = 3.2, nS = max(1.0, floor((wl - 3.0) / sp));
+      float lu2 = (wu - (wl - nS * sp) * 0.5) / sp;
+      if (lu2 < 0.0 || lu2 >= nS) return s * ao;
+      float ci = floor(lu2), qx = (fract(lu2) - 0.5) * sp;
+      vec3 res = s * ao;
+      if (abs(qx) < 0.42 && fv > 0.1) {
+        float h = fract(sin(dot(vec2(ci, fl), vec2(12.9898, 78.233))) * 43758.5453);
+        vec3 gl = mix(uWindow * 0.7, mix(uWindow, vec3(0.88, 0.95, 1.0), 0.5), fv) * mix(1.0, 0.45, uNight);
+        if (h < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * 0.8;
+        res = gl;
+      } else if (abs(qx) < 0.58) res = uTrim;
+      float fadeS = clamp(fwidth(qx) * 3.0 - 0.6, 0.0, 1.0);
+      kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.25, fadeS);
+      return mix(res, mix(s * ao, uWindow, 0.25), fadeS);
+    }
+    if (min(wu, wl - wu) < 0.7) return uTrim * ao;
+    float mu = fract(wu / 1.6), cg = floor(wu / 1.6);
+    float hg = fract(sin(dot(vec2(cg, fl), vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 gl = mix(uWindow * 0.62, mix(uWindow, vec3(0.86, 0.94, 1.0), 0.6), fv);
+    gl = mix(gl, vec3(0.96, 0.99, 1.0), 0.22 * step(0.88, fract((wu * 0.5 + p.y) * 0.035)));
+    gl *= mix(1.0, 0.45, uNight);
+    if (hg < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * (0.6 + 0.4 * fv);
+    vec3 resG = gl;
+    if (abs(mu - 0.5) > 0.46 || fv < 0.06) resG = uTrim * 0.94;
+    float fadeG = clamp(fwidth(wu) * 2.0 - 0.6, 0.0, 1.0);
+    kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.7, fadeG);
+    return mix(resG, mix(gl, uTrim, 0.15), fadeG);
+  }
   float margin = infinite ? 0.0 : clamp(wl * 0.12, 1.8, 3.2);
   float nWin = infinite ? 100000.0 : floor((wl - 2.0 * margin) / uSpacing);
   if (nWin < 1.0 || p.y < 1.2) return c * ao;

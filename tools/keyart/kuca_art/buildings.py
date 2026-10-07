@@ -10,7 +10,7 @@ import math
 import random
 
 from .geo import Footprint, dist_to_poly_edge, point_in_poly
-from .mesh import Frame, IDENT, extrude_poly, offset_polygon, outward_normal, rect_poly, round_corners, shade
+from .mesh import Frame, IDENT, extrude_poly, glass_mix_cols, offset_polygon, outward_normal, rect_poly, round_corners, shade
 
 # 건물 id → 외벽 스타일 (Unity 재질 KeyArtBuilding_<스타일>)
 STYLES = {
@@ -82,7 +82,8 @@ def build_shells(buildings, shells, skip_ids):
         sh.ao_strength = 0.0
         if MASSING.get(b.id) == 'court' and _court_shell(sh, b):
             continue
-        extrude_poly(sh, b.poly, b.min_h, b.h, roof_col=roof_tint(b))
+        extrude_poly(sh, b.poly, b.min_h, b.h, roof_col=roof_tint(b),
+                     wall_cols=glass_mix_cols(b.poly) if style_of(b) == 'Glass' else None)
         if b.min_h > 0.5:   # 떠 있는 건물(통로 등) 아랫면
             from .mesh import triangulate
             for ia, ib, ic in triangulate(b.poly):
@@ -208,11 +209,14 @@ def build_details(buildings, layer, shells, entrances, skip_ids, rng):
         _eave_cap(mb, b.poly, H + par_h, pal)
         blocks = [] if small else _massing(mb, shells[style].at(cx, cz), b, style, pal, rng)
         blocks += ROOF_RESERVED.get(b.id, [])
+        ent = entrances.get(b.id)
+        modes = MASSING.get(b.id) or ()
+        if ent and 'bay' in modes and not small:
+            blocks += _front_bay(mb, shells[style].at(cx, cz), b, ent, style, pal)
+        elif ent:
+            _entrance(mb, b, ent, pal, style)
         if not small:
             _rooftop(mb, b, style, blocks, rng)
-        ent = entrances.get(b.id)
-        if ent:
-            _entrance(mb, b, ent, pal)
 
 
 def _eave_cap(mb, poly, top, pal):
@@ -235,8 +239,9 @@ def _rect_inside(poly, rect, margin):
 #   ends:   긴 축 양 끝을 반 층 위 (외국어대학관: 원통 두 개 + 막대 동, 반 층 엇갈림)
 #   none:   덩어리 없음 (랜드마크가 따로 처리)
 MASSING = {
-    'way-455725718': 'center',
-    'way-585696507': 'ends',
+    'way-455725718': ('ends', 'core'),   # 공학관: 실제 I자 (긴 몸체 + 양팔) → 양팔 반 층 위 + 가운데 세로 유리 계단탑 (키아트)
+    'way-474085539': ('bay',),           # 국제·경영대학관: 가운데 한 층 높은 돌출 동 + 어두운 현관 (키아트)
+    'way-585696507': ('ends', 'bay'),    # 외국어대학관: 원통 두 개 반 층 위 + 정면 돌출 현관 동
     'way-585696506': 'none',      # 선승관: 배럴 볼트 체육관 지붕 (landmarks)
     'way-474085534': 'center',    # 중앙도서관: 가운데 아트리움 블록
     'way-474085536': 'ends',      # 예술디자인대학: 양 끝 파빌리온 (가운데 정면 파빌리온은 landmarks)
@@ -264,9 +269,44 @@ def _massing(mb, shell, b, style, pal, rng):
     shell.ao_strength = 0.0
     blocks = []
     cands = []
-    mode = MASSING.get(b.id)
-    if mode == 'none':
+    modes = MASSING.get(b.id)
+    modes = (modes,) if isinstance(modes, str) else (modes or ())
+    if 'none' in modes:
         return []
+    special = [k for k in modes if k in ('ends', 'core', 'court')]
+    if special:
+        for k in special:
+            blocks += _massing_mode(k, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng)
+        return blocks
+    mode = modes[0] if modes and modes[0] == 'center' else None
+    if mode == 'center':
+        cands.append((rect_poly(fp.center, u, v, hu * 0.3, hv * 0.6), 1))
+    elif L > 2.0 * Wd and L > 45:
+        pl = min(L * 0.13, 11.0)
+        for s in (-1, 1):
+            c = (fp.center[0] + u[0] * s * (hu - pl - 0.6), fp.center[1] + u[1] * s * (hu - pl - 0.6))
+            cands.append((rect_poly(c, u, v, pl, hv - 0.6), 1))
+    if mode is None and 'bay' not in modes and (not cands or b.area > 2500):
+        cands.append((rect_poly(fp.center, u, v, hu * 0.42, hv * 0.55), 2 if b.area > 4000 and H < 40 else 1))
+    for rect, floors in cands:
+        if not _rect_inside(b.poly, rect, 0.5):
+            continue
+        top = H + fh * floors
+        # 위 덩어리도 둥근 모서리 + 한 톤 다른 파스텔 지붕 (평평한 상자 위 상자처럼 보이지 않게)
+        rect = round_corners(rect, radius=2.2)
+        extrude_poly(shell, rect, H - 0.1, top, roof_col=roof_tint(b, 1),
+                     wall_cols=glass_mix_cols(rect, 4.0) if style == 'Glass' else None)
+        mb.ao_strength = 0.0
+        mb.band(rect, top - 1.0, top - 0.55, 0.28, 0.0, pal['trim'])
+        mb.band(rect, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),
+                inner_col=shade(pal['wall'], 0.86))
+        blocks.append((rect, top))
+    return blocks
+
+
+def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
+    H = b.h
+    blocks = []
     if mode == 'ends':
         # 긴 축 양 끝 18% 를 잘라 반 층 높인다 (실제 외곽선 그대로)
         from .mesh import clip_half_plane
@@ -286,28 +326,7 @@ def _massing(mb, shell, b, style, pal, rng):
     if mode == 'court':
         _courtyard(mb, b, fp, u, v, hu, hv, pal, rng)
         return [(rect_poly(fp.center, u, v, hu * 0.40, hv * 0.40), H)]
-    if mode == 'center':
-        cands.append((rect_poly(fp.center, u, v, hu * 0.3, hv * 0.6), 1))
-    elif L > 2.0 * Wd and L > 45:
-        pl = min(L * 0.13, 11.0)
-        for s in (-1, 1):
-            c = (fp.center[0] + u[0] * s * (hu - pl - 0.6), fp.center[1] + u[1] * s * (hu - pl - 0.6))
-            cands.append((rect_poly(c, u, v, pl, hv - 0.6), 1))
-    if mode is None and (not cands or b.area > 2500):
-        cands.append((rect_poly(fp.center, u, v, hu * 0.42, hv * 0.55), 2 if b.area > 4000 and H < 40 else 1))
-    for rect, floors in cands:
-        if not _rect_inside(b.poly, rect, 0.5):
-            continue
-        top = H + fh * floors
-        # 위 덩어리도 둥근 모서리 + 한 톤 다른 파스텔 지붕 (평평한 상자 위 상자처럼 보이지 않게)
-        rect = round_corners(rect, radius=2.2)
-        extrude_poly(shell, rect, H - 0.1, top, roof_col=roof_tint(b, 1))
-        mb.ao_strength = 0.0
-        mb.band(rect, top - 1.0, top - 0.55, 0.28, 0.0, pal['trim'])
-        mb.band(rect, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),
-                inner_col=shade(pal['wall'], 0.86))
-        blocks.append((rect, top))
-    return blocks
+    return []
 
 
 def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
@@ -316,13 +335,24 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
     H = b.h
     c = fp.center
     # 앞뒤로 실제 벽까지의 거리 (다각형 안에서 v 방향으로 걸어 나가며 찾는다)
-    ext = []
-    for sgn in (-1, 1):
-        t = 0.0
-        while t < hv + 2 and pip(c[0] + v[0] * sgn * t, c[1] + v[1] * sgn * t, b.poly):
-            t += 0.5
-        ext.append(t)
-    lo, hi = ext[0] + 0.8, ext[1] + 0.8
+    # 가운데를 지나는 v 방향 선 위에서 건물 안쪽 구간 (I자처럼 가운데가 비면 가장 가까운 구간)
+    ts = [k * 0.5 for k in range(int(-(hv + 2) * 2), int((hv + 2) * 2) + 1)]
+    inside = [pip(c[0] + v[0] * t, c[1] + v[1] * t, b.poly) for t in ts]
+    spans, cur = [], None
+    for t, ok in zip(ts, inside):
+        if ok and cur is None:
+            cur = [t, t]
+        elif ok:
+            cur[1] = t
+        elif cur is not None:
+            spans.append(cur)
+            cur = None
+    if cur is not None:
+        spans.append(cur)
+    if not spans:
+        return
+    t0, t1 = min(spans, key=lambda sp: 0 if sp[0] <= 0 <= sp[1] else min(abs(sp[0]), abs(sp[1])))
+    lo, hi = -t0 + 0.8, t1 + 0.8
     mid = (hi - lo) / 2
     cc = (c[0] + v[0] * mid, c[1] + v[1] * mid)
     half = (lo + hi) / 2
@@ -488,8 +518,66 @@ def _solar_panel(mb, m):
                 (0.55, 0.62, 0.78), under)
 
 
-def _entrance(mb, b, ent, pal):
-    """캐노피 입구: 로컬 +Z 가 바깥"""
+def _front_bay(mb, shell, b, ent, style, pal):
+    """
+    정면 돌출 동 (국제·경영대학관·외국어대학관 키아트): 입구 변 가운데를 2.4 m 내밀고 한 층 높인 덩어리.
+    1층은 깊게 들어간 어두운 유리 현관 + 두꺼운 문틀, 앞 계단과 화단. 돌려주는 값: 지붕 위 덩어리 자리.
+    """
+    from .nature import LIGHTS
+    i = ent['edge']
+    n = len(b.poly)
+    a, c = b.poly[i], b.poly[(i + 1) % n]
+    elen = math.hypot(c[0] - a[0], c[1] - a[1])
+    nx, nz = ent['n']
+    tx, tz = -nz, nx
+    width = max(9.0, min(elen * 0.42, 20.0))
+    proj, back = 2.4, 3.0
+    fh = floor_height(style)
+    top = b.h + fh
+    mx, mz = ent['x'], ent['z']
+    pc = (mx + nx * (proj - back) / 2, mz + nz * (proj - back) / 2)
+    rect = round_corners(rect_poly(pc, (nx, nz), (tx, tz), (proj + back) / 2, width / 2), radius=1.2)
+    shell.ao_strength = 0.0
+    extrude_poly(shell, rect, 0.0, top, roof_col=roof_tint(b, 3))
+    mb.ao_floor, mb.ao_strength = 0.0, 0.25
+    mb.band(rect, 0.0, 0.9, 0.35, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
+    mb.ao_strength = 0.0
+    mb.band(rect, top - 1.1, top - 0.55, 0.32, 0.0, pal['trim'])
+    mb.band(rect, top - 0.05, top + 1.0, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
+            inner_col=shade(pal['wall'], 0.86))
+    _eave_cap(mb, rect, top + 1.0, pal)
+    # 1층 현관: 두꺼운 문틀 + 어두운 유리 (밤에 불), 위 얇은 차양
+    m = Frame.look((mx + nx * proj, 0.0, mz + nz * proj), (nx, 0.0, nz))
+    dw = min(width * 0.55, 9.0)
+    mb.box(m, (0, 2.4, 0.2), (dw + 1.4, 4.8, 0.4), pal['trim'])
+    mb.emissive = True
+    mb.box(m, (0, 2.1, 0.42), (dw, 4.0, 0.08), (0.30, 0.36, 0.44), top=(0.30, 0.36, 0.44))
+    mb.emissive = False
+    for k in range(1, 4):
+        mb.box(m, (-dw / 2 + dw * k / 4, 2.1, 0.48), (0.12, 4.0, 0.05), pal['trim'])
+    mb.box(m, (0, 5.1, 1.1), (dw + 2.0, 0.35, 2.2), shade(pal['trim'], 1.02))
+    LIGHTS.append((mx + nx * (proj + 3.5), mz + nz * (proj + 3.5), 9.0, 0.95))
+    # 계단 3단 + 양옆 화단
+    for k in range(3):
+        mb.box(m, (0, 0.15 * (3 - k), 0.9 + 0.8 * k), (dw + 3.0 + k * 0.8, 0.3 * (3 - k), 0.8), STEP)
+    for sgn in (-1, 1):
+        x0 = sgn * (dw / 2 + 3.2)
+        mb.ao_strength = 0.2
+        mb.box(m, (x0, 0.35, 1.8), (3.2, 0.7, 2.6), (0.88, 0.85, 0.79))
+        mb.ao_strength = 0.0
+        mb.bevel_box(m, (x0, 1.05, 1.8), (2.8, 0.8, 2.2), 0.25, HEDGE)
+        for k in range(3):
+            mb.ico(m, (x0 - 0.9 + 0.9 * k, 1.55, 1.8 + (k % 2 - 0.5) * 0.6), (0.35, 0.28, 0.35), FLOWERS[(k + (sgn > 0)) % 3])
+    mb.ao_strength = 0.25
+    return [(rect, top)]
+
+
+def _entrance(mb, b, ent, pal, style='Default'):
+    """
+    입구 (로컬 +Z 가 바깥). 양식마다 다른 현관 (키아트):
+      Classical 기둥 두 개 + 작은 박공, Modern 두꺼운 평 캐노피 + 네모 기둥, Glass 유리 캐노피 + 가는 강철 기둥,
+      그 밖 둥근 기둥 캐노피.
+    """
     x, z, (nx, nz) = ent['x'], ent['z'], ent['n']
     m = Frame.look((x, 0.0, z), (nx, 0.0, nz))
     trim = pal['trim']
@@ -503,16 +591,39 @@ def _entrance(mb, b, ent, pal):
     mb.box(m, (0, 1.55, 0.38), (w * 0.5, 3.1, 0.08), GLASS_DOOR, top=GLASS_DOOR)
     mb.emissive = False
     mb.box(m, (0, 1.55, 0.43), (0.12, 3.1, 0.04), trim)
-    # 캐노피와 기둥
-    mb.box(m, (0, 3.95, 1.9), (w, 0.5, 3.8), trim, top=shade(trim, 1.02))
-    for s in (-1, 1):
-        mb.prism(m, (s * (w / 2 - 0.5), 0.3, 3.4), 0.22, 3.4, 6, trim)
+    if style == 'Classical':
+        for sgn in (-1, 1):
+            xx = sgn * (w / 2 - 0.6)
+            mb.box(m, (xx, 0.4, 3.3), (1.2, 0.5, 1.2), STEP)
+            mb.prism(m, (xx, 0.65, 3.3), 0.42, 3.4, 10, trim, r_top=0.36)
+            mb.box(m, (xx, 4.15, 3.3), (1.1, 0.3, 1.1), trim)
+        mb.box(m, (0, 4.55, 1.9), (w + 0.6, 0.6, 3.9), trim, top=shade(trim, 1.02))
+        mb.gable(m, (0, 4.85, 1.9), w + 0.6, 3.9, 1.6, shade(trim, 0.97), True, end_col=shade(trim, 0.93))
+        mb.gable(m, (0, 4.95, 3.87), w - 1.4, 0.06, 1.1, shade(trim, 0.82), True)
+    elif style == 'Modern':
+        mb.box(m, (0, 4.1, 2.3), (w + 2.4, 0.7, 4.6), trim, top=shade(trim, 1.02))
+        mb.box(m, (0, 3.72, 2.3), (w + 2.2, 0.06, 4.4), (0.98, 0.95, 0.80), top=(0.98, 0.95, 0.80))
+        for sgn in (-1, 1):
+            mb.box(m, (sgn * (w / 2 + 0.4), 1.9, 4.0), (0.6, 3.8, 0.6), shade(trim, 0.97))
+    elif style == 'Glass':
+        steel = (0.70, 0.74, 0.78)
+        glass = (0.62, 0.80, 0.92)
+        for sgn in (-1, 1):
+            mb.prism(m, (sgn * (w / 2), 0.3, 3.8), 0.12, 3.6, 6, steel)
+        mb.box(m, (0, 3.95, 2.0), (w + 1.2, 0.18, 4.4), steel)
+        mb.box(m, (0, 4.1, 2.0), (w + 0.8, 0.1, 4.0), glass, top=glass)
+        for k in range(-2, 3):
+            mb.box(m, (k * w / 4, 3.85, 2.0), (0.08, 0.12, 4.2), steel)
+    else:
+        mb.box(m, (0, 3.95, 1.9), (w, 0.5, 3.8), trim, top=shade(trim, 1.02))
+        for sgn in (-1, 1):
+            mb.prism(m, (sgn * (w / 2 - 0.5), 0.3, 3.4), 0.22, 3.4, 6, trim)
     # 계단 2단
     mb.box(m, (0, 0.15, 2.4), (w + 0.6, 0.3, 4.6), STEP)
     mb.box(m, (0, 0.38, 1.6), (w * 0.8, 0.16, 3.0), shade(STEP, 1.04))
     # 계단 양옆 화단 (석재 화분 + 꽃)
-    for s in (-1, 1):
-        x0 = s * (w / 2 + 1.9)
+    for sgn in (-1, 1):
+        x0 = sgn * (w / 2 + 1.9)
         mb.ao_strength = 0.2
         mb.box(m, (x0, 0.35, 2.2), (2.4, 0.7, 3.4), (0.88, 0.85, 0.79))
         mb.ao_strength = 0.0
@@ -520,7 +631,7 @@ def _entrance(mb, b, ent, pal):
         for k in range(3):
             fx = x0 + ((k * 37) % 5 - 2) * 0.38
             fz = 2.2 + ((k * 53) % 7 - 3) * 0.42
-            mb.ico(m, (fx, 0.95, fz), (0.42, 0.32, 0.42), FLOWERS[(k + (s > 0)) % len(FLOWERS)])
+            mb.ico(m, (fx, 0.95, fz), (0.42, 0.32, 0.42), FLOWERS[(k + (sgn > 0)) % len(FLOWERS)])
     mb.ao_strength = 0.25
 
 
