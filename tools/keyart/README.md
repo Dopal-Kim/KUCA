@@ -120,3 +120,19 @@ Unity: **KUCA → Season → Spring / Summer / Autumn / Winter / Auto(기기 날
 
 매끈한 메달 배지(64분할, 비스듬한 금색 테, 남색 뒷면), 가늘어지는 기둥과 금색 고리, 배지 뒤 은은한 후광(`KUCA/SpotGlow`).
 카메라 쪽으로 부드럽게 돌아보고, 가까이 가면 살짝 튀어 오르며 천천히 돌고 후광이 숨 쉬듯 밝아진다.
+
+## 수집 동물 3D 모델 (`kuca_art/creatures.py`, `build_creatures.py`)
+
+제미나이 3D 레퍼런스 시트(`Art/Concept/05_Characters/images`)를 보고 둥근 덩어리(타원체·캡슐·원뿔)로 만든 말랑한 토이 모델 24종.
+
+```bash
+cd tools/keyart
+uv run --with numpy python build_creatures.py      # → My project/Assets/Resources/KUCA/CreatureMeshes.bytes
+cd preview && node creatures.mjs shots/cr.png "yaw=0&cols=4&ids=pigeon,snail"   # 미리보기
+```
+
+- 형식은 `KeyArtGeometry.bytes` 와 같은 v3. Unity `CreatureLibrary` 가 같은 위치·색 정점을 합쳐 부드러운 법선으로 그린다.
+- 받침 테두리 = 등급 색 (초록·파랑·금). 금색은 윤기 띠 + 떠 있는 반짝이, 고슴도치 가시 끝 LED 는 밤에 빛난다.
+- 게임: 초록(`sprout`)·파랑(`crystal`)은 등급 동물 중 무작위. 노랑(`star`)은 랜드마크 범위 안에서만 그 장소 동물,
+  범위 밖이면 파랑으로 바뀐다. 범위 = 건물 둘레 45 m, 두 범위가 겹치면 둘 다 줄여 절대 겹치지 않는다 (`CreatureLibrary.GoldZones`).
+- 동물은 받침째 땅에 서서 카메라를 보며 통통 뛰고, 수집 반경 안이면 더 크게 뛴다. 획득 시 도감용 동물별 개수를 `progress.json` 에 저장.

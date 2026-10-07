@@ -4,6 +4,7 @@ using UnityEngine;
 /// <summary>
 /// Player 주변의 캠퍼스 안, 건물이 없는 곳에 수집 대상을 뿌린다.
 /// 멀어진 대상은 지우고, 개수가 모자라면 일정 간격으로 다시 채운다.
+/// 초록·파랑은 그 등급 동물 중 무작위, 노랑은 랜드마크 범위(CreatureLibrary.GoldZones) 안에서 그 장소의 동물만 나온다.
 /// </summary>
 public class CollectibleSpawner : MonoBehaviour
 {
@@ -96,7 +97,17 @@ public class CollectibleSpawner : MonoBehaviour
                 return false;
 
         CollectibleType type = PickType();
-        active.Add(Collectible.Create(type, pos, GetMaterial(type), transform));
+        string species = null;
+        if (type.id == "star")
+        {
+            // 노랑(황금) 동물은 자기 랜드마크 범위 안에서만 나온다. 범위 밖이면 파랑으로 바꾼다
+            CreatureLibrary.GoldZone zone = CreatureLibrary.GoldZoneAt(px, pz);
+            if (zone != null)
+                species = zone.species;
+            else
+                type = types.Find(t => t.id == "crystal") ?? type;
+        }
+        active.Add(Collectible.Create(type, pos, GetMaterial(type), transform, species));
         return true;
     }
 

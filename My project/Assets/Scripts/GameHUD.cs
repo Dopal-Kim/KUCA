@@ -77,7 +77,8 @@ public class GameHUD : MonoBehaviour
         sb.Append("점수 ").Append(progress.score).Append('\n');
         if (types != null)
             foreach (var t in types)
-                sb.Append(t.displayName).Append("  ×").Append(progress.CountOf(t.id)).Append('\n');
+                sb.Append(CreatureLibrary.TierLabels.TryGetValue(t.id, out string label) ? label : t.displayName)
+                  .Append("  ×").Append(progress.CountOf(t.id)).Append('\n');
         progressText.text = sb.ToString().TrimEnd();
     }
 

@@ -20,6 +20,8 @@ public class GameProgress
     public int score;
     public int totalCollected;
     public List<Entry> collected = new List<Entry>();
+    /// <summary>동물별 획득 수 (도감)</summary>
+    public List<Entry> species = new List<Entry>();
 
     static string FilePath => Path.Combine(Application.persistentDataPath, "progress.json");
 
@@ -37,6 +39,22 @@ public class GameProgress
         if (e == null)
             collected.Add(e = new Entry { id = type.id });
         e.count++;
+    }
+
+    public void AddSpecies(string id)
+    {
+        if (species == null)
+            species = new List<Entry>();
+        Entry e = species.Find(x => x.id == id);
+        if (e == null)
+            species.Add(e = new Entry { id = id });
+        e.count++;
+    }
+
+    public int SpeciesCountOf(string id)
+    {
+        Entry e = species?.Find(x => x.id == id);
+        return e != null ? e.count : 0;
     }
 
     public static GameProgress Load()

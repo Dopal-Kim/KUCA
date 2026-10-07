@@ -136,13 +136,15 @@ public class CollectController : MonoBehaviour
         float dist = CollectibleSpawner.HorizontalDistance(target.transform.position, campusMap.player.position);
         if (dist > collectRadius)
         {
-            hud?.Toast($"{target.Type.displayName}까지 {dist:F0}m — {collectRadius:F0}m 안으로 걸어가세요");
+            hud?.Toast($"{target.DisplayName}까지 {dist:F0}m — {collectRadius:F0}m 안으로 걸어가세요");
             return;
         }
 
         Progress.Add(target.Type);
+        if (target.SpeciesId != null)
+            Progress.AddSpecies(target.SpeciesId);
         Progress.Save();
-        hud?.Toast($"{target.Type.displayName} 획득! +{target.Type.points}");
+        hud?.Toast($"{target.DisplayName} 획득! +{target.Type.points}");
         hud?.ShowProgress(Progress, spawner.types);
         spawner.Remove(target);
     }

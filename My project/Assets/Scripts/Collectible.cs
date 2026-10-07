@@ -14,21 +14,28 @@ public class CollectibleType
 }
 
 /// <summary>
-/// 지도 위에 떠서 회전하는 수집 대상. Player가 수집 반경 안에 들어오면 커지며 강조된다.
+/// 지도 위 수집 대상. 동물 모델이 있는 등급은 받침 위 동물 캐릭터(CreatureLibrary)가 서서 카메라를 보며 통통 뛰고,
+/// 없는 등급은 떠서 도는 도형으로 그린다. Player가 수집 반경 안에 들어오면 커지며 강조된다.
 /// </summary>
 public class Collectible : MonoBehaviour
 {
     public CollectibleType Type { get; private set; }
+    /// <summary>동물 id (도형이면 null)</summary>
+    public string SpeciesId { get; private set; }
+    /// <summary>토스트·도감에 보일 이름 (동물 이름, 없으면 종류 이름)</summary>
+    public string DisplayName => SpeciesId != null ? CreatureLibrary.NameOf(SpeciesId) : Type.displayName;
 
     const float BaseSize = 12f;
     const float HoverHeight = 14f;
+    const float CreatureScale = 1.15f;     // 모델은 받침 포함 약 10 m
 
     Transform visual;
     float phase;
     bool inRange;
     float pulse;
 
-    public static Collectible Create(CollectibleType type, Vector3 groundPosition, Material material, Transform parent)
+    /// <param name="species">정해진 동물 (노랑: 랜드마크 동물). null 이면 등급에서 무작위</param>
+    public static Collectible Create(CollectibleType type, Vector3 groundPosition, Material material, Transform parent, string species = null)
     {
         var root = new GameObject($"Collectible_{type.id}");
         root.transform.SetParent(parent, false);
@@ -37,6 +44,25 @@ public class Collectible : MonoBehaviour
         var c = root.AddComponent<Collectible>();
         c.Type = type;
         c.phase = Random.value * Mathf.PI * 2f;
+
+        species = species ?? CreatureLibrary.PickSpecies(type.id);
+        if (species != null && CreatureLibrary.TryGetMesh(species, out Mesh mesh))
+        {
+            c.SpeciesId = species;
+            root.name = $"Collectible_{type.id}_{species}";
+            var body = new GameObject("Visual", typeof(MeshFilter), typeof(MeshRenderer));
+            body.transform.SetParent(root.transform, false);
+            body.transform.localScale = Vector3.one * CreatureScale;
+            body.GetComponent<MeshFilter>().sharedMesh = mesh;
+            body.GetComponent<MeshRenderer>().sharedMaterial = CreatureLibrary.Material;
+            c.visual = body.transform;
+
+            var hitBox = root.AddComponent<SphereCollider>();
+            hitBox.center = new Vector3(0f, 5.5f * CreatureScale, 0f);
+            hitBox.radius = 7.5f * CreatureScale;
+            hitBox.isTrigger = true;
+            return c;
+        }
 
         GameObject shape = GameObject.CreatePrimitive(type.shape);
         shape.name = "Visual";
@@ -65,8 +91,32 @@ public class Collectible : MonoBehaviour
 
         float t = Time.time + phase;
         pulse = Mathf.MoveTowards(pulse, inRange ? 1f : 0f, Time.deltaTime * 4f);
-        float scale = BaseSize * (1f + pulse * (0.35f + 0.1f * Mathf.Sin(t * 6f)));
 
+        if (SpeciesId != null)
+        {
+            // 동물: 카메라 쪽을 보고 가끔 통통 뛰며 살짝 몸을 흔든다. 반경 안이면 더 신나게 뛴다
+            float hopRate = inRange ? 2.2f : 1.1f;
+            float h = Mathf.Max(0f, Mathf.Sin(t * hopRate * Mathf.PI));
+            float hop = h * h * (inRange ? 2.2f : 1.0f);
+            float squash = 1f + 0.06f * Mathf.Sin(t * hopRate * Mathf.PI * 2f);
+            float s = CreatureScale * (1f + pulse * 0.25f);
+            visual.localPosition = new Vector3(0f, hop, 0f);
+            visual.localScale = new Vector3(s / Mathf.Sqrt(squash), s * squash, s / Mathf.Sqrt(squash));
+
+            float yaw = 0f;
+            Camera cam = Camera.main;
+            if (cam != null)
+            {
+                Vector3 toCam = cam.transform.position - transform.position;
+                toCam.y = 0f;
+                if (toCam.sqrMagnitude > 1f)
+                    yaw = Quaternion.LookRotation(toCam).eulerAngles.y;
+            }
+            visual.rotation = Quaternion.Euler(0f, yaw + 12f * Mathf.Sin(t * 0.9f), 0f);
+            return;
+        }
+
+        float scale = BaseSize * (1f + pulse * (0.35f + 0.1f * Mathf.Sin(t * 6f)));
         visual.localPosition = new Vector3(0f, HoverHeight + Mathf.Sin(t * 2f) * 2f, 0f);
         visual.localRotation = Quaternion.Euler(20f, t * 60f, 0f);
         visual.localScale = Vector3.one * scale;
