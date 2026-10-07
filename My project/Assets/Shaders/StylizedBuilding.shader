@@ -75,7 +75,8 @@ Shader "KUCA/StylizedBuilding"
                 if (n.y > 0.6)
                 {
                     float2 g = abs(frac(p.xz / 5.0) - 0.5);
-                    return _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+                    half3 roof = _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+                    return lerp(roof, half3(0.90, 0.94, 1.0), _KucaSnow * 0.9);   // 겨울: 지붕 눈
                 }
                 half3 c = _WallColor.rgb * lerp(0.93h, 1.04h, saturate(p.y / 24.0));
                 if (_Brick > 0.5) c *= 1.0 - 0.06 * step(frac(p.y / 0.34), 0.12);
@@ -135,6 +136,7 @@ Shader "KUCA/StylizedBuilding"
                 half3 albedo = BuildingAlbedo(i.positionWS, n, i.wall, i.roofTint, emit);
                 half3 color = KucaShade(albedo, n, i.positionWS);
                 color = KucaSunWash(color, i.positionCS) + emit;
+                color += KucaNightLight(albedo, i.positionWS, 0.35h);   // 근처 등불이 벽에 은은히
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

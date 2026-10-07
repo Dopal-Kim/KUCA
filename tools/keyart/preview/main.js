@@ -19,6 +19,8 @@ async function main() {
   if (md.shadowStrength !== undefined) look.shadowStrength = md.shadowStrength;
   const night = md.night || 0;
   const skyTint = (md.sky && md.sky.tint) || look.fog.color;
+  // ?season=spring|summer|autumn|winter (KeyArtLook.json seasons)
+  const season = (look.seasons || {})[q.get('season') || 'spring'] || { leaf: [1, 1, 1], autumn: 0, blossom: [1, 1, 1, 0], grass: [1, 1, 1], snow: 0 };
   const W = num('w', 1280), H = num('h', 800);
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(W, H);
@@ -49,6 +51,9 @@ async function main() {
   sun.shadow.normalBias = 0.6;
   sun.shadow.radius = 4;
 
+  const texLoader = new THREE.TextureLoader();
+  const loadTex = (url, srgb) => new Promise((res) => texLoader.load(url, (t) => { if (srgb) t.colorSpace = THREE.SRGBColorSpace; res(t); }));
+  const [groundTex, detailTex, lightsTex] = await Promise.all([loadTex(ART + 'CampusGround.jpg', true), loadTex(ART + 'GrassDetail.png', false), loadTex(ART + 'KeyArtLights.png', false)]);
   const S = look.sunny;
   const common = {
     uSkyAmb: { value: raw(look.ambient.sky) }, uGroundAmb: { value: raw(look.ambient.ground) },
@@ -58,24 +63,25 @@ async function main() {
     uTime: { value: 0 },
     uNight: { value: night }, uGlowColor: { value: lin(look.glow.color) }, uGlowStrength: { value: look.glow.strength },
     uLitWindows: { value: look.glow.litWindows },
+    uLights: { value: lightsTex }, uGroundLight: { value: look.glow.groundLight || 0 },
+    uSeasonLeaf: { value: raw(season.leaf) }, uSeasonBlossom: { value: new THREE.Vector4(...lin(season.blossom).toArray(), season.blossom[3]) },
+    uSeasonGrass: { value: raw(season.grass) }, uAutumn: { value: season.autumn }, uSnow: { value: season.snow },
   };
 
   // 지면
-  const texLoader = new THREE.TextureLoader();
-  const loadTex = (url, srgb) => new Promise((res) => texLoader.load(url, (t) => { if (srgb) t.colorSpace = THREE.SRGBColorSpace; res(t); }));
-  const [groundTex, detailTex, lightsTex] = await Promise.all([loadTex(ART + 'CampusGround.jpg', true), loadTex(ART + 'GrassDetail.png', false), loadTex(ART + 'KeyArtLights.png', false)]);
   groundTex.anisotropy = 8;
   detailTex.wrapS = detailTex.wrapT = THREE.RepeatWrapping;
   const groundAlbedo = `
     float greenness = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 8.0, 0.0, 1.0);
     float dtl = texture2D(uDetail, vec2(vWPos.x, -vWPos.z) / uDetailTile).r;
     diffuseColor.rgb *= 1.0 + (dtl - 0.5) * uDetailStrength * greenness;
+    diffuseColor.rgb = kucaSeasonGround(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z));
     diffuseColor.rgb = kucaWater(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z));
-    kEmit = uGlowColor * texture2D(uLights, vMapUv).r * uNight * uGroundLight * (diffuseColor.rgb * 1.3 + 0.06);`;
+    kNightAmt = 1.0;`;
   const groundMat = sunny(new THREE.MeshLambertMaterial({ map: groundTex }), common,
     { uDetail: { value: detailTex }, uDetailTile: { value: look.grassDetail.tile }, uDetailStrength: { value: look.grassDetail.strength },
-      uLights: { value: lightsTex }, uGroundLight: { value: look.glow.groundLight || 0 } },
-    'uniform sampler2D uDetail, uLights; uniform float uDetailTile, uDetailStrength, uGroundLight;', groundAlbedo, '#include <map_fragment>');
+    },
+    'uniform sampler2D uDetail; uniform float uDetailTile, uDetailStrength;', groundAlbedo, '#include <map_fragment>');
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), sunny(new THREE.MeshLambertMaterial({ color: lin(look.outerGrass) }), common));
   outer.rotation.x = -Math.PI / 2;
   outer.position.y = -0.3;
@@ -85,7 +91,11 @@ async function main() {
   // 지오메트리: Shell<스타일>_n 은 건물 외벽 재질, 나머지는 버텍스 색
   const buf = await (await fetch(ART + 'KeyArtGeometry.bytes')).arrayBuffer();
   const vcMat = sunny(new THREE.MeshLambertMaterial({ vertexColors: true }), common, {}, 'varying float vGlow;',
-    'kEmit = diffuseColor.rgb * uGlowColor * uGlowStrength * uNight * (1.0 - vGlow) * 2.0;', '#include <color_fragment>',
+    `{ vec3 P = vec3(vWPos.x, vWPos.y, -vWPos.z);
+       vec3 dn = normalize(cross(dFdx(vWPos), dFdy(vWPos)));
+       diffuseColor.rgb = kucaSeasonFoliage(diffuseColor.rgb, P, vec3(dn.x, dn.y, -dn.z)); }
+     kEmit = diffuseColor.rgb * uGlowColor * uGlowStrength * uNight * (1.0 - vGlow) * 2.0;
+     kNightAmt = 0.6;`, '#include <color_fragment>',
     'attribute float glowMask; varying float vGlow;@@vGlow = glowMask;');
   const shellMats = {};
   for (const { name, g } of await parseGeometry(buf)) {
@@ -127,6 +137,39 @@ uniform vec3 uSkyAmb, uGroundAmb, uShadowTint, uWashColor;
 uniform float uShadowStrength, uWrap, uWarmTop, uRim, uSat, uWash, uTime, uNight, uGlowStrength, uLitWindows;
 uniform vec3 uGlowColor;
 vec3 kEmit = vec3(0.0);   // 밤 불빛 (조명 뒤에 더함)
+float kNightAmt = 0.0;    // 넓게 퍼지는 밤 빛을 받는 정도 (지면 1, 나무 0.6, 벽 0.35)
+uniform sampler2D uLights;
+uniform float uGroundLight, uAutumn, uSnow;
+uniform vec3 uSeasonLeaf, uSeasonGrass;
+uniform vec4 uSeasonBlossom;
+vec3 kucaNightLight(vec3 albedo, vec3 p, float amount) {
+  if (uNight <= 0.001 || amount <= 0.0) return vec3(0.0);
+  float pool = texture2D(uLights, p.xz / vec2(1418.0, 1548.0) + 0.5).r;
+  return uGlowColor * pool * uNight * uGroundLight * amount * (albedo * 1.3 + 0.06);
+}
+vec3 kucaSeasonFoliage(vec3 c, vec3 p, vec3 n) {
+  float lum = dot(c, vec3(0.3, 0.6, 0.1));
+  float green = clamp((c.g - max(c.r, c.b) * 1.05) * 8.0, 0.0, 1.0);
+  float pink = clamp((c.r - c.g * 1.25) * 6.0, 0.0, 1.0) * clamp((c.b - c.g * 0.8) * 6.0, 0.0, 1.0);
+  float leafy = smoothstep(0.26, 0.34, c.r / max(c.g, 0.01));
+  float h = fract(sin(dot(floor(p.xz / 4.0), vec2(12.9898, 78.233))) * 43758.5453);
+  vec3 maple = mix(vec3(0.80, 0.22, 0.05), vec3(0.95, 0.58, 0.06), h);
+  maple = mix(maple, vec3(0.55, 0.10, 0.04), step(0.82, h));
+  vec3 g2 = c * uSeasonLeaf;
+  g2 = mix(g2, maple * lum * 2.4, uAutumn * leafy);
+  c = mix(c, g2, green);
+  c = mix(c, uSeasonBlossom.rgb * (0.7 + lum), pink * uSeasonBlossom.a);
+  return mix(c, vec3(0.90, 0.94, 1.0), uSnow * smoothstep(0.35, 0.75, n.y));
+}
+vec3 kucaSeasonGround(vec3 c, vec3 p) {
+  float green = clamp((c.g - max(c.r, c.b)) * 8.0, 0.0, 1.0);
+  c = mix(c, c * uSeasonGrass, green);
+  float water = clamp((c.b - max(c.r, c.g) * 0.85) * 5.0, 0.0, 1.0);
+  float nse = sin(p.x * 0.05) * sin(p.z * 0.043) * 0.5 + 0.5;
+  float snow = uSnow * clamp(green * 1.2 + 0.3, 0.0, 1.0) * smoothstep(0.15, 0.6, nse * 0.6 + uSnow * 0.7);
+  c = mix(c, vec3(0.84, 0.88, 0.95), snow * (1.0 - water));
+  return mix(c, vec3(0.70, 0.82, 0.92), uSnow * water * 0.6);
+}
 uniform vec2 uResolution;
 varying vec3 vWPos;
 vec3 kucaShade(vec3 albedo, vec3 N, vec3 L, vec3 sunCol, float atten, vec3 up, vec3 V) {
@@ -162,7 +205,8 @@ const SUNNY_LIGHT = `
   #endif
   vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
   outgoingLight = kucaShade(diffuseColor.rgb, Nv, directionalLights[0].direction, directionalLights[0].color, atten, upV, normalize(vViewPosition));
-  outgoingLight = kucaSunWash(outgoingLight, gl_FragCoord.xy / uResolution) + kEmit;
+  outgoingLight = kucaSunWash(outgoingLight, gl_FragCoord.xy / uResolution) + kEmit
+    + kucaNightLight(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z), kNightAmt);
 }
 #include <opaque_fragment>`;
 
@@ -190,7 +234,7 @@ function buildingMaterial(st, heightScale, common) {
     uWinH: { value: st.windowHeight }, uPilEvery: { value: st.pilasterEvery }, uBrick: { value: st.brick }, uArch: { value: st.arch || 0 },
   };
   return sunny(new THREE.MeshLambertMaterial({ color: 0xffffff }), common, u, BUILDING_GLSL,
-    'diffuseColor.rgb = kucaBuilding(vec3(vWPos.x, vWPos.y, -vWPos.z), normalize(vec3(vWN.x, vWN.y, -vWN.z)), vWall);',
+    'diffuseColor.rgb = kucaBuilding(vec3(vWPos.x, vWPos.y, -vWPos.z), normalize(vec3(vWN.x, vWN.y, -vWN.z)), vWall); kNightAmt = 0.35;',
     '#include <map_fragment>',
     'attribute vec2 wallUV; attribute vec3 roofTint; varying vec2 vWall; varying vec3 vWN; varying vec3 vRoofTint;@@vWall = wallUV; vRoofTint = roofTint; vWN = normalize(mat3(modelMatrix) * objectNormal);');
 }
@@ -205,7 +249,8 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float ao = mix(0.86, 1.0, clamp(p.y / 4.0, 0.0, 1.0));
   if (n.y > 0.6) {
     vec2 g = abs(fract(p.xz / 5.0) - 0.5);
-    return uRoof * vRoofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+    vec3 roof = uRoof * vRoofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+    return mix(roof, vec3(0.90, 0.94, 1.0), uSnow * 0.9);
   }
   vec3 c = uWall * mix(0.93, 1.04, clamp(p.y / 24.0, 0.0, 1.0));
   if (uBrick > 0.5) c *= 1.0 - 0.06 * step(fract(p.y / 0.34), 0.12);

@@ -11,6 +11,18 @@ using UnityEngine;
 public class KeyArtLook : MonoBehaviour
 {
     public enum Mode { Auto, Day, Sunset, Night }
+    public enum Season { Auto, Spring, Summer, Autumn, Winter }
+
+    [System.Serializable]
+    public class SeasonPalette
+    {
+        [Tooltip("활엽 초록에 곱하는 색 (리니어 배율)")] public Vector3 leaf = Vector3.one;
+        [Range(0f, 1f), Tooltip("활엽 단풍 정도")] public float autumn;
+        [Tooltip("분홍 꽃잎(벚꽃)이 바뀔 색")] public Color blossom = new Color(0.98f, 0.76f, 0.84f);
+        [Range(0f, 1f)] public float blossomMix;
+        [Tooltip("잔디에 곱하는 색 (리니어 배율)")] public Vector3 grass = Vector3.one;
+        [Range(0f, 1f)] public float snow;
+    }
 
     [System.Serializable]
     public class Preset
@@ -63,11 +75,22 @@ public class KeyArtLook : MonoBehaviour
     public Preset sunset = new Preset();
     public Preset night = new Preset();
 
+    [Header("계절 (Auto = 기기 날짜: 3~5 봄, 6~8 여름, 9~11 가을, 12~2 겨울)")]
+    public Season season = Season.Auto;
+    public SeasonPalette spring = new SeasonPalette();
+    public SeasonPalette summer = new SeasonPalette();
+    public SeasonPalette autumn = new SeasonPalette();
+    public SeasonPalette winter = new SeasonPalette();
+
     [Header("밤 불빛")]
     public Color glowColor = new Color(1f, 0.80f, 0.48f);
     public float glowStrength = 1.6f;
     [Range(0f, 1f)] public float litWindows = 0.55f;
     public float groundLight = 0.9f;
+
+    [Tooltip("밤 빛 지도 (KeyArtLights.png): 등 아래 웅덩이 + 넓게 번지는 빛")]
+    public Texture2D lightMap;
+    public Vector2 mapSize = new Vector2(1418f, 1548f);
 
     [Header("바꿀 대상 (Apply Key Art 가 채움)")]
     public Light sun;
@@ -91,6 +114,13 @@ public class KeyArtLook : MonoBehaviour
     static readonly int GlowStrengthId = Shader.PropertyToID("_KucaGlowStrength");
     static readonly int LitId = Shader.PropertyToID("_KucaLitWindows");
     static readonly int GroundLightId = Shader.PropertyToID("_KucaGroundLight");
+    static readonly int LightMapId = Shader.PropertyToID("_KucaLightMap");
+    static readonly int MapSizeId = Shader.PropertyToID("_KucaMapSize");
+    static readonly int LeafId = Shader.PropertyToID("_KucaSeasonLeaf");
+    static readonly int BlossomId = Shader.PropertyToID("_KucaSeasonBlossom");
+    static readonly int GrassId = Shader.PropertyToID("_KucaSeasonGrass");
+    static readonly int AutumnId = Shader.PropertyToID("_KucaAutumn");
+    static readonly int SnowId = Shader.PropertyToID("_KucaSnow");
 
     float nextAutoUpdate;
 
@@ -104,6 +134,30 @@ public class KeyArtLook : MonoBehaviour
         {
             nextAutoUpdate = Time.realtimeSinceStartup + 5f;
             Apply();
+        }
+    }
+
+    /// <summary>계절을 바꾸고 바로 적용</summary>
+    public void SetSeason(Season s)
+    {
+        season = s;
+        Apply();
+    }
+
+    public SeasonPalette CurrentSeason()
+    {
+        Season s = season;
+        if (s == Season.Auto)
+        {
+            int m = System.DateTime.Now.Month;
+            s = m >= 3 && m <= 5 ? Season.Spring : m >= 6 && m <= 8 ? Season.Summer : m >= 9 && m <= 11 ? Season.Autumn : Season.Winter;
+        }
+        switch (s)
+        {
+            case Season.Summer: return summer;
+            case Season.Autumn: return autumn;
+            case Season.Winter: return winter;
+            default: return spring;
         }
     }
 
@@ -156,6 +210,17 @@ public class KeyArtLook : MonoBehaviour
         Shader.SetGlobalFloat(GlowStrengthId, glowStrength);
         Shader.SetGlobalFloat(LitId, litWindows);
         Shader.SetGlobalFloat(GroundLightId, groundLight);
+        if (lightMap != null) Shader.SetGlobalTexture(LightMapId, lightMap);
+        Shader.SetGlobalVector(MapSizeId, lightMap != null ? new Vector4(mapSize.x, mapSize.y, 0f, 0f) : Vector4.zero);
+
+        SeasonPalette sp = CurrentSeason();
+        // leaf.x 가 0 이면 셰이더가 계절을 건너뛰므로 최소값을 둔다
+        Shader.SetGlobalVector(LeafId, new Vector4(Mathf.Max(sp.leaf.x, 0.001f), sp.leaf.y, sp.leaf.z, 1f));
+        Color bl = sp.blossom.linear;
+        Shader.SetGlobalVector(BlossomId, new Vector4(bl.r, bl.g, bl.b, sp.blossomMix));
+        Shader.SetGlobalVector(GrassId, sp.grass);
+        Shader.SetGlobalFloat(AutumnId, sp.autumn);
+        Shader.SetGlobalFloat(SnowId, sp.snow);
 
         if (sun != null)
         {

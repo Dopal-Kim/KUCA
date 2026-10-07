@@ -11,6 +11,8 @@ public class KyungHeeSpots : MonoBehaviour
     public Transform buildingsRoot;
     public Material badgeMaterial;
     public Material poleMaterial;
+    [Tooltip("배지 뒤 후광 (KUCA/SpotGlow). 비우면 후광 없음. Apply Key Art 가 채운다")]
+    public Material glowMaterial;
 
     [Tooltip("이 거리(m) 안에 들어오면 스팟이 돌고 메모를 남길 수 있다 (건물 외곽 기준)")]
     public float interactRadius = 40f;
@@ -63,7 +65,7 @@ public class KyungHeeSpots : MonoBehaviour
             var r = info.GetComponent<Renderer>();
             if (r == null)
                 continue;
-            spots.Add(KyungHeeSpot.Create(info, r.bounds, badgeMaterial, poleMaterial, transform));
+            spots.Add(KyungHeeSpot.Create(info, r.bounds, badgeMaterial, poleMaterial, transform, glowMaterial));
         }
     }
 

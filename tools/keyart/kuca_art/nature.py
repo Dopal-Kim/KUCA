@@ -217,7 +217,7 @@ METAL = (0.36, 0.38, 0.42)
 def draw_lamp(mb, x, z, face_yaw):
     m = Frame.yaw((x, 0.0, z), face_yaw)
     hx, _, hz = m.p((0, 0, 0.75))
-    LIGHTS.append((hx, hz, 5.0, 0.9))
+    LIGHTS.append((hx, hz, 6.0, 0.9))
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.2
     mb.prism(m, (0, 0, 0), 0.28, 0.45, 6, LAMP_POLE)
     mb.ao_strength = 0.0

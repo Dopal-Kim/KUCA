@@ -103,4 +103,17 @@ OSM 에 층수가 없는 건물은 조사한 실제 층수로 높이를 바로�
 `KeyArtLook.json` 의 `modes` 에 모드별 해·환경광·그늘·햇살·안개·하늘·밤 불빛 값.
 Unity `KeyArtLook` 컴포넌트 `mode = Auto` 면 기기 시계를 따라 새벽 노을(6:15) → 낮(7:30~17:00) → 저녁 노을(18:15) → 밤(19:30~)으로 부드럽게 바뀐다.
 에디터에서 바로 보기: **KUCA → Time of Day → Day / Sunset / Night / Auto**. 게임 코드에서는 `KeyArtLook.SetMode(...)`.
-밤: 창문 일부(`glow.litWindows`)에 불, 가로등·담장 등·현관 유리문이 빛나고(버텍스 알파 0), 그 아래 바닥 빛 웅덩이(`KeyArtLights.png`).
+밤: 창문 일부(`glow.litWindows`)에 불, 가로등·담장 등·현관 유리문이 빛나고(버텍스 알파 0),
+`KeyArtLights.png`(등 아래 웅덩이 + 25 m 에 걸쳐 넓게 번지는 빛)가 지면·나무·벽 아래쪽을 따뜻하게 비춘다 (`glow.groundLight`).
+
+## 계절 팔레트
+
+`KeyArtLook.json` 의 `seasons` (봄·여름·가을·겨울) — 지오메트리는 그대로, 셰이더가 색만 바꾼다.
+여름: 벚꽃 → 초록 잎, 짙은 잔디 / 가을: 활엽수 나무마다 다른 단풍(침엽·산울타리는 초록), 누런 잔디 / 겨울: 지붕·잔디·잎 윗면에 눈, 언 호수.
+Unity: **KUCA → Season → Spring / Summer / Autumn / Winter / Auto(기기 날짜)**, 코드에서는 `KeyArtLook.SetSeason(...)`.
+미리보기: `SEASON=autumn node render.mjs` (시간대와 함께: `MODE=night SEASON=winter`).
+
+## 경희스팟
+
+매끈한 메달 배지(64분할, 비스듬한 금색 테, 남색 뒷면), 가늘어지는 기둥과 금색 고리, 배지 뒤 은은한 후광(`KUCA/SpotGlow`).
+카메라 쪽으로 부드럽게 돌아보고, 가까이 가면 살짝 튀어 오르며 천천히 돌고 후광이 숨 쉬듯 밝아진다.

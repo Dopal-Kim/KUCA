@@ -82,16 +82,34 @@ public static class KeyArtMapSetup
         public float night; public ModeSky sky;
     }
     [System.Serializable] class Modes { public ModePreset day, sunset, night; }
+    [System.Serializable] class SeasonRow { public float[] leaf, blossom, grass; public float autumn, snow; }
+    [System.Serializable] class Seasons { public SeasonRow spring, summer, autumn, winter; }
     [System.Serializable] class Glow { public float[] color; public float litWindows = 0.55f, strength = 1.6f, groundLight = 0.9f; }
     [System.Serializable]
     class Look
     {
         public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
-        public Modes modes; public Glow glow;
+        public Modes modes; public Glow glow; public Seasons seasons;
         public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
     }
 
     static Vector3 V3(float[] c) => new Vector3(c[0], c[1], c[2]);
+
+    static KeyArtLook.SeasonPalette ToSeason(SeasonRow r)
+    {
+        var p = new KeyArtLook.SeasonPalette();
+        if (r == null) return p;
+        if (r.leaf != null && r.leaf.Length >= 3) p.leaf = V3(r.leaf);
+        if (r.grass != null && r.grass.Length >= 3) p.grass = V3(r.grass);
+        if (r.blossom != null && r.blossom.Length >= 4)
+        {
+            p.blossom = Srgb(r.blossom);
+            p.blossomMix = r.blossom[3];
+        }
+        p.autumn = r.autumn;
+        p.snow = r.snow;
+        return p;
+    }
 
     /// <summary>JSON 모드 프리셋 → KeyArtLook.Preset</summary>
     static KeyArtLook.Preset ToPreset(ModePreset m)
@@ -157,7 +175,6 @@ public static class KeyArtMapSetup
             lImp.textureCompression = TextureImporterCompression.CompressedHQ;
             lImp.SaveAndReimport();
         }
-        ground.SetTexture("_LightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(LightsTex));
         EditorUtility.SetDirty(ground);
 
         // 지형 메시용: 같은 지면 텍스처를 월드 좌표로
@@ -216,6 +233,7 @@ public static class KeyArtMapSetup
         }
 
         SetTerrain(hasTerrain);
+        SetSpotGlow();
         ApplyBuildingStyles(styleMats, manifest, hs);
         BuildGeometry(vertexColor, styleMats, hasTerrain ? terrainMat : null);
         SetOuterGround(outer, true);
@@ -247,6 +265,27 @@ public static class KeyArtMapSetup
         Undo.RecordObject(kl, "Time of day");
         if (kl.sun != null) Undo.RecordObject(kl.sun, "Time of day");
         kl.SetMode(m);
+        EditorUtility.SetDirty(kl);
+        EditorSceneManager.MarkSceneDirty(kl.gameObject.scene);
+        SceneView.RepaintAll();
+    }
+
+    [MenuItem("KUCA/Season/Auto (기기 날짜)")] static void SeasonAuto() => SetSeason(KeyArtLook.Season.Auto);
+    [MenuItem("KUCA/Season/Spring 봄")] static void SeasonSpring() => SetSeason(KeyArtLook.Season.Spring);
+    [MenuItem("KUCA/Season/Summer 여름")] static void SeasonSummer() => SetSeason(KeyArtLook.Season.Summer);
+    [MenuItem("KUCA/Season/Autumn 가을")] static void SeasonAutumn() => SetSeason(KeyArtLook.Season.Autumn);
+    [MenuItem("KUCA/Season/Winter 겨울")] static void SeasonWinter() => SetSeason(KeyArtLook.Season.Winter);
+
+    static void SetSeason(KeyArtLook.Season season)
+    {
+        var kl = Object.FindAnyObjectByType<KeyArtLook>();
+        if (kl == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", "먼저 KUCA → Map Style → Apply Key Art 를 실행하세요.", "확인");
+            return;
+        }
+        Undo.RecordObject(kl, "Season");
+        kl.SetSeason(season);
         EditorUtility.SetDirty(kl);
         EditorSceneManager.MarkSceneDirty(kl.gameObject.scene);
         SceneView.RepaintAll();
@@ -348,6 +387,18 @@ public static class KeyArtMapSetup
             Undo.RecordObject(gen, "Building material");
             gen.buildingMaterial = mats["Default"];
         }
+    }
+
+    /// <summary>경희스팟 배지 뒤 후광 재질을 만들어 KyungHeeSpots 에 넣는다</summary>
+    static void SetSpotGlow()
+    {
+        var spots = Object.FindAnyObjectByType<KyungHeeSpots>();
+        if (spots == null) return;
+        Material glow = LoadOrCreate(Dir + "/KeyArtSpotGlow.mat", "KUCA/SpotGlow");
+        glow.SetColor("_Color", new Color(1f, 0.86f, 0.55f));
+        EditorUtility.SetDirty(glow);
+        Undo.RecordObject(spots, "Spot glow");
+        spots.glowMaterial = glow;
     }
 
     static void SetTerrain(bool on)
@@ -468,6 +519,14 @@ public static class KeyArtMapSetup
                 kl.groundLight = look.glow.groundLight;
             }
             kl.skybox = sky;
+            kl.lightMap = AssetDatabase.LoadAssetAtPath<Texture2D>(LightsTex);
+            if (look.seasons != null)
+            {
+                kl.spring = ToSeason(look.seasons.spring);
+                kl.summer = ToSeason(look.seasons.summer);
+                kl.autumn = ToSeason(look.seasons.autumn);
+                kl.winter = ToSeason(look.seasons.winter);
+            }
             var dirSun = Object.FindAnyObjectByType<Light>();
             kl.sun = dirSun != null && dirSun.type == LightType.Directional ? dirSun : null;
         }
