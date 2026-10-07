@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: KeyArtBuilding_Modern
-  m_Shader: {fileID: 4800000, guid: d1064b6a0381441c1963eba69df0f0d6, type: 3}
+  m_Name: KeyArtSpotGlow
+  m_Shader: {fileID: 4800000, guid: 0eeba973fe2764112947cc0906201b5d, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -25,17 +25,8 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Arch: 0
-    - _Brick: 0
-    - _FloorHeight: 4.5499997
-    - _PilasterEvery: 0
-    - _WindowHeight: 0.42
-    - _WindowSpacing: 3.2
-    - _WindowWidth: 0.86
+    - _Intensity: 0.5
     m_Colors:
-    - _RoofColor: {r: 0.76, g: 0.75, b: 0.73, a: 1}
-    - _TrimColor: {r: 1, g: 1, b: 0.99, a: 1}
-    - _WallColor: {r: 0.97, g: 0.97, b: 0.95, a: 1}
-    - _WindowColor: {r: 0.46, g: 0.68, b: 0.86, a: 1}
+    - _Color: {r: 1, g: 0.86, b: 0.55, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
