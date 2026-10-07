@@ -192,6 +192,83 @@ def kawaii_eyes(fig, head_c, R, spread=24, pitch=-12, size=0.62, iris=IRIS, tall
         _ellipsoid(b, (size * 0.32 * s, -size * 0.45, size * 0.3), (size * 0.12, size * 0.12, size * 0.06), SHINE, 8, 4, f)
 
 
+def eye_at(fig, f, style='round', size=0.45, iris=IRIS, side=1, tilt=0.0, lid=None):
+    """
+    한쪽 눈. f = 표면 위 좌표계 (로컬 +Z 바깥, +Y 위) — 머리가 구가 아니어도 실제 표면 점에서 만든 Frame 을 넘긴다.
+    style (캐릭터 개성에 맞춰 고른다):
+      'round'    둥근 키아트 눈 (홍채 + 동공 + 반짝임 2개)        — 기본, 순한 성격
+      'almond'   아몬드형, 눈꼬리 올라감 (tilt 로 기울기)          — 영리·당돌 (여우, 까마귀, 진돗개)
+      'bead'     작고 반짝이는 까만 구슬 눈                        — 작은 동물 (오리, 고슴도치, 두더지)
+      'big_dark' 홍채가 거의 다 검은 큰 눈, 큰 반짝임              — 야행성 (날다람쥐)
+      'cat'      큰 홍채 + 세로로 긴 동공                          — 고양이
+      'ring'     흰 눈테(아이링) 두른 눈                           — 앵무새, 비둘기
+      'closed'   ∪ 모양으로 웃으며 감은 눈                         — 졸린·행복 (햄스터)
+      'droopy'   위 눈꺼풀이 반쯤 덮은 멍한 눈 (lid = 눈꺼풀 색)   — 비둘기, 달팽이
+    """
+    b = fig.extra
+    s = size
+    rot = Frame(f.o, *[tuple(c) for c in (np.array(f.x) * math.cos(math.radians(tilt * side)) + np.array(f.y) * math.sin(math.radians(tilt * side)),
+                                         -np.array(f.x) * math.sin(math.radians(tilt * side)) + np.array(f.y) * math.cos(math.radians(tilt * side)),
+                                         np.array(f.z))])
+    hi = tuple(min(1, c * 1.55) for c in iris)
+    if style == 'closed':
+        for k in range(11):
+            a = math.pi * k / 10
+            _ellipsoid(b, (math.cos(a) * s * 0.75, -math.sin(a) * s * 0.42 + s * 0.15, 0.02), (s * 0.13, s * 0.13, s * 0.08), PUPIL, 6, 4, rot)
+        return
+    if style == 'bead':
+        _ellipsoid(b, (0, 0, 0), (s * 0.55, s * 0.62, s * 0.3), PUPIL, 16, 8, rot)
+        _ellipsoid(b, (-s * 0.18 * side, s * 0.2, s * 0.22), (s * 0.18, s * 0.18, s * 0.08), SHINE, 8, 4, rot)
+        return
+    w, h = {'round': (0.9, 1.08), 'almond': (1.05, 0.72), 'big_dark': (1.0, 1.12), 'cat': (0.95, 1.0), 'ring': (0.82, 0.9), 'droopy': (0.95, 1.0)}[style]
+    if style == 'ring':
+        _ellipsoid(b, (0, 0, -s * 0.05), (s * w * 1.35, s * h * 1.35, s * 0.3), (0.97, 0.96, 0.92), 20, 10, rot)
+    _ellipsoid(b, (0, 0, 0), (s * w, s * h, s * 0.34), PUPIL, 22, 10, rot)
+    if style != 'big_dark':
+        _ellipsoid(b, (0, -s * 0.12, s * 0.06), (s * w * 0.84, s * h * 0.8, s * 0.32), iris, 20, 10, rot)
+        _ellipsoid(b, (0, -s * h * 0.42, s * 0.1), (s * w * 0.55, s * h * 0.32, s * 0.27), hi, 16, 8, rot)
+    pupil = (s * w * 0.18, s * h * 0.62) if style == 'cat' else (s * w * 0.46, s * h * 0.5)
+    _ellipsoid(b, (0, s * 0.02, s * 0.15), (pupil[0], pupil[1], s * 0.27), PUPIL, 16, 8, rot)
+    big = 0.38 if style == 'big_dark' else 0.3
+    _ellipsoid(b, (-s * w * 0.32 * side, s * h * 0.36, s * 0.3), (s * big, s * big, s * 0.12), SHINE, 12, 6, rot)
+    _ellipsoid(b, (s * w * 0.34 * side, -s * h * 0.42, s * 0.3), (s * 0.12, s * 0.12, s * 0.06), SHINE, 8, 4, rot)
+    if style == 'droopy' or lid:
+        _ellipsoid(b, (0, s * h * 0.5, s * 0.08), (s * w * 1.08, s * h * 0.62, s * 0.42), lid or (0.7, 0.7, 0.75), 18, 8, rot)
+
+
+def surface_frame(fig, origin, direction, up=(0, 1, 0), out=0.0, layer=None):
+    """
+    origin 에서 direction 으로 광선을 쏴 조형 표면(layer 만, 없으면 전체)에 닿은 점의 Frame. 눈·코·입을 실제 표면에 붙일 때 쓴다
+    (머리가 타원·달걀·납작한 모양이어도 묻히거나 뜨지 않게).
+    """
+    o = np.asarray(origin, np.float64)
+    d = np.asarray(direction, np.float64)
+    d = d / np.linalg.norm(d)
+    parts = [p for p in fig.s.parts if layer is None or p[3] == layer]
+
+    def field(P):
+        out_ = None
+        for f, _, k, _ in parts:
+            v = f(P)
+            out_ = v if out_ is None else S.smin(out_, v, k)
+        return out_
+    t = 0.0
+    for _ in range(200):
+        dist = field((o + d * t)[None, :])[0]
+        if dist < 1e-3:
+            break
+        t += max(dist * 0.9, 1e-3)
+    p = o + d * t
+    e = np.eye(3) * 1e-3
+    n = np.array([field((p + e[i])[None, :])[0] - field((p - e[i])[None, :])[0] for i in range(3)])
+    n /= np.linalg.norm(n) or 1
+    p = p + n * out
+    x = np.cross(np.asarray(up, np.float64), n)
+    x /= np.linalg.norm(x) or 1
+    y = np.cross(n, x)
+    return Frame(tuple(p), tuple(x), tuple(y), tuple(n))
+
+
 def smile(fig, head_c, R, pitch=-30, w=0.32, col=(0.30, 0.16, 0.16), open_=False):
     """'w' 입 (작은 곡선 두 개). open_ 이면 분홍 혀가 보이는 열린 입"""
     b = fig.extra
