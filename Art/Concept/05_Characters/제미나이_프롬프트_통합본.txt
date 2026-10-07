@@ -1,13 +1,18 @@
 You are generating a full set of collectible character art for a cheerful campus map game (Kyung Hee University Global Campus).
 There are 24 characters. For EACH character make TWO images: (A) a collection card and (B) a 3D model reference sheet. 48 images total.
 
+BATCH MODE - THIS IS ONE SINGLE JOB FOR ALL 24 CHARACTERS
+- Treat all 24 characters as one batch and produce ALL 48 images in this response, back to back.
+- Do NOT stop after one or two images. Do NOT ask me for confirmation, do NOT ask which one to do next, do NOT summarize between images.
+- Keep generating continuously until image #24B is finished. Only stop earlier if you hit a hard output limit;
+  in that case end with exactly one line "NEXT: #<number><A or B>", and when I reply "continue" resume from that image and again keep going to #24B without pausing.
+
 HOW TO WORK
-1. Generate exactly ONE image per step, in the order listed in CHARACTER LIST: first image #1A, then #1B, then #2A, #2B, and so on until #24B.
-2. Character #1 (Engineering Rabbit) defines the art style. Every later character must match #1's rendering style,
+1. One image per step in this order: #1A, #1B, #2A, #2B, ... #24A, #24B.
+2. Character #1 (Space Engineering Rabbit) defines the art style. Every other character must match #1's rendering style,
    proportion, face style and diorama base design exactly (different animal, same art style).
-3. Each (B) sheet must show the exact same character as its (A) card: same face, colors, outfit, accessories and base.
-4. Above each image write only its number and name, e.g. "#1A Engineering Rabbit - card". Nothing written inside the images.
-5. If you must stop, stop after a finished image; when I say "continue", resume from the next number.
+3. Each (B) sheet shows exactly the same character as its (A) card: same face, colors, outfit, accessories and base.
+4. Above each image write only its number and name, e.g. "#1A Space Engineering Rabbit - card". Nothing written inside the images.
 
 
 SHARED STYLE (applies to every image)
@@ -61,13 +66,16 @@ For (B), ignore the POSE and LANDMARK lines; use a neutral A-pose and a closed-m
 CHARACTER LIST
 
 #1
-CHARACTER = Engineering Rabbit, RARITY = LEGENDARY.
-A fluffy white rabbit with long upright ears (ears poke through holes in the helmet), pink inner ears and nose.
-Outfit: a yellow safety hard hat, round workshop goggles pushed up on the hat, light grey overalls with a crimson stitch on the pocket.
-Tool: a small chunky wrench.
-Base decoration: a few tiny gears and bolts on the grass.
-POSE: tightening a big bolt with the wrench, tongue slightly out in concentration.
-LANDMARK: a modern white engineering building with long horizontal ribbon windows, a vertical glass stair tower and a flat entrance canopy.
+CHARACTER = Space Engineering Rabbit, RARITY = LEGENDARY.
+A fluffy white rabbit astronaut-engineer with pink inner ears and nose.
+Outfit: a chunky rounded white space suit with soft padded segments, golden-yellow joint rings and trims,
+a small blank round mission patch on the chest (no text) and a crimson stitch on the shoulder,
+a clear round fishbowl helmet with two soft ear-shaped bumps on top so the long ears fit inside,
+and a compact white backpack jetpack with two small yellow thrusters.
+Tool: a small chunky space wrench tethered to the belt by a coiled cord.
+Base decoration: a tiny toy rocket, a little grey moon rock and a few small gears on the grass.
+POSE: hovering just above the base on two tiny puffs of jetpack smoke while tightening a bolt on a tiny satellite with the wrench.
+LANDMARK: a modern white engineering building with long horizontal ribbon windows, a vertical glass stair tower and a flat entrance canopy, a small rocket model and satellite dish on its roof.
 
 #2
 CHARACTER = Pigeon, RARITY = COMMON.
@@ -252,4 +260,4 @@ Base decoration: a tiny tripod.
 POSE: standing on tiptoe taking a photo, one eye closed.
 LANDMARK: a modern building mixing blue glass curtain-wall volumes and beige stone volumes with vertical slit windows, a glass entrance canopy.
 
-Start now with image #1A.
+Start now with #1A and continue through all 48 images to #24B in this same response without stopping.
