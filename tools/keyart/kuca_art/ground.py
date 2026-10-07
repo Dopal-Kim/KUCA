@@ -506,6 +506,24 @@ class Ground:
         if detail_path:
             self._detail(detail_path)
 
+    def paint_lights(self, path, lights, size=2048):
+        """밤 바닥 불빛 지도 (회색 1채널, 지면 텍스처와 같은 배치): 가로등·현관·담장 등 아래 부드러운 빛 웅덩이"""
+        h = size
+        w = round(size * self.W / self.H)
+        ppm = h / self.H * self.ppm
+        acc = np.zeros((h, w), np.float32)
+        img = Image.new('L', (w, h), 0)
+        d = ImageDraw.Draw(img)
+        for x, z, r, s in lights:
+            px, py = self.r.px(x, z)
+            px, py = px * w / self.W, py * h / self.H
+            rr = r * ppm
+            d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=int(255 * min(1.0, s)))
+        acc = ndimage.gaussian_filter(np.asarray(img).astype(np.float32) / 255, 2.2 * ppm)
+        acc = np.clip(acc * 1.6, 0, 1) ** 0.8
+        Image.fromarray((acc * 255).astype(np.uint8)).save(path)
+        print('lights', len(lights), path)
+
     def _crosswalks(self, md):
         """보행로가 차도를 가로지르는 곳에 얼룩말 무늬"""
         stripe_w = max(2, int(0.55 * self.ppm))

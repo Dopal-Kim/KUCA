@@ -206,6 +206,8 @@ def _near(g, x, z):
 
 # ---------- 소품: 가로등, 벤치 ----------
 
+LIGHTS = []   # 밤 바닥 불빛 웅덩이: (x, z, 반지름 m, 세기) — build_art 가 KeyArtLights.png 로 그린다
+
 LAMP_POLE = (0.32, 0.34, 0.38)
 LAMP_HEAD = (1.0, 0.97, 0.86)
 WOOD = (0.66, 0.47, 0.30)
@@ -214,12 +216,16 @@ METAL = (0.36, 0.38, 0.42)
 
 def draw_lamp(mb, x, z, face_yaw):
     m = Frame.yaw((x, 0.0, z), face_yaw)
+    hx, _, hz = m.p((0, 0, 0.75))
+    LIGHTS.append((hx, hz, 5.0, 0.9))
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.8, 0.2
     mb.prism(m, (0, 0, 0), 0.28, 0.45, 6, LAMP_POLE)
     mb.ao_strength = 0.0
     mb.prism(m, (0, 0.45, 0), 0.13, 4.6, 6, LAMP_POLE, r_top=0.1)
     mb.box(m, (0, 5.0, 0.35), (0.14, 0.12, 0.8), LAMP_POLE)
+    mb.emissive = True
     mb.box(m, (0, 4.75, 0.75), (0.55, 0.45, 0.55), LAMP_HEAD, top=LAMP_HEAD)
+    mb.emissive = False
     mb.box(m, (0, 5.05, 0.75), (0.75, 0.14, 0.75), LAMP_POLE)
     mb.ao_strength = 0.25
 

@@ -68,8 +68,9 @@ Shader "KUCA/StylizedBuilding"
                 return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
             }
 
-            half3 BuildingAlbedo(float3 p, float3 n, float2 wall, half3 roofTint)
+            half3 BuildingAlbedo(float3 p, float3 n, float2 wall, half3 roofTint, out half3 emit)
             {
+                emit = 0;
                 half ao = lerp(0.86h, 1.0h, saturate(p.y / 4.0));
                 if (n.y > 0.6)
                 {
@@ -113,6 +114,8 @@ Shader "KUCA/StylizedBuilding"
                     glass = lerp(glass, half3(0.97, 0.99, 1.0), 0.4 * step(0.86, frac((qq.x * 0.7 + qq.y) * 0.45 + h)));
                     if (h > 0.8 && t > 0.5) glass = lerp(glass, half3(1.0, 0.93, 0.84), 0.55);   // 커튼
                     if (_WindowWidth > 0.8 && abs(qq.x) < 0.06) glass = _TrimColor.rgb * 0.95;    // 넓은 창 멀리언
+                    glass *= lerp(1.0, 0.45, _KucaNight);
+                    if (h < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (0.65 + 0.35 * t);   // 밤: 불 켜진 창
                     res = glass;
                 }
                 else if (d < 0.16) res = _TrimColor.rgb;   // 창틀
@@ -120,14 +123,18 @@ Shader "KUCA/StylizedBuilding"
                 // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
                 float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
-                return lerp(res, avg, saturate(px * 3.0 - 0.6));
+                float fade = saturate(px * 3.0 - 0.6);
+                emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7), fade);
+                return lerp(res, avg, fade);
             }
 
             half4 frag (Varyings i) : SV_Target
             {
                 float3 n = normalize(i.normalWS);
-                half3 color = KucaShade(BuildingAlbedo(i.positionWS, n, i.wall, i.roofTint), n, i.positionWS);
-                color = KucaSunWash(color, i.positionCS);
+                half3 emit;
+                half3 albedo = BuildingAlbedo(i.positionWS, n, i.wall, i.roofTint, emit);
+                half3 color = KucaShade(albedo, n, i.positionWS);
+                color = KucaSunWash(color, i.positionCS) + emit;
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

@@ -43,6 +43,7 @@ cd tools/keyart/preview
 npm install
 node render.mjs                        # shots/*.png (사색의 광장, 중앙도서관, 노천극장, 대운동장, 전경)
 node render.mjs mine=120,-400,300,30   # 이름=x,z,거리,요 (월드 m, 도)
+MODE=sunset node render.mjs            # 시간대: day(기본) / sunset / night
 ```
 
 ## 코드 구성 (`kuca_art/`)
@@ -91,3 +92,15 @@ OSM 에 층수가 없는 건물은 조사한 실제 층수로 높이를 바로�
 | 중앙도서관·체육대학관·예술디자인대학 | 4 | 연면적·규모 추정 (코린트 양식) |
 | 국제학관 | 4 | OSM |
 | 공학실험동 | 2 | 지하1·지상2 |
+
+## 지형 (`terrain.py`)
+
+큰 특징만 또렷하게: 제2기숙사 → 중앙도서관 사이 9 m 언덕길, 동쪽 숲이 최대 약 19 m 까지 오르는 산, 그 밖은 0~1.8 m 의 완만한 물결.
+건물·물·운동장·광장·주차장 아래는 평평한 터. 결과 `KeyArtHeight.bytes` → Unity `KeyArtTerrain.HeightAt(x, z)` (플레이어·수집물 높이).
+
+## 시간대 (낮 · 노을 · 밤)
+
+`KeyArtLook.json` 의 `modes` 에 모드별 해·환경광·그늘·햇살·안개·하늘·밤 불빛 값.
+Unity `KeyArtLook` 컴포넌트 `mode = Auto` 면 기기 시계를 따라 새벽 노을(6:15) → 낮(7:30~17:00) → 저녁 노을(18:15) → 밤(19:30~)으로 부드럽게 바뀐다.
+에디터에서 바로 보기: **KUCA → Time of Day → Day / Sunset / Night / Auto**. 게임 코드에서는 `KeyArtLook.SetMode(...)`.
+밤: 창문 일부(`glow.litWindows`)에 불, 가로등·담장 등·현관 유리문이 빛나고(버텍스 알파 0), 그 아래 바닥 빛 웅덩이(`KeyArtLights.png`).

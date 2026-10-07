@@ -367,7 +367,11 @@ def _entrance(mb, b, ent, pal):
     w = 8.0 if b.area > 600 else 6.0
     # 문틀과 유리문 (벽에서 살짝 앞으로)
     mb.box(m, (0, 1.75, 0.18), (w * 0.62, 3.5, 0.36), trim)
+    from .nature import LIGHTS
+    LIGHTS.append((x + nx * 3.0, z + nz * 3.0, 8.0, 0.9))   # 현관 앞 바닥 불빛
+    mb.emissive = True     # 밤에 불 켜진 현관
     mb.box(m, (0, 1.55, 0.38), (w * 0.5, 3.1, 0.08), GLASS_DOOR, top=GLASS_DOOR)
+    mb.emissive = False
     mb.box(m, (0, 1.55, 0.43), (0.12, 3.1, 0.04), trim)
     # 캐노피와 기둥
     mb.box(m, (0, 3.95, 1.9), (w, 0.5, 3.8), trim, top=shade(trim, 1.02))

@@ -57,6 +57,8 @@ Shader "KUCA/VertexColorLit"
             {
                 half3 color = KucaShade(i.color.rgb, normalize(i.normalWS), i.positionWS);
                 color = KucaSunWash(color, i.positionCS);
+                // 버텍스 알파 0 = 가로등 머리·유리문 등 밤에 빛나는 부분
+                color += i.color.rgb * _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (1.0 - i.color.a) * 2.0;
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

@@ -379,7 +379,9 @@ def stadium(layer, ground):
             mb.box(m, (0, 22.5, 0.3), (4.4, 2.6, 0.5), POLE)
             for i in range(3):
                 for j in range(2):
+                    mb.emissive = True
                     mb.box(m, (-1.4 + i * 1.4, 21.9 + j * 1.2, 0.6), (1.1, 0.9, 0.2), LAMP, top=LAMP)
+                    mb.emissive = False
             ground.occupy(px, pz, 2.5, ao=0.3, ao_radius=1.8)
     # 관중석: 서쪽(또는 남쪽) 긴 변 바깥
     if long_z:
@@ -753,8 +755,12 @@ def _post(mb, p, lamp):
     mb.ao_strength = 0.0
     mb.bevel_box(m, (0, 2.95, 0), (2.4, 0.35, 2.4), 0.16, WALL_CAP)
     if lamp:
+        from .nature import LIGHTS
+        LIGHTS.append((p[0], p[1], 6.0, 0.8))
         mb.prism(m, (0, 3.1, 0), 0.3, 0.6, 6, (0.32, 0.34, 0.38))
+        mb.emissive = True
         mb.box(m, (0, 4.0, 0), (0.8, 0.9, 0.8), (1.0, 0.96, 0.82), top=(1.0, 0.96, 0.82))
+        mb.emissive = False
         mb.box(m, (0, 4.52, 0), (1.05, 0.16, 1.05), (0.32, 0.34, 0.38))
     else:
         mb.ico(m, (0, 3.6, 0), (0.6, 0.6, 0.6), WALL_CAP, var=0.04)

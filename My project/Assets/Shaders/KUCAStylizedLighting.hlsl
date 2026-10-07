@@ -12,6 +12,9 @@ float4 _KucaGroundAmbient;  // 리니어 배율 (아래를 보는 면)
 float4 _KucaShadowTint;     // 그늘에 곱하는 색 (푸르게)
 float4 _KucaWashColor;      // 햇살 번짐 색 (리니어)
 float _KucaShadowStrength, _KucaWrap, _KucaWarmTop, _KucaRim, _KucaSaturation, _KucaWash;
+// 밤 불빛 (KeyArtLook: 낮 0, 노을 조금, 밤 1): 창문·가로등·현관·바닥 빛 웅덩이
+float _KucaNight, _KucaGlowStrength, _KucaLitWindows, _KucaGroundLight;
+float4 _KucaGlowColor;   // 리니어
 
 half3 KucaShade(half3 albedo, float3 normalWS, float3 positionWS)
 {

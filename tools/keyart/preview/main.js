@@ -12,6 +12,13 @@ const raw = (c) => new THREE.Vector3(c[0], c[1], c[2]);                         
 
 async function main() {
   const look = await (await fetch(ART + 'KeyArtLook.json')).json();
+  // ?mode=day|sunset|night : KeyArtLook.json modes 로 덮어쓰기 (Unity KeyArtLook 과 같은 규칙)
+  const mode = q.get('mode') || 'day';
+  const md = (look.modes && look.modes[mode]) || {};
+  for (const k of ['sun', 'ambient', 'sunny', 'fog']) if (md[k]) look[k] = { ...look[k], ...md[k] };
+  if (md.shadowStrength !== undefined) look.shadowStrength = md.shadowStrength;
+  const night = md.night || 0;
+  const skyTint = (md.sky && md.sky.tint) || look.fog.color;
   const W = num('w', 1280), H = num('h', 800);
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(W, H);
@@ -22,7 +29,7 @@ async function main() {
   document.body.appendChild(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.background = lin(look.fog.color);
+  scene.background = lin(look.fog.color).lerp(lin(skyTint), 0.5);
   scene.fog = new THREE.Fog(lin(look.fog.color), look.fog.start, look.fog.end);
 
   // 해 하나 (그림자). 환경광·그늘색 등은 셰이더 uniform
@@ -49,22 +56,26 @@ async function main() {
     uWarmTop: { value: S.warmTop }, uRim: { value: S.rim }, uSat: { value: S.saturation },
     uWash: { value: S.wash }, uWashColor: { value: lin(S.washColor) }, uResolution: { value: new THREE.Vector2(W, H) },
     uTime: { value: 0 },
+    uNight: { value: night }, uGlowColor: { value: lin(look.glow.color) }, uGlowStrength: { value: look.glow.strength },
+    uLitWindows: { value: look.glow.litWindows },
   };
 
   // 지면
   const texLoader = new THREE.TextureLoader();
   const loadTex = (url, srgb) => new Promise((res) => texLoader.load(url, (t) => { if (srgb) t.colorSpace = THREE.SRGBColorSpace; res(t); }));
-  const [groundTex, detailTex] = await Promise.all([loadTex(ART + 'CampusGround.jpg', true), loadTex(ART + 'GrassDetail.png', false)]);
+  const [groundTex, detailTex, lightsTex] = await Promise.all([loadTex(ART + 'CampusGround.jpg', true), loadTex(ART + 'GrassDetail.png', false), loadTex(ART + 'KeyArtLights.png', false)]);
   groundTex.anisotropy = 8;
   detailTex.wrapS = detailTex.wrapT = THREE.RepeatWrapping;
   const groundAlbedo = `
     float greenness = clamp((diffuseColor.g - max(diffuseColor.r, diffuseColor.b)) * 8.0, 0.0, 1.0);
     float dtl = texture2D(uDetail, vec2(vWPos.x, -vWPos.z) / uDetailTile).r;
     diffuseColor.rgb *= 1.0 + (dtl - 0.5) * uDetailStrength * greenness;
-    diffuseColor.rgb = kucaWater(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z));`;
+    diffuseColor.rgb = kucaWater(diffuseColor.rgb, vec3(vWPos.x, vWPos.y, -vWPos.z));
+    kEmit = uGlowColor * texture2D(uLights, vMapUv).r * uNight * uGroundLight * (diffuseColor.rgb * 1.3 + 0.06);`;
   const groundMat = sunny(new THREE.MeshLambertMaterial({ map: groundTex }), common,
-    { uDetail: { value: detailTex }, uDetailTile: { value: look.grassDetail.tile }, uDetailStrength: { value: look.grassDetail.strength } },
-    'uniform sampler2D uDetail; uniform float uDetailTile, uDetailStrength;', groundAlbedo, '#include <map_fragment>');
+    { uDetail: { value: detailTex }, uDetailTile: { value: look.grassDetail.tile }, uDetailStrength: { value: look.grassDetail.strength },
+      uLights: { value: lightsTex }, uGroundLight: { value: look.glow.groundLight || 0 } },
+    'uniform sampler2D uDetail, uLights; uniform float uDetailTile, uDetailStrength, uGroundLight;', groundAlbedo, '#include <map_fragment>');
   const outer = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000), sunny(new THREE.MeshLambertMaterial({ color: lin(look.outerGrass) }), common));
   outer.rotation.x = -Math.PI / 2;
   outer.position.y = -0.3;
@@ -73,7 +84,9 @@ async function main() {
 
   // 지오메트리: Shell<스타일>_n 은 건물 외벽 재질, 나머지는 버텍스 색
   const buf = await (await fetch(ART + 'KeyArtGeometry.bytes')).arrayBuffer();
-  const vcMat = sunny(new THREE.MeshLambertMaterial({ vertexColors: true }), common);
+  const vcMat = sunny(new THREE.MeshLambertMaterial({ vertexColors: true }), common, {}, 'varying float vGlow;',
+    'kEmit = diffuseColor.rgb * uGlowColor * uGlowStrength * uNight * (1.0 - vGlow) * 2.0;', '#include <color_fragment>',
+    'attribute float glowMask; varying float vGlow;@@vGlow = glowMask;');
   const shellMats = {};
   for (const { name, g } of await parseGeometry(buf)) {
     const shell = name.match(/^Shell(\w+?)_\d+$/);
@@ -111,7 +124,9 @@ async function main() {
 // KUCAStylizedLighting.hlsl 와 같은 계산 (뷰 공간)
 const SUNNY_GLSL = `
 uniform vec3 uSkyAmb, uGroundAmb, uShadowTint, uWashColor;
-uniform float uShadowStrength, uWrap, uWarmTop, uRim, uSat, uWash, uTime;
+uniform float uShadowStrength, uWrap, uWarmTop, uRim, uSat, uWash, uTime, uNight, uGlowStrength, uLitWindows;
+uniform vec3 uGlowColor;
+vec3 kEmit = vec3(0.0);   // 밤 불빛 (조명 뒤에 더함)
 uniform vec2 uResolution;
 varying vec3 vWPos;
 vec3 kucaShade(vec3 albedo, vec3 N, vec3 L, vec3 sunCol, float atten, vec3 up, vec3 V) {
@@ -147,7 +162,7 @@ const SUNNY_LIGHT = `
   #endif
   vec3 upV = normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz);
   outgoingLight = kucaShade(diffuseColor.rgb, Nv, directionalLights[0].direction, directionalLights[0].color, atten, upV, normalize(vViewPosition));
-  outgoingLight = kucaSunWash(outgoingLight, gl_FragCoord.xy / uResolution);
+  outgoingLight = kucaSunWash(outgoingLight, gl_FragCoord.xy / uResolution) + kEmit;
 }
 #include <opaque_fragment>`;
 
@@ -162,7 +177,7 @@ function sunny(mat, common, extraUniforms = {}, extraDecl = '', albedoCode = '',
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;\n' + vertexExtra.split('@@')[0])
       .replace('#include <fog_vertex>', '#include <fog_vertex>\nvWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;\n' + (vertexExtra.split('@@')[1] || ''));
     let f = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + SUNNY_GLSL + '\n' + extraDecl);
-    if (replaceChunk) f = f.replace(replaceChunk, replaceChunk === '#include <map_fragment>' ? '#include <map_fragment>\n' + albedoCode : albedoCode);
+    if (replaceChunk) f = f.replace(replaceChunk, replaceChunk.startsWith('#include') ? replaceChunk + '\n' + albedoCode : albedoCode);
     sh.fragmentShader = f.replace('#include <opaque_fragment>', SUNNY_LIGHT);
   };
   return mat;
@@ -220,13 +235,17 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
     gl = mix(gl, vec3(0.97, 0.99, 1.0), 0.4 * step(0.86, fract((qq.x * 0.7 + qq.y) * 0.45 + h)));
     if (h > 0.8 && t > 0.5) gl = mix(gl, vec3(1.0, 0.93, 0.84), 0.55);
     if (uWinW > 0.8 && abs(qq.x) < 0.06) gl = uTrim * 0.95;
+    gl *= mix(1.0, 0.45, uNight);
+    if (h < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * (0.65 + 0.35 * t);
     res = gl;
   }
   else if (d < 0.16) res = uTrim;
   // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
   float px = max(fwidth(qq.x), fwidth(qq.y));
   vec3 avg = mix(c * ao, mix(uWindow, uTrim, 0.35), clamp(uWinW * uWinH * 1.4, 0.0, 0.7));
-  return mix(res, avg, clamp(px * 3.0 - 0.6, 0.0, 1.0));
+  float fade = clamp(px * 3.0 - 0.6, 0.0, 1.0);
+  kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * clamp(uWinW * uWinH * 1.4, 0.0, 0.7), fade);
+  return mix(res, avg, fade);
 }`;
 
 async function parseGeometry(buf) {
@@ -251,13 +270,14 @@ async function parseGeometry(buf) {
     const col = new Uint8Array(body, o, vc * 4); o += vc * 4;
     let aux = null;
     if (flags & 1) { aux = new Uint16Array(body.slice(o, o + vc * 4)); o += vc * 4; }
-    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3), wuv = new Float32Array(vc * 2), tint = new Float32Array(vc * 3);
+    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3), wuv = new Float32Array(vc * 2), tint = new Float32Array(vc * 3), glow = new Float32Array(vc);
     for (let t = 0; t < vc; t += 3) {
       const order = [t, t + 2, t + 1];   // z 를 뒤집으니 감는 방향도 뒤집는다
       for (let j = 0; j < 3; j++) {
         const s = order[j], d = t + j;
         pos[d * 3] = ox + src[s * 3] * UNIT; pos[d * 3 + 1] = oy + src[s * 3 + 1] * UNIT; pos[d * 3 + 2] = -(oz + src[s * 3 + 2] * UNIT);
         c[d * 3] = lut[col[s * 4]]; c[d * 3 + 1] = lut[col[s * 4 + 1]]; c[d * 3 + 2] = lut[col[s * 4 + 2]];
+        glow[d] = col[s * 4 + 3] / 255;
         tint[d * 3] = col[s * 4] / 255; tint[d * 3 + 1] = col[s * 4 + 1] / 255; tint[d * 3 + 2] = col[s * 4 + 2] / 255;   // 지붕 파스텔 (그대로의 값)
         if (aux) { wuv[d * 2] = aux[s * 2] * 0.1; wuv[d * 2 + 1] = aux[s * 2 + 1] * 0.1; }
       }
@@ -267,6 +287,7 @@ async function parseGeometry(buf) {
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.setAttribute('wallUV', new THREE.BufferAttribute(wuv, 2));
     g.setAttribute('roofTint', new THREE.BufferAttribute(tint, 3));
+    g.setAttribute('glowMask', new THREE.BufferAttribute(glow, 1));
     g.computeVertexNormals();
     out.push({ name, g });
   }

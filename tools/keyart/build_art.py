@@ -96,6 +96,7 @@ def main():
     print('props', nature.place_props(layer, ground, rng))
 
     ground.paint(os.path.join(OUT, 'CampusGround.jpg'), os.path.join(OUT, 'GrassDetail.png'))
+    ground.paint_lights(os.path.join(OUT, 'KeyArtLights.png'), nature.LIGHTS)
     # 지형: 큰 언덕(기숙사→도서관, 동쪽 숲 산)만 또렷하게, 건물·물·운동장 아래는 평평한 터
     terrain = Terrain(ground, buildings)
     for lay in [layer] + list(shells.values()):

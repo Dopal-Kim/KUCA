@@ -9,6 +9,7 @@ Shader "KUCA/StylizedGround"
         _DetailMap ("Grass Detail (회색, 평균 0.5)", 2D) = "gray" {}
         _DetailTile ("Detail Tile (m)", Float) = 7
         _DetailStrength ("Detail Strength", Range(0, 1.5)) = 0.55
+        _LightMap ("Night Light Pools (KeyArtLights.png)", 2D) = "black" {}
         _WorldUV ("World UV (지형 메시: 0/1)", Float) = 0
         _MapSize ("Map Size (m)", Vector) = (1418, 1548, 0, 0)
     }
@@ -31,6 +32,7 @@ Shader "KUCA/StylizedGround"
 
             TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
             TEXTURE2D(_DetailMap); SAMPLER(sampler_DetailMap);
+            TEXTURE2D(_LightMap); SAMPLER(sampler_LightMap);
 
             CBUFFER_START(UnityPerMaterial)
                 float4 _BaseMap_ST;
@@ -71,6 +73,9 @@ Shader "KUCA/StylizedGround"
                 albedo = KucaWater(albedo, i.positionWS);   // 호수·연못 반짝임 (시간에 따라 움직임)
                 half3 color = KucaShade(albedo, normalize(i.normalWS), i.positionWS);
                 color = KucaSunWash(color, i.positionCS);
+                // 밤: 가로등·현관·담장 등 아래 바닥 빛 웅덩이 (바닥 색이 비치는 따뜻한 빛)
+                half pool = SAMPLE_TEXTURE2D(_LightMap, sampler_LightMap, uv).r;
+                color += _KucaGlowColor.rgb * pool * _KucaNight * _KucaGroundLight * (albedo * 1.3 + 0.06);
                 return half4(MixFog(color, i.fog), 1);
             }
             ENDHLSL

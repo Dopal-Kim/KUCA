@@ -19,6 +19,7 @@ public static class KeyArtMapSetup
     const string DetailTex = Dir + "/GrassDetail.png";
     const string GeometryFile = Dir + "/KeyArtGeometry.bytes";
     const string HeightFile = Dir + "/KeyArtHeight.bytes";
+    const string LightsTex = Dir + "/KeyArtLights.png";
     const string TerrainMat = Dir + "/KeyArtTerrain.mat";
     const string TerrainRoot = "KeyArtTerrain";
     const string ManifestFile = Dir + "/KeyArtManifest.json";
@@ -73,11 +74,43 @@ public static class KeyArtMapSetup
         public float wrap = 0.35f, warmTop = 0.16f, rim = 0.22f, saturation = 1.12f, wash = 0.1f;
         public float[] shadowTint, washColor;
     }
+    [System.Serializable] class ModeSky { public float[] tint; public float exposure = 1.3f; }
+    [System.Serializable]
+    class ModePreset
+    {
+        public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
+        public float night; public ModeSky sky;
+    }
+    [System.Serializable] class Modes { public ModePreset day, sunset, night; }
+    [System.Serializable] class Glow { public float[] color; public float litWindows = 0.55f, strength = 1.6f, groundLight = 0.9f; }
     [System.Serializable]
     class Look
     {
         public Sun sun; public Ambient ambient; public float shadowStrength; public Sunny sunny; public Fog fog;
+        public Modes modes; public Glow glow;
         public float[] outerGrass; public float buildingHeightScale = 1f; public Detail grassDetail; public Cam camera; public Styles styles;
+    }
+
+    static Vector3 V3(float[] c) => new Vector3(c[0], c[1], c[2]);
+
+    /// <summary>JSON 모드 프리셋 → KeyArtLook.Preset</summary>
+    static KeyArtLook.Preset ToPreset(ModePreset m)
+    {
+        var p = new KeyArtLook.Preset
+        {
+            sunColor = Srgb(m.sun.color), sunIntensity = m.sun.intensity, sunPitch = m.sun.pitch, sunYaw = m.sun.yaw,
+            skyAmbient = V3(m.ambient.sky), groundAmbient = V3(m.ambient.ground), shadowStrength = m.shadowStrength,
+            wrap = m.sunny.wrap, warmTop = m.sunny.warmTop, rim = m.sunny.rim, saturation = m.sunny.saturation, wash = m.sunny.wash,
+            fogColor = Srgb(m.fog.color), fogStart = m.fog.start, fogEnd = m.fog.end, night = m.night,
+        };
+        if (m.sunny.shadowTint != null && m.sunny.shadowTint.Length >= 3) p.shadowTint = V3(m.sunny.shadowTint);
+        if (m.sunny.washColor != null && m.sunny.washColor.Length >= 3) p.washColor = Srgb(m.sunny.washColor);
+        if (m.sky != null && m.sky.tint != null && m.sky.tint.Length >= 3)
+        {
+            p.skyTint = Srgb(m.sky.tint);
+            p.skyExposure = m.sky.exposure;
+        }
+        return p;
     }
     [System.Serializable] class StyleRow { public string id, style; }
     [System.Serializable] class HeightRow { public string id; public float scale = 1f; }
@@ -116,6 +149,15 @@ public static class KeyArtMapSetup
         ground.SetTexture("_DetailMap", AssetDatabase.LoadAssetAtPath<Texture2D>(DetailTex));
         ground.SetFloat("_DetailTile", look.grassDetail.tile);
         ground.SetFloat("_DetailStrength", look.grassDetail.strength);
+        var lImp = AssetImporter.GetAtPath(LightsTex) as TextureImporter;
+        if (lImp != null)
+        {
+            lImp.sRGBTexture = false;
+            lImp.wrapMode = TextureWrapMode.Clamp;
+            lImp.textureCompression = TextureImporterCompression.CompressedHQ;
+            lImp.SaveAndReimport();
+        }
+        ground.SetTexture("_LightMap", AssetDatabase.LoadAssetAtPath<Texture2D>(LightsTex));
         EditorUtility.SetDirty(ground);
 
         // 지형 메시용: 같은 지면 텍스처를 월드 좌표로
@@ -185,6 +227,29 @@ public static class KeyArtMapSetup
         EditorSceneManager.MarkSceneDirty(map.scene);
         EditorSceneManager.SaveScene(map.scene);
         Debug.Log("[KeyArtMapSetup] 키아트 스타일을 적용했습니다.");
+    }
+
+    // ---------- 시간대 ----------
+
+    [MenuItem("KUCA/Time of Day/Auto (기기 시계)")] static void TimeAuto() => SetTime(KeyArtLook.Mode.Auto);
+    [MenuItem("KUCA/Time of Day/Day 낮")] static void TimeDay() => SetTime(KeyArtLook.Mode.Day);
+    [MenuItem("KUCA/Time of Day/Sunset 노을")] static void TimeSunset() => SetTime(KeyArtLook.Mode.Sunset);
+    [MenuItem("KUCA/Time of Day/Night 밤")] static void TimeNight() => SetTime(KeyArtLook.Mode.Night);
+
+    static void SetTime(KeyArtLook.Mode m)
+    {
+        var kl = Object.FindAnyObjectByType<KeyArtLook>();
+        if (kl == null)
+        {
+            EditorUtility.DisplayDialog("KUCA", "먼저 KUCA → Map Style → Apply Key Art 를 실행하세요.", "확인");
+            return;
+        }
+        Undo.RecordObject(kl, "Time of day");
+        if (kl.sun != null) Undo.RecordObject(kl.sun, "Time of day");
+        kl.SetMode(m);
+        EditorUtility.SetDirty(kl);
+        EditorSceneManager.MarkSceneDirty(kl.gameObject.scene);
+        SceneView.RepaintAll();
     }
 
     [MenuItem("KUCA/Map Style/Apply Mapbox")]
@@ -392,22 +457,19 @@ public static class KeyArtMapSetup
             var kl = lookGo.GetComponent<KeyArtLook>();
             if (kl == null) kl = Undo.AddComponent<KeyArtLook>(lookGo);
             Undo.RecordObject(kl, "Key Art look");
-            kl.skyAmbient = new Vector3(look.ambient.sky[0], look.ambient.sky[1], look.ambient.sky[2]);
-            kl.groundAmbient = new Vector3(look.ambient.ground[0], look.ambient.ground[1], look.ambient.ground[2]);
-            kl.shadowStrength = look.shadowStrength;
-            if (look.sunny != null)
+            kl.day = ToPreset(look.modes.day);
+            kl.sunset = ToPreset(look.modes.sunset);
+            kl.night = ToPreset(look.modes.night);
+            if (look.glow != null)
             {
-                kl.wrap = look.sunny.wrap;
-                kl.warmTop = look.sunny.warmTop;
-                kl.rim = look.sunny.rim;
-                kl.saturation = look.sunny.saturation;
-                kl.wash = look.sunny.wash;
-                if (look.sunny.shadowTint != null && look.sunny.shadowTint.Length >= 3)
-                    kl.shadowTint = new Vector3(look.sunny.shadowTint[0], look.sunny.shadowTint[1], look.sunny.shadowTint[2]);
-                if (look.sunny.washColor != null && look.sunny.washColor.Length >= 3)
-                    kl.washColor = Srgb(look.sunny.washColor);
+                if (look.glow.color != null && look.glow.color.Length >= 3) kl.glowColor = Srgb(look.glow.color);
+                kl.litWindows = look.glow.litWindows;
+                kl.glowStrength = look.glow.strength;
+                kl.groundLight = look.glow.groundLight;
             }
-            kl.Apply();
+            kl.skybox = sky;
+            var dirSun = Object.FindAnyObjectByType<Light>();
+            kl.sun = dirSun != null && dirSun.type == LightType.Directional ? dirSun : null;
         }
 
         var sun = Object.FindAnyObjectByType<Light>();
@@ -421,6 +483,9 @@ public static class KeyArtMapSetup
             sun.shadowStrength = 1f;   // 그림자 세기는 셰이더(_KucaShadowStrength)가 정한다
             sun.transform.rotation = on ? Quaternion.Euler(look.sun.pitch, look.sun.yaw, 0f) : Quaternion.Euler(50f, 330f, 0f);
         }
+        // 지금 모드(Auto 면 시각)에 맞춰 해·안개·하늘·전역 값을 다시 적용
+        var lookComp = Object.FindAnyObjectByType<KeyArtLook>();
+        if (on && lookComp != null) lookComp.Apply();
     }
 
     /// <summary>디오라마 카메라: 좁은 화각으로 멀리서 (원근 왜곡이 적은 미니어처 느낌)</summary>
