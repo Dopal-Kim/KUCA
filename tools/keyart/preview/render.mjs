@@ -35,10 +35,10 @@ const port = server.address().port;
 const exe = process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 fs.mkdirSync(path.join(here, 'shots'), { recursive: true });
-for (let [name, [x, z, dist, yaw]] of Object.entries(views)) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+for (let [name, [x, z, dist, yaw, pitch]] of Object.entries(views)) {
+  const page = await browser.newPage({ viewport: { width: Number(process.env.W || 1280), height: Number(process.env.H || 800) } });
   page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') console.log('[page]', m.text().slice(0, 600)); });
-  await page.goto(`http://localhost:${port}/tools/keyart/preview/index.html?x=${x}&z=${z}&dist=${dist}&yaw=${yaw}${process.env.MODE ? "&mode=" + process.env.MODE : ""}${process.env.SEASON ? "&season=" + process.env.SEASON : ""}${process.env.EXTRA || ""}`);
+  await page.goto(`http://localhost:${port}/tools/keyart/preview/index.html?x=${x}&z=${z}&dist=${dist}&w=${process.env.W || 1280}&h=${process.env.H || 800}&yaw=${yaw}${pitch !== undefined ? '&pitch=' + pitch : ''}${process.env.MODE ? "&mode=" + process.env.MODE : ""}${process.env.SEASON ? "&season=" + process.env.SEASON : ""}${process.env.EXTRA || ""}`);
   name = [name, process.env.MODE, process.env.SEASON].filter(Boolean).join("_");
   await page.waitForFunction(() => window.__done || window.__error, null, { timeout: 600000 });
   const err = await page.evaluate(() => window.__error);

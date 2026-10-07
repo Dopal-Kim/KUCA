@@ -81,7 +81,7 @@ def main():
     # 건물 외벽 덩어리: 외벽 셰이더 재질로 그린다 (스타일마다 레이어, Unity 는 이름 앞부분으로 재질을 고른다)
     shells = {st: Layer(f'Shell{st}', MAP_W / 2, MAP_H / 2, grid=3, aux=True) for st in bld.PALETTE}
     bld.HEIGHT_SCALE = hs
-    landmarks.build(buildings, layer, ground)
+    landmarks.build(buildings, layer, ground, shells, entrances)
     print('axis', landmarks.gate_avenue(layer, ground), landmarks.plaza_ring(layer, ground, osm))
     if lake:
         landmarks.lake_features(layer, ground, lake)

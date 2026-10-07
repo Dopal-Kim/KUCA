@@ -219,9 +219,11 @@ class Builder:
             for s in range(segments):
                 p0, p1 = s * 2 * math.pi / segments, (s + 1) * 2 * math.pi / segments
                 sh = shade(col, 0.95 + 0.05 * ((s + ring) % 2))
-                self.tri(m, P(t0, p0), P(t1, p0), P(t1, p1), sh, base)
                 if ring < rings - 1:
+                    self.tri(m, P(t0, p0), P(t1, p0), P(t1, p1), sh, base)
                     self.tri(m, P(t0, p0), P(t1, p1), P(t0, p1), sh, base)
+                else:   # 꼭대기: 꼭짓점 하나로 모이는 삼각형 (예전엔 넓이 0 이라 구멍이 났다)
+                    self.tri(m, P(t0, p0), P(t1, p0), P(t0, p1), sh, base)
 
     def arc_tier(self, m, center, r0, r1, a0, a1, h, segments, col, y0=0.0):
         def At(r, a, y):
@@ -473,7 +475,7 @@ def triangulate(poly):
     return tris
 
 
-def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None):
+def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None, inward=False):
     """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다.
     mb.aux 가 있으면 벽 정점마다 (u, 벽 길이): 거의 일직선으로 이어진 변들은 한 벽으로 친다."""
     n = len(poly)
@@ -482,7 +484,8 @@ def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None
         a, b = poly[i], poly[(i + 1) % n]
         nx, nz = outward_normal(poly, i)
         mx, mz = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
-        ins = (mx - nx, (y0 + y1) / 2, mz - nz)
+        k = -1.0 if inward else 1.0     # inward: 안쪽(중정)을 바라보는 벽
+        ins = (mx - nx * k, (y0 + y1) / 2, mz - nz * k)
         u0, u1, L = runs[i]
         A, B = (u0, L), (u1, L)
         mb.tri(IDENT, (a[0], y0, a[1]), (b[0], y0, b[1]), (b[0], y1, b[1]), col, ins, aux=(A, B, B))
