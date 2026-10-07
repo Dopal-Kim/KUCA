@@ -170,12 +170,12 @@ function buildingMaterial(st, heightScale, common) {
   return sunny(new THREE.MeshLambertMaterial({ color: 0xffffff }), common, u, BUILDING_GLSL,
     'diffuseColor.rgb = kucaBuilding(vec3(vWPos.x, vWPos.y, -vWPos.z), normalize(vec3(vWN.x, vWN.y, -vWN.z)), vWall);',
     '#include <map_fragment>',
-    'attribute vec2 wallUV; varying vec2 vWall; varying vec3 vWN;@@vWall = wallUV; vWN = normalize(mat3(modelMatrix) * objectNormal);');
+    'attribute vec2 wallUV; attribute vec3 roofTint; varying vec2 vWall; varying vec3 vWN; varying vec3 vRoofTint;@@vWall = wallUV; vRoofTint = roofTint; vWN = normalize(mat3(modelMatrix) * objectNormal);');
 }
 
 // StylizedBuilding.shader 의 BuildingAlbedo 와 같은 무늬 (Unity 좌표, wall = (벽 위 위치, 벽 길이) m)
 const BUILDING_GLSL = `
-varying vec2 vWall; varying vec3 vWN;
+varying vec2 vWall; varying vec3 vWN; varying vec3 vRoofTint;
 uniform vec3 uWall, uTrim, uWindow, uRoof;
 uniform float uFloorH, uSpacing, uWinW, uWinH, uPilEvery, uBrick, uArch;
 float sdRoundBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
@@ -183,7 +183,7 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float ao = mix(0.86, 1.0, clamp(p.y / 4.0, 0.0, 1.0));
   if (n.y > 0.6) {
     vec2 g = abs(fract(p.xz / 5.0) - 0.5);
-    return uRoof * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+    return uRoof * vRoofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
   }
   vec3 c = uWall * mix(0.93, 1.04, clamp(p.y / 24.0, 0.0, 1.0));
   if (uBrick > 0.5) c *= 1.0 - 0.06 * step(fract(p.y / 0.34), 0.12);
@@ -244,13 +244,14 @@ async function parseGeometry(buf) {
     const col = new Uint8Array(body, o, vc * 4); o += vc * 4;
     let aux = null;
     if (flags & 1) { aux = new Uint16Array(body.slice(o, o + vc * 4)); o += vc * 4; }
-    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3), wuv = new Float32Array(vc * 2);
+    const pos = new Float32Array(vc * 3), c = new Float32Array(vc * 3), wuv = new Float32Array(vc * 2), tint = new Float32Array(vc * 3);
     for (let t = 0; t < vc; t += 3) {
       const order = [t, t + 2, t + 1];   // z 를 뒤집으니 감는 방향도 뒤집는다
       for (let j = 0; j < 3; j++) {
         const s = order[j], d = t + j;
         pos[d * 3] = ox + src[s * 3] * UNIT; pos[d * 3 + 1] = oy + src[s * 3 + 1] * UNIT; pos[d * 3 + 2] = -(oz + src[s * 3 + 2] * UNIT);
         c[d * 3] = lut[col[s * 4]]; c[d * 3 + 1] = lut[col[s * 4 + 1]]; c[d * 3 + 2] = lut[col[s * 4 + 2]];
+        tint[d * 3] = col[s * 4] / 255; tint[d * 3 + 1] = col[s * 4 + 1] / 255; tint[d * 3 + 2] = col[s * 4 + 2] / 255;   // 지붕 파스텔 (그대로의 값)
         if (aux) { wuv[d * 2] = aux[s * 2] * 0.1; wuv[d * 2 + 1] = aux[s * 2 + 1] * 0.1; }
       }
     }
@@ -258,6 +259,7 @@ async function parseGeometry(buf) {
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     g.setAttribute('color', new THREE.BufferAttribute(c, 3));
     g.setAttribute('wallUV', new THREE.BufferAttribute(wuv, 2));
+    g.setAttribute('roofTint', new THREE.BufferAttribute(tint, 3));
     g.computeVertexNormals();
     out.push({ name, g });
   }

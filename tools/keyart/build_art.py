@@ -63,6 +63,12 @@ def main():
     seeds = [b for b in buildings if landmarks.is_campus_seed(b)]
     ground.compute_campus(seeds)
     bld.OUTSIDE_IDS.update(b.id for b in buildings if not ground.has(ground.campus, *b.centroid))
+    # 캠퍼스 밖은 낮게 (배경으로 물러나게): 높이 0.75배, Unity 도 매니페스트로 같은 배율
+    for b in buildings:
+        if b.id in bld.OUTSIDE_IDS and b.id not in landmarks.REAL_LEVELS:
+            b.h *= 0.75
+            b.min_h *= 0.75
+            height_fix[b.id] = round(height_fix.get(b.id, 1.0) * 0.75, 4)
     lake = landmarks.plan_lake(ground, osm)
     print(f'campus seeds {len(seeds)}, outside buildings {len(bld.OUTSIDE_IDS)}, lake {lake}')
     ground.add_buildings([b for b in buildings if b.id not in landmarks.HIDDEN])
@@ -79,6 +85,7 @@ def main():
     if lake:
         landmarks.lake_features(layer, ground, lake)
     print('campus wall', landmarks.campus_wall(layer, ground, rng))
+    print('gate fountain', landmarks.gate_fountain(layer, ground), 'pavilions', landmarks.pavilions(layer, ground, rng))
     bld.build_shells(buildings, shells, landmarks.HIDDEN)
     bld.build_details(buildings, layer, shells, entrances, landmarks.NO_DETAILS, rng)
     hedges = bld.build_hedges(buildings, layer, ground, entrances, landmarks.NO_DETAILS, rng)

@@ -787,3 +787,94 @@ def _merge_straight(run, tol=0.35, max_len=40.0):
         ends.append(run[j])
         i = j
     return starts, ends
+
+
+# ---------- 정문 안쪽 분수 조형물 (실제: 정문을 들어서면 오른쪽 '네오르네상스' 분수) ----------
+
+def gate_fountain(layer, ground):
+    """정문 안쪽(남쪽으로 들어서며 오른쪽 = 서쪽)에 둥근 분수 + 받침 위 지구본 조형물"""
+    gx, gz = GATE_POS
+    best = None
+    for dx in range(-60, -10, 4):
+        for dz in range(-70, -15, 4):
+            x, z = gx + dx, gz + dz
+            if ground.has(ground.campus, x, z) and ground.is_free(x, z, 9.0):
+                d = math.hypot(dx + 30, dz + 35)
+                if best is None or d < best[0]:
+                    best = (d, x, z)
+    if not best:
+        return False
+    _, x, z = best
+    mb = layer.at(x, z)
+    m = Frame((x, 0.0, z))
+    stone, cap = (0.93, 0.90, 0.84), (0.99, 0.97, 0.92)
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.22
+    mb.prism(m, (0, 0, 0), 7.0, 0.7, 20, stone, caps=False)
+    mb.ao_strength = 0.0
+    mb.prism(m, (0, 0.7, 0), 7.3, 0.18, 20, cap, caps=True)
+    mb.prism(m, (0, 0.55, 0), 6.4, 0.2, 20, (0.50, 0.80, 0.94), caps=True)       # 물
+    mb.prism(m, (0, 0.0, 0), 1.6, 3.2, 8, stone)                                   # 받침
+    mb.prism(m, (0, 3.2, 0), 2.0, 0.35, 8, cap, caps=True)
+    mb.ico(m, (0, 5.3, 0), (1.8, 1.8, 1.8), (0.62, 0.78, 0.92), var=0.06)          # 지구본
+    mb.prism(m, (0, 4.6, 0), 2.15, 0.25, 16, GOLD)                                 # 금색 고리
+    for k in range(10):
+        a = k * math.pi / 5
+        mb.cone(m, (math.cos(a) * 5.2, 0.75, math.sin(a) * 5.2), 0.2, 1.8, 6, WATER_JET, bottom=False)
+    ground.occupy(x, z, 9.0, ao=0.25, ao_radius=7.5)
+    return True
+
+
+# ---------- 쉼터: 넓은 잔디의 육각 정자 ----------
+
+PAVILION_ROOFS = [(0.70, 0.86, 0.78), (0.98, 0.78, 0.82), (0.72, 0.84, 0.96), (0.98, 0.88, 0.70)]
+
+
+def pavilions(layer, ground, rng, max_count=10, spacing=130.0):
+    """캠퍼스 안 넓은 잔디(숲 아님) 중 길에서 25 m 안, 주변 9 m 가 빈 곳에 정자 + 벤치 + 꽃"""
+    from .geo import MAP_H, MAP_W
+    from .nature import draw_bench, FLOWER
+    from scipy import ndimage
+    g = ground
+    lawn = g.campus & g.park & ~g.forest
+    d_walk = ndimage.distance_transform_edt(~(g.walk | g.road)) / g.ppm
+    cands = []
+    step = 9.0
+    z = -MAP_H / 2 + 20
+    while z < MAP_H / 2 - 20:
+        x = -MAP_W / 2 + 20
+        while x < MAP_W / 2 - 20:
+            ix, iy = g._ix(x, z)
+            if 0 <= ix < g.W and 0 <= iy < g.H and lawn[iy, ix] and 6 < d_walk[iy, ix] < 25 and g.is_free(x, z, 9.0):
+                cands.append((d_walk[iy, ix], x, z))
+            x += step
+        z += step
+    rng.shuffle(cands)
+    placed = []
+    for _, x, z in cands:
+        if len(placed) >= max_count:
+            break
+        if any(math.hypot(x - px, z - pz) < spacing for px, pz in placed):
+            continue
+        placed.append((x, z))
+        mb = layer.at(x, z)
+        m = Frame.yaw((x, 0.0, z), rng.uniform(0, 60))
+        roof = PAVILION_ROOFS[len(placed) % len(PAVILION_ROOFS)]
+        mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.25
+        mb.prism(m, (0, 0, 0), 4.6, 0.45, 6, (0.90, 0.87, 0.80), caps=True, rot=30)
+        mb.ao_strength = 0.0
+        for k in range(6):
+            a = math.radians(30 + 60 * k)
+            mb.prism(m, (math.cos(a) * 3.7, 0.45, math.sin(a) * 3.7), 0.22, 3.0, 6, (0.98, 0.96, 0.92))
+        mb.prism(m, (0, 3.45, 0), 4.5, 0.35, 6, (0.98, 0.96, 0.92), caps=True, rot=30)
+        mb.cone(m, (0, 3.8, 0), 5.4, 2.8, 6, roof, rot=30)
+        mb.prism(m, (0, 6.5, 0), 0.18, 0.7, 6, GOLD, caps=True)
+        mb.ico(m, (0, 7.3, 0), (0.3, 0.3, 0.3), GOLD, var=0.0)
+        for sx in (-1, 1):
+            p = m.p((sx * 1.6, 0.45, 0))
+            draw_bench(mb, p[0], p[2], math.degrees(math.atan2(-sx, 0)))
+        for k in range(8):
+            a = k * math.pi / 4 + 0.2
+            p = m.p((math.cos(a) * 6.0, 0, math.sin(a) * 6.0))
+            mb.ico(IDENT, (p[0], 0.4, p[2]), (0.6, 0.45, 0.6), FLOWER[k % len(FLOWER)] if k % 2 else (0.36, 0.62, 0.22))
+        ground.occupy(x, z, 8.0, ao=0.3, ao_radius=5.5)
+    return len(placed)

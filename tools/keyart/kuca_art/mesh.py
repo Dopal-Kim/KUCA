@@ -467,7 +467,7 @@ def triangulate(poly):
     return tris
 
 
-def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True):
+def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True, roof_col=None):
     """다각형 기둥 (건물 외벽 셰이더용 덩어리). 벽은 바깥 법선, 지붕은 위를 본다.
     mb.aux 가 있으면 벽 정점마다 (u, 벽 길이): 거의 일직선으로 이어진 변들은 한 벽으로 친다."""
     n = len(poly)
@@ -485,7 +485,7 @@ def extrude_poly(mb, poly, y0, y1, col=(1.0, 1.0, 1.0), roof=True):
         for ia, ib, ic in triangulate(poly):
             a, b, c = poly[ia], poly[ib], poly[ic]
             cx, cz = (a[0] + b[0] + c[0]) / 3, (a[1] + b[1] + c[1]) / 3
-            mb.tri(IDENT, (a[0], y1, a[1]), (b[0], y1, b[1]), (c[0], y1, c[1]), col, (cx, y1 - 1.0, cz))
+            mb.tri(IDENT, (a[0], y1, a[1]), (b[0], y1, b[1]), (c[0], y1, c[1]), roof_col or col, (cx, y1 - 1.0, cz))
 
 
 def _wall_runs(poly, max_turn_deg=12.0):

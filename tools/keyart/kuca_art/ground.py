@@ -474,6 +474,22 @@ class Ground:
         ao = ndimage.gaussian_filter(np.asarray(self.ao_img).astype(np.float32) / 255, 0.9 * ppm)
         canvas *= (1 - ao)[..., None]
 
+        # 담장 안쪽 꽃 띠: 캠퍼스 경계에서 안으로 2~5 m (길·물 제외)
+        d_in = ndimage.distance_transform_edt(self.campus) / ppm
+        band = (d_in > 2.0) & (d_in < 5.0) & ~(self.road | self.curb | self.walk | self.water | self.buildings | self.parking)
+        ys, xs = np.nonzero(band[::2, ::2])
+        if len(xs):
+            fl = Image.new('RGB', (W, H), (0, 0, 0))
+            fd = ImageDraw.Draw(fl)
+            for i in rng.choice(len(xs), size=min(len(xs), 90000), replace=False):
+                x, y = xs[i] * 2, ys[i] * 2
+                rr = 0.26 * ppm
+                fd.ellipse((x - rr, y - rr, x + rr, y + rr), fill=palette[rng.integers(len(palette))])
+            fa = np.asarray(fl).astype(np.float32)
+            bed_m = ndimage.gaussian_filter(band.astype(np.float32), 0.6 * ppm)[..., None]
+            canvas = canvas * (1 - 0.12 * bed_m)
+            canvas = np.where((fa.sum(axis=2) > 0)[..., None], fa, canvas)
+
         # 캠퍼스 경계 안팎 대비: 밖은 채도를 45% 빼고 밝은 회녹색 쪽으로, 안은 채도 +8% · 따뜻하게
         cs = self.campus_soft[..., None]
         lum = canvas.mean(axis=2, keepdims=True)

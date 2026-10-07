@@ -60,6 +60,18 @@ def style_of(b):
     return STYLES.get(b.id, 'Default')
 
 
+# 지붕 파스텔 (외벽 셰이더가 지붕색에 버텍스 색으로 곱한다): 연베이지·연하늘·연분홍·민트·기본
+ROOF_TINTS = [(1.0, 1.0, 1.0), (1.06, 1.02, 0.93), (0.93, 1.0, 1.10), (1.08, 0.95, 0.97), (0.95, 1.06, 0.98)]
+
+
+def roof_tint(b):
+    if b.id in OUTSIDE_IDS:
+        return (1 / 1.1, 1 / 1.1, 1 / 1.1)
+    h = sum(ord(ch) for ch in b.id)
+    t = ROOF_TINTS[h % len(ROOF_TINTS)]
+    return (t[0] / 1.1, t[1] / 1.1, t[2] / 1.1)   # 버텍스 색은 0~1 이라 1.1 로 나눠 담고 셰이더가 1.1 을 곱한다
+
+
 def build_shells(buildings, shells, skip_ids):
     """모든 건물 외벽 덩어리 (둥근 모서리 다각형 그대로 돌출). Unity 의 상자 건물 대신 보인다."""
     for b in buildings:
@@ -68,7 +80,7 @@ def build_shells(buildings, shells, skip_ids):
         cx, cz = b.centroid
         sh = shells[style_of(b)].at(cx, cz)
         sh.ao_strength = 0.0
-        extrude_poly(sh, b.poly, b.min_h, b.h)
+        extrude_poly(sh, b.poly, b.min_h, b.h, roof_col=roof_tint(b))
         if b.min_h > 0.5:   # 떠 있는 건물(통로 등) 아랫면
             from .mesh import triangulate
             for ia, ib, ic in triangulate(b.poly):
@@ -153,12 +165,19 @@ def build_details(buildings, layer, shells, entrances, skip_ids, rng):
         par_h = 0.6 if small else 1.0
         mb.band(b.poly, H - 0.05, H + par_h, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
                 inner_col=shade(pal['wall'], 0.86))
+        _eave_cap(mb, b.poly, H + par_h, pal)
         blocks = [] if small else _massing(mb, shells[style].at(cx, cz), b, style, pal, rng)
         if not small:
             _rooftop(mb, b, style, blocks, rng)
         ent = entrances.get(b.id)
         if ent:
             _entrance(mb, b, ent, pal)
+
+
+def _eave_cap(mb, poly, top, pal):
+    """난간 위 둥근 처마: 바깥으로 내민 얇은 띠 두 겹 (아래는 그늘진 밑면, 위는 밝은 둥근 윗면)"""
+    mb.band(poly, top - 0.02, top + 0.16, 0.42, 0.2, shade(pal['trim'], 0.98), top_col=shade(pal['trim'], 1.03))
+    mb.band(poly, top + 0.16, top + 0.28, 0.28, 0.3, shade(pal['trim'], 1.02), top_col=shade(pal['trim'], 1.06))
 
 
 def _rect_inside(poly, rect, margin):
@@ -211,7 +230,7 @@ def _massing(mb, shell, b, style, pal, rng):
             part = clip_half_plane(b.poly, fp.center, axis, hu * 0.64)
             if len(part) >= 3:
                 top = H + fh * 0.5
-                extrude_poly(shell, part, H - 0.1, top)
+                extrude_poly(shell, part, H - 0.1, top, roof_col=roof_tint(b))
                 mb.band(part, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),
                         inner_col=shade(pal['wall'], 0.86))
                 blocks.append((part, top))
@@ -229,7 +248,7 @@ def _massing(mb, shell, b, style, pal, rng):
         if not _rect_inside(b.poly, rect, 0.5):
             continue
         top = H + fh * floors
-        extrude_poly(shell, rect, H - 0.1, top)
+        extrude_poly(shell, rect, H - 0.1, top, roof_col=roof_tint(b))
         mb.ao_strength = 0.0
         mb.band(rect, top - 1.0, top - 0.55, 0.28, 0.0, pal['trim'])
         mb.band(rect, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),

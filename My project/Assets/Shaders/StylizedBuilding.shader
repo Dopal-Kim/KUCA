@@ -1,6 +1,6 @@
 // 키아트 건물 외벽: 둥근 창(고전 양식은 아치 창), 창턱, 모서리 기둥(벽 양끝은 창 없음), 창 묶음 사이 벽, 층 띠, 벽돌 줄눈, 지붕 판넬.
 // 창 배치는 메시 UV2 = (벽 위 위치 m, 벽 전체 길이 m) 로 벽마다 가운데 정렬 (tools/keyart 의 Shell 메시).
-// UV2 가 없으면(길이 0) 월드 좌표로 반복. 웹 미리보기 main.js 의 kucaBuilding 과 같은 무늬.
+// UV2 가 없으면(길이 0) 월드 좌표로 반복. 지붕색에는 버텍스 색 × 1.1 을 곱한다 (건물마다 파스텔). 웹 미리보기 main.js 의 kucaBuilding 과 같은 무늬.
 Shader "KUCA/StylizedBuilding"
 {
     Properties
@@ -39,7 +39,7 @@ Shader "KUCA/StylizedBuilding"
                 float _FloorHeight, _WindowSpacing, _WindowWidth, _WindowHeight, _PilasterEvery, _Brick, _Arch;
             CBUFFER_END
 
-            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 wall : TEXCOORD1; };
+            struct Attributes { float4 positionOS : POSITION; float3 normalOS : NORMAL; float2 wall : TEXCOORD1; half4 color : COLOR; };
             struct Varyings
             {
                 float4 positionCS : SV_POSITION;
@@ -47,6 +47,7 @@ Shader "KUCA/StylizedBuilding"
                 float3 normalWS : TEXCOORD1;
                 float2 wall : TEXCOORD2;
                 float fog : TEXCOORD3;
+                half3 roofTint : TEXCOORD4;
             };
 
             Varyings vert (Attributes v)
@@ -56,6 +57,7 @@ Shader "KUCA/StylizedBuilding"
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
                 o.wall = v.wall;
+                o.roofTint = v.color.rgb;   // 지붕 파스텔 (Shell 메시 버텍스 색 ÷ 1.1, 그대로의 값)
                 o.fog = ComputeFogFactor(o.positionCS.z);
                 return o;
             }
@@ -66,13 +68,13 @@ Shader "KUCA/StylizedBuilding"
                 return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
             }
 
-            half3 BuildingAlbedo(float3 p, float3 n, float2 wall)
+            half3 BuildingAlbedo(float3 p, float3 n, float2 wall, half3 roofTint)
             {
                 half ao = lerp(0.86h, 1.0h, saturate(p.y / 4.0));
                 if (n.y > 0.6)
                 {
                     float2 g = abs(frac(p.xz / 5.0) - 0.5);
-                    return _RoofColor.rgb * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+                    return _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
                 }
                 half3 c = _WallColor.rgb * lerp(0.93h, 1.04h, saturate(p.y / 24.0));
                 if (_Brick > 0.5) c *= 1.0 - 0.06 * step(frac(p.y / 0.34), 0.12);
@@ -124,7 +126,7 @@ Shader "KUCA/StylizedBuilding"
             half4 frag (Varyings i) : SV_Target
             {
                 float3 n = normalize(i.normalWS);
-                half3 color = KucaShade(BuildingAlbedo(i.positionWS, n, i.wall), n, i.positionWS);
+                half3 color = KucaShade(BuildingAlbedo(i.positionWS, n, i.wall, i.roofTint), n, i.positionWS);
                 color = KucaSunWash(color, i.positionCS);
                 return half4(MixFog(color, i.fog), 1);
             }
