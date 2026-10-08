@@ -288,7 +288,7 @@ def tube_stripe(a, b, r, refdir, ang, w, t0=0.0, t1=1.0):
     return f
 
 
-def stripe_line(a, b, ra, rb, refdir, ang, w=0.065):
+def stripe_line(a, b, ra, rb, refdir, ang, w=0.085):
     """원통 구간 a→b (반지름 ra→rb) 표면을 따라가는 또렷한 세로 줄 (별도 레이어용 SDF)"""
     a, b = np.asarray(a, np.float64), np.asarray(b, np.float64)
     ax = (b - a) / np.linalg.norm(b - a)
@@ -296,7 +296,7 @@ def stripe_line(a, b, ra, rb, refdir, ang, w=0.065):
     u /= np.linalg.norm(u)
     v = np.cross(ax, u)
     d = u * math.cos(ang) + v * math.sin(ang)
-    return S.capsule(a + d * (ra + 0.01), b + d * (rb + 0.01), w)
+    return S.capsule(a + d * (ra + 0.02), b + d * (rb + 0.02), w)
 
 
 def stairs(fig, c, yaw):
@@ -420,7 +420,7 @@ def build(fig, rng):
                 continue
             # 잎 모양 털 뭉치: 아래로 겹쳐 내려오는 비늘처럼, 끝이 둥글게 가늘어짐 (복슬한 실루엣)
             b0 = p + R @ np.array((0, -0.2, -0.08))
-            locks.append(S.capsule(b0, b0 + R @ np.array((0, L * 1.0, 0)), 0.4, 0.16))
+            locks.append(S.capsule(b0, b0 + R @ np.array((0, L * 0.85, 0)), 0.42, 0.2))
     # 정수리: 앞(밴드 뒤)에서 뒤로 빗어 넘긴 긴 갈기 결 (돔을 따라 흐르는 굵은 → 가는 관)
     for u in (-1.2, -0.9, -0.6, -0.3, 0.0, 0.3, 0.6, 0.9, 1.2):
         pts = []
@@ -437,10 +437,10 @@ def build(fig, rng):
     fig.paint(lambda P: np.maximum(S.ellipsoid(mc, MR + 0.42)(P), np.abs(mane(P)) - 0.04), MANE_LT, soft=0.3)
     # 앞머리 갈기 (밴드 위로 솟은 뭉치)
     fl = []
-    for (yaw, pit, L, r0) in ((0, 48, 0.95, 0.36), (-22, 44, 0.6, 0.26), (22, 44, 0.6, 0.26)):
+    for (yaw, pit, L, r0) in ((0, 47, 1.15, 0.46), (-20, 43, 0.75, 0.32), (20, 43, 0.75, 0.32)):
         p = surf(head, hc, yaw, pit, -0.15)
         R = axes(_dir(yaw, pit) * 0.35 + np.array((yaw * -0.01, 0.75, 0.55)), _dir(yaw, 10))
-        fl.append(S.capsule(p, p + R @ np.array((0, L, 0)), r0, 0.1))
+        fl.append(S.capsule(p, p + R @ np.array((0, L, 0)), r0, 0.14))
     fig.add(U(fl, 0.12), MANE_LT, k=0.0, layer='mane2')
     # 귀 (갈기 위로 나온 둥근 귀, 분홍 안쪽)
     for s in (-1, 1):
@@ -461,8 +461,8 @@ def build(fig, rng):
     # 자신감 있는 둥근 눈 + 살짝 올린 눈썹
     face_eyes(fig, hc, spread=23, pitch=-4, style='round', size=0.6, iris=(0.34, 0.19, 0.09), layer='head')
     for s in (-1, 1):
-        a, m, b = surf(face, hc, s * 11, 13, -0.03), surf(face, hc, s * 20, 16.5, -0.03), surf(face, hc, s * 30, 15, -0.03)
-        fig.add(U([S.capsule(a, m, 0.065, 0.075), S.capsule(m, b, 0.075, 0.05)]), (0.80, 0.52, 0.28), k=0.0, layer='brow')
+        a, m, b = surf(face, hc, s * 11, 10, -0.03), surf(face, hc, s * 20, 13, -0.03), surf(face, hc, s * 30, 11.5, -0.03)
+        fig.add(U([S.capsule(a, m, 0.08, 0.09), S.capsule(m, b, 0.09, 0.06)]), (0.78, 0.46, 0.20), k=0.0, layer='brow')
         fig.paint(S.sphere(surf(face, hc, s * 37, -19), 0.4), Fg.BLUSH, soft=0.34)
     nf = sface(fig, hc, 0, -18, -0.04, layer='head')
     Fg._ellipsoid(fig.extra, (0, 0, 0), (0.2, 0.14, 0.12), NOSE, 14, 8, nf)

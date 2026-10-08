@@ -279,7 +279,7 @@ def build(fig, rng):
         a = surf(head, hc, s * 8, 13, -0.04)
         m = surf(head, hc, s * 20, 18.5, -0.04)
         b = surf(head, hc, s * 33, 19.5, -0.05)
-        fig.add(U([S.capsule(a, m, 0.12, 0.12), S.capsule(m, b, 0.12, 0.06)], 0.06), (0.42, 0.42, 0.48), k=0.0, layer='brow')
+        fig.add(U([S.capsule(a, m, 0.12, 0.12), S.capsule(m, b, 0.12, 0.06)], 0.06), (0.36, 0.36, 0.42), k=0.0, layer='brow')
     # 다리·발
     for s in (-1, 1):
         x = s * 0.78

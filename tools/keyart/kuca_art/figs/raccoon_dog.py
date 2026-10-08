@@ -319,8 +319,7 @@ def build(fig, rng):
         fig.paint(S.ellipsoid(surf(face, hc, s * 25.5, -6.5, -0.1), (0.8, 0.64, 0.7), R=S.rot(s * 25, 0, s * 22)), FUR_DK, soft=0.05)
     fig.paint(S.sphere(surf(face, hc, 0, 22), 0.13), FUR_DK, soft=0.04)
     # 가슴 흰 털 (V 자 + 삐죽 끝)
-    bib = lambda P: np.minimum(S.ellipsoid((0, y0 + 2.6, 1.3), (0.78, 0.72, 0.7))(P),
-                               np.maximum(S.ellipsoid((0, y0 + 2.05, 1.3), (0.5, 0.6, 0.7))(P), 0.12 - np.abs(np.sin(P[:, 0] * 7.5)) * 0.3 - (y0 + 2.0 - P[:, 1])))
+    bib = lambda P: S.smin(S.ellipsoid((0, y0 + 2.75, 1.3), (0.8, 0.6, 0.7))(P), S.ellipsoid((0, y0 + 2.2, 1.35), (0.42, 0.62, 0.7))(P), 0.2)
     fig.paint(lambda P: np.maximum(bib(P), np.abs(core(P)) - 0.06), CREAM, soft=0.05)
     # 눈·코·입·볼
     # 작고 동그란 눈 (짙은 가면 안에서 반짝)

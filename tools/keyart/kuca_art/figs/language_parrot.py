@@ -65,7 +65,7 @@ def build(fig, rng):
     # ---- 날개: 어깨에서 비스듬히 아래·바깥으로 펼친 날개, 끝은 부채꼴 파란 깃 ----
     for s in (-1, 1):
         root = np.array((s * 1.08, y0 + 3.15, 0.15))
-        R = S.rot(s * 30, 0, s * 40)
+        R = S.rot(s * 24, 0, s * 52)
         down = R @ np.array((0, -1.0, 0))
         fig.add(S.ellipsoid(tuple(root + down * 0.85), (0.7, 1.05, 0.3), R=R), GREEN, k=0.15)
         for i, xo in enumerate((-0.45, -0.22, 0.0, 0.22, 0.45)):
@@ -103,13 +103,12 @@ def build(fig, rng):
     # ---- 부리: 노란 갈고리 윗부리 + 작은 아랫부리 (표면에 붙임) ----
     bf = head_frame(fig, hc, 0, -16)
     bp = np.array(bf.o) + np.array((0, 0, -0.12))
-    beak_up = S.ellipsoid(tuple(bp + (0, 0.1, 0.05)), (0.5, 0.44, 0.42))
+    beak_up = S.ellipsoid(tuple(bp + (0, 0.08, 0.02)), (0.44, 0.38, 0.38))
     beak_hook = lambda P: S.smin(S.capsule(tuple(bp + (0, 0.12, 0.28)), tuple(bp + (0, -0.22, 0.48)), 0.37, 0.2)(P), S.capsule(tuple(bp + (0, -0.22, 0.48)), tuple(bp + (0, -0.58, 0.34)), 0.2, 0.06)(P), 0.1)
     fig.add(beak_up, BEAK, k=0.15, layer='beak')
     fig.add(beak_hook, BEAK, k=0.3, layer='beak')
     fig.add(S.ellipsoid(tuple(bp + (0, -0.36, 0.0)), (0.28, 0.16, 0.25)), BEAK_DK, k=0.05, layer='beak2')
     fig.paint(lambda P: np.minimum(beak_up(P), beak_hook(P)) - 0.06, BEAK, soft=0.03)
-    fig.paint(S.ellipsoid(tuple(bp + (0, 0.3, 0.3)), (0.24, 0.17, 0.2)), (1.0, 0.92, 0.5), soft=0.15)
     # ---- 헤드폰: 빨간 밴드 + 금 슬라이더 + 금 테 · 크림 쿠션 · 빨간 컵 ----
     band = S.intersect(S.torus((0, hc[1] - 0.05, hc[2] - 0.15), HR * 1.04 + 0.1, 0.19, Rm=S.rot(0, 90, 0)),
                        lambda P: hc[1] + 0.9 - P[:, 1])
@@ -125,7 +124,7 @@ def build(fig, rng):
     # ---- 얼굴 부품: 흰 눈테 두른 앵무새 눈 (ring), 짧은 눈썹, 칠한 볼터치 ----
     for s in (-1, 1):
         ef = head_frame(fig, hc, s * 31, 4)
-        Fg.eye_at(fig, ef, 'ring', size=0.42, iris=(0.34, 0.19, 0.10), side=s)
+        Fg.eye_at(fig, ef, 'ring', size=0.46, iris=(0.34, 0.19, 0.10), side=s)
         bf_ = head_frame(fig, hc, s * 33, 22, out=0.02)
         brow(fig, bf_, w=0.46, tilt=-s * 0.06)
         p = np.array(head_frame(fig, hc, s * 46, -16).o)

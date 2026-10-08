@@ -318,8 +318,8 @@ def build(fig, rng):
     for k in range(4):
         a = math.pi * k / 4 + math.pi / 8
         n = Rh @ np.array((math.cos(a), 0, math.sin(a)))
-        fig.paint(lambda P, n=n: np.maximum(np.abs((P - Hc) @ n) - 0.035, np.maximum(((P - Hc) @ Rh[:, 1]) * -1 - 0.5, -crown(P) - 0.15)), HAT_DK, soft=0.03)
-    fig.paint(lambda P: np.maximum(np.abs((P - Hc) @ Rh[:, 1] + 0.36) - 0.035, np.abs(crown(P)) - 0.1), HAT_DK, soft=0.04)
+        fig.paint(lambda P, n=n: np.maximum(np.abs((P - Hc) @ n) - 0.03, np.maximum(((P - Hc) @ Rh[:, 1]) * -1 - 0.35, np.abs(crown(P)) - 0.05)), HAT_DK, soft=0.03)
+    fig.paint(lambda P: np.maximum(np.abs((P - Hc) @ Rh[:, 1] + 0.3) - 0.035, np.abs(crown(P)) - 0.05), HAT_DK, soft=0.03)
     bd = Rh @ _dir(52, 8)
     bpos = Hc + bd * hit(crown, Hc, bd)
     bR = axes(Rh[:, 1] - bd * (Rh[:, 1] @ bd), bd)
@@ -332,7 +332,7 @@ def build(fig, rng):
     fig.add(curl(surf(head, hc, -15, 5, -0.08), S.rot(-15, 4, 14), 0.14, 0.22), WHITE, k=0.16)
     # 얼굴: 눈·부리·볼
     # 작고 반짝이는 까만 구슬 눈
-    face_eyes(fig, hc, spread=27, pitch=-11, style='bead', size=0.6, sink=0.1)
+    face_eyes(fig, hc, spread=27, pitch=-11, style='bead', size=0.66, sink=0.1)
     bf = sface(fig, hc, 0, -27)
     bp, fwd, up = np.array(bf.p((0, 0, 0.0))), np.array(bf.dir((0, 0, 1))), np.array(bf.dir((0, 1, 0)))
     Rb = axes(up, fwd)

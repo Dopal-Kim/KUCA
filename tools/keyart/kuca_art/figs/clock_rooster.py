@@ -234,17 +234,17 @@ def build(fig, rng):
     def shell_f(P):      # 조끼가 따라갈 표면 (몸 + 목)
         return S.smin(body_f(P), S.ellipsoid(*NECK)(P), 0.5)
     # 가슴 깃털 (V 트임에서 보이는 보송한 흰 털): 한 덩어리로 부드럽게
-    q = hit(fig, (0, y0 + 3.4, 4.5), (0, 0, -1), field=body_f)
-    fig.add(S.ellipsoid((0, y0 + 3.4, q[2] - 0.3), (0.62, 0.48, 0.4)), WHITE, k=0.35)
+    q = hit(fig, (0, y0 + 3.15, 4.5), (0, 0, -1), field=body_f)
+    fig.add(S.ellipsoid((0, y0 + 3.15, q[2] - 0.3), (0.7, 0.5, 0.42)), WHITE, k=0.35)
 
     # ---------- 조끼 (크림): 몸 전체를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
-    yv = y0 + 2.85                   # V 트임 꼭짓점
+    yv = y0 + 2.62                   # V 트임 꼭짓점
     hem_y = y0 + 1.12
-    top_y = y0 + 3.38
-    slope = 0.55
+    top_y = y0 + 3.12
+    slope = 0.75
 
     def top_f(P):        # 목둘레: 뒤가 높고 앞이 낮게 기운 선
-        return top_y + 0.12 - 0.2 * np.clip(P[:, 2], -1.5, 1.5)
+        return top_y + 0.05 - 0.22 * np.clip(P[:, 2], -1.5, 1.5)
 
     def vopen_f(P):      # 앞 V (양수 = 비움)
         return np.minimum(P[:, 2] - 0.6, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))
@@ -263,7 +263,7 @@ def build(fig, rng):
     for s in (-1, 1):
         pts = []
         for k in range(8):
-            y = yv + 0.03 + (top_y - 0.08 - yv) * k / 7
+            y = yv + 0.03 + (top_y - 0.2 - yv) * k / 7
             x = s * (y - yv) * slope + s * 0.02
             pts.append((x, y, vz(x, y, -0.02)))
         chain(fig, pts, 0.08, Fg.GOLD, 'trim', metal=G)

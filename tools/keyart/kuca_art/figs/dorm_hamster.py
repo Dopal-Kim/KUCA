@@ -82,6 +82,14 @@ def w_mouth(fig, f, w, col):
             Fg._ellipsoid(fig.extra, (s * w * 0.5 + math.cos(a) * w * 0.5, -math.sin(a) * w * 0.42, 0.01), (0.05, 0.05, 0.04), col, 6, 4, f)
 
 
+def closed_eye(fig, f, s, col=(0.20, 0.11, 0.09)):
+    """졸린 ∪ 감은 눈: 촘촘한 구슬로 이은 매끈한 곡선 + 바깥 끝 짧은 속눈썹"""
+    for k in range(29):
+        a = math.pi * k / 28
+        th = math.sin(a) * 0.5 + 0.5
+        Fg._ellipsoid(fig.extra, (math.cos(a) * s * 0.62, -math.sin(a) * s * 0.34, 0.0), (s * 0.075 * th + 0.02, s * 0.075 * th + 0.02, s * 0.05), col, 8, 4, f)
+
+
 def build(fig, rng):
     Fg.base(fig, rng, flowers=7)
     y0 = Fg.TOP
@@ -136,8 +144,8 @@ def build(fig, rng):
     fig.add(S.ellipsoid((0, hc[1] - 0.62, hc[2] + 0.12), (HR * 1.14, HR * 0.7, HR * 0.94)), CREAM, k=0.9, layer='head')
     fig.add(S.capsule((0, y0 + 3.1, 0.0), (0, hc[1] - 1.2, 0.05), 0.85), CREAM, k=0.25, layer='head')
     # 털 무늬: 위쪽·뒤쪽 주황, 가운데 흰 이마 줄
-    fig.paint(lambda P: np.maximum(head_f(P) - 0.08, (hc[1] - 0.4) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 0.8) * 0.8), FUR, soft=0.12)
-    fig.paint(S.ellipsoid((0, hc[1] + 0.25, hc[2] + 1.95), (0.62, 1.25, 0.75)), CREAM, soft=0.14)
+    fig.paint(lambda P: np.maximum(head_f(P) - 0.12, (hc[1] + 0.25 - 0.55 * np.abs(P[:, 0])) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 1.2) * 0.6), FUR, soft=0.12)
+    fig.paint(S.ellipsoid((0, hc[1] + 0.35, hc[2] + 1.95), (0.5, 1.2, 0.75)), CREAM, soft=0.14)
     # ---- 귀: 둥근 주황 귀 + 분홍 안쪽 ----
     for s in (-1, 1):
         ec = (s * 1.82, hc[1] + 1.45, hc[2] + 0.15)
@@ -176,7 +184,7 @@ def build(fig, rng):
     # ---- 얼굴: 졸린 ∪ 감은 눈, 작은 분홍 코, 'w' 입, 볼터치는 칠만 ----
     for s in (-1, 1):
         ef = head_frame(fig, hc, s * 26, -8)
-        Fg.eye_at(fig, ef, 'closed', size=0.5, side=s)
+        closed_eye(fig, ef, 0.5)
     nf = head_frame(fig, hc, 0, -19)
     Fg._ellipsoid(fig.extra, (0, 0, 0), (0.15, 0.1, 0.08), (1.0, 0.58, 0.64), 12, 6, nf)
     w_mouth(fig, head_frame(fig, hc, 0, -26), 0.26, (0.36, 0.2, 0.18))

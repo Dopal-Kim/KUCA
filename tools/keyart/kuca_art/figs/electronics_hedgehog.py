@@ -141,8 +141,8 @@ def build(fig, rng):
     fig.add(S.capsule((0, y0 + 3.2, 0), (0, hc[1] - 1.3, 0.05), 0.75), BROWN, k=0.2)
     snout_a, snout_b = np.array((0, hc[1] - 0.5, hc[2] + 1.0)), np.array((0, hc[1] - 0.72, hc[2] + 2.55))
     fig.add(S.capsule(tuple(snout_a), tuple(snout_b), 0.78, 0.17), BROWN, k=0.45)
-    face = S.ellipsoid((0, hc[1] - 0.25, hc[2] + 1.3), (1.75, 1.6, 1.5))
-    fig.paint(lambda P: np.maximum.reduce([face(P), -S.ellipsoid((0, hc[1] + 1.4, hc[2] + 1.5), (0.3, 0.55, 0.9))(P), (hc[1] - 2.0) - P[:, 1]]), CREAM, soft=0.06)
+    face = S.ellipsoid((0, hc[1] - 0.35, hc[2] + 1.3), (1.7, 1.45, 1.5))
+    fig.paint(lambda P: np.maximum.reduce([face(P), -S.ellipsoid((0, hc[1] + 1.25, hc[2] + 1.5), (0.32, 0.6, 0.9))(P), (hc[1] - 2.0) - P[:, 1], P[:, 1] - (hc[1] + 0.95)]), CREAM, soft=0.06)
     # 얼굴 부품 자리 (가시·헤드셋 넣기 전에 표면을 구한다)
     eye_f = {s: head_frame(fig, hc, s * 28, 0) for s in (-1, 1)}
     nose_f = head_frame(fig, hc, 0, -14.5)
@@ -211,7 +211,7 @@ def build(fig, rng):
     fig.add(S.sphere(tuple(m2 + np.array((0.08, 0.0, 0.03))), 0.2), (0.16, 0.16, 0.18), k=0.03, layer='mic')
     # ---- 얼굴: 작고 반짝이는 까만 구슬 눈, 주둥이 끝 까만 코, 작은 입, 볼터치는 칠만 ----
     for s in (-1, 1):
-        Fg.eye_at(fig, eye_f[s], 'bead', size=0.4, side=s)
+        Fg.eye_at(fig, eye_f[s], 'bead', size=0.43, side=s)
         fig.paint(S.sphere(blush_p[s], 0.45), Fg.BLUSH, soft=0.55)
     Fg._ellipsoid(fig.extra, (0, 0, 0.02), (0.2, 0.15, 0.14), (0.12, 0.08, 0.07), 12, 6, nose_f)
     Fg._ellipsoid(fig.extra, (-0.06, 0.06, 0.12), (0.06, 0.035, 0.03), (0.6, 0.6, 0.6), 6, 4, nose_f)

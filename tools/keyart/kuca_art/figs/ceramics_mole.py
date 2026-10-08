@@ -121,7 +121,7 @@ def build(fig, rng):
         d = np.maximum(d, -(P[:, 2] + 0.15))
         d = np.maximum(d, y - (y0 + 3.5))
         d = np.maximum(d, (y0 + 0.75) - y)
-        d = np.maximum(d, -(np.minimum(S.capsule(shL, hdL, 0.48, 0.38)(P), S.capsule(shR, hdR, 0.48, 0.4)(P)) - 0.03))   # 팔 자리는 비움
+        d = np.maximum(d, -(np.minimum(S.capsule(shL, hdL, 0.48, 0.38)(P), S.capsule(shR, hdR, 0.48, 0.4)(P)) - 0.16))   # 팔 자리는 비움
         return d
     fig.add(apron, LINEN, k=0.0, layer='apron')
 
@@ -174,7 +174,7 @@ def build(fig, rng):
         for k in range(1, 13):
             t = k / 12
             th = math.radians(s * (28 + 152 * t))
-            y = y0 + 3.42 + 0.62 * math.sin(math.pi * t) - 0.5 * t
+            y = y0 + 3.42 + 0.95 * math.sin(math.pi * t) ** 0.6 - 0.75 * t
             q = hit(fig, (math.sin(th) * 4.5, y, math.cos(th) * 4.5), (-math.sin(th), 0, -math.cos(th)), field=lambda P: torso_f(P) - 0.12)
             pts.append(q)
         for a, b in zip(pts, pts[1:]):

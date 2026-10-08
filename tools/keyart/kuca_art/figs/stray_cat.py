@@ -84,7 +84,7 @@ def build(fig, rng):
     nb = lambda P: np.abs(body_all(P))
 
     # ---- 무늬: 줄무늬 (뒤·옆, 머리 위) ----
-    # 줄무늬: 칠이 아니라 털 표면 위 0.04 얇은 판 (따로 layer → 가장자리가 또렷한 굵은 태비 줄)
+    # 줄무늬: 거리장으로 정의한 굵은 태비 줄 (칠 가장자리를 짧게 → 또렷)
     def band_d(u, period, w):
         t = u / period
         return np.abs(t - np.round(t)) * period - w
@@ -102,8 +102,8 @@ def build(fig, rng):
         d = band_d(q[:, 1] + 0.3 * np.sin(th), 0.72, 0.12)
         clear = np.where(q[:, 1] < 0.75, 1.2 - th, 0.7 - th)
         return np.maximum(np.maximum(d, clear * 1.2), (q[:, 1] - 1.65) * 2)
-    fig.add(lambda P: np.maximum(body_all(P) - 0.04, stripes_body(P)), STRIPE, k=0.0, layer='stripe')
-    fig.add(lambda P: np.maximum(head0(P) - 0.04, stripes_head(P)), STRIPE, k=0.0, layer='stripe')
+    fig.paint(masked(stripes_body, nb, 0.1), STRIPE, soft=0.05)
+    fig.paint(masked(stripes_head, lambda P: np.abs(head0(P)), 0.12), STRIPE, soft=0.05)
     for x0, tilt in ((-0.45, 6), (0.0, 0), (0.45, -6)):   # 이마 'M' 줄
         p0, _ = surf_point(head_parts[0], hc, x0 * 22 + 0.0, 52)
         p1, _ = surf_point(head_parts[0], hc, x0 * 30, 30)

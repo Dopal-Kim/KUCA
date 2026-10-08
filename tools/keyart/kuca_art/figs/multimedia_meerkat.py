@@ -100,20 +100,20 @@ def build(fig, rng):
     hr = np.array((1.42, 1.72, 1.5))
     head_f = S.ellipsoid(hc, tuple(hr))
     fig.add(head_f, SAND, k=0.3)
-    muz_a, muz_b = np.array((0, hc[1] - 0.55, hc[2] + 0.8)), np.array((0, hc[1] - 0.9, hc[2] + 1.85))
-    fig.add(S.capsule(tuple(muz_a), tuple(muz_b), 0.72, 0.28), SAND, k=0.45)
+    muz_a, muz_b = np.array((0, hc[1] - 0.55, hc[2] + 0.75)), np.array((0, hc[1] - 0.85, hc[2] + 1.6))
+    fig.add(S.capsule(tuple(muz_a), tuple(muz_b), 0.75, 0.33), SAND, k=0.45)
     fig.paint(S.ellipsoid((0, hc[1] - 1.05, hc[2] + 1.0), (1.3, 0.85, 1.2)), CREAM, soft=0.3)
     fig.paint(S.ellipsoid((0, hc[1] - 0.2, hc[2] + 1.7), (0.3, 0.85, 0.5)), CREAM, soft=0.3)
     # 얼굴 부품 자리
     eye_f = {s: head_frame(fig, hc, s * 26, 3) for s in (-1, 1)}
     brow_f = {s: head_frame(fig, hc, s * 27, 18, out=0.02) for s in (-1, 1)}
     blush_p = {s: np.array(head_frame(fig, hc, s * 42, -22).o) for s in (-1, 1)}
-    nose_f = head_frame(fig, hc, 0, -21)
-    mouth_f = head_frame(fig, hc, 0, -29)
+    nose_f = head_frame(fig, hc, 0, -24)
+    mouth_f = head_frame(fig, hc, 0, -33)
     # 눈 무늬: 눈 둘레 짙은 갈색 물방울 (바깥 아래로 처짐)
     for s in (-1, 1):
         p = np.array(eye_f[s].o)
-        fig.paint(S.ellipsoid(tuple(p + np.array((s * 0.08, -0.1, 0))), (0.58, 0.55, 0.55), R=S.rot(s * 26, 0, s * 25)), PATCH, soft=0.04)
+        fig.paint(S.ellipsoid(tuple(p + np.array((s * 0.06, -0.08, 0))), (0.66, 0.6, 0.6), R=S.rot(s * 26, 0, s * 25)), PATCH, soft=0.04)
     # 귀: 옆에 작은 반달 (짙은 색)
     for s in (-1, 1):
         ec = (s * 1.42, hc[1] + 0.05, hc[2] - 0.2)
@@ -151,7 +151,7 @@ def build(fig, rng):
     fig.add(rock, (0.70, 0.69, 0.68), k=0.0, layer='rock')
     # ---- 얼굴: 짙은 눈 무늬 안의 작은 둥근 눈, 코, 'w' 입, 눈썹, 볼터치는 칠만 ----
     for s in (-1, 1):
-        Fg.eye_at(fig, eye_f[s], 'round', size=0.34, side=s)
+        Fg.eye_at(fig, eye_f[s], 'round', size=0.3, side=s)
         for k in range(9):
             t = k / 8 - 0.5
             Fg._ellipsoid(fig.extra, (t * 0.46, -abs(t) * 0.12 - s * t * 0.08, 0.0), (0.065, 0.045, 0.045), PATCH, 6, 4, brow_f[s])

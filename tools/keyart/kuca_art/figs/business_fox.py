@@ -102,7 +102,7 @@ def build(fig, rng):
         Fg._ellipsoid(fig.extra, (0, 0, 0.0), (0.09, 0.09, 0.05), Fg.GOLD, 10, 6, f)
     for s in (-1, 1):   # 주머니 덮개
         f = front_frame(fig, s * 0.55, y0 + 2.2, 'vest')
-        fig.add(S.box(f.o, (0.2, 0.045, 0.05), round_=0.02, R=S.rot(s * 32, 0, 0)), VEST_DK, k=0.0, layer='vest2')
+        fig.add(S.box(f.o, (0.18, 0.03, 0.03), round_=0.015, R=S.rot(s * 32, 0, 0)), VEST_DK, k=0.0, layer='vest2')
     f = front_frame(fig, 0.52, y0 + 3.15, 'vest')
     fig.add(S.box(f.o, (0.16, 0.035, 0.045), round_=0.02, R=S.rot(30, 0, 0)), VEST_DK, k=0.0, layer='vest2')
     # 넥타이: 매듭 + 날 (셔츠 표면에 붙임)
@@ -136,16 +136,16 @@ def build(fig, rng):
     # ---- 머리: 역삼각 얼굴 (넓은 관자놀이 → 좁은 턱) + 뾰족한 주둥이, 따로 붙인 볼 없음 ----
     hc = (0, y0 + 5.5, 0.1)
     HR = 1.95
-    head_f = tri_head(hc, (HR * 1.12, HR * 0.92, HR * 0.95), 0.24)
+    head_f = tri_head(hc, (HR * 1.12, HR * 0.92, HR * 0.95), 0.38)
     fig.add(head_f, ORANGE, k=0.3)
     fig.add(S.capsule((0, y0 + 3.6, 0), (0, hc[1] - 1.3, 0.05), 0.62), ORANGE, k=0.2)
-    fig.add(S.capsule((0, hc[1] - 0.45, hc[2] + 0.85), (0, hc[1] - 0.82, hc[2] + 2.25), 0.72, 0.18), ORANGE, k=0.4)   # 뾰족 주둥이
+    fig.add(S.capsule((0, hc[1] - 0.5, hc[2] + 0.8), (0, hc[1] - 0.85, hc[2] + 2.15), 0.82, 0.24), ORANGE, k=0.4)   # 뾰족 주둥이
     for s in (-1, 1):   # 볼털: 얼굴 아래 옆으로 뾰족하게 뻗은 흰 털 (작게, 아래·뒤로)
-        for dy, ln, dz in ((-0.45, 0.6, 0.0), (-0.85, 0.42, 0.1)):
-            a = np.array((s * 1.45, hc[1] + dy, hc[2] + 0.45 + dz))
-            fig.add(S.cone(tuple(a), tuple(a + np.array((s * ln, -0.32, -0.15))), 0.36, 0.05), ORANGE, k=0.3)
+        for dy, ln, dz in ((-0.15, 0.62, 0.0), (-0.55, 0.45, 0.1)):
+            a = np.array((s * 1.65, hc[1] + dy, hc[2] + 0.35 + dz))
+            fig.add(S.cone(tuple(a), tuple(a + np.array((s * ln, -0.3, -0.12))), 0.36, 0.05), ORANGE, k=0.25)
     # 흰 얼굴 아래쪽 (주둥이·볼털)
-    fig.paint(lambda P: np.maximum.reduce([S.ellipsoid((0, hc[1] - 1.1, hc[2] + 0.6), (2.9, 0.95, 1.9))(P), P[:, 1] - (hc[1] - 0.55), (y0 + 3.85) - P[:, 1]]), WHITE, soft=0.15)
+    fig.paint(lambda P: np.maximum.reduce([S.ellipsoid((0, hc[1] - 0.95, hc[2] + 0.6), (2.9, 1.0, 1.9))(P), P[:, 1] - (hc[1] - 0.3) - 0.25 * np.abs(P[:, 0]) + 0.15 * np.maximum(0, np.abs(P[:, 0]) - 1.4) * 3, (y0 + 3.85) - P[:, 1]]), WHITE, soft=0.15)
     # 앞머리 털 (작은 불꽃 모양)
     for x, ang, ln in ((-0.25, 20, 0.55), (0.05, -5, 0.7), (0.32, -25, 0.5)):
         a = np.array((x, hc[1] + HR * 0.84, hc[2] + 0.5))
@@ -155,7 +155,7 @@ def build(fig, rng):
     dot_p = {s: np.array(head_frame(fig, hc, s * 24, 25).o) for s in (-1, 1)}
     blush_p = {s: np.array(head_frame(fig, hc, s * 44, -16).o) for s in (-1, 1)}
     nose_f = head_frame(fig, hc, 0, -19.5)
-    mouth_f = head_frame(fig, hc, 0, -27)
+    mouth_f = head_frame(fig, hc, 0, -24)
     for s in (-1, 1):   # 눈 위 흰 점
         fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.22, 0.14, 0.25)), WHITE, soft=0.03)
     # ---- 귀: 큰 삼각 귀, 짙은 끝, 밝은 안쪽 ----
