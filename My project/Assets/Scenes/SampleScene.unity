@@ -15,14 +15,14 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
   m_Fog: 1
-  m_FogColor: {r: 0.1, g: 0.13, b: 0.25, a: 1}
+  m_FogColor: {r: 0.88, g: 0.93, b: 0.98, a: 1}
   m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 600
-  m_LinearFogEnd: 2000
-  m_AmbientSkyColor: {r: 0.36556458, g: 0.3958812, b: 0.5468542, a: 1}
-  m_AmbientEquatorColor: {r: 0.3885728, g: 0.37342668, b: 0.4492038, a: 1}
-  m_AmbientGroundColor: {r: 0.41002083, g: 0.34919015, b: 0.31330413, a: 1}
+  m_LinearFogStart: 900
+  m_LinearFogEnd: 2600
+  m_AmbientSkyColor: {r: 0.773573, g: 0.8094681, b: 0.8756056, a: 1}
+  m_AmbientEquatorColor: {r: 0.80363095, g: 0.8094681, b: 0.8094681, a: 1}
+  m_AmbientGroundColor: {r: 0.8322835, g: 0.8094681, b: 0.7353569, a: 1}
   m_AmbientIntensity: 1
   m_AmbientMode: 1
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
@@ -15716,8 +15716,8 @@ Light:
   m_Enabled: 1
   serializedVersion: 13
   m_Type: 1
-  m_Color: {r: 0.6, g: 0.7, b: 1, a: 1}
-  m_Intensity: 0.16
+  m_Color: {r: 1, g: 0.93, b: 0.8, a: 1}
+  m_Intensity: 0.72
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -15779,7 +15779,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.11345881, y: 0.8681684, z: -0.42343405, w: -0.23262504}
+  m_LocalRotation: {x: 0.3314136, y: 0.46193975, z: -0.19134173, w: 0.8001031}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -41295,6 +41295,7 @@ MonoBehaviour:
   spawner: {fileID: 1082617447}
   hud: {fileID: 1082617446}
   cam: {fileID: 330585545}
+  catchScreen: {fileID: 0}
   collectRadius: 40
   tapMaxMove: 20
   tapMaxDuration: 0.4
@@ -41316,6 +41317,7 @@ MonoBehaviour:
   character: {fileID: 2055078389}
   customizer: {fileID: 1082617449}
   defaultNickname: "\uACBD\uD76C \uD0D0\uD5D8\uAC00"
+  nearbyRadius: 250
   portraitLightIntensity: 1.5
   portraitLookHeight: 1.6
   portraitDistance: 2
@@ -41408,7 +41410,7 @@ MonoBehaviour:
   spots: {fileID: 1855503126}
   openOnBuildingTap: 0
   requireProximityToWrite: 1
-  serverUrl: 
+  serverUrl: https://kuca-memo.azurewebsites.net
 --- !u!114 &1082617451
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -44802,7 +44804,6 @@ MonoBehaviour:
   testLongitude: 127.08
   testLatitude: 37.244
   testWalkSpeed: 5
-  showDebugInfo: 1
 --- !u!4 &1171499778
 Transform:
   m_ObjectHideFlags: 0
