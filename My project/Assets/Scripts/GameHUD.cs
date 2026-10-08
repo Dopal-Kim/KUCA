@@ -83,6 +83,8 @@ public class GameHUD : MonoBehaviour
     GameObject noticeScreen, settingsScreen;
     RectTransform noticeList, settingsList;
     InputField nicknameInput;
+    InputField serverInput;
+    Text serverStatus;
 
     Camera portraitCam;
     Light portraitLight;
@@ -682,6 +684,7 @@ public class GameHUD : MonoBehaviour
     {
         SetScreen(settingsScreen, true, null);
         nicknameInput.text = PlayerPrefs.GetString(NicknameKey, "");
+        RefreshServerStatus();
     }
 
     void CloseSettings() => SetScreen(settingsScreen, false, null);
@@ -701,6 +704,21 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(save, 110f, 200f);
         UIKit.Text(nickCard.transform, "메모를 남길 때도 이 이름이 쓰여요.", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
 
+        // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버)
+        Image serverCard = Card(settingsList, "ServerCard");
+        UIKit.Vertical(serverCard, 18f, new RectOffset(40, 40, 32, 36));
+        UIKit.Text(serverCard.transform, "메모 서버", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
+        RectTransform srow = UIKit.Rect(serverCard.transform, "Row");
+        UIKit.Size(srow, 110f);
+        var sh = UIKit.Horizontal(srow, 20f);
+        sh.childForceExpandWidth = false;
+        serverInput = UIKit.Input(srow, "비우면 기본 서버", 36, false, 80);
+        serverInput.keyboardType = TouchScreenKeyboardType.URL;
+        UIKit.Size(serverInput, 110f, -1f, 1f);
+        Button check = UIKit.Button(srow, "연결", SaveServer, UIKit.Accent, 38);
+        UIKit.Size(check, 110f, 200f);
+        serverStatus = UIKit.Text(serverCard.transform, "", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
+
         Image optCard = Card(settingsList, "OptionsCard");
         UIKit.Vertical(optCard, 18f, new RectOffset(40, 40, 32, 36));
         Button custom = UIKit.Button(optCard.transform, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); }, UIKit.ButtonGray, 38);
@@ -709,6 +727,57 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(north, 110f);
 
         UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대학교 캠퍼스 탐험", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
+    }
+
+    string DefaultMemoServer
+    {
+        get
+        {
+            var board = FindAnyObjectByType<MemoBoard>();
+            return board != null ? board.DefaultServerUrl : MemoBoard.DefaultServer;
+        }
+    }
+
+    void RefreshServerStatus()
+    {
+        bool custom = PlayerPrefs.HasKey(MemoBoard.ServerUrlKey);
+        string url = custom ? PlayerPrefs.GetString(MemoBoard.ServerUrlKey) : DefaultMemoServer;
+        serverInput.text = custom ? url : "";
+        serverStatus.color = UIKit.Quiet;
+        serverStatus.text = custom
+            ? $"지금 쓰는 서버: {url}  (비우고 연결을 누르면 기본 서버로)"
+            : $"기본 서버를 쓰고 있어요: {url}";
+    }
+
+    void SaveServer()
+    {
+        string url = HttpMemoService.Normalize(serverInput.text);
+        if (url.Length == 0)
+        {
+            // 비우면 기본 서버로 되돌린다.
+            PlayerPrefs.DeleteKey(MemoBoard.ServerUrlKey);
+            PlayerPrefs.Save();
+            RefreshServerStatus();
+            Toast("기본 메모 서버를 써요");
+            return;
+        }
+        serverStatus.color = UIKit.Quiet;
+        serverStatus.text = "연결 확인 중…";
+        StartCoroutine(HttpMemoService.Check(url, (ok, error) =>
+        {
+            if (!ok)
+            {
+                serverStatus.color = new Color(1f, 0.55f, 0.55f);
+                serverStatus.text = error;
+                return;
+            }
+            PlayerPrefs.SetString(MemoBoard.ServerUrlKey, url);
+            PlayerPrefs.Save();
+            RefreshServerStatus();
+            serverStatus.color = new Color(0.55f, 0.9f, 0.65f);
+            serverStatus.text = $"연결됐어요: {url}";
+            Toast("메모 서버에 연결했어요");
+        }));
     }
 
     void SaveNickname()

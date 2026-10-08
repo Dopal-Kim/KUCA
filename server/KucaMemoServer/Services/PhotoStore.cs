@@ -1,8 +1,10 @@
 namespace KucaMemoServer.Services;
 
 /// <summary>
-/// 메모 사진을 wwwroot/photos/{메모 id}.{jpg|png} 로 저장하고 지운다.
-/// wwwroot 는 UseStaticFiles 가 내려주므로 /photos/{파일 이름} 으로 바로 받을 수 있다.
+/// 메모 사진을 {사진 폴더}/{메모 id}.{jpg|png} 로 저장하고 지운다. 주소는 /photos/{파일 이름}.
+/// 사진 폴더는 기본 wwwroot/photos 이고, 설정 Photos:Directory 로 바꿀 수 있다
+/// (Azure App Service 에서는 배포할 때 앱 폴더가 바뀌므로 /home/data/photos 처럼 앱 밖에 둔다).
+/// Program.cs 가 이 폴더를 /photos 로 내려준다.
 /// </summary>
 public class PhotoStore
 {
@@ -11,10 +13,13 @@ public class PhotoStore
 
     readonly string directory;
 
-    public PhotoStore(IWebHostEnvironment env)
+    /// <summary>사진이 저장되는 폴더 (절대 경로)</summary>
+    public string DirectoryPath => directory;
+
+    public PhotoStore(IConfiguration config, IWebHostEnvironment env)
     {
         string webRoot = env.WebRootPath ?? Path.Combine(env.ContentRootPath, "wwwroot");
-        directory = Path.Combine(webRoot, "photos");
+        directory = Path.GetFullPath(config["Photos:Directory"] ?? Path.Combine(webRoot, "photos"));
         Directory.CreateDirectory(directory);
     }
 

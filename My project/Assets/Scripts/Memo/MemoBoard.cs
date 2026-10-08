@@ -21,8 +21,17 @@ public class MemoBoard : MonoBehaviour
     [Tooltip("켜면 경희스팟 근처(interactRadius)에서만 메모를 쓸 수 있다")]
     public bool requireProximityToWrite = true;
 
-    [Tooltip("메모 서버 주소 (예: http://192.168.0.5:5080). 비우면 가짜 서버")]
-    public string serverUrl = "";
+    [Tooltip("메모 서버 기본 주소 (Azure: https://kuca-memo.azurewebsites.net). 비우면 기기 안의 가짜 서버. 앱 설정에서 다른 주소를 저장하면 그쪽을 쓴다")]
+    public string serverUrl = DefaultServer;
+
+    /// <summary>배포된 메모 서버 (server/deploy-azure.sh)</summary>
+    public const string DefaultServer = "https://kuca-memo.azurewebsites.net";
+
+    /// <summary>앱 설정 화면에서 바꾼 서버 주소. 키가 없으면 기본 주소(serverUrl)를 쓴다</summary>
+    public const string ServerUrlKey = "memo_server_url";
+
+    /// <summary>설정에서 따로 정하지 않았을 때 쓰는 주소</summary>
+    public string DefaultServerUrl => (serverUrl ?? "").Trim();
 
     const string AuthorKey = "memo_author";
     const string DeviceKey = "memo_device_id";
@@ -41,6 +50,7 @@ public class MemoBoard : MonoBehaviour
     static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
 
     IMemoService service;
+    string serviceUrl;
     CampusBuildingInfo building;
     readonly List<Texture2D> loadedPhotos = new List<Texture2D>();
     readonly List<(RectTransform holder, MemoData memo)> stickers = new List<(RectTransform, MemoData)>();
@@ -85,7 +95,7 @@ public class MemoBoard : MonoBehaviour
 
     void Awake()
     {
-        service = string.IsNullOrWhiteSpace(serverUrl) ? new MockMemoService() : new HttpMemoService(serverUrl.Trim());
+        EnsureService();
         Canvas canvas = UIKit.CreateCanvas(transform, "MemoCanvas", 30);
         BuildUI(canvas.transform);
         if (photoCapture != null)
@@ -129,8 +139,22 @@ public class MemoBoard : MonoBehaviour
         UIInputBlocker.SetModal(this, false);
     }
 
+    /// <summary>쓸 서버 주소: 설정에서 저장한 값이 있으면 그것, 없으면 인스펙터의 serverUrl</summary>
+    string CurrentServerUrl => (PlayerPrefs.HasKey(ServerUrlKey) ? PlayerPrefs.GetString(ServerUrlKey) : serverUrl ?? "").Trim();
+
+    /// <summary>설정에서 서버 주소가 바뀌었으면 새 주소로 다시 만든다.</summary>
+    void EnsureService()
+    {
+        string url = CurrentServerUrl;
+        if (service != null && url == serviceUrl)
+            return;
+        serviceUrl = url;
+        service = url.Length == 0 ? new MockMemoService() : new HttpMemoService(url);
+    }
+
     void OpenBoard(CampusBuildingInfo target)
     {
+        EnsureService();
         building = target;
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
@@ -154,6 +178,7 @@ public class MemoBoard : MonoBehaviour
         listView.SetActive(true);
         writeView.SetActive(false);
         viewer.SetActive(false);
+        UpdateWriteState();
         Reload();
     }
 
@@ -360,6 +385,11 @@ public class MemoBoard : MonoBehaviour
         if (stickers.Count > 0 && Mathf.Abs(((RectTransform)collageScroll.viewport).rect.width - laidOutWidth) > 1f)
             Relayout();
         // 걸어서 가까워지면 바로 쓰기 버튼이 켜지도록 매 프레임 확인한다.
+        UpdateWriteState();
+    }
+
+    void UpdateWriteState()
+    {
         canWrite = CanWrite(out float d);
         writeButtonFace.color = canWrite ? Ink : new Color(Ink.r, Ink.g, Ink.b, 0.35f);
         writeHint.transform.parent.gameObject.SetActive(!canWrite);

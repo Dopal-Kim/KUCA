@@ -1,6 +1,7 @@
 using KucaMemoServer.Endpoints;
 using KucaMemoServer.Services;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.FileProviders;
 
 // KUCA 장소 메모 서버
 // 실행: server/KucaMemoServer 폴더에서 `dotnet run` → 브라우저에서 http://localhost:5080/swagger
@@ -25,8 +26,16 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// wwwroot 폴더의 파일(업로드된 사진 등)을 그대로 내려준다. 예: /photos/abc.jpg
+// wwwroot 폴더의 파일을 그대로 내려준다.
 app.UseStaticFiles();
+
+// 업로드된 사진: 사진 폴더를 /photos 로 내려준다. 예: /photos/abc.jpg
+// (기본은 wwwroot/photos 라 위에서도 내려가지만, Photos:Directory 로 앱 밖에 둔 경우를 위해 따로 연결한다)
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(app.Services.GetRequiredService<PhotoStore>().DirectoryPath),
+    RequestPath = "/photos",
+});
 
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
    .WithTags("Health");
