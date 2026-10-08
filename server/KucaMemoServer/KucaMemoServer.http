@@ -30,3 +30,13 @@ Content-Disposition: form-data; name="deviceId"
 
 test-device-1
 --kuca--
+
+### (2단계) 다음 페이지: 마지막 메모의 createdAt 을 before 에 넣는다
+GET {{host}}/api/buildings/way-455725718/memos?limit=20&before=2026-10-06T05:12:30Z
+
+### (2단계) 메모 하나 (작성 응답의 id 를 넣는다)
+GET {{host}}/api/memos/여기에-메모-id
+
+### (4단계) 메모 삭제: 작성할 때와 같은 deviceId 여야 204, 다르면 403
+DELETE {{host}}/api/memos/여기에-메모-id
+X-Device-Id: test-device-1

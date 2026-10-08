@@ -1,31 +1,142 @@
+using System.Globalization;
+using KucaMemoServer.Models;
+using KucaMemoServer.Services;
+
 namespace KucaMemoServer.Endpoints;
 
 /// <summary>
-/// 메모 API — 여러분이 채울 부분입니다.
-/// 주소와 요청/응답 모양은 docs/api.md 를 그대로 따라야 앱과 연결됩니다.
-/// 지금은 모두 501(아직 구현 안 됨)을 돌려줍니다.
+/// 메모 API. 주소와 요청/응답 모양은 docs/api.md 를 그대로 따른다.
 /// </summary>
 public static class MemoEndpoints
 {
+    public const int DefaultLimit = 20;
+    public const int MaxLimit = 50;
+    public const int MaxAuthorLength = 20;
+    public const int MaxTextLength = 500;
+    public const int MaxDeviceIdLength = 64;
+
     public static void MapMemoEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/api").WithTags("Memos");
 
-        // TODO(2단계): 건물의 메모 목록 (최신순)
-        group.MapGet("/buildings/{buildingId}/memos", (string buildingId) =>
-            Results.StatusCode(StatusCodes.Status501NotImplemented));
+        // 건물의 메모 목록 (최신순). ?limit=1~50 (기본 20), ?before=시각 이면 그보다 이전 메모만.
+        group.MapGet("/buildings/{buildingId}/memos", (string buildingId, int? limit, string? before,
+                                                       BuildingStore buildings, MemoStore memos) =>
+        {
+            if (buildings.Find(buildingId) is null)
+                return BuildingNotFound(buildingId);
 
-        // TODO(2단계 글만, 3단계 사진까지): 메모 작성. multipart/form-data 로 author, text, deviceId, photo(선택)를 받는다.
-        group.MapPost("/buildings/{buildingId}/memos", (string buildingId) =>
-            Results.StatusCode(StatusCodes.Status501NotImplemented))
-            .DisableAntiforgery();
+            DateTime? beforeTime = null;
+            if (!string.IsNullOrWhiteSpace(before))
+            {
+                if (!DateTime.TryParse(before, CultureInfo.InvariantCulture,
+                        DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime parsed))
+                    return Error(StatusCodes.Status400BadRequest, "before 는 ISO 8601 시각이어야 합니다 (예: 2026-10-06T05:12:30Z)");
+                beforeTime = parsed;
+            }
 
-        // TODO(2단계): 메모 하나
-        group.MapGet("/memos/{memoId}", (string memoId) =>
-            Results.StatusCode(StatusCodes.Status501NotImplemented));
+            int take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
+            return Results.Ok(memos.List(buildingId, take, beforeTime));
+        });
 
-        // TODO(4단계): 메모 삭제. X-Device-Id 헤더가 작성자 기기와 같을 때만.
-        group.MapDelete("/memos/{memoId}", (string memoId) =>
-            Results.StatusCode(StatusCodes.Status501NotImplemented));
+        // 메모 작성. multipart/form-data 로 author, text, deviceId, photo(선택)를 받는다.
+        group.MapPost("/buildings/{buildingId}/memos", async (string buildingId, HttpRequest request,
+                                                              BuildingStore buildings, MemoStore memos, PhotoStore photos) =>
+        {
+            if (buildings.Find(buildingId) is null)
+                return BuildingNotFound(buildingId);
+
+            if (!request.HasFormContentType)
+                return Error(StatusCodes.Status400BadRequest, "본문은 multipart/form-data 여야 합니다");
+
+            IFormCollection form;
+            try
+            {
+                form = await request.ReadFormAsync();
+            }
+            catch (InvalidDataException)
+            {
+                // FormOptions 의 크기 제한을 넘은 경우
+                return Error(StatusCodes.Status400BadRequest, "사진은 10MB 이하만 올릴 수 있습니다");
+            }
+
+            string author = form["author"].ToString().Trim();
+            string text = form["text"].ToString().Trim();
+            string deviceId = form["deviceId"].ToString().Trim();
+
+            if (author.Length is 0 or > MaxAuthorLength)
+                return Error(StatusCodes.Status400BadRequest, $"author 는 1~{MaxAuthorLength}자여야 합니다");
+            if (text.Length is 0 or > MaxTextLength)
+                return Error(StatusCodes.Status400BadRequest, $"text 는 1~{MaxTextLength}자여야 합니다");
+            if (deviceId.Length is 0 or > MaxDeviceIdLength)
+                return Error(StatusCodes.Status400BadRequest, $"deviceId 는 1~{MaxDeviceIdLength}자여야 합니다");
+
+            IFormFile? photo = form.Files.GetFile("photo");
+            string? extension = null;
+            if (photo is { Length: > 0 })
+            {
+                if (photo.Length > PhotoStore.MaxBytes)
+                    return Error(StatusCodes.Status400BadRequest, "photo 는 10MB 이하만 올릴 수 있습니다");
+                extension = await PhotoStore.DetectExtensionAsync(photo);
+                if (extension is null)
+                    return Error(StatusCodes.Status400BadRequest, "photo 는 JPEG 또는 PNG 여야 합니다");
+            }
+
+            var memo = new Memo
+            {
+                Id = Guid.NewGuid().ToString(),
+                BuildingId = buildingId,
+                Author = author,
+                Text = text,
+                DeviceId = deviceId,
+                // 밀리초 아래는 버린다. 응답의 createdAt 을 그대로 before 에 넣어도 같은 메모가 다시 오지 않게.
+                CreatedAt = TruncateToMilliseconds(DateTime.UtcNow),
+            };
+
+            if (photo is not null && extension is not null)
+                memo.PhotoUrl = await photos.SaveAsync(memo.Id, extension, photo);
+
+            try
+            {
+                memos.Add(memo);
+            }
+            catch
+            {
+                photos.Delete(memo.PhotoUrl);
+                throw;
+            }
+
+            return Results.Created($"/api/memos/{memo.Id}", memo);
+        })
+        .DisableAntiforgery();
+
+        // 메모 하나
+        group.MapGet("/memos/{memoId}", (string memoId, MemoStore memos) =>
+            memos.Find(memoId) is { } memo ? Results.Ok(memo) : MemoNotFound(memoId));
+
+        // 메모 삭제. X-Device-Id 헤더가 작성할 때의 deviceId 와 같을 때만. 사진 파일도 함께 지운다.
+        group.MapDelete("/memos/{memoId}", (string memoId, HttpRequest request, MemoStore memos, PhotoStore photos) =>
+        {
+            Memo? memo = memos.Find(memoId);
+            if (memo is null)
+                return MemoNotFound(memoId);
+
+            string deviceId = request.Headers["X-Device-Id"].ToString().Trim();
+            if (deviceId.Length == 0 || deviceId != memo.DeviceId)
+                return Error(StatusCodes.Status403Forbidden, "이 기기에서 쓴 메모만 지울 수 있습니다");
+
+            memos.Delete(memoId);
+            photos.Delete(memo.PhotoUrl);
+            return Results.NoContent();
+        });
     }
+
+    static DateTime TruncateToMilliseconds(DateTime t) =>
+        new(t.Ticks - t.Ticks % TimeSpan.TicksPerMillisecond, t.Kind);
+
+    static IResult Error(int status, string message) => Results.Json(new { error = message }, statusCode: status);
+
+    static IResult BuildingNotFound(string id) => Error(StatusCodes.Status404NotFound, $"건물을 찾을 수 없습니다: {id}");
+
+    static IResult MemoNotFound(string id) => Error(StatusCodes.Status404NotFound, $"메모를 찾을 수 없습니다: {id}");
 }

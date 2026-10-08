@@ -10,3 +10,6 @@ obj/
 *.db-wal
 KucaMemoServer/wwwroot/photos/*
 !KucaMemoServer/wwwroot/photos/.gitkeep
+
+# 루트 .gitignore 가 Unity 용으로 *.csproj 를 제외하지만, 서버 프로젝트 파일은 있어야 `dotnet run` 이 된다
+!*.csproj
