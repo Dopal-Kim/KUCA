@@ -23,15 +23,18 @@ from kuca_art import figures
 
 # 고품질 피규어(kuca_art/figures.py, figs/) 로 지도용 두 단계 + 도감용 고품질을 만든다.
 #   CreatureMeshes.bytes     가까이 (LOD0, 약 18k 삼각형)  — 확대했을 때 매끈하게
-#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 5k 삼각형)   — 지도에서 여러 마리가 떠 있어도 부드럽게
+#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 8k 삼각형)   — 지도에서 여러 마리가 떠 있어도 부드럽게
 #   --hq → CreatureMeshesHQ.bytes (도감 확대용 60k)
 LEVELS = {'near': ('CreatureMeshes.bytes', 13000, 0.045, 0.4, 6000),
-          'far': ('CreatureMeshesFar.bytes', 3000, 0.06, 0.2, 1500),
+          'far': ('CreatureMeshesFar.bytes', 5000, 0.05, 0.3, 3000),
           'hq': ('CreatureMeshesHQ.bytes', 60000, 0.04, 1.0, None)}
 hq = '--hq' in _sys.argv
 only = [a.split('=')[1].split(',') for a in _sys.argv if a.startswith('--only=')]
 only = only[0] if only else None
 levels = ['hq'] if hq else ['near', 'far']
+lv_arg = [a.split('=')[1].split(',') for a in _sys.argv if a.startswith('--levels=')]
+if lv_arg:
+    levels = lv_arg[0]
 old = dict(creatures.build_all())
 for lv in levels:
     fname, tris, voxel, lod, cap = LEVELS[lv]
