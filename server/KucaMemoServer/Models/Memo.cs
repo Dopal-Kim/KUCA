@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace KucaMemoServer.Models;
 
 /// <summary>
@@ -23,5 +25,7 @@ public class Memo
     /// <summary>작성 시각 (UTC)</summary>
     public DateTime CreatedAt { get; set; }
 
-    // TODO(4단계): 삭제 권한 확인용 DeviceId 를 저장하세요. 단, API 응답에는 내보내지 마세요.
+    /// <summary>작성한 기기 ID. 삭제 권한 확인용으로 서버에만 저장하고 API 응답에는 내보내지 않는다.</summary>
+    [JsonIgnore]
+    public string DeviceId { get; set; } = "";
 }
