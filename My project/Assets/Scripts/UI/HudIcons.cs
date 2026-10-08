@@ -175,6 +175,49 @@ public static class HudIcons
         p.Erase(q => q.BoxD(54, 94, 8f, 6f, 0f, 0f));
     });
 
+
+    /// <summary>메모 쓰기 (종이 위 연필)</summary>
+    public static Sprite MemoWrite => Cached("memowrite", 128, p =>
+    {
+        p.Box(54, 60, 36f, 42f, 8f);
+        p.Box(54, 60, 28f, 34f, 4f, erase: true);
+        p.Segment(36, 74, 62, 74, 6f);
+        p.Segment(36, 60, 56, 60, 6f);
+        p.Segment(36, 46, 48, 46, 6f);
+        p.Erase(q => q.SegmentD(70, 40, 108, 96, 26f));
+        p.Segment(72, 42, 106, 92, 13f);
+        p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
+    });
+
+    public static Sprite Camera => Cached("camera", 128, p =>
+    {
+        p.Box(64, 58, 50f, 36f, 10f);
+        p.Box(64, 98, 18f, 8f, 4f);
+        p.Erase(q => q.CircleD(64, 58, 22f));
+        p.Circle(64, 58, 14f);
+    });
+
+    public static Sprite Person => Cached("person", 128, p =>
+    {
+        p.Ring(64, 64, 52f, 9f);
+        p.Circle(64, 76, 17f);
+        p.Fill(q => Mathf.Max(q.CircleD(64, 34, 30f), q.CircleD(64, 64, 47f)), Color.white);
+    });
+
+    /// <summary>스티커처럼 가장자리가 오톨도톨하게 찢어진 흰 종이 (9-slice)</summary>
+    static Sprite torn;
+    public static Sprite TornPaper => torn != null ? torn : torn = Paint(128, 26, p =>
+    {
+        p.Fill(q =>
+        {
+            float d = q.BoxD(64, 64, 60f, 60f, 10f, 0f);
+            // 가장자리 둘레를 따라 불규칙하게 들쭉날쭉
+            float a = Mathf.Atan2(q.y - 64f, q.x - 64f);
+            float n = Mathf.Sin(a * 23f) * 1.2f + Mathf.Sin(a * 57f + 1.3f) * 0.9f + Mathf.Sin((q.x + q.y) * 0.9f) * 0.8f;
+            return d + n;
+        }, Color.white);
+    });
+
     public static Sprite Sort => Cached("sort", 128, p =>
     {
         p.Segment(28, 92, 100, 92, 11f);
@@ -427,5 +470,6 @@ public static class HudIcons
     {
         circle = pill = rounded = glowRing = softDisk = needle = bag = shirt = gear = bell = hexagon = chevron = null;
         cache.Clear();
+        torn = null;
     }
 }
