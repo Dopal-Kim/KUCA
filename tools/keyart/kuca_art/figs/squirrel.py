@@ -121,9 +121,11 @@ def build(fig, rng):
     blush_paint(fig, hc, 44, -20, 'body', size=0.36, soft=0.5)
 
     # ---- 꼬리: 큰 S 자 곡선 (엉덩이 → 뒤로 솟아 → 끝이 바깥으로 말려 내려옴), 겹친 털 뭉치들로 ----
-    ctrl = np.array([(0.0, y0 + 1.1, -0.7), (0.0, y0 + 1.5, -1.75), (0.0, y0 + 2.7, -2.45), (0.0, y0 + 4.3, -2.5),
-                     (0.0, y0 + 5.7, -2.6), (0.0, y0 + 6.55, -3.2), (0.0, y0 + 6.3, -3.85), (0.0, y0 + 5.75, -3.75)])
-    rads = np.array([0.5, 1.05, 1.55, 1.72, 1.62, 1.38, 1.08, 0.75])
+    ctrl = np.array([(0.0, y0 + 1.1, -0.7), (0.0, y0 + 1.5, -1.75), (0.0, y0 + 2.7, -2.4), (0.0, y0 + 4.2, -2.5),
+                     (0.0, y0 + 5.6, -2.7), (0.0, y0 + 6.55, -3.25), (0.0, y0 + 6.65, -3.95), (0.0, y0 + 6.05, -4.25),
+                     (0.0, y0 + 5.5, -3.85)])
+    rads = np.array([0.5, 1.05, 1.55, 1.72, 1.62, 1.4, 1.15, 0.9, 0.62])
+    ctrl[:, 2] = np.where(ctrl[:, 2] < -2.4, -2.4 + (ctrl[:, 2] + 2.4) * 0.55, ctrl[:, 2])   # 받침 조형 범위(z>-4.8) 안에 들도록
 
     def crom(t):   # Catmull-Rom 위 점 (t: 0..1)
         n = len(ctrl) - 1
@@ -142,23 +144,27 @@ def build(fig, rng):
     outn *= np.where(outn[:, 2:3] < 0, 1, -1)                                  # 몸 반대쪽(뒤)을 향하게
     parts_t = []
     for a, b, ra, rb in zip(spine[:-1:3], spine[3::3], srad[:-1:3], srad[3::3]):
-        parts_t.append(S.capsule(tuple(a), tuple(b), ra * 0.72, rb * 0.72))      # 속 심
+        parts_t.append(S.capsule(tuple(a), tuple(b), ra * 0.88, rb * 0.88))      # 속 심
     clumps = []
     for j, t in enumerate(np.linspace(0.1, 0.97, 9)):
         k = int(t * (len(T) - 1))
         c, r, tg, n_ = spine[k], srad[k], tang[k], outn[k]
         side = np.cross(tg, n_)
-        for phi in (-120, -72, -24, 24, 72, 120) if j % 2 == 0 else (-96, -48, 0, 48, 96):
+        for phi in (-110, -66, -22, 22, 66, 110) if j % 2 == 0 else (-88, -44, 0, 44, 88):
             ph = math.radians(phi)
             d = n_ * math.cos(ph) + side * math.sin(ph)
-            if d[2] > 0.55 and t < 0.6:      # 몸 쪽 안쪽 면은 뭉치 생략
+            inner = d @ (-n_)
+            if inner > 0.6:      # 곡선 안쪽(몸·말린 속) 면은 뭉치 생략 → 얇은 막·구멍 방지
                 continue
+            L = 1.0 if t < 0.7 else 0.6
             base = c + d * r * 0.25 - tg * r * 0.45
-            tip = c + d * r * 0.88 + tg * r * 1.0
+            tip = c + d * r * 0.88 + tg * r * 1.0 * L
             clumps.append((base, tip, r * 0.55))
             parts_t.append(S.capsule(tuple(base), tuple(tip), r * 0.55, r * 0.12))
-    lo_b = spine.min(axis=0) - 1.9
-    hi_b = spine.max(axis=0) + 1.9
+    # 말린 끝과 꼬리 기둥 사이를 메워 (뒤에서 볼 때 구멍 없이) 하나의 큰 덩어리로
+    parts_t.append(S.ellipsoid((0.0, y0 + 5.6, -2.95), (1.3, 0.9, 0.8)))
+    lo_b = spine.min(axis=0) - 3.2
+    hi_b = spine.max(axis=0) + 3.2
 
     def tail(P):
         out = np.full(len(P), 5.0)
@@ -179,7 +185,7 @@ def build(fig, rng):
             Q = P[m]
             D = np.linalg.norm(Q[:, None, :] - spine[None, :, :], axis=2)
             k = D.argmin(axis=1)
-            out[m] = (srad[k] * 0.95 - D[np.arange(len(Q)), k]) * 2.0
+            out[m] = (srad[k] * 1.2 - D[np.arange(len(Q)), k]) * 2.0
         return out
     fig.paint(masked(tail_tip, lambda P: np.abs(tail(P)), 0.1), FUR_L, soft=0.5)
 
