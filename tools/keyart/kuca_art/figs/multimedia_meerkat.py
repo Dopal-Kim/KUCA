@@ -8,10 +8,10 @@ from .. import figures as Fg
 
 TIER = 'gold'
 
-SAND = (0.89, 0.76, 0.56)
+SAND = (0.91, 0.75, 0.50)
 SAND_DK = (0.78, 0.62, 0.42)
 CREAM = (0.98, 0.93, 0.83)
-PATCH = (0.40, 0.25, 0.17)
+PATCH = (0.36, 0.21, 0.13)
 DARK = (0.35, 0.22, 0.15)
 KNIT = (0.97, 0.94, 0.87)
 STRAP = (0.72, 0.12, 0.18)
@@ -107,7 +107,7 @@ def build(fig, rng):
     # 얼굴 부품 자리
     eye_f = {s: head_frame(fig, hc, s * 26, 3) for s in (-1, 1)}
     brow_f = {s: head_frame(fig, hc, s * 27, 18, out=0.02) for s in (-1, 1)}
-    blush_p = {s: np.array(head_frame(fig, hc, s * 42, -22).o) for s in (-1, 1)}
+    blush_p = {s: np.array(head_frame(fig, hc, s * 40, -30).o) for s in (-1, 1)}
     nose_f = head_frame(fig, hc, 0, -24)
     mouth_f = head_frame(fig, hc, 0, -33)
     # 눈 무늬: 눈 둘레 짙은 갈색 물방울 (바깥 아래로 처짐)

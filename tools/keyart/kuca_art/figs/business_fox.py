@@ -157,7 +157,7 @@ def build(fig, rng):
     nose_f = head_frame(fig, hc, 0, -19.5)
     mouth_f = head_frame(fig, hc, 0, -24)
     for s in (-1, 1):   # 눈 위 흰 점
-        fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.22, 0.14, 0.25)), WHITE, soft=0.03)
+        fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.28, 0.17, 0.3)), WHITE, soft=0.03)
     # ---- 귀: 큰 삼각 귀, 짙은 끝, 밝은 안쪽 ----
     for s in (-1, 1):
         Re = S.rot(s * 12, -8, -s * 20)

@@ -218,12 +218,12 @@ def build(fig, rng):
         fig.add(S.capsule((x, y0 + 0.2, 0.23), (x, y0 + 0.17, -0.3), 0.17, 0.14), FOOT, k=0.1, layer='feet')
 
     # ---------- 몸통: 가슴이 앞으로 나온 통통한 몸 (뒤는 둥근 엉덩이) ----------
-    torso = [((0, y0 + 2.4, -0.05), (1.6, 1.42, 1.38)), ((0, y0 + 1.62, 0.0), (1.32, 0.78, 1.2)),
-             ((0, y0 + 2.9, 0.42), (1.3, 1.12, 1.12))]
+    torso = [((0, y0 + 2.4, -0.05), (1.42, 1.38, 1.32)), ((0, y0 + 1.62, 0.0), (1.2, 0.76, 1.12)),
+             ((0, y0 + 2.85, 0.4), (1.15, 1.05, 1.08))]
     for c, r in torso:
         fig.add(S.ellipsoid(c, r), WHITE, k=0.45)
 
-    NECK = ((0, y0 + 3.85, 0.2), (1.45, 0.7, 1.25))
+    NECK = ((0, y0 + 3.45, 0.2), (1.3, 0.55, 1.15))
 
     def body_f(P):
         d = S.ellipsoid(*torso[0])(P)
@@ -234,8 +234,8 @@ def build(fig, rng):
     def shell_f(P):      # 조끼가 따라갈 표면 (몸 + 목)
         return S.smin(body_f(P), S.ellipsoid(*NECK)(P), 0.5)
     # 가슴 깃털 (V 트임에서 보이는 보송한 흰 털): 한 덩어리로 부드럽게
-    q = hit(fig, (0, y0 + 3.15, 4.5), (0, 0, -1), field=body_f)
-    fig.add(S.ellipsoid((0, y0 + 3.15, q[2] - 0.3), (0.7, 0.5, 0.42)), WHITE, k=0.35)
+    q = hit(fig, (0, y0 + 3.0, 4.5), (0, 0, -1), field=body_f)
+    fig.add(S.ellipsoid((0, y0 + 3.0, q[2] - 0.3), (0.6, 0.42, 0.4)), WHITE, k=0.3)
 
     # ---------- 조끼 (크림): 몸 전체를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
     yv = y0 + 2.62                   # V 트임 꼭짓점
@@ -276,7 +276,7 @@ def build(fig, rng):
     fig.add(S.intersect(S.onion(lambda P: shell_f(P) - 0.11, 0.085), lambda P: np.abs(P[:, 1] - (hem_y + 0.05)) - 0.065),
             Fg.GOLD, k=0.0, layer='trim', metal=G)
     # 진홍 보석 + 뒤 단추
-    gx, gy = -0.62, y0 + 2.55
+    gx, gy = -0.58, y0 + 2.45
     gz = vz(gx, gy)
     Rg = S.rot(math.degrees(math.atan2(gx, 1.4)), 80, 0)
     fig.add(S.sphere((gx, gy, gz + 0.05), 0.19), Fg.CRIMSON, k=0.0, layer='gem')
@@ -284,7 +284,7 @@ def build(fig, rng):
     for y in (y0 + 2.7, y0 + 2.2):
         fig.add(S.sphere((0, y, vz(0, y, 0.0, back=True)), 0.1), Fg.GOLD, k=0.0, layer='btn', metal=G)
     # 오른쪽 주머니 (덮개 + 금테)
-    px, py = 0.8, y0 + 2.4
+    px, py = 0.72, y0 + 2.35
     pz = vz(px, py)
     Rp = S.rot(math.degrees(math.atan2(px, pz)) * 0.9, 0, 0)
     fig.add(S.box((px, py - 0.12, pz - 0.04), (0.36, 0.24, 0.09), round_=0.05, R=Rp), (0.95, 0.85, 0.66), k=0.0, layer='pocket')
@@ -292,7 +292,7 @@ def build(fig, rng):
                       tuple(np.array((px, py + 0.12, pz + 0.03)) + Rp @ np.array((0.35, 0, 0))), 0.05), Fg.GOLD, k=0.0, layer='trim', metal=G)
 
     # ---------- 회중시계 (금색, 주머니에서 늘어진 사슬) ----------
-    wc = (0.9, y0 + 1.5, vz(0.9, y0 + 1.5, 0.12))
+    wc = (0.82, y0 + 1.5, vz(0.82, y0 + 1.5, 0.12))
     Rw = S.rot(26, 82, 0)                    # 원기둥 Y축 → 앞쪽 (살짝 오른쪽)
     fig.add(S.cylinder(wc, 0.56, 0.09, round_=0.05, R=Rw), Fg.GOLD, k=0.0, layer='watch', metal=G)
     fig.add(S.torus(np.array(wc) + Rw @ np.array((0, 0.08, 0)), 0.5, 0.06, Rm=Rw), Fg.GOLD, k=0.0, layer='watch', metal=G)
@@ -314,7 +314,7 @@ def build(fig, rng):
 
     # ---------- 날개: 조끼 아래 옆구리에서 바깥으로 펼친 적갈색 깃 부채 ----------
     for s in (-1, 1):
-        root = np.array((s * 1.5, y0 + 2.65, 0.0))
+        root = np.array((s * 1.36, y0 + 2.6, 0.0))
         fan = ((28, 1.4, RUST_DK), (48, 1.65, RUST), (68, 1.7, DKRED), (88, 1.55, RUST), (108, 1.25, RUST_LT))
         for i, (ang, L, col) in enumerate(fan):
             a_ = math.radians(ang)
@@ -323,7 +323,7 @@ def build(fig, rng):
             fig.add(S.ellipsoid(tuple(mid), (0.36, L * 0.56, 0.15), R=S.rot(s * 6, 0, s * ang)), col, k=0.06, layer='wing%d' % (i % 2))
 
     # ---------- 꼬리: 따로 떨어진 낫깃 부채 (뒤에서 보면 펼쳐짐) ----------
-    tb = np.array((0.0, y0 + 2.45, -1.2))
+    tb = np.array((0.0, y0 + 2.45, -1.12))
     tails = ((-58, 0.85, RUST), (-38, 1.05, DKRED), (-19, 1.2, RUST_DK), (0, 1.32, RUST), (19, 1.2, DKRED), (38, 1.05, RUST_DK), (58, 0.85, RUST))
     for i, (phi, h, col) in enumerate(tails):
         ph = math.radians(phi)
@@ -347,9 +347,9 @@ def build(fig, rng):
             fig.add(S.ellipsoid(tuple((a_ + b_) / 2), (w * 1.05, L * 0.8, w * 0.7), R=R), col, k=0.1, layer='tail%d' % i)
 
     # ---------- 머리: 달걀형 (위가 좁고 아래 볼 쪽이 부드럽게 넓음), 볼 구 없음 ----------
-    hc = np.array((0, y0 + 5.38, 0.12))
-    fig.add(S.ellipsoid(tuple(hc), (1.7, 1.76, 1.68)), WHITE, k=0.6)
-    fig.add(S.ellipsoid(tuple(hc + (0, -0.6, 0.12)), (1.84, 1.2, 1.62)), WHITE, k=0.6)       # 아래쪽 볼 볼륨
+    hc = np.array((0, y0 + 5.05, 0.15))
+    fig.add(S.ellipsoid(tuple(hc), (1.74, 1.78, 1.7)), WHITE, k=0.45)
+    fig.add(S.ellipsoid(tuple(hc + (0, -0.55, 0.12)), (1.98, 1.22, 1.7)), WHITE, k=0.5)       # 아래쪽 볼 볼륨
     fig.add(S.ellipsoid(*NECK), WHITE, k=0.5)                                                # 목
     top = hc[1] + 1.72
     # 볏 (빨간 세 봉우리)

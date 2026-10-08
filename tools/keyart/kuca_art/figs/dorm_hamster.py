@@ -9,7 +9,7 @@ from .. import figures as Fg
 TIER = 'gold'
 
 CREAM = (0.99, 0.95, 0.89)
-FUR = (0.96, 0.70, 0.30)
+FUR = (0.98, 0.68, 0.24)
 EAR_IN = (1.0, 0.68, 0.70)
 PJ_W = (0.99, 0.95, 0.93)
 PJ_P = (0.95, 0.55, 0.58)
@@ -141,10 +141,12 @@ def build(fig, rng):
     HR = 2.0
     head_f = S.ellipsoid(hc, (HR * 1.1, HR * 0.95, HR * 0.98))
     fig.add(head_f, CREAM, k=0.0, layer='head')
-    fig.add(S.ellipsoid((0, hc[1] - 0.62, hc[2] + 0.12), (HR * 1.14, HR * 0.7, HR * 0.94)), CREAM, k=0.9, layer='head')
+    puff = S.ellipsoid((0, hc[1] - 0.62, hc[2] + 0.12), (HR * 1.14, HR * 0.7, HR * 0.94))
+    fig.add(puff, CREAM, k=0.9, layer='head')
+    head_u = lambda P: S.smin(head_f(P), puff(P), 0.9)
     fig.add(S.capsule((0, y0 + 3.1, 0.0), (0, hc[1] - 1.2, 0.05), 0.85), CREAM, k=0.25, layer='head')
     # 털 무늬: 위쪽·뒤쪽 주황, 가운데 흰 이마 줄
-    fig.paint(lambda P: np.maximum(head_f(P) - 0.12, (hc[1] + 0.25 - 0.55 * np.abs(P[:, 0])) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 1.2) * 0.6), FUR, soft=0.12)
+    fig.paint(lambda P: np.maximum.reduce([head_u(P) - 0.1, (hc[1] - 1.25) - P[:, 1], (hc[1] + 0.05 - 0.62 * np.abs(P[:, 0])) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 1.3) * 0.6]), FUR, soft=0.08)
     fig.paint(S.ellipsoid((0, hc[1] + 0.35, hc[2] + 1.95), (0.5, 1.2, 0.75)), CREAM, soft=0.14)
     # ---- 귀: 둥근 주황 귀 + 분홍 안쪽 ----
     for s in (-1, 1):

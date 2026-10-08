@@ -141,7 +141,7 @@ def build(fig, rng):
     fig.add(S.capsule((0, y0 + 3.2, 0), (0, hc[1] - 1.3, 0.05), 0.75), BROWN, k=0.2)
     snout_a, snout_b = np.array((0, hc[1] - 0.5, hc[2] + 1.0)), np.array((0, hc[1] - 0.72, hc[2] + 2.55))
     fig.add(S.capsule(tuple(snout_a), tuple(snout_b), 0.78, 0.17), BROWN, k=0.45)
-    face = S.ellipsoid((0, hc[1] - 0.35, hc[2] + 1.3), (1.7, 1.45, 1.5))
+    face = S.ellipsoid((0, hc[1] - 0.35, hc[2] + 1.3), (1.6, 1.42, 1.5))
     fig.paint(lambda P: np.maximum.reduce([face(P), -S.ellipsoid((0, hc[1] + 1.25, hc[2] + 1.5), (0.32, 0.6, 0.9))(P), (hc[1] - 2.0) - P[:, 1], P[:, 1] - (hc[1] + 0.95)]), CREAM, soft=0.06)
     # 얼굴 부품 자리 (가시·헤드셋 넣기 전에 표면을 구한다)
     eye_f = {s: head_frame(fig, hc, s * 28, 0) for s in (-1, 1)}
@@ -152,7 +152,7 @@ def build(fig, rng):
     spines = []
     tips = []
     for d in fib_dirs(110):
-        in_face = d[2] > 0.3 and abs(d[0]) < 0.78 and d[1] < 0.62
+        in_face = d[2] > 0.12 and abs(d[0]) < 0.92 and d[1] < 0.55
         if in_face or d[1] < -0.6 or (d[2] > 0.0 and d[1] < -0.2):
             continue
         if abs(d[2] - 0.05) < 0.13 and d[1] > 0.2:      # 헤드셋 밴드 자리 (가르마)
