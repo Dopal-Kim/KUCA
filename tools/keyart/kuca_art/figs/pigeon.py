@@ -13,9 +13,9 @@ GREY = (0.60, 0.60, 0.645)
 GREY_D = (0.40, 0.40, 0.46)
 GREY_L = (0.74, 0.74, 0.79)
 BELLY = (0.95, 0.94, 0.93)
-IRI_G = (0.26, 0.76, 0.46)
+IRI_G = (0.24, 0.72, 0.50)
 IRI_T = (0.32, 0.62, 0.66)
-IRI_P = (0.55, 0.36, 0.86)
+IRI_P = (0.56, 0.38, 0.84)
 FOOT = (0.94, 0.46, 0.44)
 BEAK = (0.30, 0.30, 0.35)
 BAG = (0.52, 0.68, 0.25)
@@ -275,28 +275,38 @@ def build(fig, rng):
     chest = S.ellipsoid((0, y0 + 3.6, 0.95), (1.7, 1.65, 1.6))
     def core(P):
         return S.smin(S.smin(belly(P), chest(P), 0.6), head(P), 0.8)
-    Y_TOP, ROWS = y0 + 4.85, 6
-
-    sc = lambda P: feather_scales(P, Y_TOP, ROWS, Rr=2.0, cz=0.2)
+    # ---- 목 무지개 깃 띠: 매끈한 띠 + 크고 은은한 비늘 3 줄, 초록(위) / 보라(아래) 색 구역을 또렷하게 ----
+    Y_TOP, ROWS = y0 + 5.0, 3
+    sc = lambda P: feather_scales(P, Y_TOP, ROWS, n_around=11, H=0.42, hh=0.36, w=0.75, A=0.032, Rr=2.0, cz=0.2)
     fig.add(lambda P: core(P) - sc(P)[0], GREY, k=0.3)
     near_body = lambda P: np.abs(core(P))
-    yb = Y_TOP - (ROWS - 1) * 0.24 - 0.42
-    fig.paint(masked(lambda P: (P[:, 1] - (yb + 0.1)) * 2.5, near_body, 0.2), BELLY, soft=0.6)
-    fig.paint(masked(lambda P: (P[:, 1] - (y0 + 6.9)) * -1.5, near_body, 0.2), (0.66, 0.66, 0.71), soft=1.4)   # 정수리 살짝 밝게
+    th_of = lambda P: np.arctan2(P[:, 0], P[:, 2] - 0.2)
+    y_mid = y0 + 4.45
+    y_bot = y0 + 3.78
 
-    def row_paint(kset, thr=0.012):
+    def scallop(P, y_edge, n=9, amp=0.2):      # 아래 가장자리를 비늘 모양으로 물결
+        u = th_of(P) * n / (2 * math.pi)
+        du = u - np.round(u)
+        return y_edge - amp * (1 - (2 * du) ** 2)
+    belly_f = lambda P: (P[:, 1] - scallop(P, y_bot)) * 4.0      # 띠 아래: 흰 배
+    fig.paint(masked(lambda P: belly_f(P), near_body, 0.2), BELLY, soft=0.2)
+    fig.paint(masked(lambda P: (P[:, 1] - (y0 + 6.9)) * -1.5, near_body, 0.2), (0.66, 0.66, 0.71), soft=1.4)   # 정수리 살짝 밝게
+    band = lambda P: np.maximum((P[:, 1] - Y_TOP) * 4.0, -belly_f(P))      # 띠 안쪽 < 0
+    green = lambda P: np.maximum(band(P), (scallop(P, y_mid, amp=0.14) - P[:, 1]) * 4.0)
+    purple = lambda P: np.maximum(band(P), (P[:, 1] - scallop(P, y_mid, amp=0.14)) * 4.0)
+    fig.paint(masked(green, near_body, 0.2), IRI_G, soft=0.2)
+    fig.paint(masked(purple, near_body, 0.2), IRI_P, soft=0.2)
+    # 띠 위 가장자리는 회색으로 부드럽게 녹아듦 + 초록 위쪽에 밝은 청록 반사
+    fig.paint(masked(lambda P: np.maximum(np.abs(P[:, 1] - (Y_TOP - 0.18)) - 0.12, band(P)), near_body, 0.2), (0.42, 0.82, 0.70), soft=0.15)
+    fig.paint(masked(lambda P: (P[:, 1] - Y_TOP) * -4.0 + 0.4, near_body, 0.2), GREY, soft=0.6)
+    # 비늘 겹친 곳만 아주 살짝 짙게 (큰 비늘 모양이 은은하게 보이도록)
+    def crease(zone):
         def f(P):
             b, row = sc(P)
-            return np.where(np.isin(row, kset) & (b > thr), -1.0, 1.0)
+            return np.where((row >= 0) & (b < 0.006) & (zone(P) < 0), -1.0, 1.0)
         return masked(f, near_body, 0.2)
-    fig.paint(row_paint([0, 1]), IRI_G, soft=0.5)
-    fig.paint(row_paint([2]), IRI_T, soft=0.5)
-    fig.paint(row_paint([3, 4, 5]), IRI_P, soft=0.5)
-    def edge_f(P):
-        b, row = sc(P)
-        return np.where((row >= 0) & (b < 0.035) & (P[:, 1] > yb - 0.1), -1.0, 1.0)
-    fig.paint(masked(edge_f, near_body, 0.2), (0.30, 0.34, 0.50), soft=1.2)
-    fig.paint(row_paint([0]), (0.50, 0.80, 0.62), soft=1.4)
+    fig.paint(crease(green), (0.17, 0.58, 0.42), soft=0.6)
+    fig.paint(crease(purple), (0.45, 0.29, 0.72), soft=0.6)
 
     # ---- 얼굴: 멍한 반쯤 감긴 눈 (흰자 + 처진 눈꺼풀), 짧은 부리 + 흰 납막, 칠한 볼터치 ----
     for s in (-1, 1):

@@ -10,9 +10,9 @@ from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell,
 
 TIER = 'blue'
 
-FUR = (0.55, 0.39, 0.29)
+FUR = (0.53, 0.40, 0.31)
 FUR_D = (0.36, 0.24, 0.16)
-FUR_L = (0.70, 0.52, 0.38)
+FUR_L = (0.76, 0.62, 0.50)
 CREAM = (0.98, 0.91, 0.79)
 EAR_IN = (0.97, 0.74, 0.62)
 KNIT = (0.30, 0.60, 0.96)
@@ -76,13 +76,13 @@ def build(fig, rng):
     nb = lambda P: np.abs(core(P))
     # 귀 끝 털 (짙은 갈색, 뾰족하게 여러 가닥)
     for s, e, b, t, Re in ears:
-        tb = t - (t - b) / np.linalg.norm(t - b) * 0.3
-        up = np.array((s * 0.28, 1.0, -0.05)); up /= np.linalg.norm(up)
-        fig.add(S.capsule(tuple(tb), tuple(tb + up * 1.2), 0.4, 0.05), FUR_D, k=0.2, layer='tuft')     # 붓 모양 중심
-        for k, (dx, dz, L, r) in enumerate(((-0.42, 0.05, 0.85, 0.14), (0.42, -0.05, 0.9, 0.14), (-0.2, 0.12, 1.05, 0.15),
-                                             (0.22, -0.12, 1.0, 0.15), (0.6, 0.0, 0.7, 0.12))):
-            dvec = up + np.array((s * dx * 0.9, 0, dz)); dvec /= np.linalg.norm(dvec)
-            fig.add(S.capsule(tuple(tb + up * 0.1), tuple(tb + up * 0.1 + dvec * L), r, 0.02), FUR_D, k=0.12, layer='tuft')
+        tb = t - (t - b) / np.linalg.norm(t - b) * 0.25
+        up = np.array((s * 0.22, 1.0, -0.05)); up /= np.linalg.norm(up)
+        # 부드러운 붓 모양 귀 끝 털: 통통한 뿌리에서 뾰족해지는 털 뭉치 3 개가 살짝 벌어짐
+        fig.add(S.ellipsoid(tuple(tb + up * 0.2), (0.32, 0.34, 0.24), R=axis_R(up, (0, 0, 1))), FUR_D, k=0.3, layer='tuft')   # 통통한 뿌리
+        for k, (dx, dz, L, r) in enumerate(((0.0, 0.0, 1.0, 0.24), (-0.3, 0.06, 0.78, 0.2), (0.3, -0.05, 0.82, 0.2))):
+            dvec = up + np.array((s * dx, 0, dz)); dvec /= np.linalg.norm(dvec)
+            fig.add(S.capsule(tuple(tb + up * 0.15), tuple(tb + dvec * L), r, 0.05), FUR_D, k=0.3, layer='tuft')
         fig.paint(masked(lambda P, b=b, t=t: S.capsule(tuple(b + (0, 0.35, 0)), tuple(t + (0, -0.3, 0)), 0.38, 0.08)(P) + ((P - b) @ Re[:, 2] < 0.0) * 1.0,
                          lambda P: np.abs(body_all(P)), 0.12), EAR_IN, soft=0.12)
         fig.paint(masked(lambda P, t=t: np.linalg.norm(P - t, axis=1) - 0.45, lambda P: np.abs(body_all(P)), 0.12), FUR_D, soft=0.3)
@@ -120,19 +120,68 @@ def build(fig, rng):
     mouth_w(fig, face_frame(fig, hc, 0, -22, 'body'), w=0.22, th=0.045)
     blush_paint(fig, hc, 44, -20, 'body', size=0.36, soft=0.5)
 
-    # ---- 꼬리 (등 아래에서 뒤로 → 크게 솟아 끝이 뒤로 말림) ----
-    # 아주 큰 꼬리: 몸보다 크게, 머리 뒤까지 솟아 끝이 뒤로 말림
-    tp = [((0.0, y0 + 1.15, -0.75), 0.5), ((0.05, y0 + 1.85, -1.55), 1.12), ((0.1, y0 + 3.1, -2.1), 1.62),
-          ((0.1, y0 + 4.6, -2.3), 1.78), ((0.05, y0 + 6.0, -2.55), 1.55), ((0.0, y0 + 6.75, -3.15), 1.08), ((0.0, y0 + 6.2, -3.6), 0.62)]
+    # ---- 꼬리: 큰 S 자 곡선 (엉덩이 → 뒤로 솟아 → 끝이 바깥으로 말려 내려옴), 겹친 털 뭉치들로 ----
+    ctrl = np.array([(0.0, y0 + 1.1, -0.7), (0.0, y0 + 1.5, -1.75), (0.0, y0 + 2.7, -2.45), (0.0, y0 + 4.3, -2.5),
+                     (0.0, y0 + 5.7, -2.6), (0.0, y0 + 6.55, -3.2), (0.0, y0 + 6.3, -3.85), (0.0, y0 + 5.75, -3.75)])
+    rads = np.array([0.5, 1.05, 1.55, 1.72, 1.62, 1.38, 1.08, 0.75])
+
+    def crom(t):   # Catmull-Rom 위 점 (t: 0..1)
+        n = len(ctrl) - 1
+        u = np.clip(t, 0, 1) * n
+        i = min(int(u), n - 1)
+        f = u - i
+        p0, p1, p2, p3 = ctrl[max(i - 1, 0)], ctrl[i], ctrl[i + 1], ctrl[min(i + 2, n)]
+        return 0.5 * ((2 * p1) + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f + (-p0 + 3 * p1 - 3 * p2 + p3) * f ** 3), \
+            np.interp(u, np.arange(n + 1), rads)
+    T = np.linspace(0, 1, 40)
+    spine = np.array([crom(t)[0] for t in T])
+    srad = np.array([crom(t)[1] for t in T])
+    tang = np.gradient(spine, axis=0)
+    tang /= np.linalg.norm(tang, axis=1, keepdims=True)
+    outn = np.stack([np.zeros(len(T)), -tang[:, 2], tang[:, 1]], axis=1)       # yz 평면 법선
+    outn *= np.where(outn[:, 2:3] < 0, 1, -1)                                  # 몸 반대쪽(뒤)을 향하게
+    parts_t = []
+    for a, b, ra, rb in zip(spine[:-1:3], spine[3::3], srad[:-1:3], srad[3::3]):
+        parts_t.append(S.capsule(tuple(a), tuple(b), ra * 0.72, rb * 0.72))      # 속 심
+    clumps = []
+    for j, t in enumerate(np.linspace(0.1, 0.97, 9)):
+        k = int(t * (len(T) - 1))
+        c, r, tg, n_ = spine[k], srad[k], tang[k], outn[k]
+        side = np.cross(tg, n_)
+        for phi in (-120, -72, -24, 24, 72, 120) if j % 2 == 0 else (-96, -48, 0, 48, 96):
+            ph = math.radians(phi)
+            d = n_ * math.cos(ph) + side * math.sin(ph)
+            if d[2] > 0.55 and t < 0.6:      # 몸 쪽 안쪽 면은 뭉치 생략
+                continue
+            base = c + d * r * 0.25 - tg * r * 0.45
+            tip = c + d * r * 0.88 + tg * r * 1.0
+            clumps.append((base, tip, r * 0.55))
+            parts_t.append(S.capsule(tuple(base), tuple(tip), r * 0.55, r * 0.12))
+    lo_b = spine.min(axis=0) - 1.9
+    hi_b = spine.max(axis=0) + 1.9
+
     def tail(P):
-        d = None
-        for (a, ra), (b, rb) in zip(tp, tp[1:]):
-            g = S.capsule(a, b, ra, rb)(P)
-            d = g if d is None else S.smin(d, g, 0.6)
-        return d + fuzz(P, 0.015, 3.0)
-    fig.add(tail, FUR, k=0.3)
-    nt = lambda P: np.abs(tail(P))
-    fig.paint(masked(lambda P: (P[:, 2] + 3.85) * 3.0, nt, 0.15), FUR_L, soft=0.25)          # 꼬리 바깥 끝 테두리 밝게
+        out = np.full(len(P), 5.0)
+        m = np.all((P > lo_b) & (P < hi_b), axis=1)
+        if m.any():
+            Q = P[m]
+            d = parts_t[0](Q)
+            for g in parts_t[1:]:
+                d = S.smin(d, g(Q), 0.25)
+            out[m] = d
+        return out
+    fig.add(tail, FUR, k=0.0, layer='tail')
+
+    def tail_tip(P):     # 뭉치 끝 쪽(심에서 먼 곳)을 밝게 → 털끝
+        m = np.all((P > lo_b) & (P < hi_b), axis=1)
+        out = np.full(len(P), 1.0)
+        if m.any():
+            Q = P[m]
+            D = np.linalg.norm(Q[:, None, :] - spine[None, :, :], axis=2)
+            k = D.argmin(axis=1)
+            out[m] = (srad[k] * 0.95 - D[np.arange(len(Q)), k]) * 2.0
+        return out
+    fig.paint(masked(tail_tip, lambda P: np.abs(tail(P)), 0.1), FUR_L, soft=0.5)
 
     # ---- 파란 털모자 (머리 위, 골지 테 + 방울) ----
     top, tn = surf_point(head0, hc, 0, 75)

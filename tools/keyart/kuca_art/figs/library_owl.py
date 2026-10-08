@@ -359,12 +359,15 @@ def build(fig, rng):
     # 펼친 책 (배 앞, 보는 사람 쪽으로 기울임)
     open_book(fig, bc, S.rot(0, 42, 0))
     # 망토: 어깨를 덮는 남색 케이프 + 아래 가장자리 금 테 + 앞 여밈 보석
-    bell = S.capsule((0, y0 + 3.9, -0.05), (0, y0 + 2.3, -0.05), 1.3, 2.25)
+    bell = S.capsule((0, y0 + 4.0, -0.05), (0, y0 + 2.2, -0.05), 1.45, 2.35)
     cb = lambda P: S.smin(core(P), bell(P), 0.3)
-    edge = lambda P: y0 + 2.4 + 0.55 * np.clip(P[:, 2], 0, None) / 1.9 - 0.1 * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 8) * 0
+    # 망토 밑단: 앞은 가슴 높이, 옆을 지나 등 쪽은 등 가운데까지 내려오는 둥근 U 자 (작은 망토)
+    cth = lambda P: np.cos(np.arctan2(P[:, 0], P[:, 2] - 0.05))
+    edge = lambda P: y0 + 2.3 + 0.45 * np.clip(cth(P), 0, None) - 1.3 * np.clip(-cth(P), 0, None) ** 1.1
     front_open = lambda P: np.maximum(np.abs(P[:, 0]) - 0.04 - 0.25 * np.clip(y0 + 3.45 - P[:, 1], 0, None), -P[:, 2])
-    flare = lambda P: 0.08 + 0.45 * np.clip((y0 + 3.95 - P[:, 1]) / 1.45, 0, 1) ** 1.15     # 아래로 갈수록 퍼지는 케이프
-    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 3.8), -front_open(P)))
+    drop = lambda P: np.clip((y0 + 4.0 - P[:, 1]) / 2.4, 0, 1)
+    flare = lambda P: 0.08 + 0.42 * drop(P) ** 1.1 + 0.07 * drop(P) * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 7)   # 아래로 퍼지며 세로 주름
+    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.02), -front_open(P)))
     fig.add(cape, NAVY, k=0.0, layer='cape')
     trim = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P) - 0.01) - 0.11, np.abs(P[:, 1] - edge(P) - 0.03) - 0.06), -front_open(P))
     fig.add(trim, Fg.GOLD, k=0.0, layer='trim', metal=GLD)

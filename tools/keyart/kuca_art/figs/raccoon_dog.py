@@ -9,7 +9,7 @@ from .. import figures as Fg
 
 TIER = 'blue'
 
-FUR = (0.66, 0.52, 0.42)
+FUR = (0.60, 0.51, 0.43)
 FUR_LT = (0.72, 0.63, 0.55)
 FUR_DK = (0.34, 0.22, 0.16)
 CREAM = (0.98, 0.94, 0.88)
@@ -312,15 +312,17 @@ def build(fig, rng):
         fig.add(S.subtract(ear, inner, k=0.08), FUR_DK, k=0.3, layer='ear')
         fig.paint(S.ellipsoid(ec + Re @ np.array((0, -0.08, 0.25)), (0.56, 0.6, 0.3), R=Re), EAR_IN, soft=0.06)
     # 얼굴 무늬: 흰 아래 얼굴 + 눈 위 흰 눈썹 띠 → 짙은 눈가 가면 → 이마 점
-    fig.paint(S.ellipsoid(hc + np.array((0, -1.15, 1.35)), (2.3, 1.0, 1.3)), CREAM, soft=0.1)
-    fig.paint(S.ellipsoid(surf(face, hc, 0, 4, -0.2), (0.5, 0.9, 0.6)), CREAM, soft=0.1)
+    # 또렷한 영역: 크림 주둥이·아래뺨 → 짙은 눈 가면 → 눈 위 크림 눈썹 점 (모두 얼굴 표면에만, 경계 날카롭게)
+    def decal(E, col, name, lift=0.012, base=None):
+        g = base or face
+        fig.add(lambda P: np.maximum(E(P), np.abs(g(P) - lift) - 0.03), col, k=0.0, layer=name)
+    decal(S.ellipsoid(surf(face, hc, 0, -27, -0.1), (1.12, 0.62, 0.9)), CREAM, 'm_cream', 0.01)
     for s in (-1, 1):
-        fig.paint(S.ellipsoid(surf(face, hc, s * 22, 20), (0.75, 0.42, 0.6), R=S.rot(0, 0, -s * 14)), CREAM, soft=0.08)
-        fig.paint(S.ellipsoid(surf(face, hc, s * 25.5, -6.5, -0.1), (0.8, 0.64, 0.7), R=S.rot(s * 25, 0, s * 22)), FUR_DK, soft=0.05)
-    fig.paint(S.sphere(surf(face, hc, 0, 22), 0.13), FUR_DK, soft=0.04)
+        decal(S.ellipsoid(surf(face, hc, s * 25.5, -5.5, -0.1), (0.74, 0.56, 0.7), R=S.rot(s * 25, 0, s * 24)), FUR_DK, 'm_mask', 0.022)
+        decal(S.ellipsoid(surf(face, hc, s * 21, 18, -0.05), (0.42, 0.25, 0.5), R=S.rot(s * 21, 0, -s * 12)), CREAM, 'm_brow', 0.012)
     # 가슴 흰 털 (V 자 + 삐죽 끝)
     bib = lambda P: S.smin(S.ellipsoid((0, y0 + 2.75, 1.3), (0.8, 0.6, 0.7))(P), S.ellipsoid((0, y0 + 2.2, 1.35), (0.42, 0.62, 0.7))(P), 0.2)
-    fig.paint(lambda P: np.maximum(bib(P), np.abs(core(P)) - 0.06), CREAM, soft=0.05)
+    decal(bib, CREAM, 'm_bib', 0.012, core)
     # 눈·코·입·볼
     # 작고 동그란 눈 (짙은 가면 안에서 반짝)
     face_eyes(fig, hc, spread=25, pitch=-5, style='round', size=0.47, iris=(0.24, 0.14, 0.10))
@@ -329,24 +331,23 @@ def build(fig, rng):
     Fg._ellipsoid(fig.extra, (-0.06, 0.06, 0.1), (0.07, 0.04, 0.04), (0.6, 0.5, 0.48), 8, 4, nf)
     mouth_w(fig, sface(fig, hc, 0, -27, -0.02), w=0.22, col=(0.32, 0.2, 0.17))
     for s in (-1, 1):
-        fig.paint(S.sphere(surf(face, hc, s * 41, -25), 0.3), Fg.BLUSH, soft=0.28)
+        fig.paint(S.sphere(surf(face, hc, s * 42, -24), 0.26), Fg.BLUSH, soft=0.1)
     # 다리·발 (짙은 갈색)
     for s in (-1, 1):
-        fig.add(S.capsule((s * 0.8, y0 + 1.2, 0.15), (s * 0.82, y0 + 0.45, 0.35), 0.52, 0.48), FUR_DK, k=0.3, layer='body')
-        fig.add(S.ellipsoid((s * 0.82, y0 + 0.3, 0.55), (0.55, 0.32, 0.68)), FUR_DK, k=0.25, layer='body')
+        fig.add(S.capsule((s * 0.8, y0 + 1.15, 0.2), (s * 0.82, y0 + 0.45, 0.35), 0.5, 0.48), FUR_DK, k=0.2, layer='leg')
+        fig.add(S.ellipsoid((s * 0.82, y0 + 0.3, 0.55), (0.55, 0.32, 0.68)), FUR_DK, k=0.2, layer='leg')
     # 팔: 오른팔(-X) 과자 봉지 들고, 왼팔(+X) 옆에 내림. 아래팔 짙은 색
     sh_r, el_r, pw_r = np.array((-1.5, y0 + 3.05, 0.25)), np.array((-1.95, y0 + 2.3, 0.65)), np.array((-1.82, y0 + 2.6, 1.42))
     sh_l, el_l, pw_l = np.array((1.5, y0 + 3.05, 0.2)), np.array((1.98, y0 + 2.3, 0.4)), np.array((2.02, y0 + 1.75, 0.75))
     for sh, el, pw in ((sh_r, el_r, pw_r), (sh_l, el_l, pw_l)):
         fig.add(S.capsule(sh, el, 0.5, 0.43), FUR, k=0.16, layer='body')
-        fig.add(S.capsule(el, pw, 0.43, 0.42), FUR_DK, k=0.15, layer='body')
-        fig.add(S.sphere(pw, 0.46), FUR_DK, k=0.15, layer='body')
-        fig.paint(S.capsule(el, pw, 0.55), FUR_DK, soft=0.2)
+        fig.add(S.capsule(el, pw, 0.44, 0.42), FUR_DK, k=0.15, layer='forearm')
+        fig.add(S.sphere(pw, 0.46), FUR_DK, k=0.15, layer='forearm')
     # 꼬리: 크고 복슬한 갈색, 끝이 짙음 (고리 무늬 없음)
     tail = [((-0.05, 1.15, -1.2), 0.6), ((-0.15, 0.98, -1.95), 0.82), ((-0.25, 1.2, -2.6), 0.78), ((-0.3, 1.62, -2.95), 0.58), ((-0.3, 1.95, -3.0), 0.36)]
     tf = U([S.capsule(np.array(a) + (0, y0, 0), np.array(b) + (0, y0, 0), ra, rb) for (a, ra), (b, rb) in zip(tail, tail[1:])], 0.3)
     fig.add(tf, FUR, k=0.3, layer='body')
-    fig.paint(S.sphere(np.array((-0.3, y0 + 2.0, -3.05)), 0.7), FUR_DK, soft=0.3)
+    fig.paint(S.sphere(np.array((-0.3, y0 + 2.05, -3.05)), 0.62), FUR_DK, soft=0.03)
     # 배낭 (등): 몸통 + 앞주머니 + 빨간 단추 + 손잡이 + 옆주머니 + 어깨끈 (앞가슴에 빨간 단추)
     pc = np.array((0, y0 + 2.95, -2.1))
     fig.add(S.box(pc, (1.3, 1.22, 0.6), round_=0.5), BLUE, k=0.0, layer='pack')

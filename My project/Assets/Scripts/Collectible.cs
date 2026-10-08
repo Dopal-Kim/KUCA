@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>수집 대상 종류 (이름, 모양, 색, 점수, 등장 가중치)</summary>
@@ -28,7 +29,9 @@ public class Collectible : MonoBehaviour
     const float BaseSize = 12f;
     const float HoverHeight = 14f;
     const float CreatureScale = 1.15f;     // 모델은 받침 포함 약 10 m
+    const float NearLodScreenHeight = 0.12f;   // 화면 높이의 12% 보다 크게 보이면 매끈한 메시, 작으면 가벼운 메시
 
+    static Camera cachedCam;
     Transform visual;
     float phase;
     bool inRange;
@@ -65,6 +68,28 @@ public class Collectible : MonoBehaviour
                 gr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             }
             c.visual = body.transform;
+
+            // 거리 LOD: 가까우면 매끈한 메시, 멀면 가벼운 메시 (화면에서 차지하는 높이 기준)
+            if (CreatureLibrary.TryGetFarMesh(species, out Mesh far))
+            {
+                var farGo = new GameObject("VisualFar", typeof(MeshFilter), typeof(MeshRenderer));
+                farGo.transform.SetParent(body.transform, false);
+                farGo.GetComponent<MeshFilter>().sharedMesh = far;
+                var fr = farGo.GetComponent<MeshRenderer>();
+                fr.sharedMaterial = CreatureLibrary.Material;
+                fr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;   // 멀리서는 그림자 생략 (가볍게)
+                var nearRenderers = new List<Renderer> { body.GetComponent<MeshRenderer>() };
+                foreach (Transform child in body.transform)
+                    if (child.name == "Glass") nearRenderers.Add(child.GetComponent<Renderer>());
+                var lod = body.AddComponent<LODGroup>();
+                lod.SetLODs(new[]
+                {
+                    new LOD(NearLodScreenHeight, nearRenderers.ToArray()),
+                    new LOD(0.004f, new Renderer[] { fr }),
+                });
+                lod.fadeMode = LODFadeMode.None;
+                lod.RecalculateBounds();
+            }
 
             var hitBox = root.AddComponent<SphereCollider>();
             hitBox.center = new Vector3(0f, 5.5f * CreatureScale, 0f);
@@ -113,7 +138,8 @@ public class Collectible : MonoBehaviour
             visual.localScale = new Vector3(s / Mathf.Sqrt(squash), s * squash, s / Mathf.Sqrt(squash));
 
             float yaw = 0f;
-            Camera cam = Camera.main;
+            if (cachedCam == null) cachedCam = Camera.main;   // Camera.main 은 매 프레임 찾으면 비싸다
+            Camera cam = cachedCam;
             if (cam != null)
             {
                 Vector3 toCam = cam.transform.position - transform.position;

@@ -153,28 +153,41 @@ public static class CreatureLibrary
         return TryGetMesh(id, out _) ? id : null;
     }
 
+    static Dictionary<string, Mesh> farMeshes;
+
+    /// <summary>가까이에서 보일 메시 (LOD0)</summary>
     public static bool TryGetMesh(string id, out Mesh mesh)
     {
         if (meshes == null)
-            Load();
+            meshes = Load("KUCA/CreatureMeshes");
         mesh = null;
         return id != null && meshes.TryGetValue(id, out mesh);
     }
 
-    static void Load()
+    /// <summary>멀리서 보일 가벼운 메시 (LOD1). 파일이 없으면 false (가까운 메시만 쓴다)</summary>
+    public static bool TryGetFarMesh(string id, out Mesh mesh)
     {
-        meshes = new Dictionary<string, Mesh>();
-        var asset = Resources.Load<TextAsset>("KUCA/CreatureMeshes");
+        if (farMeshes == null)
+            farMeshes = Load("KUCA/CreatureMeshesFar", quiet: true);
+        mesh = null;
+        return id != null && farMeshes.TryGetValue(id, out mesh);
+    }
+
+    static Dictionary<string, Mesh> Load(string path, bool quiet = false)
+    {
+        var result = new Dictionary<string, Mesh>();
+        var asset = Resources.Load<TextAsset>(path);
         if (asset == null)
         {
-            Debug.LogWarning("[CreatureLibrary] Resources/KUCA/CreatureMeshes.bytes 가 없습니다 (tools/keyart/build_creatures.py).");
-            return;
+            if (!quiet)
+                Debug.LogWarning($"[CreatureLibrary] Resources/{path}.bytes 가 없습니다 (tools/keyart/build_creatures.py).");
+            return result;
         }
         byte[] data = asset.bytes;
         if (data.Length < 8 || data[0] != 'K' || data[1] != 'U' || data[2] != 'C' || data[3] != 'A' || System.BitConverter.ToInt32(data, 4) != 3)
         {
-            Debug.LogError("[CreatureLibrary] CreatureMeshes.bytes 형식이 맞지 않습니다 (v3 필요).");
-            return;
+            Debug.LogError($"[CreatureLibrary] {path}.bytes 형식이 맞지 않습니다 (v3 필요).");
+            return result;
         }
         using (var gz = new GZipStream(new MemoryStream(data, 8, data.Length - 8), CompressionMode.Decompress))
         using (var br = new BinaryReader(gz))
@@ -191,9 +204,10 @@ public static class CreatureLibrary
                 if ((flags & 1) != 0)
                     br.ReadBytes(vc * 4);
                 byte[] nrm = (flags & 2) != 0 ? br.ReadBytes(vc * 3) : null;   // 피규어: 조형 표면의 정확한 법선
-                meshes[name.Replace("Creature_", "")] = BuildMesh(name, origin, vc, pos, col, nrm);
+                result[name.Replace("Creature_", "")] = BuildMesh(name, origin, vc, pos, col, nrm);
             }
         }
+        return result;
     }
 
     /// <summary>같은 (위치, 색, 법선) 정점을 하나로 합쳐 인덱스 메시를 만든다. 법선이 없으면 다시 계산 (부드러운 법선)</summary>

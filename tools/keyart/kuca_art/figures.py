@@ -97,6 +97,7 @@ class Figure:
 # ---------- 공통: 받침 ----------
 
 def lathe(fig, profile, col_fn, segs=96):
+    segs = max(32, int(segs * LOD)) if LOD < 1.0 else segs
     """회전체 (profile = [(반지름, 높이)...] 아래→위), 법선은 단면 접선에서 정확히 계산 → 아주 매끈한 받침"""
     pr = np.asarray(profile, np.float64)
     tan = np.gradient(pr, axis=0)
@@ -143,7 +144,7 @@ def base(fig, rng, flowers=7):
     fig.paint(lambda P: 0.15 - np.abs(np.sin(P[:, 0] * 1.7 + P[:, 2] * 1.3) * np.cos(P[:, 2] * 1.9)) - (TOP - 0.3 - P[:, 1]) * 9, GRASS_HI, soft=0.4)
     fig.paint(lambda P: 0.2 - np.abs(np.sin(P[:, 0] * 4.1 - P[:, 2] * 2.3) * np.sin(P[:, 2] * 3.7 + 1.0)) - (TOP - 0.3 - P[:, 1]) * 9, (0.30, 0.56, 0.14), soft=0.3)
     b = fig.extra
-    for k in range(260):   # 잔디 덤불 (잎 3장씩)
+    for k in range(int(260 * LOD)):   # 잔디 덤불 (잎 3장씩)
         a = rng.uniform(0, 2 * math.pi)
         d = math.sqrt(rng.uniform(0.02, 1.0)) * 4.1
         x, z = math.cos(a) * d, math.sin(a) * d
@@ -151,8 +152,9 @@ def base(fig, rng, flowers=7):
             h = rng.uniform(0.28, 0.6)
             tilt = rng.uniform(-25, 25)
             f = Frame((x, TOP - 0.08, z), *[tuple(S.rot(rng.uniform(0, 360), tilt, rng.uniform(-20, 20))[:, i]) for i in range(3)])
-            b.cone(f, (0, 0, 0), 0.08, h, 4, ((0.62, 0.86, 0.30), (0.46, 0.76, 0.22), (0.34, 0.62, 0.16))[(k + j) % 3])
+            b.cone(f, (0, 0, 0), 0.08, h, 3 if LOD < 1.0 else 4, ((0.62, 0.86, 0.30), (0.46, 0.76, 0.22), (0.34, 0.62, 0.16))[(k + j) % 3])
     placed = 0
+    flowers = max(3, int(round(flowers * min(1.0, LOD * 1.5))))
     while placed < flowers:   # 데이지 (흰 꽃잎 8장 + 노란 가운데)
         a = rng.uniform(0, 2 * math.pi)
         d = rng.uniform(2.4, 3.95)
@@ -167,7 +169,14 @@ def base(fig, rng, flowers=7):
 
 # ---------- 또렷한 부품 (Builder) ----------
 
+LOD = 1.0   # 세부 정도: 1 = 도감용 고품질, 0.4 = 지도용 (작은 부품 면 수·잔디 수를 줄인다). build() 가 정한다
+
+
 def _ellipsoid(mb, c, r, col, seg=16, rings=10, m=IDENT):
+    if LOD < 1.0:
+        seg = max(6, int(round(seg * LOD ** 0.5 * 0.85)))
+        rings = max(3, int(round(rings * LOD ** 0.5 * 0.85)))
+
     def P(i, j):
         th = -math.pi / 2 + math.pi * i / rings
         ph = 2 * math.pi * j / seg
@@ -315,6 +324,8 @@ SUIT_GREY = (0.70, 0.72, 0.76)
 
 
 def sphere_cap(fig, c, R, z_cut, segs=64, rings=24):
+    if LOD < 1.0:
+        segs, rings = max(24, int(segs * LOD)), max(10, int(rings * LOD))
     """유리 바이저: 중심 c, 반지름 R 구에서 z >= z_cut (로컬, 앞) 부분. 법선 정확 (투명 재질 메시)"""
     b = fig.glass
     t0 = math.acos(max(-1.0, min(1.0, z_cut / R)))
@@ -476,6 +487,38 @@ def _load_figs():
 _load_figs()
 
 
+EXTRA_CAP = 6000   # 지도용: 눈·꽃·잔디 등 또렷한 부품의 삼각형 상한
+
+
+def _reduce_extra(fig, cap):
+    """지도용: 또렷한 부품(fig.extra) 묶음을 cap 개 삼각형 근처로 줄인다. 색·빛남은 가장 가까운 원래 정점에서 가져온다"""
+    import fast_simplification
+    from scipy.spatial import cKDTree
+    P = np.asarray(fig.extra.pos, np.float64).reshape(-1, 3)
+    C = np.asarray(fig.extra.col, np.float64).reshape(-1, 3)
+    A = np.asarray(fig.extra.alpha, np.float64) if len(fig.extra.alpha) == len(P) else np.ones(len(P))
+    key = np.round(P / 0.0005).astype(np.int64)
+    uniq, inv = np.unique(key, axis=0, return_inverse=True)
+    inv = inv.ravel()
+    V = uniq * 0.0005
+    F = inv.reshape(-1, 3)
+    F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 0] != F[:, 2])]
+    V2, F2 = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), max(0.0, 1.0 - cap / max(len(F), 1)))
+    V2 = np.asarray(V2, np.float64)
+    tri = V2[F2]
+    cen = tri.mean(axis=1)
+    _, near = cKDTree(P).query(cen)                       # 삼각형마다 가장 가까운 원래 정점의 색 (부품 경계가 섞이지 않게)
+    # 감는 방향: 원래 가까운 면과 같은 쪽
+    T0 = P.reshape(-1, 3, 3)[near // 3]
+    n0 = np.cross(T0[:, 1] - T0[:, 0], T0[:, 2] - T0[:, 0])
+    n1 = np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0])
+    flip = np.sum(n0 * n1, axis=1) < 0
+    tri[flip] = tri[flip][:, ::-1]
+    fig.extra.pos = tri.reshape(-1).tolist()
+    fig.extra.col = np.repeat(C[near], 3, axis=0).reshape(-1).tolist()
+    fig.extra.alpha = np.repeat(A[near], 3).tolist()
+
+
 def smooth_normals(P):
     """삼각형 묶음 (N*3, 3) 의 정점 법선: 같은 위치끼리 면 법선(넓이 가중) 평균"""
     T = P.reshape(-1, 3, 3)
@@ -489,7 +532,9 @@ def smooth_normals(P):
     return n / np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
 
 
-def build(cid, tris=16000, seed=3, voxel=0.04):
+def build(cid, tris=16000, seed=3, voxel=0.04, lod=1.0, extra_cap=None):
+    global LOD
+    LOD = lod
     tier, fn = FIGURES[cid]
     fig = Figure(tier)
     fn(fig, random.Random(seed))
@@ -498,6 +543,10 @@ def build(cid, tris=16000, seed=3, voxel=0.04):
     # 조형 표면: SDF 기울기 법선 (아주 매끈), 부품: 위치별 평균 법선
     body = V[F].reshape(-1, 3)
     extra = np.asarray(fig.extra.pos, np.float64).reshape(-1, 3)
+    cap = extra_cap or EXTRA_CAP
+    if lod < 1.0 and len(extra) // 3 > cap:
+        _reduce_extra(fig, cap)
+        extra = np.asarray(fig.extra.pos, np.float64).reshape(-1, 3)
     mb = Builder()
     mb.pos = body.ravel().tolist() + extra.ravel().tolist()
     ex_col = vivid(np.asarray(fig.extra.col, np.float64).reshape(-1, 3)).ravel().tolist() if fig.extra.col else []

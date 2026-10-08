@@ -89,69 +89,74 @@ def build(fig, rng):
         t = u / period
         return np.abs(t - np.round(t)) * period - w
 
-    def stripes_body(P):     # 등·옆 가로 줄, 앞 흰 배 쪽에서 끝남
+    def taper(v, a, b):      # 영역 끝에서 줄 폭을 0 으로 (줄 끝이 뾰족하게 깔끔히 끝남)
+        return np.clip((v - a) / (b - a), 0, 1) ** 0.6
+
+    def stripes_body(P):     # 몸통: 고른 폭의 가로 띠가 등에서 옆으로 돌아 흰 배 앞에서 뾰족하게 끝남
         y = P[:, 1]
-        d = band_d(y - 0.18 * np.abs(P[:, 0]), 0.8, 0.13)
-        back = -P[:, 2] - 0.25 * np.abs(P[:, 0]) + 0.55
-        return np.maximum(np.maximum(d, (0.35 - back) * 0.8), (y - (y0 + 4.3)) * 2)
+        back = -P[:, 2] + 0.55 - 0.15 * np.abs(P[:, 0])
+        w = 0.12 * taper(back, 0.25, 0.85)
+        d = band_d(y - (y0 + 2.0) - 0.12 * np.abs(P[:, 0]), 0.62, 0) - w
+        return np.maximum(d, (y - (y0 + 4.2)) * 3)
 
     head0 = head_parts[0]
-    def stripes_head(P):     # 머리 옆·뒤 줄 (얼굴 앞은 깨끗하게)
+    def stripes_head(P):     # 머리: 정수리~뒤통수 세로 줄 3 + 옆 가로 줄 (얼굴 앞은 깨끗하게)
         q = P - hc
-        th = np.abs(np.arctan2(q[:, 0], q[:, 2]))
-        d = band_d(q[:, 1] + 0.3 * np.sin(th), 0.72, 0.12)
-        clear = np.where(q[:, 1] < 0.75, 1.2 - th, 0.7 - th)
-        return np.maximum(np.maximum(d, clear * 1.2), (q[:, 1] - 1.65) * 2)
-    fig.paint(masked(stripes_body, nb, 0.1), STRIPE, soft=0.05)
-    fig.paint(masked(stripes_head, lambda P: np.abs(head0(P)), 0.12), STRIPE, soft=0.05)
-    for x0, tilt in ((-0.45, 6), (0.0, 0), (0.45, -6)):   # 이마 'M' 줄
-        p0, _ = surf_point(head_parts[0], hc, x0 * 22 + 0.0, 52)
-        p1, _ = surf_point(head_parts[0], hc, x0 * 30, 30)
-        fig.paint(masked(S.capsule(p0, p1, 0.13, 0.07), nb, 0.1), (0.82, 0.37, 0.07), soft=0.05)
-    for s in (-1, 1):     # 볼 옆 줄
-        for k, pt in enumerate((4, -6)):
-            p0, _ = surf_point(head_parts[0], hc, s * 62, pt)
-            p1, _ = surf_point(head_parts[0], hc, s * 84, pt - 3)
-            fig.paint(masked(S.capsule(p0, p1, 0.09, 0.05), nb, 0.1), STRIPE, soft=0.1)
-    # 꼬리 고리 줄
-    tl = lambda P: min_tail(P)
+        th = np.arctan2(q[:, 0], q[:, 2])
+        ath = np.abs(th)
+        # 옆·뒤 가로 줄: 머리 둘레를 따라 고른 폭
+        side_w = 0.11 * taper(ath, 1.05, 1.5)
+        d_side = band_d(q[:, 1] + 0.35, 0.58, 0) - side_w
+        d_side = np.maximum(d_side, q[:, 1] - 0.9)
+        # 정수리 세로 줄 (앞이마 → 뒤통수, x 방향 간격 고르게)
+        top_w = 0.1 * taper(q[:, 1], 0.55, 1.1)
+        d_top = np.minimum(np.abs(q[:, 0]) - top_w, np.abs(np.abs(q[:, 0]) - 0.48) - top_w * 0.85)
+        d_top = np.maximum(d_top, (-0.7 - q[:, 2]) * 2)     # 정수리 세로 줄은 뒤통수 위쪽에서 끝남
+        return np.minimum(d_side, d_top)
+    fig.paint(masked(stripes_body, nb, 0.1), STRIPE, soft=0.2)
+    fig.paint(masked(stripes_head, lambda P: np.abs(head0(P)), 0.12), STRIPE, soft=0.2)
+    for s in (-1, 1):     # 볼 옆 짧은 가로 줄 2 개
+        for k, pt in enumerate((-4, -16)):
+            p0 = np.array(face_frame(fig, hc, s * 64, pt, 'body').o)
+            p1 = np.array(face_frame(fig, hc, s * 86, pt + 2, 'body').o)
+            fig.paint(masked(S.capsule(p0, p1, 0.075, 0.03), nb, 0.1), STRIPE, soft=0.2)
 
     def min_tail(P):
         t = tail[0](P)
         for g in tail[1:]:
             t = np.minimum(t, g(P))
         return t
-    for k in range(4):
+    for k in range(4):     # 꼬리 고리 (축에 수직, 고른 폭)
         a, b = tail_pts[k], tail_pts[k + 1]
         c = (a + b) / 2
         n = (b - a) / np.linalg.norm(b - a)
-        fig.paint(masked(lambda P, c=c, n=n: np.abs((P - c) @ n) - 0.13, lambda P: np.abs(min_tail(P)), 0.1), STRIPE, soft=0.12)
+        fig.paint(masked(lambda P, c=c, n=n: np.abs((P - c) @ n) - 0.11, lambda P: np.abs(min_tail(P)), 0.1), STRIPE, soft=0.2)
 
-    # 팔·허벅지 줄 (팔 축에 수직인 띠, 바깥쪽)
+    # 팔·허벅지 줄 (팔다리 축에 수직인 고른 띠, 앞쪽 흰 면 전에 끝남)
     for a_, b_ in ((sh_l, paw_l), (sh_r, el_r), (el_r, paw_r)):
         L = np.linalg.norm(b_ - a_)
         n = (b_ - a_) / L
-        for t in (0.3, 0.62):
+        for t in (0.32, 0.66):
             c = a_ + (b_ - a_) * t
-            fig.paint(masked(lambda P, c=c, n=n: np.maximum(np.abs((P - c) @ n) - 0.07, -(P[:, 2] - 0.2) * 0 + (P[:, 2] - c[2] - 0.35) * 3), nb, 0.08), STRIPE, soft=0.08)
+            fig.paint(masked(lambda P, c=c, n=n: np.maximum(np.abs((P - c) @ n) - 0.08, (P[:, 2] - c[2] - 0.25) * 4), nb, 0.08), STRIPE, soft=0.2)
     for s in (-1, 1):
-        for yy in (y0 + 1.15, y0 + 1.6):
-            fig.paint(masked(lambda P, s=s, yy=yy: np.maximum(np.abs(P[:, 1] - yy - 0.15 * (P[:, 2])) - 0.08, (0.45 - s * P[:, 0]) * 3), nb, 0.08), STRIPE, soft=0.08)
+        for yy in (y0 + 1.05, y0 + 1.6):
+            fig.paint(masked(lambda P, s=s, yy=yy: np.maximum(np.abs(P[:, 1] - yy) - 0.09, (0.3 - s * P[:, 0]) * 4 + np.clip(P[:, 2] - 0.3, 0, None) * 4), nb, 0.08), STRIPE, soft=0.2)
     # ---- 흰 부분: 주둥이·볼 아래, 이마 가운데, 가슴·배, 발, 꼬리 끝 ----
     def muzzle(P):
         q = P - (hc + (0, -0.8, 1.25))
         return np.hypot(q[:, 0] / 1.7, q[:, 1] / 1.0) - 1.0 + np.clip(-q[:, 2], 0, None) * 0.8
-    fig.paint(masked(muzzle, nb, 0.1), WHITE, soft=0.3)
-    fig.paint(masked(lambda P: np.hypot(P[:, 0] / (0.12 + 0.3 * np.clip((hc[1] + 0.75 - P[:, 1]) / 0.8, 0, 1)), (P[:, 1] - (hc[1] - 0.1)) / 0.85) - 1.0 + np.clip(1.4 - P[:, 2], 0, None) * 2, nb, 0.1), WHITE, soft=0.4)
+    fig.paint(masked(muzzle, nb, 0.1), WHITE, soft=0.08)
+    fig.paint(masked(lambda P: np.hypot(P[:, 0] / (0.12 + 0.3 * np.clip((hc[1] + 0.75 - P[:, 1]) / 0.8, 0, 1)), (P[:, 1] - (hc[1] - 0.1)) / 0.85) - 1.0 + np.clip(1.4 - P[:, 2], 0, None) * 2, nb, 0.1), WHITE, soft=0.1)
     def belly(P):
         q = P - np.array((0, y0 + 2.9, 1.0))
         return np.hypot(q[:, 0] / 0.95, q[:, 1] / 1.75) - 1.0 + np.clip(0.3 - P[:, 2], 0, None) * 2
-    fig.paint(masked(belly, nb, 0.1), WHITE, soft=0.3)
+    fig.paint(masked(belly, nb, 0.1), WHITE, soft=0.08)
     for s in (-1, 1):
-        fig.paint(masked(lambda P, s=s: (P[:, 1] - (y0 + 0.62)) * 3 + np.abs(P[:, 0] - s * 0.75) * 0.5 - 0.3, nb, 0.1), WHITE, soft=0.2)
+        fig.paint(masked(lambda P, s=s: (P[:, 1] - (y0 + 0.62)) * 3 + np.abs(P[:, 0] - s * 0.75) * 0.5 - 0.3, nb, 0.1), WHITE, soft=0.06)
     fig.paint(masked(lambda P: np.linalg.norm(P - paw_l, axis=1) - 0.5, nb, 0.1), WHITE, soft=0.12)
     fig.paint(masked(lambda P: np.linalg.norm(P - paw_r, axis=1) - 0.52, nb, 0.1), WHITE, soft=0.12)
-    fig.paint(masked(lambda P: np.linalg.norm(P - tail_pts[-1], axis=1) - 0.62, nb, 0.1), WHITE, soft=0.15)
+    fig.paint(masked(lambda P: np.linalg.norm(P - tail_pts[-1], axis=1) - 0.62, nb, 0.1), WHITE, soft=0.06)
     # 귀 안쪽 분홍 + 흰 솜털
     for s, e, b, t, Re in ear_fs:
         inner_c = (b + t) / 2 + Re[:, 2] * 0.1
