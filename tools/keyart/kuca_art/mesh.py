@@ -393,7 +393,7 @@ class Layer:
                 yield f'{self.name}_{key}', b
 
 
-def write_bytes(path, meshes):
+def write_bytes(path, meshes, pos_unit=None):
     """
     KUCA 지오메트리 파일 v2 (Unity KeyArtGeometry 컴포넌트, 웹 미리보기가 읽음)
       'KUCA' int32 version=3, 이후 전부 gzip:
@@ -416,12 +416,14 @@ def write_bytes(path, meshes):
         vc = len(p)
         total += vc
         origin = (p.min(axis=0) + p.max(axis=0)) / 2
-        q = np.round((p - origin) / POS_UNIT)
+        q = np.round((p - origin) / (pos_unit or POS_UNIT))
         assert np.abs(q).max() < 32767, f'{name}: 청크가 너무 큼'
         body.write(struct.pack('<i', len(nb)))
         body.write(nb)
         has_aux = b.aux is not None and len(b.aux) == vc * 2
-        body.write(struct.pack('<fffii', *origin, vc, 1 if has_aux else 0))
+        nrm = getattr(b, 'nrm', None)
+        has_nrm = nrm is not None and len(nrm) == vc * 3
+        body.write(struct.pack('<fffii', *origin, vc, (1 if has_aux else 0) | (2 if has_nrm else 0)))
         body.write(q.astype('<i2').tobytes())
         c = np.clip(np.asarray(b.col, np.float32).reshape(-1, 3) * 255 + 0.5, 0, 255).astype(np.uint8)
         al = np.asarray(b.alpha, np.float32) if len(b.alpha) == vc else np.ones(vc, np.float32)
@@ -429,6 +431,8 @@ def write_bytes(path, meshes):
         body.write(c.tobytes())
         if has_aux:
             body.write(np.clip(np.round(np.asarray(b.aux, np.float64) * 10), 0, 65535).astype('<u2').tobytes())
+        if has_nrm:   # flags&2: 정점 법선 int8[vc*3] (x127) — 동물 피규어의 매끈한 곡면
+            body.write(np.clip(np.round(np.asarray(nrm, np.float64) * 127), -127, 127).astype('i1').tobytes())
     with open(path, 'wb') as f:
         f.write(b'KUCA')
         f.write(struct.pack('<i', 3))

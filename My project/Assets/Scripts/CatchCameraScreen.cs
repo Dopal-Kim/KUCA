@@ -72,10 +72,14 @@ public class CatchCameraScreen : MonoBehaviour
     float placeDeadline;
     Vector3 monsterBase;
     bool monsterPlaced;
+    /// <summary>피벗에서 발바닥까지 높이</summary>
+    float monsterHalf;
     float openTime;
     float phase;
 
     Collectible target;
+    string speciesId;
+    string displayName;
     CollectibleType type;
     CollectController owner;
     float yaw, pitch;
@@ -94,6 +98,8 @@ public class CatchCameraScreen : MonoBehaviour
         this.target = target;
         this.owner = owner;
         type = target.Type;
+        speciesId = target.SpeciesId;
+        displayName = target.DisplayName;
         IsOpen = true;
         busy = false;
         UIInputBlocker.SetModal(this, true);
@@ -101,7 +107,7 @@ public class CatchCameraScreen : MonoBehaviour
         resultCard.SetActive(false);
         controls.alpha = 1f;
         controls.blocksRaycasts = true;
-        title.text = $"야생의 {type.displayName}{Josa(type.displayName, "이", "가")} 나타났다!";
+        title.text = $"야생의 {displayName}{Josa(displayName, "이", "가")} 나타났다!";
         hint.text = "";
         note.text = "";
         yaw = pitch = 0f;
@@ -414,17 +420,24 @@ public class CatchCameraScreen : MonoBehaviour
         arLight.shadows = LightShadows.None;
         arLight.cullingMask = 1 << layer;
 
-        GameObject shape = GameObject.CreatePrimitive(type.shape);
-        shape.name = "Monster_" + type.id;
-        Destroy(shape.GetComponent<Collider>());
-        shape.layer = layer;
-        shape.transform.SetParent(stage.transform, false);
         float size = arMode ? arMonsterSize : monsterSize;
-        float s = type.shape == PrimitiveType.Cylinder || type.shape == PrimitiveType.Capsule ? size * 0.6f : size;
-        shape.transform.localScale = Vector3.one * s;
-        if (owner != null && owner.spawner != null)
-            shape.GetComponent<Renderer>().sharedMaterial = owner.spawner.GetMaterial(type);
-        monster = shape.transform;
+        if (speciesId != null && CreatureLibrary.TryGetMesh(speciesId, out Mesh body))
+            monster = BuildCreature(body, size * 1.4f, layer);
+        else
+        {
+            GameObject shape = GameObject.CreatePrimitive(type.shape);
+            shape.name = "Monster_" + type.id;
+            Destroy(shape.GetComponent<Collider>());
+            shape.layer = layer;
+            shape.transform.SetParent(stage.transform, false);
+            bool tall = type.shape == PrimitiveType.Cylinder || type.shape == PrimitiveType.Capsule;
+            float s = tall ? size * 0.6f : size;
+            shape.transform.localScale = Vector3.one * s;
+            if (owner != null && owner.spawner != null)
+                shape.GetComponent<Renderer>().sharedMaterial = owner.spawner.GetMaterial(type);
+            monster = shape.transform;
+            monsterHalf = s * (tall ? 1f : 0.5f);
+        }
         monster.gameObject.SetActive(false);
 
         // 바닥 그림자 (AR 에서 땅에 서 있는 느낌)
@@ -438,6 +451,32 @@ public class CatchCameraScreen : MonoBehaviour
         sh.transform.localScale = new Vector3(w, w, 1f);
         shadow = sh.transform;
         shadow.gameObject.SetActive(false);
+    }
+
+    /// <summary>동물 피규어를 높이 height 로 세운다. 피벗은 피규어 가운데 (도형과 같게).</summary>
+    Transform BuildCreature(Mesh body, float height, int layer)
+    {
+        var pivot = new GameObject("Monster_" + speciesId).transform;
+        pivot.SetParent(stage.transform, false);
+        Bounds b = body.bounds;
+        float k = height / Mathf.Max(b.size.y, 1e-4f);
+        var go = new GameObject("Figure", typeof(MeshFilter), typeof(MeshRenderer));
+        go.layer = layer;
+        go.transform.SetParent(pivot, false);
+        go.transform.localScale = Vector3.one * k;
+        go.transform.localPosition = -b.center * k;
+        go.GetComponent<MeshFilter>().sharedMesh = body;
+        go.GetComponent<MeshRenderer>().sharedMaterial = CreatureLibrary.Material;
+        if (CreatureLibrary.TryGetGlass(speciesId, out Mesh glass) && CreatureLibrary.GlassMaterial != null)
+        {
+            var g = new GameObject("Glass", typeof(MeshFilter), typeof(MeshRenderer));
+            g.layer = layer;
+            g.transform.SetParent(go.transform, false);
+            g.GetComponent<MeshFilter>().sharedMesh = glass;
+            g.GetComponent<MeshRenderer>().sharedMaterial = CreatureLibrary.GlassMaterial;
+        }
+        monsterHalf = height * 0.5f;
+        return pivot;
     }
 
     /// <summary>AR: 바닥 위 point 에 경희몬을 세운다 (다시 부르면 옮긴다).</summary>
@@ -606,8 +645,7 @@ public class CatchCameraScreen : MonoBehaviour
         // 바닥 위에서 통통 뛰며 카메라 쪽을 바라본다.
         phase += Time.deltaTime;
         float hop = Mathf.Abs(Mathf.Sin(phase * 3f)) * arMonsterSize * 0.25f;
-        float half = monster.localScale.y * (type.shape == PrimitiveType.Cylinder || type.shape == PrimitiveType.Capsule ? 1f : 0.5f);
-        monster.position = monsterBase + Vector3.up * (half + hop);
+        monster.position = monsterBase + Vector3.up * (monsterHalf + hop);
         Vector3 toCam = cam.position - monsterBase;
         toCam.y = 0f;
         float face = toCam.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(toCam).eulerAngles.y : 0f;
@@ -694,7 +732,7 @@ public class CatchCameraScreen : MonoBehaviour
             file = "";
         }
 
-        GameProgress.Caught caught = owner != null ? owner.CompleteCatch(type, target, file) : null;
+        GameProgress.Caught caught = owner != null ? owner.CompleteCatch(type, target, file, speciesId) : null;
         target = null;
         lastPhoto = shot;
         lastPhotoPath = string.IsNullOrEmpty(file) ? null : path;
@@ -708,7 +746,7 @@ public class CatchCameraScreen : MonoBehaviour
         monster.gameObject.SetActive(false);
         resultPhoto.texture = lastPhoto;
         resultFitter.aspectRatio = lastPhoto != null && lastPhoto.height > 0 ? (float)lastPhoto.width / lastPhoto.height : 0.5625f;
-        resultTitle.text = $"{type.displayName}{Josa(type.displayName, "을", "를")} 잡았다!";
+        resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 잡았다!";
         resultSub.text = caught != null
             ? $"쿠옹력 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
             : "사진을 저장했어요";

@@ -1,0 +1,191 @@
+Create ONE single image: a character lineup poster showing ALL 24 characters listed below together at once,
+arranged in a neat grid of 6 columns x 4 rows on a clean light cream background, every character at the same size,
+each standing on its own small round diorama base, all in one consistent art style.
+Row 1 = the gold (legendary) landmark characters #1-#6, row 2 = gold #7-#12, row 3 = gold #13-#16 plus blue #17-#18,
+row 4 = blue #19-#20 and green #21-#24. Each character in a cheerful idle pose holding its tool or accessory.
+Horizontal 16:9. No text, labels, numbers or logos.
+
+SHARED STYLE
+A cute anthropomorphic animal character rendered as a soft 3D toy figure, like a premium vinyl / clay collectible.
+Chibi proportion: exactly 2 heads tall (the head is as big as the whole body), standing upright on two short legs,
+short stubby arms, round chunky shapes, smooth matte surfaces with a soft subtle subsurface glow,
+no individual fur strands, no realistic textures, no hard outlines.
+Face: big glossy dark eyes with one white highlight each, tiny mouth, soft pink blush cheeks.
+Lighting and color: bright sunny pastel palette matching a cheerful miniature campus diorama,
+high brightness, gentle saturation, warm sunlight from the upper left, soft blue-tinted shadows, soft ambient occlusion.
+Shapes simple and readable even when very small.
+The character stands on a round diorama base: a thick circular grass top with a smooth stone rim,
+like a miniature plinth (the rim color shows rarity, see RARITY).
+School identity: a tiny Kyung Hee crimson accent only (one small stitch, button or round badge, deep crimson about #A6192E).
+Absolutely no text, letters, numbers, logos or watermarks anywhere.
+
+RARITY RULES
+RARITY = COMMON (GREEN):
+The base rim is soft leaf green (#6CCB5F). Exactly ONE small accessory in the same green.
+Simple and plain, no special effects. Dopey, absent-minded, slightly sleepy expression.
+
+RARITY = RARE (BLUE):
+The base rim is sky blue (#4EA8F5) with a thin lighter blue trim line. Exactly TWO small accessories in the same blue.
+Slightly more detailed than common, a confident curious expression, no sparkles.
+
+RARITY = LEGENDARY (GOLD / YELLOW):
+The base rim is warm golden yellow (#FFC933) with a polished gold trim line, and a few tiny themed props
+decorate the grass top of the base. The character wears a themed outfit and holds a themed tool (see CHARACTER).
+A few tiny soft golden sparkles float around the character. Proud, joyful expression. Most detailed of all rarities.
+
+CHARACTERS
+
+#1
+CHARACTER = Space Engineering Rabbit, RARITY = LEGENDARY.
+A fluffy white rabbit astronaut-engineer with pink inner ears and nose.
+Outfit: a chunky rounded white space suit with soft padded segments, golden-yellow joint rings and trims,
+a small blank round mission patch on the chest (no text) and a crimson stitch on the shoulder,
+a clear round fishbowl helmet with two soft ear-shaped bumps on top so the long ears fit inside,
+and a compact white backpack jetpack with two small yellow thrusters.
+Tool: a small chunky space wrench tethered to the belt by a coiled cord.
+Base decoration: a tiny toy rocket, a little grey moon rock and a few small gears on the grass.
+
+#2
+CHARACTER = Library Owl, RARITY = LEGENDARY.
+A round brown-and-cream owl with feather ear tufts, wearing large round golden-rimmed glasses.
+Outfit: a small dark navy scholar cape with a crimson button.
+Tool: an open book.
+Base decoration: a small stack of three books.
+
+#3
+CHARACTER = Plaza Lake Duck, RARITY = LEGENDARY.
+A white duck with an orange beak and feet, round body, a small curl of feathers on its head.
+Outfit: a yellow rain hat.
+Tool: a yellow swim ring around its waist.
+Base decoration: a small water puddle with a lily pad on the grass.
+
+#4
+CHARACTER = Main Gate Magpie, RARITY = LEGENDARY.
+A Korean magpie with a black head and back, white belly and shoulder patches, iridescent blue-green wing and tail tips, a long tail.
+Outfit: a small bellhop cap with a crimson band.
+Tool: a sealed envelope (blank, no text).
+Base decoration: a tiny stone column with a capital.
+
+#5
+CHARACTER = Sports College Lion Cub, RARITY = LEGENDARY.
+A golden lion cub with a small fluffy mane just starting to grow, round ears, a tuft at the tail tip.
+Outfit: a white sweatband on the head, a light tracksuit jacket with a crimson zipper pull.
+Tool: a whistle on a cord.
+Base decoration: one small stone stair step.
+
+#6
+CHARACTER = Clock Tower Rooster, RARITY = LEGENDARY.
+A plump rooster with white and russet feathers, a red comb and wattle, a fancy curved tail.
+Outfit: a small cream vest with a crimson button.
+Tool: a golden pocket watch on a chain.
+Base decoration: a small clock face plate set into the grass.
+
+#7
+CHARACTER = Art College Chameleon, RARITY = LEGENDARY.
+A chameleon with a soft pastel rainbow gradient body, a curled tail, big round turret eyes.
+Outfit: a crimson beret.
+Tool: a paint palette and a paintbrush.
+Base decoration: a few colorful paint splashes on the grass.
+
+#8
+CHARACTER = Ceramics Mole, RARITY = LEGENDARY.
+A velvety dark grey mole with a pink star-shaped nose, tiny squinting eyes, big pink digging paws.
+Outfit: a beige apron with clay smudges and a crimson pocket stitch.
+Tool: a small lopsided clay pot.
+Base decoration: a tiny pottery wheel.
+
+#9
+CHARACTER = Observatory Flying Squirrel, RARITY = LEGENDARY.
+A small flying squirrel with soft grey-brown fur, a white belly, huge dark eyes, a flat fluffy tail.
+Outfit: a navy cape with tiny star dots (shaped like its gliding membrane).
+Tool: a small brass telescope.
+Base decoration: a few tiny star-shaped sparkles on the grass.
+
+#10
+CHARACTER = Amphitheater Frog, RARITY = LEGENDARY.
+A bright green frog with a pale yellow belly, big round eyes on top of the head, a wide happy mouth.
+Outfit: a crimson bow tie.
+Tool: a vintage microphone.
+Base decoration: a lily pad stage on the grass.
+
+#11
+CHARACTER = Stadium Jindo Puppy, RARITY = LEGENDARY.
+A white Korean Jindo puppy with pointy upright ears, a curled tail, a happy open-mouth smile.
+Outfit: a crimson headband, small running shoes.
+Tool: a relay baton.
+Base decoration: a small strip of red running track with white lane lines.
+
+#12
+CHARACTER = Foreign Language Parrot, RARITY = LEGENDARY.
+A colorful parrot with a green body, a red-orange face, blue wing tips, a curved beak.
+Outfit: chunky headphones with a crimson band.
+Tool: a small desk globe.
+Base decoration: a small round stone shaped like a speech bubble (no text).
+
+#13
+CHARACTER = Dormitory Hamster, RARITY = LEGENDARY.
+A golden-and-white hamster with huge stuffed cheeks, tiny ears, sleepy eyes.
+Outfit: striped pajamas and a nightcap with a crimson pompom.
+Tool: a small pillow.
+Base decoration: a tiny folded blanket.
+
+#14
+CHARACTER = Electronics Hedgehog, RARITY = LEGENDARY.
+A round hedgehog with soft brown spines, each spine tip glowing as a tiny warm LED, a cream face, a little black nose.
+Outfit: a headset with a microphone, crimson ear cushions.
+Tool: a small green circuit board.
+Base decoration: a tiny microchip on the grass.
+
+#15
+CHARACTER = Business Fox, RARITY = LEGENDARY.
+An orange fox with a white chest and tail tip, sharp friendly eyes, big fluffy tail.
+Outfit: a small vest and a crimson necktie.
+Tool: a little briefcase.
+Base decoration: a tiny stack of papers.
+
+#16
+CHARACTER = Multimedia Meerkat, RARITY = LEGENDARY.
+A slim sandy meerkat with dark eye patches, standing very straight on tiptoe, curious face.
+Outfit: a beanie with a crimson stripe.
+Tool: a compact camera.
+Base decoration: a tiny tripod.
+
+#17
+CHARACTER = Campus Stray Cat, RARITY = RARE.
+An orange cheese-tabby cat with a white chest and paws, the tip of the left ear slightly cut flat (a neutered campus cat), calm confident eyes.
+Accessories: a blue collar with a small round bell, and a blue fish-shaped snack.
+
+#18
+CHARACTER = Korean Squirrel (Eurasian red squirrel, dark grey-brown coat), RARITY = RARE.
+A grey-brown squirrel with a cream belly, long tufts on the ear tips, a huge fluffy tail curling up behind it.
+Accessories: a small blue acorn pouch on a strap, and a tiny blue knit cap.
+
+#19
+CHARACTER = Crow, RARITY = RARE.
+A glossy black crow with a soft blue sheen on its feathers, a clever smirk, bright eyes.
+Accessories: a blue scarf, and a blue pouch full of shiny bottle caps and a tiny blank card.
+
+#20
+CHARACTER = Korean Raccoon Dog (NOT a raccoon: no ringed tail), RARITY = RARE.
+A round fluffy raccoon dog with brown-grey fur, a dark eye mask, a short bushy plain tail, chubby cheeks.
+Accessories: a small blue backpack, and a blue snack bag.
+
+#21
+CHARACTER = Pigeon, RARITY = COMMON.
+A chubby grey pigeon with a shiny green-purple neck, half-lidded dopey eyes, a tiny beak slightly open.
+Accessory: a tiny green pouch of bread crumbs hanging from one wing.
+
+#22
+CHARACTER = Snail, RARITY = COMMON.
+A soft cream-colored snail standing upright, a round caramel swirl shell on its back, two short eye stalks, sleepy half-closed eyes.
+Accessory: a big green leaf held like an umbrella.
+
+#23
+CHARACTER = Ant, RARITY = COMMON.
+A small reddish-brown ant with a big round head, two bendy antennae, confused blank eyes, standing on two legs (the other limbs tiny).
+Accessory: a green leaf piece much bigger than itself, carried on its head.
+
+#24
+CHARACTER = Ladybug, RARITY = COMMON.
+A very round ladybug, glossy red shell with black dots, a black round head, wobbly stance, dazed smile.
+Accessory: a tiny green backpack.

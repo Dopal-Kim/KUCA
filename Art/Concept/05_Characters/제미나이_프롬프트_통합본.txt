@@ -1,0 +1,328 @@
+You are generating a full set of collectible character art for a cheerful campus map game (Kyung Hee University Global Campus).
+There are 24 characters. For EACH character make TWO images: (A) a collection card and (B) a 3D model reference sheet. 48 images total.
+
+BATCH MODE - THIS IS ONE SINGLE JOB FOR ALL 24 CHARACTERS
+- Treat all 24 characters as one batch and produce ALL 48 images in this response, back to back.
+- Do NOT stop after one or two images. Do NOT ask me for confirmation, do NOT ask which one to do next, do NOT summarize between images.
+- Keep generating continuously until image #24B is finished. Only stop earlier if you hit a hard output limit;
+  in that case end with exactly one line "NEXT: #<number><A or B>", and when I reply "continue" resume from that image and again keep going to #24B without pausing.
+
+HOW TO WORK
+1. One image per step in this order: #1A, #1B, #2A, #2B, ... #24A, #24B.
+2. Character #1 (Space Engineering Rabbit) defines the art style. Every other character must match #1's rendering style,
+   proportion, face style and diorama base design exactly (different animal, same art style).
+3. Each (B) sheet shows exactly the same character as its (A) card: same face, colors, outfit, accessories and base.
+4. Above each image write only its number, name and file name, e.g.
+   "#1A Space Engineering Rabbit - card  (3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png)". Nothing written inside the images.
+
+
+ATTACHED REFERENCE FILES (KUCA_Final_Master_KeyArt_All.zip - the official key art of this game)
+Use them ONLY as references; never copy their text, frames or UI into the new images.
+- 04_System_and_Visuals/[캠퍼스 전경] - [발표 메인 비주얼]_16x9.png : the overall look of the game world (colors, light, low-poly miniature style).
+- 01_Buildings/*_아이콘_*.png and 02_Landscapes/*_아이콘_*.png : round diorama icons of each landmark.
+  Copy their round grass-and-stone diorama base style for every character base, and use the matching icon as the landmark
+  in the background of each LEGENDARY collection card (rebuild it as a softly blurred miniature behind the character, same shapes and colors).
+- 03_Place_Cards_9x16/*_카드_기본.png : layout reference for every (A) collection card (9:16, empty top third, subject in the lower two thirds).
+- Do not use: "[공학관]_아이콘_공사구역.png", "[쪽지 마커 3종]_아이콘.png", "[8종 타일].png".
+
+LANDMARK BACKGROUND MAP (LEGENDARY characters -> key art file to use as the card background)
+  #1 Space Engineering Rabbit  ->  "01_Buildings/[캠퍼스 내 건물] - [공학관]_아이콘_기본.png"
+  #10 Library Owl  ->  "01_Buildings/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_아이콘_기본.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_카드_기본.png (9:16 background composition)"
+  #11 Plaza Lake Duck  ->  "02_Landscapes/[캠퍼스 내 조경] - [사색의 광장(오벨리스크 2기)]_아이콘_기본.png"
+  #12 Main Gate Magpie  ->  "02_Landscapes/[캠퍼스 내 조경] - [정문(새천년기념탑:네오르네상스문)]_아이콘_기본.png"
+  #13 Sports College Lion Cub  ->  "01_Buildings/[캠퍼스 내 건물] - [체육대학관]_아이콘_기본.png"
+  #14 Clock Tower Rooster  ->  "01_Buildings/[캠퍼스 내 건물] - [선승관(시계탑)]_아이콘_기본.png"
+  #15 Art College Chameleon  ->  "01_Buildings/[캠퍼스 내 건물] - [예술·디자인대학관]_아이콘_기본.png"
+  #16 Ceramics Mole  ->  "01_Buildings/[캠퍼스 내 건물] - [도예관]_아이콘_기본.png"
+  #17 Observatory Flying Squirrel  ->  "02_Landscapes/[캠퍼스 내 조경] - [천문대]_아이콘_기본.png"  +  "02_Landscapes/[캠퍼스 내 조경] - [천문대]_아이콘_밤_맑음.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 조경] - [천문대]_카드_기본.png (9:16 background composition)"
+  #18 Amphitheater Frog  ->  "02_Landscapes/[캠퍼스 내 조경] - [평화노천극장(연못·무대배경)]_아이콘_기본.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 조경] - [평화노천극장]_카드_기본.png (9:16 background composition)"
+  #19 Stadium Jindo Puppy  ->  "02_Landscapes/[캠퍼스 내 조경] - [대운동장(벚꽃길)]_아이콘_기본.png"
+  #20 Foreign Language Parrot  ->  "01_Buildings/[캠퍼스 내 건물] - [외국어대학관]_아이콘_기본.png"
+  #21 Dormitory Hamster  ->  "01_Buildings/[캠퍼스 내 건물] - [우정원]_아이콘_기본.png"
+  #22 Electronics Hedgehog  ->  "01_Buildings/[캠퍼스 내 건물] - [전자정보·응용과학대학관]_아이콘_기본.png"
+  #23 Business Fox  ->  "01_Buildings/[캠퍼스 내 건물] - [국제·경영대학관]_아이콘_기본.png"
+  #24 Multimedia Meerkat  ->  "01_Buildings/[캠퍼스 내 건물] - [멀티미디어교육관·글로벌관]_아이콘_기본.png"
+COMMON (#2-#5) and RARE (#6-#9) characters have no landmark: use the plain pastel rarity-color gradient background, no key art.
+For (B) 3D model reference sheets never use a key art background (pure white only).
+
+
+SHARED STYLE (applies to every image)
+A cute anthropomorphic animal character rendered as a soft 3D toy figure, like a premium vinyl / clay collectible.
+Chibi proportion: exactly 2 heads tall (the head is as big as the whole body), standing upright on two short legs,
+short stubby arms, round chunky shapes, smooth matte surfaces with a soft subtle subsurface glow,
+no individual fur strands, no realistic textures, no hard outlines.
+Face: big glossy dark eyes with one white highlight each, tiny mouth, soft pink blush cheeks.
+Lighting and color: bright sunny pastel palette matching a cheerful miniature campus diorama,
+high brightness, gentle saturation, warm sunlight from the upper left, soft blue-tinted shadows, soft ambient occlusion.
+Shapes simple and readable even when very small.
+The character stands on a round diorama base: a thick circular grass top with a smooth stone rim,
+like a miniature plinth (the rim color shows rarity, see RARITY).
+School identity: a tiny Kyung Hee crimson accent only (one small stitch, button or round badge, deep crimson about #A6192E).
+Absolutely no text, letters, numbers, logos or watermarks anywhere.
+
+RARITY RULES (each character lists its rarity)
+RARITY = COMMON (GREEN):
+The base rim is soft leaf green (#6CCB5F). Exactly ONE small accessory in the same green.
+Simple and plain, no special effects. Dopey, absent-minded, slightly sleepy expression.
+
+RARITY = RARE (BLUE):
+The base rim is sky blue (#4EA8F5) with a thin lighter blue trim line. Exactly TWO small accessories in the same blue.
+Slightly more detailed than common, a confident curious expression, no sparkles.
+
+RARITY = LEGENDARY (GOLD / YELLOW):
+The base rim is warm golden yellow (#FFC933) with a polished gold trim line, and a few tiny themed props
+decorate the grass top of the base. The character wears a themed outfit and holds a themed tool (see CHARACTER).
+A few tiny soft golden sparkles float around the character. Proud, joyful expression. Most detailed of all rarities.
+
+IMAGE TYPE (A)
+COLLECTION CARD:
+Vertical 9:16 image. The top third is left completely empty (only soft background, no objects) for UI text.
+The character is centered in the lower two thirds, 3/4 front view, a lively signature pose, full body and base visible.
+Background for COMMON/RARE: a smooth pastel gradient of the rarity color with a few soft round bokeh dots.
+Background for LEGENDARY: a softly blurred bright miniature diorama of the character's landmark
+(described in CHARACTER) in a clean low-poly key-art style, sunny spring day, behind the character.
+
+IMAGE TYPE (B)
+3D MODEL REFERENCE SHEET:
+Horizontal 16:9 character turnaround sheet on a pure white background.
+The SAME character shown four times in one row at the same scale, aligned on one baseline:
+front view, 3/4 front view, right side view, back view.
+Neutral A-pose (arms slightly away from the body, legs straight, mouth closed, eyes open), every accessory worn the same way in all views.
+Orthographic-looking camera with no perspective distortion, flat even studio lighting, no cast shadows, no background props.
+The round diorama base is shown under each view.
+On the far right, the handheld tool / props shown separately and slightly larger.
+No text, labels, arrows or color swatches.
+For (B), ignore the POSE and LANDMARK lines; use a neutral A-pose and a closed-mouth calm expression.
+
+CHARACTER LIST
+
+#1
+CHARACTER = Space Engineering Rabbit, RARITY = LEGENDARY.
+A fluffy white rabbit astronaut-engineer with pink inner ears and nose.
+Outfit: a chunky rounded white space suit with soft padded segments, golden-yellow joint rings and trims,
+a small blank round mission patch on the chest (no text) and a crimson stitch on the shoulder,
+a clear round fishbowl helmet with two soft ear-shaped bumps on top so the long ears fit inside,
+and a compact white backpack jetpack with two small yellow thrusters.
+Tool: a small chunky space wrench tethered to the belt by a coiled cord.
+Base decoration: a tiny toy rocket, a little grey moon rock and a few small gears on the grass.
+POSE: hovering just above the base on two tiny puffs of jetpack smoke while tightening a bolt on a tiny satellite with the wrench.
+LANDMARK: a modern white engineering building with long horizontal ribbon windows, a vertical glass stair tower and a flat entrance canopy, a small rocket model and satellite dish on its roof.
+
+#2
+CHARACTER = Pigeon, RARITY = COMMON.
+A chubby grey pigeon with a shiny green-purple neck, half-lidded dopey eyes, a tiny beak slightly open.
+Accessory: a tiny green pouch of bread crumbs hanging from one wing.
+POSE: tossing one crumb into the air and missing it, head tilted.
+
+#3
+CHARACTER = Snail, RARITY = COMMON.
+A soft cream-colored snail standing upright, a round caramel swirl shell on its back, two short eye stalks, sleepy half-closed eyes.
+Accessory: a big green leaf held like an umbrella.
+POSE: slowly walking forward under the leaf umbrella, one eye stalk drooping.
+
+#4
+CHARACTER = Ant, RARITY = COMMON.
+A small reddish-brown ant with a big round head, two bendy antennae, confused blank eyes, standing on two legs (the other limbs tiny).
+Accessory: a green leaf piece much bigger than itself, carried on its head.
+POSE: balancing the leaf on its head and looking the wrong way.
+
+#5
+CHARACTER = Ladybug, RARITY = COMMON.
+A very round ladybug, glossy red shell with black dots, a black round head, wobbly stance, dazed smile.
+Accessory: a tiny green backpack.
+POSE: just tipped over and sitting on the ground, backpack straps askew, a single cherry petal on its head.
+
+#6
+CHARACTER = Campus Stray Cat, RARITY = RARE.
+An orange cheese-tabby cat with a white chest and paws, the tip of the left ear slightly cut flat (a neutered campus cat), calm confident eyes.
+Accessories: a blue collar with a small round bell, and a blue fish-shaped snack.
+POSE: sitting proudly and holding the fish snack up like a trophy.
+
+#7
+CHARACTER = Korean Squirrel (Eurasian red squirrel, dark grey-brown coat), RARITY = RARE.
+A grey-brown squirrel with a cream belly, long tufts on the ear tips, a huge fluffy tail curling up behind it.
+Accessories: a small blue acorn pouch on a strap, and a tiny blue knit cap.
+POSE: digging a small hole and holding an acorn, looking around suspiciously.
+
+#8
+CHARACTER = Crow, RARITY = RARE.
+A glossy black crow with a soft blue sheen on its feathers, a clever smirk, bright eyes.
+Accessories: a blue scarf, and a blue pouch full of shiny bottle caps and a tiny blank card.
+POSE: proudly holding up one shiny bottle cap with its wing.
+
+#9
+CHARACTER = Korean Raccoon Dog (NOT a raccoon: no ringed tail), RARITY = RARE.
+A round fluffy raccoon dog with brown-grey fur, a dark eye mask, a short bushy plain tail, chubby cheeks.
+Accessories: a small blue backpack, and a blue snack bag.
+POSE: hugging the snack bag happily, crumbs on its cheek.
+
+#10
+CHARACTER = Library Owl, RARITY = LEGENDARY.
+A round brown-and-cream owl with feather ear tufts, wearing large round golden-rimmed glasses.
+Outfit: a small dark navy scholar cape with a crimson button.
+Tool: an open book.
+Base decoration: a small stack of three books.
+POSE: reading the open book held in both wings, glasses slipping down the beak.
+LANDMARK: a grand neoclassical library with a tall columned portico, a triangular pediment, wide front stairs and three flag poles.
+
+#11
+CHARACTER = Plaza Lake Duck, RARITY = LEGENDARY.
+A white duck with an orange beak and feet, round body, a small curl of feathers on its head.
+Outfit: a yellow rain hat.
+Tool: a yellow swim ring around its waist.
+Base decoration: a small water puddle with a lily pad on the grass.
+POSE: floating-pose with the swim ring, eyes closed peacefully as if dozing.
+LANDMARK: a large oval lake with a stone rim and a fountain in a paved plaza, two white obelisks, rows of cone-shaped trees.
+
+#12
+CHARACTER = Main Gate Magpie, RARITY = LEGENDARY.
+A Korean magpie with a black head and back, white belly and shoulder patches, iridescent blue-green wing and tail tips, a long tail.
+Outfit: a small bellhop cap with a crimson band.
+Tool: a sealed envelope (blank, no text).
+Base decoration: a tiny stone column with a capital.
+POSE: bowing politely while offering the envelope with one wing.
+LANDMARK: a monumental neo-renaissance stone gate spanning a road, massive piers with paired columns, a thick entablature and raised attic blocks.
+
+#13
+CHARACTER = Sports College Lion Cub, RARITY = LEGENDARY.
+A golden lion cub with a small fluffy mane just starting to grow, round ears, a tuft at the tail tip.
+Outfit: a white sweatband on the head, a light tracksuit jacket with a crimson zipper pull.
+Tool: a whistle on a cord.
+Base decoration: one small stone stair step.
+POSE: blowing the whistle with puffed cheeks, one fist raised.
+LANDMARK: a long neoclassical college building with raised end pavilions and a grand front staircase flanked by two stone lion statues.
+
+#14
+CHARACTER = Clock Tower Rooster, RARITY = LEGENDARY.
+A plump rooster with white and russet feathers, a red comb and wattle, a fancy curved tail.
+Outfit: a small cream vest with a crimson button.
+Tool: a golden pocket watch on a chain.
+Base decoration: a small clock face plate set into the grass.
+POSE: checking the pocket watch in panic, feathers puffed.
+LANDMARK: a large gymnasium with a curved barrel-vault roof and an arched arcade, next to a tall square clock tower with a pyramid roof.
+
+#15
+CHARACTER = Art College Chameleon, RARITY = LEGENDARY.
+A chameleon with a soft pastel rainbow gradient body, a curled tail, big round turret eyes.
+Outfit: a crimson beret.
+Tool: a paint palette and a paintbrush.
+Base decoration: a few colorful paint splashes on the grass.
+POSE: painting in the air with the brush while the body color shifts to match the paint.
+LANDMARK: a palace-like neoclassical building with a central pediment pavilion and tall columns, a terrace and double grand stairs.
+
+#16
+CHARACTER = Ceramics Mole, RARITY = LEGENDARY.
+A velvety dark grey mole with a pink star-shaped nose, tiny squinting eyes, big pink digging paws.
+Outfit: a beige apron with clay smudges and a crimson pocket stitch.
+Tool: a small lopsided clay pot.
+Base decoration: a tiny pottery wheel.
+POSE: proudly lifting the lopsided pot with both paws, clay on its nose.
+LANDMARK: a low beige studio building with a light grey metal gable roof and skylights, a winding stone path through green lawns.
+
+#17
+CHARACTER = Observatory Flying Squirrel, RARITY = LEGENDARY.
+A small flying squirrel with soft grey-brown fur, a white belly, huge dark eyes, a flat fluffy tail.
+Outfit: a navy cape with tiny star dots (shaped like its gliding membrane).
+Tool: a small brass telescope.
+Base decoration: a few tiny star-shaped sparkles on the grass.
+POSE: looking through the telescope pointed up, cape spread open.
+LANDMARK: a white dome observatory on a round base among pine trees, early evening sky with the first stars (the only twilight card).
+
+#18
+CHARACTER = Amphitheater Frog, RARITY = LEGENDARY.
+A bright green frog with a pale yellow belly, big round eyes on top of the head, a wide happy mouth.
+Outfit: a crimson bow tie.
+Tool: a vintage microphone.
+Base decoration: a lily pad stage on the grass.
+POSE: singing into the microphone with one arm stretched out dramatically.
+LANDMARK: a semicircular open-air amphitheater with alternating stone and grass tiers, an arched stage backdrop wall, a pond and cherry trees.
+
+#19
+CHARACTER = Stadium Jindo Puppy, RARITY = LEGENDARY.
+A white Korean Jindo puppy with pointy upright ears, a curled tail, a happy open-mouth smile.
+Outfit: a crimson headband, small running shoes.
+Tool: a relay baton.
+Base decoration: a small strip of red running track with white lane lines.
+POSE: mid-run holding the baton, ears flapping, cherry petals flying behind.
+LANDMARK: a red running track around a green soccer field, lined with a pink cherry blossom avenue.
+
+#20
+CHARACTER = Foreign Language Parrot, RARITY = LEGENDARY.
+A colorful parrot with a green body, a red-orange face, blue wing tips, a curved beak.
+Outfit: chunky headphones with a crimson band.
+Tool: a small desk globe.
+Base decoration: a small round stone shaped like a speech bubble (no text).
+POSE: spinning the globe with one wing while talking excitedly.
+LANDMARK: a beige modern college building with a projecting central entrance bay, a rooftop box and a glass entrance canopy.
+
+#21
+CHARACTER = Dormitory Hamster, RARITY = LEGENDARY.
+A golden-and-white hamster with huge stuffed cheeks, tiny ears, sleepy eyes.
+Outfit: striped pajamas and a nightcap with a crimson pompom.
+Tool: a small pillow.
+Base decoration: a tiny folded blanket.
+POSE: hugging the pillow and yawning, cheeks full.
+LANDMARK: a red brick dormitory with cream horizontal bands and a central glass stair core.
+
+#22
+CHARACTER = Electronics Hedgehog, RARITY = LEGENDARY.
+A round hedgehog with soft brown spines, each spine tip glowing as a tiny warm LED, a cream face, a little black nose.
+Outfit: a headset with a microphone, crimson ear cushions.
+Tool: a small green circuit board.
+Base decoration: a tiny microchip on the grass.
+POSE: holding the circuit board up and checking it closely, spine LEDs twinkling.
+LANDMARK: a white modern building with long blue window bands, a courtyard, and an entrance canopy on columns.
+
+#23
+CHARACTER = Business Fox, RARITY = LEGENDARY.
+An orange fox with a white chest and tail tip, sharp friendly eyes, big fluffy tail.
+Outfit: a small vest and a crimson necktie.
+Tool: a little briefcase.
+Base decoration: a tiny stack of papers.
+POSE: pointing forward confidently with the briefcase in the other paw.
+LANDMARK: a beige college building with a taller central block, a dark recessed entrance and front steps.
+
+#24
+CHARACTER = Multimedia Meerkat, RARITY = LEGENDARY.
+A slim sandy meerkat with dark eye patches, standing very straight on tiptoe, curious face.
+Outfit: a beanie with a crimson stripe.
+Tool: a compact camera.
+Base decoration: a tiny tripod.
+POSE: standing on tiptoe taking a photo, one eye closed.
+LANDMARK: a modern building mixing blue glass curtain-wall volumes and beige stone volumes with vertical slit windows, a glass entrance canopy.
+
+DELIVERY - AFTER ALL 48 IMAGES ARE DONE
+When image #24B is finished, package everything as ONE zip file named "KUCA_Characters.zip" and give me the download link.
+Inside the zip, split the images into three folders by rarity:
+  1_Green_Common/      (green / common characters)
+  2_Blue_Rare/         (blue / rare characters)
+  3_Yellow_Legendary/  (gold / legendary landmark characters)
+Use exactly these file names (A = collection card, B = 3D model reference sheet), PNG at full resolution:
+#1A -> 3_Yellow_Legendary/01_SpaceEngineeringRabbit_card.png    #1B -> 3_Yellow_Legendary/01_SpaceEngineeringRabbit_model.png
+#2A -> 1_Green_Common/02_Pigeon_card.png    #2B -> 1_Green_Common/02_Pigeon_model.png
+#3A -> 1_Green_Common/03_Snail_card.png    #3B -> 1_Green_Common/03_Snail_model.png
+#4A -> 1_Green_Common/04_Ant_card.png    #4B -> 1_Green_Common/04_Ant_model.png
+#5A -> 1_Green_Common/05_Ladybug_card.png    #5B -> 1_Green_Common/05_Ladybug_model.png
+#6A -> 2_Blue_Rare/06_CampusStrayCat_card.png    #6B -> 2_Blue_Rare/06_CampusStrayCat_model.png
+#7A -> 2_Blue_Rare/07_KoreanSquirrel_card.png    #7B -> 2_Blue_Rare/07_KoreanSquirrel_model.png
+#8A -> 2_Blue_Rare/08_Crow_card.png    #8B -> 2_Blue_Rare/08_Crow_model.png
+#9A -> 2_Blue_Rare/09_KoreanRaccoonDog_card.png    #9B -> 2_Blue_Rare/09_KoreanRaccoonDog_model.png
+#10A -> 3_Yellow_Legendary/10_LibraryOwl_card.png    #10B -> 3_Yellow_Legendary/10_LibraryOwl_model.png
+#11A -> 3_Yellow_Legendary/11_PlazaLakeDuck_card.png    #11B -> 3_Yellow_Legendary/11_PlazaLakeDuck_model.png
+#12A -> 3_Yellow_Legendary/12_MainGateMagpie_card.png    #12B -> 3_Yellow_Legendary/12_MainGateMagpie_model.png
+#13A -> 3_Yellow_Legendary/13_SportsCollegeLionCub_card.png    #13B -> 3_Yellow_Legendary/13_SportsCollegeLionCub_model.png
+#14A -> 3_Yellow_Legendary/14_ClockTowerRooster_card.png    #14B -> 3_Yellow_Legendary/14_ClockTowerRooster_model.png
+#15A -> 3_Yellow_Legendary/15_ArtCollegeChameleon_card.png    #15B -> 3_Yellow_Legendary/15_ArtCollegeChameleon_model.png
+#16A -> 3_Yellow_Legendary/16_CeramicsMole_card.png    #16B -> 3_Yellow_Legendary/16_CeramicsMole_model.png
+#17A -> 3_Yellow_Legendary/17_ObservatoryFlyingSquirrel_card.png    #17B -> 3_Yellow_Legendary/17_ObservatoryFlyingSquirrel_model.png
+#18A -> 3_Yellow_Legendary/18_AmphitheaterFrog_card.png    #18B -> 3_Yellow_Legendary/18_AmphitheaterFrog_model.png
+#19A -> 3_Yellow_Legendary/19_StadiumJindoPuppy_card.png    #19B -> 3_Yellow_Legendary/19_StadiumJindoPuppy_model.png
+#20A -> 3_Yellow_Legendary/20_ForeignLanguageParrot_card.png    #20B -> 3_Yellow_Legendary/20_ForeignLanguageParrot_model.png
+#21A -> 3_Yellow_Legendary/21_DormitoryHamster_card.png    #21B -> 3_Yellow_Legendary/21_DormitoryHamster_model.png
+#22A -> 3_Yellow_Legendary/22_ElectronicsHedgehog_card.png    #22B -> 3_Yellow_Legendary/22_ElectronicsHedgehog_model.png
+#23A -> 3_Yellow_Legendary/23_BusinessFox_card.png    #23B -> 3_Yellow_Legendary/23_BusinessFox_model.png
+#24A -> 3_Yellow_Legendary/24_MultimediaMeerkat_card.png    #24B -> 3_Yellow_Legendary/24_MultimediaMeerkat_model.png
+If you cannot create a zip file, instead list every image again grouped under the three folder names above with its file name,
+so I can download and sort them myself.
+
+Start now with #1A and continue through all 48 images to #24B in this same response without stopping, then deliver the zip.

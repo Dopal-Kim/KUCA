@@ -27,6 +27,8 @@ public class GameProgress
         public long caughtAt; // DateTime.Ticks (현지 시각)
         /// <summary>잡을 때 찍은 사진 파일 이름 (스크랩북 폴더 안, 없으면 빈 문자열)</summary>
         public string photo = "";
+        /// <summary>동물 캐릭터 id (CreatureLibrary), 일반 경희몬이면 빈 문자열</summary>
+        public string speciesId = "";
 
         public DateTime CaughtAt => new DateTime(caughtAt);
     }
@@ -42,6 +44,8 @@ public class GameProgress
     public int totalCollected;
     /// <summary>종류별 획득 수 (도감)</summary>
     public List<Entry> collected = new List<Entry>();
+    /// <summary>동물별 획득 수 (도감)</summary>
+    public List<Entry> species = new List<Entry>();
     /// <summary>지금 가지고 있는 경희몬</summary>
     public List<Caught> caught = new List<Caught>();
     public string partnerUid = "";
@@ -83,6 +87,22 @@ public class GameProgress
         };
         caught.Add(c);
         return c;
+    }
+
+    public void AddSpecies(string id)
+    {
+        if (species == null)
+            species = new List<Entry>();
+        Entry e = species.Find(x => x.id == id);
+        if (e == null)
+            species.Add(e = new Entry { id = id });
+        e.count++;
+    }
+
+    public int SpeciesCountOf(string id)
+    {
+        Entry e = species?.Find(x => x.id == id);
+        return e != null ? e.count : 0;
     }
 
     /// <summary>점수가 높은 종류일수록 CP 가 높다 (10점 → 약 90~210).</summary>
@@ -140,6 +160,7 @@ public class GameProgress
     void Migrate()
     {
         caught ??= new List<Caught>();
+        species ??= new List<Entry>();
         partnerHistory ??= new List<PartnerRecord>();
         items ??= new List<Entry>();
         visitedSpots ??= new List<string>();

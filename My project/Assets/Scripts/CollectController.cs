@@ -140,7 +140,7 @@ public class CollectController : MonoBehaviour
         float dist = CollectibleSpawner.HorizontalDistance(target.transform.position, campusMap.player.position);
         if (dist > collectRadius)
         {
-            hud?.Toast($"{target.Type.displayName}까지 {dist:F0}m — {collectRadius:F0}m 안으로 걸어가세요");
+            hud?.Toast($"{target.DisplayName}까지 {dist:F0}m — {collectRadius:F0}m 안으로 걸어가세요");
             return;
         }
 
@@ -148,15 +148,23 @@ public class CollectController : MonoBehaviour
         if (catchScreen != null)
             catchScreen.Open(target, this);
         else
-            CompleteCatch(target.Type, target, "");
+            CompleteCatch(target.Type, target, "", target.SpeciesId);
     }
 
-    /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.</summary>
-    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile)
+    /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.
+    /// speciesId: 동물 캐릭터면 그 id (도감 기록용), 아니면 null.</summary>
+    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null)
     {
+        speciesId ??= target != null ? target.SpeciesId : null;
         GameProgress.Caught caught = Progress.Add(type, photoFile);
+        if (speciesId != null)
+        {
+            caught.speciesId = speciesId;
+            Progress.AddSpecies(speciesId);
+        }
         Progress.Save();
-        hud?.Toast($"{type.displayName} 획득!  쿠옹력 {caught.cp}  ·  +{type.points} XP");
+        string name = speciesId != null ? CreatureLibrary.NameOf(speciesId) : type.displayName;
+        hud?.Toast($"{name} 획득!  쿠옹력 {caught.cp}  ·  +{type.points} XP");
         hud?.ShowProgress(Progress, spawner.types);
         if (target != null)
             spawner.Remove(target);
