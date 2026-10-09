@@ -152,6 +152,9 @@ PlayerSettings:
   bundleVersion: 0.1.0
   preloadedAssets:
   - {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+  - {fileID: 4800000, guid: e7c77f6eaab324a819efdc13b8125a39, type: 3}
+  - {fileID: 4800000, guid: 6743a50a812740be8c0aa3fccc46fae9, type: 3}
+  - {fileID: 3251432830892291178, guid: b859c8e7b373446a59020149deb318d3, type: 2}
   metroInputSource: 0
   wsaTransparentSwapchain: 0
   xboxOneDisableKinectGpuReservation: 1
@@ -574,7 +577,7 @@ PlayerSettings:
   enableInternalProfiler: 0
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
-  cameraUsageDescription: "\uC7A5\uC18C \uBA54\uBAA8\uC5D0 \uC62C\uB9B4 \uC0AC\uC9C4\uC744 \uCC0D\uAE30 \uC704\uD574 \uCE74\uBA54\uB77C\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4."
+  cameraUsageDescription: "\uACBD\uD76C\uBAAC\uACFC \uD568\uAED8 \uC0AC\uC9C4\uC744 \uCC0D\uACE0, \uC7A5\uC18C \uBA54\uBAA8\uC5D0 \uC62C\uB9B4 \uC0AC\uC9C4\uC744 \uCC0D\uAE30 \uC704\uD574 \uCE74\uBA54\uB77C\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4."
   locationUsageDescription: "\uCEA0\uD37C\uC2A4 \uC9C0\uB3C4\uC5D0\uC11C \uB0B4 \uC704\uCE58\uB97C \uD45C\uC2DC\uD558\uAE30 \uC704\uD574 \uC704\uCE58 \uC815\uBCF4\uB97C \uC0AC\uC6A9\uD569\uB2C8\uB2E4."
   microphoneUsageDescription: 
   bluetoothUsageDescription: 
@@ -837,7 +840,7 @@ PlayerSettings:
   webProgressiveAssetLoading: 0
   scriptingDefineSymbols:
     Standalone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
-    iPhone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY
+    iPhone: SENTIS_ANALYTICS_ENABLED;APP_UI_EDITOR_ONLY;UNITY_XR_ARKIT_LOADER_ENABLED
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
@@ -948,7 +951,7 @@ PlayerSettings:
   hmiLoadingImage: {fileID: 0}
   platformRequiresReadableAssets: 0
   virtualTexturingSupportEnabled: 0
-  insecureHttpOption: 0
+  insecureHttpOption: 1
   androidVulkanDenyFilterList: []
   androidVulkanAllowFilterList: []
   androidVulkanDeviceFilterListAsset: {fileID: 0}

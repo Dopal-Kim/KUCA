@@ -96,9 +96,16 @@ public class PhotoCaptureScreen : MonoBehaviour
 
     void Update()
     {
-        if (cam == null || !cam.isPlaying || cam.width <= 16)
-            return;
-        // 카메라 영상은 기기 방향에 따라 돌아가 있으므로 화면에서 바로 세운다.
+        if (cam != null && cam.isPlaying && cam.width > 16)
+            ShowCameraPreview(preview, previewFitter, cam, fill: false);
+    }
+
+    /// <summary>
+    /// 카메라 영상은 기기 방향에 따라 돌아가 있으므로 화면에서 바로 세운다.
+    /// fill 이면 화면을 꽉 채우고(넘치는 부분은 잘림), 아니면 화면 안에 다 들어오게 맞춘다.
+    /// </summary>
+    public static void ShowCameraPreview(RawImage preview, AspectRatioFitter fitter, WebCamTexture cam, bool fill)
+    {
         int angle = cam.videoRotationAngle;
         bool sideways = angle == 90 || angle == 270;
         preview.rectTransform.localEulerAngles = new Vector3(0f, 0f, -angle);
@@ -107,15 +114,17 @@ public class PhotoCaptureScreen : MonoBehaviour
         {
             // 90도 돌려 보여 주므로, 돌리기 전 크기를 화면의 가로·세로를 바꾼 영역에 맞춘다.
             var parent = (RectTransform)preview.rectTransform.parent;
-            float s = Mathf.Min(parent.rect.height / cam.width, parent.rect.width / cam.height);
-            previewFitter.enabled = false;
+            float sx = parent.rect.height / cam.width, sy = parent.rect.width / cam.height;
+            float s = fill ? Mathf.Max(sx, sy) : Mathf.Min(sx, sy);
+            fitter.enabled = false;
             preview.rectTransform.anchorMin = preview.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
             preview.rectTransform.sizeDelta = new Vector2(cam.width * s, cam.height * s);
         }
         else
         {
-            previewFitter.enabled = true;
-            previewFitter.aspectRatio = (float)cam.width / cam.height;
+            fitter.enabled = true;
+            fitter.aspectMode = fill ? AspectRatioFitter.AspectMode.EnvelopeParent : AspectRatioFitter.AspectMode.FitInParent;
+            fitter.aspectRatio = (float)cam.width / cam.height;
         }
     }
 

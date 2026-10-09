@@ -9,7 +9,7 @@ using UnityEngine.InputSystem.UI;
 /// <summary>
 /// 캐릭터 꾸미기 화면. 성별과 부위별 선택지를 좌우 버튼으로 바꾸면 Player 캐릭터에 바로 반영된다.
 /// 위쪽에는 캐릭터 레이어만 찍는 미리보기 카메라 화면을 보여 주고, 드래그로 돌려 볼 수 있다.
-/// 저장된 캐릭터가 없으면(첫 실행) 자동으로 열리고, 이후에는 왼쪽 아래 '캐릭터' 버튼으로 연다.
+/// 저장된 캐릭터가 없으면(첫 실행) 자동으로 열리고, 이후에는 HUD 왼쪽 아래 프로필을 눌러 연다.
 /// </summary>
 public class CharacterCustomizer : MonoBehaviour
 {
@@ -41,7 +41,6 @@ public class CharacterCustomizer : MonoBehaviour
     Light previewLight;
     RenderTexture previewTexture;
     float previewYaw = 180f;
-    GameObject openButton;
     Text genderValue;
     readonly Dictionary<CharacterSlot, Text> slotValues = new Dictionary<CharacterSlot, Text>();
     Font font;
@@ -93,7 +92,6 @@ public class CharacterCustomizer : MonoBehaviour
         IsOpen = open;
         UIInputBlocker.SetModal(this, open);
         screen.SetActive(open);
-        openButton.SetActive(!open);
         previewCam.enabled = open;
         previewLight.enabled = open;
         if (open)
@@ -190,14 +188,6 @@ public class CharacterCustomizer : MonoBehaviour
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
         scaler.referenceResolution = new Vector2(1080, 1920);
         scaler.matchWidthOrHeight = 0.5f;
-
-        // 열기 버튼 (왼쪽 아래)
-        openButton = CreateButton(canvasGo.transform, "캐릭터", () => SetOpen(true), new Color(0.15f, 0.45f, 1f, 0.9f), 44);
-        var ob = (RectTransform)openButton.transform;
-        ob.anchorMin = ob.anchorMax = ob.pivot = new Vector2(0f, 0f);
-        ob.anchoredPosition = new Vector2(30f, 330f);
-        ob.sizeDelta = new Vector2(240f, 120f);
-        UIInputBlocker.Register(ob);
 
         // 꾸미기 화면 전체: 어두운 배경 + 위쪽 미리보기 + 아래쪽 패널
         screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));

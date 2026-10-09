@@ -10,7 +10,8 @@ using UnityEngine.Networking;
 public class HttpMemoService : IMemoService
 {
     readonly string baseUrl;
-    const int TimeoutSeconds = 15;
+    // Azure 무료 요금제(F1)는 잠들었다 깨어나는 첫 요청이 느려서 넉넉히 기다린다.
+    const int TimeoutSeconds = 40;
 
     public HttpMemoService(string baseUrl) => this.baseUrl = baseUrl.TrimEnd('/');
 
@@ -30,6 +31,29 @@ public class HttpMemoService : IMemoService
         }
         catch (ArgumentException) { }
         return $"서버 오류 ({req.responseCode})";
+    }
+
+    /// <summary>"192.168.0.5:5080" 처럼 쓴 주소에 http:// 를 붙이고 끝의 / 를 뗀다.</summary>
+    public static string Normalize(string url)
+    {
+        url = (url ?? "").Trim().TrimEnd('/');
+        if (url.Length > 0 && !url.StartsWith("http://") && !url.StartsWith("https://"))
+            url = "http://" + url;
+        return url;
+    }
+
+    /// <summary>GET /api/health 로 서버가 살아 있는지 확인한다.</summary>
+    public static IEnumerator Check(string url, Action<bool, string> onDone)
+    {
+        using var req = UnityWebRequest.Get(Normalize(url) + "/api/health");
+        req.timeout = 40;
+        yield return req.SendWebRequest();
+        if (req.result == UnityWebRequest.Result.Success)
+            onDone(true, null);
+        else
+            onDone(false, req.result == UnityWebRequest.Result.ConnectionError
+                ? "연결할 수 없어요. 같은 와이파이인지, 서버가 켜져 있는지 확인해 주세요."
+                : $"서버 응답 오류 ({req.responseCode})");
     }
 
     public IEnumerator GetMemos(string buildingId, Action<List<MemoData>, string> onDone)

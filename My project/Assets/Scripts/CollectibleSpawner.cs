@@ -34,6 +34,8 @@ public class CollectibleSpawner : MonoBehaviour
 
     public IReadOnlyList<Collectible> Active => active;
 
+    public CollectibleType TypeOf(string id) => types.Find(t => t.id == id);
+
     readonly List<Collectible> active = new List<Collectible>();
     readonly Dictionary<string, Material> materials = new Dictionary<string, Material>();
     float refillTimer;
@@ -143,7 +145,8 @@ public class CollectibleSpawner : MonoBehaviour
         return types[types.Count - 1];
     }
 
-    Material GetMaterial(CollectibleType type)
+    /// <summary>종류별 머티리얼 (지도 위 대상, 도감 썸네일, 파트너가 함께 쓴다)</summary>
+    public Material GetMaterial(CollectibleType type)
     {
         if (materials.TryGetValue(type.id, out Material m))
             return m;

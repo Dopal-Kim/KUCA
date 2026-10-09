@@ -6,7 +6,7 @@ using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 #endif
 
 /// <summary>
-/// 수집 대상을 탭하면, Player가 수집 반경 안에 있을 때만 획득한다.
+/// 수집 대상을 탭하면, Player가 수집 반경 안에 있을 때 카메라 화면을 열고, 함께 사진을 찍으면 획득한다.
 /// Player 둘레에 수집 반경 링을 그리고, 반경 안의 대상을 강조한다.
 /// </summary>
 public class CollectController : MonoBehaviour
@@ -15,6 +15,8 @@ public class CollectController : MonoBehaviour
     public CollectibleSpawner spawner;
     public GameHUD hud;
     public Camera cam;
+    [Tooltip("잡을 때 여는 카메라 화면. 비우면 같은 오브젝트에 만든다.")]
+    public CatchCameraScreen catchScreen;
 
     [Tooltip("수집할 수 있는 거리 (m)")]
     public float collectRadius = 40f;
@@ -50,6 +52,8 @@ public class CollectController : MonoBehaviour
 
     void Start()
     {
+        if (catchScreen == null && !TryGetComponent(out catchScreen))
+            catchScreen = gameObject.AddComponent<CatchCameraScreen>();
         if (hud != null)
             hud.ShowProgress(Progress, spawner != null ? spawner.types : null);
     }
@@ -140,13 +144,31 @@ public class CollectController : MonoBehaviour
             return;
         }
 
-        Progress.Add(target.Type);
-        if (target.SpeciesId != null)
-            Progress.AddSpecies(target.SpeciesId);
+        // 바로 얻지 않고, 카메라 화면에서 경희몬과 함께 사진을 찍어야 잡힌다.
+        if (catchScreen != null)
+            catchScreen.Open(target, this);
+        else
+            CompleteCatch(target.Type, target, "", target.SpeciesId);
+    }
+
+    /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.
+    /// speciesId: 동물 캐릭터면 그 id (도감 기록용), 아니면 null.</summary>
+    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null)
+    {
+        speciesId ??= target != null ? target.SpeciesId : null;
+        GameProgress.Caught caught = Progress.Add(type, photoFile);
+        if (speciesId != null)
+        {
+            caught.speciesId = speciesId;
+            Progress.AddSpecies(speciesId);
+        }
         Progress.Save();
-        hud?.Toast($"{target.DisplayName} 획득! +{target.Type.points}");
+        string name = speciesId != null ? CreatureLibrary.NameOf(speciesId) : type.displayName;
+        hud?.Toast($"{name} 획득!  쿠옹력 {caught.cp}  ·  +{type.points} XP");
         hud?.ShowProgress(Progress, spawner.types);
-        spawner.Remove(target);
+        if (target != null)
+            spawner.Remove(target);
+        return caught;
     }
 
     void TapBuilding(Ray ray)
