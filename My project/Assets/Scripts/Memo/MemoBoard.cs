@@ -526,6 +526,7 @@ public class MemoBoard : MonoBehaviour
     void BuildUI(Transform canvas)
     {
         root = UIKit.Image(canvas, "MemoBoard", Paper, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         Vector2 safeMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
@@ -607,6 +608,7 @@ public class MemoBoard : MonoBehaviour
     void BuildViewer()
     {
         viewer = UIKit.Image(root.transform, "Viewer", new Color(0.05f, 0.05f, 0.06f, 0.92f), raycast: true).gameObject;
+        BackButton.Attach(viewer, () => viewer.SetActive(false));
         UIKit.Stretch((RectTransform)viewer.transform);
 
         RectTransform box = UIKit.Rect(viewer.transform, "PhotoBox");

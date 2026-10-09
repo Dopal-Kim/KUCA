@@ -191,6 +191,7 @@ public class CharacterCustomizer : MonoBehaviour
 
         // 꾸미기 화면 전체: 어두운 배경 + 위쪽 미리보기 + 아래쪽 패널
         screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));
+        BackButton.Attach(screen, () => SetOpen(false));
         screen.transform.SetParent(canvasGo.transform, false);
         screen.GetComponent<Image>().color = new Color(0.12f, 0.14f, 0.18f, 0.96f);
         var sr = (RectTransform)screen.transform;

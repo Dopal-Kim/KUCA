@@ -26,6 +26,7 @@ public class PhotoCaptureScreen : MonoBehaviour
     public void Build(Transform canvas)
     {
         root = UIKit.Image(canvas, "CameraScreen", Color.black, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
 
         var go = new GameObject("Preview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));

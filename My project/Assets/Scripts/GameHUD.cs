@@ -146,6 +146,8 @@ public class GameHUD : MonoBehaviour
 
         noticeScreen = BuildScreen("NoticeScreen", "공지사항", CloseNotices, out _, out noticeList);
         settingsScreen = BuildScreen("SettingsScreen", "설정", CloseSettings, out _, out settingsList);
+        BackButton.Attach(noticeScreen, CloseNotices);
+        BackButton.Attach(settingsScreen, CloseSettings);
         BuildSettings();
         RefreshNotices();
 

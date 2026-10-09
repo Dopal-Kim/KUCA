@@ -223,6 +223,7 @@ public class CatchCameraScreen : MonoBehaviour
     {
         canvas = UIKit.CreateCanvas(transform, "CatchCanvas", 25);
         root = UIKit.Image(canvas.transform, "CatchScreen", Color.black, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
 
         // 카메라가 없을 때 대신 보여 줄 하늘·땅 배경
