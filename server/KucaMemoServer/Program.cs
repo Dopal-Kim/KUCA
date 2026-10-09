@@ -18,6 +18,10 @@ builder.Services.AddSingleton<BuildingStore>();
 builder.Services.AddSingleton<MemoStore>();
 builder.Services.AddSingleton<PhotoStore>();
 
+// 캠퍼스 날씨 (기상청 초단기 실황·예보, 키는 설정 Kma:ServiceKey)
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<KmaWeatherService>();
+
 // 메모 작성 본문 크기 제한: 사진 10MB + 글자 여유분
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);
 
@@ -42,6 +46,7 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
 
 app.MapBuildingEndpoints();
 app.MapMemoEndpoints();
+app.MapWeatherEndpoints();
 app.MapWebPages();
 
 app.Run();

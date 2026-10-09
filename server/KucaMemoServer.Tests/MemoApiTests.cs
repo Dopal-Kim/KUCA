@@ -22,6 +22,7 @@ public sealed class TestServer : WebApplicationFactory<Program>
     {
         builder.UseSetting("Memos:DatabasePath", Path.Combine(Root, "memos.db"));
         builder.UseSetting(WebHostDefaults.WebRootKey, Path.Combine(Root, "wwwroot"));
+        builder.UseSetting("Kma:ServiceKey", "");   // 테스트는 기상청을 부르지 않는다
     }
 
     protected override void Dispose(bool disposing)

@@ -2,6 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- 로컬 비밀 값(기상청 키 등): dotnet user-secrets set "Kma:ServiceKey" "<키>" -->
+    <UserSecretsId>kuca-memo-server</UserSecretsId>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>

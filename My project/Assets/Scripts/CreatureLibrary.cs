@@ -210,7 +210,8 @@ public static class CreatureLibrary
     {
         if (!TierSpecies.TryGetValue(tierId, out string[] list) || list.Length == 0)
             return null;
-        string id = list[Random.Range(0, list.Length)];
+        // 시간대·계절·날씨에 맞는 동물이 더 자주 나온다 (SpawnConditions)
+        string id = SpawnConditions.PickWeighted(list);
         return TryGetMesh(id, out _) ? id : null;
     }
 

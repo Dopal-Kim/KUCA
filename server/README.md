@@ -31,6 +31,23 @@ cd server
 - 기본 요금제 F1(무료)은 한동안 안 쓰면 잠들어서 첫 요청이 느립니다. 항상 켜 두려면 `SKU=B1` 로 만듭니다(크레딧 차감).
 - 앱에서는 설정 › 메모 서버에 위 주소를 넣습니다.
 
+## 날씨 (기상청 API 키)
+
+`GET /api/weather` 는 기상청 단기예보 조회서비스를 씁니다. 공공데이터포털에서 받은 키를 **저장소가 아니라 설정에** 넣습니다 (Decoding·Encoding 키 둘 다 됨).
+
+```bash
+# 로컬
+cd server/KucaMemoServer
+dotnet user-secrets set "Kma:ServiceKey" "<공공데이터포털 키>"
+
+# Azure: 배포하면서 넣기
+KMA_KEY="<공공데이터포털 키>" ./deploy-azure.sh
+# 또는 직접
+az webapp config appsettings set --name kuca-memo --resource-group <리소스 그룹> --settings Kma__ServiceKey="<공공데이터포털 키>"
+```
+
+키가 없으면 `/api/weather` 가 503 을 돌려주고, 앱은 날씨 조건 없이 동작합니다.
+
 ## 테스트
 
 ```bash
