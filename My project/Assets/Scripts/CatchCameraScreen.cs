@@ -91,7 +91,7 @@ public class CatchCameraScreen : MonoBehaviour
     /// <summary>target 을 잡는 카메라 화면을 연다.</summary>
     public void Open(Collectible target, CollectController owner)
     {
-        if (IsOpen || target == null)
+        if (IsOpen || target == null || !CreatureLibrary.TryGetMesh(target.SpeciesId, out _))
             return;
         if (root == null)
             Build();
@@ -421,23 +421,9 @@ public class CatchCameraScreen : MonoBehaviour
         arLight.cullingMask = 1 << layer;
 
         float size = arMode ? arMonsterSize : monsterSize;
-        if (speciesId != null && CreatureLibrary.TryGetMesh(speciesId, out Mesh body))
-            monster = BuildCreature(body, size * 1.4f, layer);
-        else
-        {
-            GameObject shape = GameObject.CreatePrimitive(type.shape);
-            shape.name = "Monster_" + type.id;
-            Destroy(shape.GetComponent<Collider>());
-            shape.layer = layer;
-            shape.transform.SetParent(stage.transform, false);
-            bool tall = type.shape == PrimitiveType.Cylinder || type.shape == PrimitiveType.Capsule;
-            float s = tall ? size * 0.6f : size;
-            shape.transform.localScale = Vector3.one * s;
-            if (owner != null && owner.spawner != null)
-                shape.GetComponent<Renderer>().sharedMaterial = owner.spawner.GetMaterial(type);
-            monster = shape.transform;
-            monsterHalf = s * (tall ? 1f : 0.5f);
-        }
+        // 지도의 수집 대상은 늘 동물 피규어다 (모델이 없는 대상은 지도에 나오지 않는다).
+        CreatureLibrary.TryGetMesh(speciesId, out Mesh body);
+        monster = BuildCreature(body, size * 1.4f, layer);
         monster.gameObject.SetActive(false);
 
         // 바닥 그림자 (AR 에서 땅에 서 있는 느낌)
