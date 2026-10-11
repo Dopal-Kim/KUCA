@@ -391,6 +391,13 @@ public class GameHUD : MonoBehaviour
         {
             RectTransform face = RoundButton(hud, buttons[i].name, size, buttons[i].action);
             Place(face, new Vector2(1f, 1f), new Vector2(-Margin, -Margin - i * (size + gap)));
+            if (buttons[i].name == "Album")
+            {
+                // 내 게시물에 새 좋아요가 오면 빨간 점
+                albumBadge = Circle(face, "Badge", new Color(0.93f, 0.25f, 0.33f), 34f);
+                Place(albumBadge.rectTransform, new Vector2(1f, 1f), new Vector2(-4f, -4f));
+                albumBadge.gameObject.SetActive(false);
+            }
             Image icon;
             if (buttons[i].icon != null)
             {
@@ -610,6 +617,18 @@ public class GameHUD : MonoBehaviour
         xpPopup.gameObject.SetActive(true);
         xpPopup.alpha = 1f;
         xpPopupTimer = 1.8f;
+    }
+
+    Image albumBadge;
+
+    /// <summary>사진첩 버튼의 새 반응 점</summary>
+    public void SetAlbumBadge(bool on)
+    {
+        if (albumBadge != null)
+        {
+            albumBadge.gameObject.SetActive(on);
+            albumBadge.transform.SetAsLastSibling();
+        }
     }
 
     /// <summary>내 사진첩 (내가 메모판에 올린 사진들)</summary>
