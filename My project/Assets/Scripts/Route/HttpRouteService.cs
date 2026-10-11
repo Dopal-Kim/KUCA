@@ -5,8 +5,9 @@ using UnityEngine;
 using UnityEngine.Networking;
 
 /// <summary>
-/// 서버(C)의 산책 추천·장소 공지 API. 서버에 아직 API 가 없거나(404) AI 가 실패하면
-/// 기기 안의 기본 추천(LocalRouteService)으로 바꿔서 화면이 깨지지 않게 한다.
+/// 서버의 산책 추천·장소 공지 API.
+/// - 추천: 서버가 실패하면 기기 안의 기본 추천(LocalRouteService)으로 바꿔서 화면이 깨지지 않게 한다.
+/// - 공지: 서버에 API 가 아직 없을 때(404)만 예시 공지. 그 밖의 실패는 "불러오지 못했어요" 로 알린다.
 /// </summary>
 public class HttpRouteService : IRouteService
 {
@@ -59,9 +60,10 @@ public class HttpRouteService : IRouteService
                 yield break;
             }
         }
-        if (req.responseCode == 404 || req.result != UnityWebRequest.Result.Success)
+        if (req.responseCode == 404)
         {
-            // 서버에 공지 API 가 아직 없으면 예시 공지를 보여 준다.
+            // 서버에 공지 API 가 아직 없을 때만 예시 공지를 보여 준다.
+            // (오류·인터넷 끊김 때 예시를 보여 주면 진짜 공지로 헷갈릴 수 있다)
             yield return fallback.GetNotices(buildingId, onDone);
             yield break;
         }
