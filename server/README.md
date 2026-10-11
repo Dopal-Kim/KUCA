@@ -39,9 +39,9 @@ cd server
 
 | 설정 | 뜻 |
 | --- | --- |
-| `Recommend:Endpoint` | 채팅 API 전체 주소 (예: `https://.../v1/chat/completions`) |
-| `Recommend:ApiKey` | API 키 |
-| `Recommend:Model` | 모델 이름 (필요하면) |
+| `Recommend:Endpoint` | 채팅 API 전체 주소. 기본값: 챗쿠(BAZE) 게이트웨이 `https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions` |
+| `Recommend:ApiKey` | API 키 (BAZE › API Gateway 에서 발급). **이것만 넣으면 된다** |
+| `Recommend:Model` | 모델 이름. 기본값 `gpt-5.4-mini` (게이트웨이 `/models/` 의 다른 ID 로 바꿀 수 있음) |
 | `Recommend:AuthHeader` | 키를 보낼 헤더. 기본 `Authorization` |
 | `Recommend:AuthScheme` | 헤더 값 앞말. 기본 `Bearer`, 키만 보내려면 빈 값 |
 
@@ -49,18 +49,19 @@ cd server
 
 ```bash
 dotnet user-secrets init
-dotnet user-secrets set "Recommend:Endpoint" "https://..."
 dotnet user-secrets set "Recommend:ApiKey" "발급받은 키"
 ```
 
 Azure:
 
 ```bash
-az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__Endpoint="https://..." Recommend__ApiKey="발급받은 키" Recommend__Model="모델 이름"
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__ApiKey="발급받은 키"
 ```
 
-- 요청·응답은 널리 쓰이는 채팅 API 모양을 따릅니다. 요청은 `{ model, messages }`, 답은 `choices[0].message.content` 입니다.
-- 챗쿠 API 모양이 다르면 `Services/ChatKuClient.cs` 의 `BuildBody`·`ReadAnswer` 만 고치면 됩니다.
+- 챗쿠(BAZE) 게이트웨이는 OpenAI 호환입니다. 요청은 `{ model, messages }`, 답은 `choices[0].message.content` 입니다.
+- 키는 `Authorization: Bearer` 로 보냅니다.
+- 실측: `gpt-5.4-mini` 는 약 3초, `gemini-3.5-flash` 는 약 11초 걸렸습니다.
+- 사용량은 키를 만든 BAZE 계정에 청구됩니다.
 
 ## 테스트
 

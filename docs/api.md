@@ -265,7 +265,7 @@
 - 경희스팟이 아닌 곳을 추천하면 `lat`/`lon` 으로 지도에 표시합니다
 - 실패 시 `400` (필드 오류). AI 가 실패하거나 엉뚱한 답을 주면 `200` 에 `source: "fallback"` (가까운 곳부터 고름)
 - 후보는 지금 위치에서 가까운 30곳까지 AI 에게 줍니다. AI 가 후보에 없는 ID 를 주면 버립니다
-- **AI 설정 (서버)** — 키는 저장소에 넣지 않습니다. Azure 앱 설정 `Recommend__Endpoint`, `Recommend__ApiKey`, `Recommend__Model` (로컬은 `dotnet user-secrets`). 키가 없으면 규칙 기반으로만 추천합니다. 자세한 것은 `server/README.md`
+- **AI 설정 (서버)** — 챗쿠(BAZE 게이트웨이, 기본 모델 `gpt-5.4-mini`). 키는 저장소에 넣지 않고 Azure 앱 설정 `Recommend__ApiKey` 에만 넣습니다 (로컬은 `dotnet user-secrets`). 키가 없으면 규칙 기반으로만 추천합니다. 자세한 것은 `server/README.md`
 
 ### GET /api/notices
 
