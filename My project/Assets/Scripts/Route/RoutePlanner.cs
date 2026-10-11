@@ -155,6 +155,10 @@ public class RoutePlanner : MonoBehaviour
         }
         if (collect != null && collect.Progress != null)
             req.visitedBuildingIds = new List<string>(collect.Progress.visitedSpots);
+        if (spots != null)
+            foreach (KyungHeeSpot s in spots.Spots)
+                if (s != null && s.Building != null)
+                    req.candidateBuildingIds.Add(s.Building.buildingId);
 
         HideSheet();
         ShowLoading(true);

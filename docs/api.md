@@ -220,7 +220,9 @@
 
 ## 산책 추천 · 장소 공지 (B-4 제안, 서버는 C 구현 예정)
 
-> **상태: 제안.** 앱(B)은 이 모양으로 이미 만들어 두었습니다.
+> **상태**
+> - 산책 추천: 서버 구현 완료 (챗쿠 AI. 키가 없으면 규칙 기반).
+> - 장소 공지: 제안 (C 구현 예정).
 > - 서버에 아직 없으면(`404`·연결 실패) 앱이 기기 안 기본 추천과 예시 공지로 대신합니다.
 > - 모양을 바꿔야 하면 이 절을 고치는 PR 로 B 와 합의해 주세요.
 
@@ -233,7 +235,8 @@
   "minutes": 30,
   "tastes": ["photo", "unvisited"],
   "lat": 37.2440, "lon": 127.0800,
-  "visitedBuildingIds": ["way-474085534"]
+  "visitedBuildingIds": ["way-474085534"],
+  "candidateBuildingIds": ["way-473963422", "way-474085534", "way-474085535"]
 }
 ```
 
@@ -243,6 +246,7 @@
 | `tastes` | 0개 이상. `photo`(사진 명소) · `quiet`(조용한 곳) · `food`(맛집·카페) · `unvisited`(안 가 본 곳) |
 | `lat`, `lon` | 지금 위치 (GPS). 캠퍼스 밖이면 정문 기준으로 봐도 됨 |
 | `visitedBuildingIds` | 이미 가 본 경희스팟 건물 ID (`unvisited` 판단용) |
+| `candidateBuildingIds` | 추천 후보 (앱의 경희스팟 건물 ID). 서버는 이 안에서만 고릅니다. 비우면 지금 위치 700m 안의 이름 있는 건물 |
 
 `200`
 
@@ -259,7 +263,9 @@
 - `stops`: 들를 순서대로 2~5곳. `walkMinutes` 는 앞 장소(첫 곳은 지금 위치)에서 걸어서 몇 분. `reason` 은 한 문장
 - `source`: `ai` 또는 `fallback` (AI 가 실패해서 서버가 규칙으로 고른 경우)
 - 경희스팟이 아닌 곳을 추천하면 `lat`/`lon` 으로 지도에 표시합니다
-- 실패 시 `400` (필드 오류), `503` (AI·서버 사정). 앱은 실패하면 기기 안 기본 추천을 씁니다
+- 실패 시 `400` (필드 오류). AI 가 실패하거나 엉뚱한 답을 주면 `200` 에 `source: "fallback"` (가까운 곳부터 고름)
+- 후보는 지금 위치에서 가까운 30곳까지 AI 에게 줍니다. AI 가 후보에 없는 ID 를 주면 버립니다
+- **AI 설정 (서버)** — 키는 저장소에 넣지 않습니다. Azure 앱 설정 `Recommend__Endpoint`, `Recommend__ApiKey`, `Recommend__Model` (로컬은 `dotnet user-secrets`). 키가 없으면 규칙 기반으로만 추천합니다. 자세한 것은 `server/README.md`
 
 ### GET /api/notices
 

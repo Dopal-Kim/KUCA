@@ -17,6 +17,8 @@ public class RouteRequest
     public double lat, lon;
     /// <summary>이미 가 본 경희스팟 건물 ID</summary>
     public List<string> visitedBuildingIds = new List<string>();
+    /// <summary>추천 후보 (앱의 경희스팟 건물 ID). 서버는 이 안에서만 고른다</summary>
+    public List<string> candidateBuildingIds = new List<string>();
 }
 
 [Serializable]
