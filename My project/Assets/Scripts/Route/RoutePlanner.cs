@@ -51,6 +51,7 @@ public class RoutePlanner : MonoBehaviour
     readonly List<bool> done = new List<bool>();
     readonly Dictionary<string, List<PlaceNotice>> noticesByPlace = new Dictionary<string, List<PlaceNotice>>();
     List<PlaceNotice> allNotices = new List<PlaceNotice>();
+    string noticeError;
 
     public static void Open()
     {
@@ -83,9 +84,16 @@ public class RoutePlanner : MonoBehaviour
             () => spots != null ? new List<KyungHeeSpot>(spots.Spots) : new List<KyungHeeSpot>(),
             () => PlayerPosition);
         service = url.Length == 0 ? local : new HttpRouteService(url, local);
+        ReloadNotices();
+    }
+
+    void ReloadNotices()
+    {
+        noticeError = null;
         noticesByPlace.Clear();
         StartCoroutine(service.GetNotices(null, (list, error) =>
         {
+            noticeError = error;
             allNotices = list ?? new List<PlaceNotice>();
             noticesByPlace.Clear();
             foreach (PlaceNotice n in allNotices)
@@ -107,6 +115,8 @@ public class RoutePlanner : MonoBehaviour
     void ShowSheet()
     {
         EnsureService();
+        if (noticeError != null)
+            ReloadNotices(); // 지난번에 못 불러왔으면 다시 시도
         sheet.SetActive(true);
         sheet.transform.SetAsLastSibling();
         UIInputBlocker.SetModal(this, true);
@@ -484,7 +494,7 @@ public class RoutePlanner : MonoBehaviour
             Destroy(noticeList.GetChild(i).gameObject);
         if (allNotices.Count == 0)
         {
-            Text none = UIKit.Text(noticeList, "장소와 관련된 공지가 아직 없어요", 30, TextAnchor.MiddleCenter, InkQuiet);
+            Text none = UIKit.Text(noticeList, noticeError != null ? $"{noticeError}\n잠시 뒤 다시 열어 주세요" : "장소와 관련된 공지가 아직 없어요", 30, TextAnchor.MiddleCenter, InkQuiet);
             UIKit.Size(none, 160f);
             return;
         }
