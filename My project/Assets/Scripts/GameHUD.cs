@@ -382,7 +382,7 @@ public class GameHUD : MonoBehaviour
         const float size = 120f, gap = 26f;
         var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
-            ("Compass", null, () => { if (cameraFollow != null) cameraFollow.ResetNorthUp(); }),
+            ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
             ("Items", HudIcons.Bag, () => menus.OpenCollection(KhuMenus.Tab.Items)),
             ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),

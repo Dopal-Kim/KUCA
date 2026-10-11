@@ -233,6 +233,18 @@ public static class HudIcons
         p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
     });
 
+    /// <summary>길 (구불구불한 길 + 도착 핀) — 산책 길잡이</summary>
+    public static Sprite Route => Cached("route", 128, p =>
+    {
+        p.Segment(26, 22, 58, 40, 11f);
+        p.Segment(58, 40, 34, 66, 11f);
+        p.Segment(34, 66, 70, 84, 11f);
+        p.Circle(26, 22, 11f);
+        p.Circle(94, 92, 22f);
+        p.Polygon(Color.white, new Vector2(76, 86), new Vector2(112, 86), new Vector2(94, 58));
+        p.Erase(q => q.CircleD(94, 93, 8f));
+    });
+
     /// <summary>자물쇠 (가 보지 않은 곳의 쪽지)</summary>
     public static Sprite Lock => Cached("lock", 128, p =>
     {

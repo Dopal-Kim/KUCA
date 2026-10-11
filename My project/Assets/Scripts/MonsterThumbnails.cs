@@ -18,7 +18,8 @@ public static class MonsterThumbnails
             return null;
         if (cache.TryGetValue(speciesId, out Texture2D tex) && tex != null)
             return tex;
-        if (!CreatureLibrary.TryGetMesh(speciesId, out Mesh mesh))
+        // mesh == null: 에디터에서 Play 를 다시 시작하면 지난 판의 메시가 지워진 채 캐시에 남아 있을 수 있다.
+        if (!CreatureLibrary.TryGetMesh(speciesId, out Mesh mesh) || mesh == null)
             return null;
         return cache[speciesId] = Render(speciesId, mesh);
     }

@@ -153,6 +153,9 @@ public partial class MemoBoard : MonoBehaviour
     }
 
     /// <summary>쓸 서버 주소: 설정에서 저장한 값이 있으면 그것, 없으면 인스펙터의 serverUrl</summary>
+    /// <summary>메모 서버 주소 (산책 추천·공지도 같은 서버를 쓴다). 비어 있으면 기기 안 가짜 서버</summary>
+    public string ServerUrl => CurrentServerUrl;
+
     string CurrentServerUrl => (PlayerPrefs.HasKey(ServerUrlKey) ? PlayerPrefs.GetString(ServerUrlKey) : serverUrl ?? "").Trim();
 
     /// <summary>설정에서 서버 주소가 바뀌었으면 새 주소로 다시 만든다.</summary>
