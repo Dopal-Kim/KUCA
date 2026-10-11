@@ -5,8 +5,9 @@ using UnityEngine.UI;
 /// <summary>
 /// B-4 산책 길잡이: 지도 오른쪽 위 길 버튼으로 연다.
 /// - 산책 추천: 걸을 시간·취향을 고르면 AI(서버)가 경희스팟 코스를 짠다. 기다리는 동안 파트너가 길을 찾는 연출,
-///   받으면 지도 위에 지금 위치 → ①②③ 를 점선과 번호 핀으로 잇고, 아래에 장소 카드(추천 이유)를 보여 준다.
-/// - 장소 공지: 학교 공지 중 장소와 연결된 것. 카드·핀을 누르면 그 장소 공지가 원문 링크와 함께 보인다.
+///   받으면 지도 아래에 장소 카드(①②③, 추천 이유)를 보여 준다. 카드를 누르면 팝업 미니맵에
+///   지금 위치 → ①②③ 경로를 파란 선과 번호로 그리고, 그 장소의 공지(원문 링크)를 함께 보여 준다.
+/// - 장소 공지: 학교 공지 중 장소와 연결된 것.
 /// 서버에 API 가 없거나 AI 가 실패하면 기기 안 기본 추천으로 바꿔서 화면이 깨지지 않는다 (HttpRouteService).
 /// </summary>
 [DefaultExecutionOrder(1000)] // 카메라가 움직인 뒤에 핀 자리를 잡는다
@@ -28,7 +29,7 @@ public class RoutePlanner : MonoBehaviour
     IRouteService service;
     string serviceUrl;
 
-    RectTransform canvasRect, overlay;
+    RectTransform canvasRect;
     GameObject sheet, recommendPanel, noticePanel, loading, placePopup, routeUi;
     Image[] tabFaces, timeChips, tasteChips;
     RectTransform noticeList, cardsContent, popupNotices;
@@ -42,13 +43,14 @@ public class RoutePlanner : MonoBehaviour
 
     RouteResult route;
     readonly List<Vector3> points = new List<Vector3>(); // [0] 은 지금 위치, 나머지는 들를 곳
-    readonly List<RectTransform> pins = new List<RectTransform>();
-    readonly List<RectTransform> segments = new List<RectTransform>();
+    RawImage miniMap;
+    RectTransform miniOverlay;
+    Camera miniCam;
+    RenderTexture miniTexture;
     readonly List<Image> cardBadges = new List<Image>();
     readonly List<bool> done = new List<bool>();
     readonly Dictionary<string, List<PlaceNotice>> noticesByPlace = new Dictionary<string, List<PlaceNotice>>();
     List<PlaceNotice> allNotices = new List<PlaceNotice>();
-    static Sprite dash;
 
     public static void Open()
     {
@@ -220,12 +222,7 @@ public class RoutePlanner : MonoBehaviour
             return;
         }
         for (int i = 0; i < kept.Count; i++)
-        {
-            segments.Add(Segment());
-            int index = i;
-            pins.Add(Pin(i + 1, () => OpenPlace(index)));
             done.Add(false);
-        }
         routeTitle.text = $"<b>{Escape(result.title)}</b>  <size=26><color=#8C8C91>{(result.source == "ai" ? "AI 추천" : "기본 추천")}</color></size>";
         BuildCards();
         routeUi.SetActive(true);
@@ -233,10 +230,6 @@ public class RoutePlanner : MonoBehaviour
 
     void ClearRoute()
     {
-        foreach (RectTransform r in pins) if (r != null) Destroy(r.gameObject);
-        foreach (RectTransform r in segments) if (r != null) Destroy(r.gameObject);
-        pins.Clear();
-        segments.Clear();
         points.Clear();
         done.Clear();
         route = null;
@@ -276,39 +269,6 @@ public class RoutePlanner : MonoBehaviour
             loadingPartner.rectTransform.anchoredPosition = new Vector2(0f, 70f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) * 36f);
         if (route == null)
             return;
-        Camera cam = Camera.main;
-        if (cam == null)
-            return;
-        points[0] = PlayerPosition;
-
-        var screen = new Vector2[points.Count];
-        var visible = new bool[points.Count];
-        for (int i = 0; i < points.Count; i++)
-        {
-            Vector3 sp = cam.WorldToScreenPoint(points[i]);
-            visible[i] = sp.z > 0f;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(overlay, sp, null, out screen[i]);
-        }
-        // 화면 밖에 있는 장소의 핀은 화면 가장자리에 붙여서 어느 쪽으로 가면 되는지 보이게 한다.
-        Vector2 half = overlay.rect.size * 0.5f - new Vector2(60f, 60f);
-        for (int i = 0; i < pins.Count; i++)
-        {
-            Vector2 at = screen[i + 1] + new Vector2(0f, 46f);
-            if (!visible[i + 1])
-                at = -at; // 카메라 뒤쪽이면 화면 좌표가 뒤집혀 나온다
-            pins[i].gameObject.SetActive(true);
-            pins[i].anchoredPosition = new Vector2(Mathf.Clamp(at.x, -half.x, half.x), Mathf.Clamp(at.y, -half.y, half.y));
-            RectTransform seg = segments[i];
-            bool show = visible[i] && visible[i + 1];
-            seg.gameObject.SetActive(show);
-            if (show)
-            {
-                Vector2 a = screen[i], b = screen[i + 1], d = b - a;
-                seg.anchoredPosition = (a + b) * 0.5f;
-                seg.sizeDelta = new Vector2(d.magnitude, 12f);
-                seg.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
-            }
-        }
 
         // 도착한 곳은 초록 체크로 바꾸고, 다 돌면 축하
         for (int i = 0; i < route.stops.Count; i++)
@@ -324,8 +284,6 @@ public class RoutePlanner : MonoBehaviour
 
     void MarkDone(int i)
     {
-        pins[i].GetComponent<Image>().color = DoneGreen;
-        pins[i].GetComponentInChildren<Text>().text = "✓";
         if (i < cardBadges.Count && cardBadges[i] != null)
         {
             cardBadges[i].color = DoneGreen;
@@ -380,10 +338,10 @@ public class RoutePlanner : MonoBehaviour
         if (route == null || index < 0 || index >= route.stops.Count)
             return;
         RouteStop s = route.stops[index];
-        ShowPlace(s.buildingId, s.name, s.reason);
+        ShowPlace(s.buildingId, $"<color=#2A6BF2>{index + 1}</color>  {Escape(s.name)}", $"{s.reason}  ·  도보 {s.walkMinutes}분", index);
     }
 
-    void ShowPlace(string buildingId, string name, string reason)
+    void ShowPlace(string buildingId, string name, string reason, int focus)
     {
         popupName.text = name;
         popupReason.text = string.IsNullOrEmpty(reason) ? "" : reason;
@@ -410,6 +368,104 @@ public class RoutePlanner : MonoBehaviour
         placePopup.SetActive(true);
         placePopup.transform.SetAsLastSibling();
         UIInputBlocker.SetModal(this, true);
+        Canvas.ForceUpdateCanvases();
+        DrawMiniMap(focus);
+    }
+
+    // ---------- 미니맵 ----------
+
+    /// <summary>
+    /// 코스 전체(지금 위치 + 들를 곳)가 들어오게 위에서 내려다본 지도를 한 장 찍고,
+    /// 그 위에 파란 경로 선과 번호를 그린다. focus 번째 장소는 크게 표시한다. 지도 방향은 지금 화면과 같다.
+    /// </summary>
+    void DrawMiniMap(int focus)
+    {
+        for (int i = miniOverlay.childCount - 1; i >= 0; i--)
+            Destroy(miniOverlay.GetChild(i).gameObject);
+        Camera main = Camera.main;
+        if (route == null || points.Count < 2 || main == null)
+            return;
+        points[0] = PlayerPosition;
+
+        Vector2 size = ((RectTransform)miniMap.transform).rect.size;
+        float aspect = size.x / Mathf.Max(1f, size.y);
+        Quaternion rot = Quaternion.Euler(90f, main.transform.eulerAngles.y, 0f);
+        Vector3 right = rot * Vector3.right, up = rot * Vector3.up;
+        float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+        foreach (Vector3 p in points)
+        {
+            float x = Vector3.Dot(p, right), y = Vector3.Dot(p, up);
+            minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
+            minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
+        }
+        Vector3 center = right * ((minX + maxX) * 0.5f) + up * ((minY + maxY) * 0.5f);
+        center.y = 0f;
+        float half = Mathf.Max((maxY - minY) * 0.5f, (maxX - minX) * 0.5f / aspect) * 1.3f + 40f;
+
+        if (miniCam == null)
+        {
+            miniCam = new GameObject("RouteMiniMapCamera").AddComponent<Camera>();
+            miniCam.transform.SetParent(transform, false);
+            miniCam.enabled = false;
+            miniCam.orthographic = true;
+            miniCam.clearFlags = CameraClearFlags.SolidColor;
+            miniCam.backgroundColor = new Color(0.55f, 0.72f, 0.42f);
+        }
+        int w = 1024, h = Mathf.Max(64, Mathf.RoundToInt(w / aspect));
+        if (miniTexture == null || miniTexture.width != w || miniTexture.height != h)
+        {
+            if (miniTexture != null) miniTexture.Release();
+            miniTexture = new RenderTexture(w, h, 24) { name = "RouteMiniMap", antiAliasing = 2 };
+        }
+        miniCam.cullingMask = main.cullingMask;
+        miniCam.orthographicSize = half;
+        miniCam.aspect = aspect;
+        miniCam.transform.SetPositionAndRotation(center + Vector3.up * 800f, rot);
+        miniCam.nearClipPlane = 1f;
+        miniCam.farClipPlane = 2000f;
+        miniCam.targetTexture = miniTexture;
+        miniCam.Render();
+        miniCam.targetTexture = null;
+        miniMap.texture = miniTexture;
+
+        // 지도 위 경로: 지금 위치 → ① → ② … 파란 선, 번호 원
+        var at = new Vector2[points.Count];
+        for (int i = 0; i < points.Count; i++)
+        {
+            Vector3 vp = miniCam.WorldToViewportPoint(points[i]);
+            at[i] = new Vector2((vp.x - 0.5f) * size.x, (vp.y - 0.5f) * size.y);
+        }
+        for (int i = 0; i + 1 < at.Length; i++)
+            Line(miniOverlay, at[i], at[i + 1], i == focus ? 14f : 10f, RouteBlue);
+        Image me = Circle(miniOverlay, Ink, 54f, "나");
+        me.rectTransform.anchoredPosition = at[0];
+        me.GetComponentInChildren<Text>().fontSize = 24;
+        for (int i = 1; i < at.Length; i++)
+        {
+            bool isFocus = i - 1 == focus;
+            bool arrived = i - 1 < done.Count && done[i - 1];
+            Image c = Circle(miniOverlay, arrived ? DoneGreen : RouteBlue, isFocus ? 84f : 60f, arrived ? "✓" : i.ToString());
+            c.rectTransform.anchoredPosition = at[i];
+            Outline o = c.gameObject.AddComponent<Outline>();
+            o.effectColor = Color.white;
+            o.effectDistance = isFocus ? new Vector2(5f, -5f) : new Vector2(3f, -3f);
+        }
+    }
+
+    static void Line(RectTransform parent, Vector2 a, Vector2 b, float width, Color color)
+    {
+        Image seg = UIKit.Image(parent, "Line", color);
+        RectTransform r = seg.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
+        Vector2 d = b - a;
+        r.anchoredPosition = (a + b) * 0.5f;
+        r.sizeDelta = new Vector2(d.magnitude, width);
+        r.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
+    }
+
+    void OnDestroy()
+    {
+        if (miniTexture != null) miniTexture.Release();
     }
 
     void ClosePlace()
@@ -461,9 +517,6 @@ public class RoutePlanner : MonoBehaviour
 
     void BuildRouteUi()
     {
-        overlay = UIKit.Rect(canvasRect, "RouteOverlay");
-        UIKit.Stretch(overlay);
-
         routeUi = UIKit.Rect(canvasRect, "RouteCards").gameObject;
         var rr = (RectTransform)routeUi.transform;
         rr.anchorMin = new Vector2(0f, 0f);
@@ -660,7 +713,7 @@ public class RoutePlanner : MonoBehaviour
         cr.anchorMin = new Vector2(0.05f, 0.5f);
         cr.anchorMax = new Vector2(0.95f, 0.5f);
         cr.pivot = new Vector2(0.5f, 0.5f);
-        cr.sizeDelta = new Vector2(0f, 1100f);
+        cr.sizeDelta = new Vector2(0f, 1560f);
         Swallow(card.gameObject);
         popupName = UIKit.Text(cr, "", 44, TextAnchor.MiddleLeft, Ink);
         popupName.fontStyle = FontStyle.Bold;
@@ -674,12 +727,28 @@ public class RoutePlanner : MonoBehaviour
         Place(ci.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         ci.rectTransform.sizeDelta = new Vector2(40f, 40f);
         popupReason = UIKit.Text(cr, "", 30, TextAnchor.UpperLeft, InkQuiet);
-        Box(popupReason.rectTransform, 50f, 120f, 50f, 80f);
+        Box(popupReason.rectTransform, 50f, 116f, 50f, 50f);
+
+        // 미니맵 (코스 전체를 위에서 본 지도 + 파란 경로)
+        Image frame = UIKit.Image(cr, "MiniMap", new Color(0.55f, 0.72f, 0.42f));
+        frame.sprite = HudIcons.Rounded;
+        frame.type = Image.Type.Sliced;
+        frame.pixelsPerUnitMultiplier = 1f;
+        Box(frame.rectTransform, 50f, 186f, 50f, 680f);
+        frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+        var mm = new GameObject("Map", typeof(RectTransform), typeof(RawImage));
+        mm.transform.SetParent(frame.transform, false);
+        miniMap = mm.GetComponent<RawImage>();
+        miniMap.raycastTarget = false;
+        UIKit.Stretch(miniMap.rectTransform);
+        miniOverlay = UIKit.Rect(frame.transform, "Route");
+        UIKit.Stretch(miniOverlay);
+
         Text head = UIKit.Text(cr, "장소 공지", 32, TextAnchor.MiddleLeft, Ink);
         head.fontStyle = FontStyle.Bold;
-        Box(head.rectTransform, 50f, 210f, 50f, 50f);
+        Box(head.rectTransform, 50f, 896f, 50f, 50f);
         RectTransform area = UIKit.Rect(cr, "List");
-        UIKit.StretchBetween(area, 190f, 280f);
+        UIKit.StretchBetween(area, 190f, 960f);
         popupNotices = UIKit.ScrollList(area, 16f, new RectOffset(50, 50, 0, 20));
         popupBoardButton = UIKit.Button(cr, "이 장소 쪽지판 열기", () => { }, Ink, 34);
         Image bi = popupBoardButton.GetComponent<Image>();
@@ -697,47 +766,6 @@ public class RoutePlanner : MonoBehaviour
     }
 
     // ---------- 작은 도우미 ----------
-
-    RectTransform Pin(int number, UnityEngine.Events.UnityAction onClick)
-    {
-        Image pin = Circle(overlay, RouteBlue, 84f, number.ToString());
-        pin.raycastTarget = true;
-        var b = pin.gameObject.AddComponent<Button>();
-        b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(onClick);
-        pin.gameObject.AddComponent<Outline>().effectColor = Color.white;
-        pin.gameObject.GetComponent<Outline>().effectDistance = new Vector2(4f, -4f);
-        return pin.rectTransform;
-    }
-
-    RectTransform Segment()
-    {
-        Image seg = UIKit.Image(overlay, "Line", RouteBlue);
-        seg.sprite = Dash;
-        seg.type = Image.Type.Tiled;
-        seg.pixelsPerUnitMultiplier = 64f / 48f;
-        seg.rectTransform.anchorMin = seg.rectTransform.anchorMax = seg.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        seg.transform.SetAsFirstSibling(); // 핀 아래에 그린다
-        return seg.rectTransform;
-    }
-
-    /// <summary>점선 한 칸 (앞 60% 칠함)</summary>
-    static Sprite Dash
-    {
-        get
-        {
-            if (dash != null) return dash;
-            const int w = 64, h = 16;
-            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat, name = "RouteDash" };
-            var px = new Color32[w * h];
-            for (int y = 0; y < h; y++)
-                for (int x = 0; x < w; x++)
-                    px[y * w + x] = x < 38 ? new Color32(255, 255, 255, 255) : new Color32(255, 255, 255, 0);
-            tex.SetPixels32(px);
-            tex.Apply(false, true);
-            return dash = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
-        }
-    }
 
     static Image Circle(Transform parent, Color color, float size, string label)
     {
