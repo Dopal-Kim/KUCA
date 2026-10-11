@@ -279,6 +279,18 @@ public class RoutePlanner : MonoBehaviour
 
     void LateUpdate()
     {
+        // 다른 화면(메뉴·메모판·설정·잡기 등)이 열리면 길잡이 창은 닫고, 코스 카드는 그동안 숨긴다.
+        bool otherOpen = UIInputBlocker.IsOtherModalOpen(this);
+        if (otherOpen)
+        {
+            if (loading.activeSelf) { request++; ShowLoading(false); }
+            if (sheet.activeSelf) HideSheet();
+            if (placePopup.activeSelf) ClosePlace();
+        }
+        bool showCards = route != null && !otherOpen;
+        if (routeUi.activeSelf != showCards)
+            routeUi.SetActive(showCards);
+
         if (loading.activeSelf && loadingPartner != null)
             loadingPartner.rectTransform.anchoredPosition = new Vector2(0f, 70f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) * 36f);
         if (route == null)

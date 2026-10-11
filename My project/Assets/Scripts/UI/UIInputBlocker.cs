@@ -14,6 +14,22 @@ public static class UIInputBlocker
     /// <summary>모달 화면이 하나라도 열려 있는지</summary>
     public static bool IsModalOpen => modals.Count > 0;
 
+    /// <summary>owner 말고 다른 모달 화면이 열려 있는지 (다른 화면이 열리면 스스로 닫는 팝업용)</summary>
+    public static bool IsOtherModalOpen(object owner)
+    {
+        foreach (object m in modals)
+        {
+            if (ReferenceEquals(m, owner))
+                continue;
+            if (m is Object o && o == null)
+                continue; // 지워진 화면이 남아 있는 경우
+            if (m is GameObject go && !go.activeInHierarchy)
+                continue;
+            return true;
+        }
+        return false;
+    }
+
     public static void SetModal(object owner, bool open)
     {
         if (open) modals.Add(owner);
