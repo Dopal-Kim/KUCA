@@ -20,6 +20,9 @@ public class MemoData
     /// <summary>"visible" 또는 "pending"(서버 내용 검사에서 검토 대기. 작성한 기기에만 보임)</summary>
     public string status;
 
+    /// <summary>서버에 그 메모가 없을 때(지워짐) GetMemo·DeleteMemo 가 돌려주는 에러 문구</summary>
+    public const string NotFound = "메모가 없습니다.";
+
     public bool HasPhoto => !string.IsNullOrEmpty(photoUrl);
     public bool IsPending => status == "pending";
 

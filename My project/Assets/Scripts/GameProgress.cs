@@ -57,6 +57,42 @@ public class GameProgress
     public float walkedMeters;
     public List<string> visitedSpots = new List<string>();
 
+    // ---------- 걷기 보상: 경희몬 알 (B-3) ----------
+    // 늘 알 하나를 품고 걷는다. EggMeters 를 걸으면 깨어나 경희몬 한 마리가 도감에 들어온다 (하루 EggsPerDay 번까지).
+    public const float EggMeters = 1000f;
+    public const int EggsPerDay = 3;
+    /// <summary>지금 품은 알이 걸은 거리 (m). 오늘 다 깼으면 EggMeters 에서 멈춰 있다가 내일 깨어난다</summary>
+    public float eggMeters;
+    /// <summary>hatchedToday 를 센 날 (yyyyMMdd)</summary>
+    public string eggDay = "";
+    public int hatchedToday;
+
+    static string Today => DateTime.Now.ToString("yyyyMMdd");
+
+    /// <summary>오늘 깨운 알 수</summary>
+    public int HatchedToday => eggDay == Today ? hatchedToday : 0;
+
+    /// <summary>알이 다 자랐고 오늘 더 깨울 수 있으면 true</summary>
+    public bool EggReady => eggMeters >= EggMeters && HatchedToday < EggsPerDay;
+
+    /// <summary>걸은 거리를 알에 더한다 (EggMeters 를 넘지 않음)</summary>
+    public void AddEggDistance(float meters) => eggMeters = Mathf.Min(EggMeters, eggMeters + Mathf.Max(0f, meters));
+
+    /// <summary>알을 깨운 것으로 기록하고 새 알을 품는다</summary>
+    public void MarkHatched()
+    {
+        if (eggDay != Today)
+        {
+            eggDay = Today;
+            hatchedToday = 0;
+        }
+        hatchedToday++;
+        eggMeters = 0f;
+    }
+
+    /// <summary>깨어날 등급: 초록 70% · 파랑 25% · 황금 5%</summary>
+    public static string RollEggTier(float r) => r < 0.70f ? "sprout" : r < 0.95f ? "crystal" : "star";
+
     static string FilePath => Path.Combine(Application.persistentDataPath, "progress.json");
 
     public int CountOf(string id)
@@ -164,6 +200,8 @@ public class GameProgress
         partnerHistory ??= new List<PartnerRecord>();
         items ??= new List<Entry>();
         visitedSpots ??= new List<string>();
+        eggDay ??= "";
+        eggMeters = Mathf.Clamp(eggMeters, 0f, EggMeters);
         foreach (Entry e in collected)
         {
             int have = caught.FindAll(c => c.typeId == e.id).Count;

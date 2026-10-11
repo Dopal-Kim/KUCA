@@ -233,6 +233,19 @@ public static class HudIcons
         p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
     });
 
+    /// <summary>알 (아래가 둥글고 위가 좁은 달걀 모양) — 걷기 보상</summary>
+    public static Sprite Egg => Cached("egg", 128, p =>
+    {
+        p.Fill(q =>
+        {
+            float dy = q.y - 58f;
+            float rx = 40f * (dy > 0f ? 1f - 0.22f * dy / 56f : 1f); // 위로 갈수록 좁게
+            float ry = dy > 0f ? 56f : 46f;
+            float k = Mathf.Sqrt((q.x - 64f) * (q.x - 64f) / (rx * rx) + dy * dy / (ry * ry));
+            return (k - 1f) * Mathf.Min(rx, ry);
+        }, Color.white);
+    });
+
     /// <summary>길 (구불구불한 길 + 도착 핀) — 산책 길잡이</summary>
     public static Sprite Route => Cached("route", 128, p =>
     {
