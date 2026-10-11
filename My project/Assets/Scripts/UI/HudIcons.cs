@@ -233,6 +233,16 @@ public static class HudIcons
         p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
     });
 
+    /// <summary>자물쇠 (가 보지 않은 곳의 쪽지)</summary>
+    public static Sprite Lock => Cached("lock", 128, p =>
+    {
+        p.Ring(64, 78, 24f, 10f);
+        p.Erase(q => q.BoxD(64, 58, 40f, 22f, 0f, 0f));
+        p.Box(64, 46, 38f, 30f, 8f);
+        p.Erase(q => q.CircleD(64, 50, 8f));
+        p.Erase(q => q.BoxD(64, 38, 3.5f, 10f, 2f, 0f));
+    });
+
     public static Sprite Camera => Cached("camera", 128, p =>
     {
         p.Box(64, 58, 50f, 36f, 10f);

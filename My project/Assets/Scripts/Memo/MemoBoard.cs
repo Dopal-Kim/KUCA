@@ -169,6 +169,10 @@ public partial class MemoBoard : MonoBehaviour
     {
         EnsureService();
         building = target;
+        locked = !IsVisited(target);
+        lockedCount = 0;
+        album.SetActive(false);
+        albumMode = false;
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
         title.text = target.DisplayName;
@@ -216,6 +220,7 @@ public partial class MemoBoard : MonoBehaviour
                 return;
             }
             listStatus.gameObject.SetActive(false);
+            lockedCount = locked ? memos.Count : 0;
             currentMemos.Clear();
             currentMemos.AddRange(memos);
             LayoutCollage(memos);
@@ -298,12 +303,22 @@ public partial class MemoBoard : MonoBehaviour
         UIKit.Stretch(paper.rectTransform);
         var b = paper.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => OpenViewer(m));
+        bool hide = locked; // 가 보지 않은 스팟: 흐리게만 보이고 열리지 않는다 (B-2)
+        b.onClick.AddListener(() =>
+        {
+            if (hide) ShowToast("이 경희스팟에 가 보면 쪽지가 열려요");
+            else OpenViewer(m);
+        });
         paper.gameObject.AddComponent<PressScale>();
 
         if (!m.HasPhoto)
         {
-            // 사진이 없는 예전 메모는 쪽지처럼
+            // 사진이 없는 예전 메모는 쪽지처럼 (가려졌으면 글 대신 자물쇠)
+            if (hide)
+            {
+                LockMark(paper.transform);
+                return holder;
+            }
             Text t = UIKit.Text(paper.transform, Clip(m.text, 60), 32, TextAnchor.UpperLeft, Ink);
             UIKit.Stretch(t.rectTransform, border + 18f, border + 18f);
             t.verticalOverflow = VerticalWrapMode.Truncate;
@@ -327,12 +342,36 @@ public partial class MemoBoard : MonoBehaviour
         var fit = go.GetComponent<AspectRatioFitter>();
         fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
+        if (hide)
+            LockMark(paper.transform);
+        if (m.IsPending)
+        {
+            // 검토 대기: 나에게만 보이는 사진이라는 표시
+            Image tag = UIKit.Image(paper.transform, "Pending", new Color(0.88f, 0.54f, 0.12f));
+            tag.sprite = HudIcons.Pill;
+            tag.type = Image.Type.Sliced;
+            tag.pixelsPerUnitMultiplier = 120f / 48f;
+            Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(border + 10f, -border - 10f));
+            tag.rectTransform.sizeDelta = new Vector2(130f, 48f);
+            Text tt = UIKit.Text(tag.transform, "검토 중", 24, TextAnchor.MiddleCenter, Color.white);
+            tt.fontStyle = FontStyle.Bold;
+            UIKit.Stretch(tt.rectTransform);
+        }
         StartCoroutine(service.LoadPhoto(m, (tex, error) =>
         {
             if (raw == null || tex == null)
                 return;
             // 내려받은 사진만 나중에 지운다 (예시 사진은 에셋이라 지우면 안 됨)
-            if (!m.photoUrl.StartsWith("resource://")) loadedPhotos.Add(tex);
+            bool asset = m.photoUrl.StartsWith("resource://");
+            if (hide)
+            {
+                Texture2D blurred = Blurred(tex);
+                if (!asset) Destroy(tex);
+                tex = blurred;
+                loadedPhotos.Add(tex);
+                raw.color = new Color(0.85f, 0.85f, 0.85f);
+            }
+            else if (!asset) loadedPhotos.Add(tex);
             raw.texture = tex;
             raw.enabled = true;
             fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
@@ -349,10 +388,11 @@ public partial class MemoBoard : MonoBehaviour
         viewerPhoto.texture = null;
         viewerPhoto.enabled = false;
         SetAvatar(viewerAvatar, viewerAvatarLetter, m.author);
-        viewerAuthor.text = $"<b>{Escape(m.author)}</b>\n<size=26><color=#8C8C91>{FormatTime(m.CreatedAtLocal)}</color></size>";
+        string when = m.IsPending ? "<color=#E08A1E>검토 대기 · 나에게만 보여요</color>" : $"<color=#8C8C91>{FormatTime(m.CreatedAtLocal)}</color>";
+        viewerAuthor.text = $"<b>{Escape(m.author)}</b>\n<size=26>{when}</size>";
         viewerText.text = $"<b>{Escape(m.author)}</b>  {Escape(m.text)}";
         viewerDelete.gameObject.SetActive(IsMine(m.id));
-        viewerShare.gameObject.SetActive(albumMode && IsMine(m.id) && m.HasPhoto);
+        viewerShare.gameObject.SetActive(albumMode && IsMine(m.id) && m.HasPhoto && !m.IsPending);
         RefreshLike();
         viewer.SetActive(true);
         viewer.transform.SetAsLastSibling();
@@ -385,6 +425,11 @@ public partial class MemoBoard : MonoBehaviour
         MemoData m = viewerMemo;
         if (m == null || liking)
             return;
+        if (m.IsPending)
+        {
+            ShowToast("검토가 끝나 공개되면 좋아요를 받을 수 있어요");
+            return;
+        }
         bool like = !m.likedByMe;
         int before = m.likeCount;
         m.likedByMe = like;
@@ -452,7 +497,7 @@ public partial class MemoBoard : MonoBehaviour
     }
 
     /// <summary>격자에 정사각형 사진 칸 하나 (누르면 onClick)</summary>
-    void AddGridPhoto(RectTransform grid, MemoData m, UnityEngine.Events.UnityAction onClick)
+    Image AddGridPhoto(RectTransform grid, MemoData m, UnityEngine.Events.UnityAction onClick)
     {
         Image cell = UIKit.Image(grid, m.id, PaperDark, raycast: true);
         cell.gameObject.AddComponent<RectMask2D>();
@@ -475,6 +520,7 @@ public partial class MemoBoard : MonoBehaviour
             raw.enabled = true;
             fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
         }));
+        return cell;
     }
 
     /// <summary>area 를 채우는 세로 스크롤 3열 사진 격자 (돌려주는 것은 칸이 들어갈 Content)</summary>
@@ -562,6 +608,13 @@ public partial class MemoBoard : MonoBehaviour
             return;
         if (stickers.Count > 0 && Mathf.Abs(((RectTransform)collageScroll.viewport).rect.width - laidOutWidth) > 1f)
             Relayout();
+        // 메모판을 연 채로 걸어서 스팟에 들어오면 (방문 기록이 생기면) 바로 연다.
+        if (locked && building != null && IsVisited(building))
+        {
+            locked = false;
+            ShowToast("쪽지가 열렸어요!");
+            Reload();
+        }
         // 걸어서 가까워지면 바로 쓰기 버튼이 켜지도록 매 프레임 확인한다.
         UpdateWriteState();
     }
@@ -570,8 +623,12 @@ public partial class MemoBoard : MonoBehaviour
     {
         canWrite = CanWrite(out float d);
         writeButtonFace.color = canWrite ? Ink : new Color(Ink.r, Ink.g, Ink.b, 0.35f);
-        writeHint.transform.parent.gameObject.SetActive(!canWrite);
-        if (!canWrite)
+        writeHint.transform.parent.gameObject.SetActive(!canWrite || locked);
+        if (locked)
+            writeHint.text = lockedCount > 0
+                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"
+                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m";
+        else if (!canWrite)
             writeHint.text = $"경희스팟까지 {d:F0}m  ·  {spots.interactRadius:F0}m 안에서 사진을 남길 수 있어요";
     }
 
@@ -663,6 +720,13 @@ public partial class MemoBoard : MonoBehaviour
             photoTexture = null; // 공유 창이 쓰고 지운다
             SetPhoto(null, null);
             ShowList();
+            if (created.IsPending)
+            {
+                // 서버 내용 검사에서 애매하다고 본 글: 검토가 끝날 때까지 나에게만 보인다.
+                if (shot != null) Destroy(shot);
+                ShowToast("검토 후 공개돼요 · 그때까지는 나에게만 보여요");
+                return;
+            }
             ShowToast("사진을 붙였어요!");
             OpenShare(created, shot, true);
         }));

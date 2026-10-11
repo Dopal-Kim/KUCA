@@ -17,8 +17,11 @@ public class MemoData
     public int likeCount;
     /// <summary>이 기기가 좋아요를 눌렀는지 (목록을 X-Device-Id 와 함께 받았을 때만 채워짐)</summary>
     public bool likedByMe;
+    /// <summary>"visible" 또는 "pending"(서버 내용 검사에서 검토 대기. 작성한 기기에만 보임)</summary>
+    public string status;
 
     public bool HasPhoto => !string.IsNullOrEmpty(photoUrl);
+    public bool IsPending => status == "pending";
 
     public DateTime CreatedAtLocal =>
         DateTime.TryParse(createdAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t.ToLocalTime() : DateTime.MinValue;
