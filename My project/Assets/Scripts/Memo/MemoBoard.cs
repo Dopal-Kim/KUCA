@@ -245,9 +245,38 @@ public partial class MemoBoard : MonoBehaviour
     /// 두 줄로 쌓되, 크기·기울기·좌우 위치를 메모마다 조금씩 다르게 해서 종이 위에 붙인 스티커처럼 보이게 한다.
     /// 값은 메모 id 로 정하므로 열 때마다 같은 자리에 붙는다. 화면 너비가 바뀌면 Update 에서 다시 배치한다.
     /// </summary>
+    /// <summary>
+    /// 대표 사진 (B-5): 최근 7일 동안 올라온 사진 중 좋아요가 가장 많은 것 (같으면 최신).
+    /// 좋아요가 하나도 없으면 대표 사진을 두지 않는다. 검토 대기 사진은 제외.
+    /// </summary>
+    static MemoData PickRepresentative(List<MemoData> memos)
+    {
+        DateTime since = DateTime.Now.AddDays(-7);
+        MemoData best = null;
+        foreach (MemoData m in memos)
+        {
+            if (!m.HasPhoto || m.IsPending || m.likeCount <= 0 || m.CreatedAtLocal < since)
+                continue;
+            if (best == null || m.likeCount > best.likeCount ||
+                (m.likeCount == best.likeCount && m.CreatedAtLocal > best.CreatedAtLocal))
+                best = m;
+        }
+        return best;
+    }
+
+    string representativeId;
+
     void LayoutCollage(List<MemoData> memos)
     {
         stickers.Clear();
+        MemoData rep = PickRepresentative(memos);
+        representativeId = rep?.id;
+        if (rep != null)
+        {
+            memos = new List<MemoData>(memos);
+            memos.Remove(rep);
+            memos.Insert(0, rep); // 대표 사진은 맨 위에 크게
+        }
         foreach (MemoData m in memos)
             stickers.Add((Sticker(m), m));
         Relayout();
@@ -267,6 +296,18 @@ public partial class MemoBoard : MonoBehaviour
         {
             if (holder == null)
                 continue;
+            if (m.id == representativeId)
+            {
+                // 대표 사진: 두 줄을 가로질러 맨 위에 크게
+                float rw = width - pad * 2f - border * 2f, rh = rw * 0.72f;
+                holder.anchoredPosition = new Vector2(width * 0.5f, -(70f + rh * 0.5f + border));
+                holder.sizeDelta = new Vector2(rw, rh) + Vector2.one * border * 2f;
+                holder.localRotation = Quaternion.Euler(0f, 0f, -1.5f);
+                float below = 70f + rh + border * 2f + 30f;
+                heights[0] = below;
+                heights[1] = below + 60f;
+                continue;
+            }
             var rng = new System.Random(StableHash(m.id));
             int col = heights[0] <= heights[1] ? 0 : 1;
             float aspect = m.HasPhoto ? aspects[rng.Next(aspects.Length)] : 1f;
@@ -347,6 +388,19 @@ public partial class MemoBoard : MonoBehaviour
 
         if (hide)
             LockMark(paper.transform);
+        if (m.id == representativeId)
+        {
+            // "★ 이번 주 대표 사진" 띠
+            Image crown = UIKit.Image(holder, "Representative", new Color(0.96f, 0.72f, 0.18f));
+            crown.sprite = HudIcons.Pill;
+            crown.type = Image.Type.Sliced;
+            crown.pixelsPerUnitMultiplier = 120f / 64f;
+            Place(crown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 30f));
+            crown.rectTransform.sizeDelta = new Vector2(360f, 64f);
+            Text ct = UIKit.Text(crown.transform, $"★ 이번 주 대표 사진  ·  ♥ {m.likeCount}", 28, TextAnchor.MiddleCenter, Color.white);
+            ct.fontStyle = FontStyle.Bold;
+            UIKit.Stretch(ct.rectTransform);
+        }
         if (m.IsPending)
         {
             // 검토 대기: 나에게만 보이는 사진이라는 표시
@@ -453,6 +507,8 @@ public partial class MemoBoard : MonoBehaviour
             {
                 m.likeCount = count;
                 m.likedByMe = likedByMe;
+                if (like && !IsMine(m.id))
+                    Quests.Report("like_other", 1, m.id); // 같은 사진은 한 번만 센다
             }
             if (viewerMemo == m)
                 RefreshLike();

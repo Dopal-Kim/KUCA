@@ -304,7 +304,9 @@ public class RoutePlanner : MonoBehaviour
             if (spot == null || !spot.InRange) continue;
             done[i] = true;
             MarkDone(i);
-            Toast(done.TrueForAll(x => x) ? "코스 완주! 수고했어요" : $"{route.stops[i].name} 도착!");
+            bool finished = done.TrueForAll(x => x);
+            Toast(finished ? "코스 완주! 수고했어요" : $"{route.stops[i].name} 도착!");
+            if (finished) Quests.Report("course_done");
         }
     }
 

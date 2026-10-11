@@ -533,6 +533,10 @@ public class GameHUD : MonoBehaviour
         Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         Image face = Circle(ring.transform, "Face", Color.white, size - 12f);
         Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        // 받을 퀘스트 보상이 있으면 빨간 점
+        menuBadge = Circle(root, "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
+        Place(menuBadge.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(size * 0.36f, size * 0.36f));
+        menuBadge.gameObject.SetActive(false);
 
         if (logo != null)
         {
@@ -674,7 +678,15 @@ public class GameHUD : MonoBehaviour
         xpPopupTimer = 1.8f;
     }
 
-    Image albumBadge;
+    Image albumBadge, menuBadge;
+
+    /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
+    public void SetMenuBadge(bool on)
+    {
+        if (menuBadge == null) return;
+        menuBadge.gameObject.SetActive(on);
+        menuBadge.transform.SetAsLastSibling();
+    }
 
     /// <summary>사진첩 버튼의 새 반응 점</summary>
     public void SetAlbumBadge(bool on)

@@ -41,7 +41,9 @@ public class HatchScreen : MonoBehaviour
         nameText.text = CreatureLibrary.NameOf(species);
         tierText.text = CreatureLibrary.TierLabel(tier);
         tierText.color = CreatureLibrary.TierColor(tier);
-        info.text = $"도감에 등록됐어요  ·  오늘 {hatchedToday}/{GameProgress.EggsPerDay}";
+        info.text = hatchedToday < 0
+            ? "도감에 등록됐어요  ·  퀘스트 보상"
+            : $"도감에 등록됐어요  ·  오늘 {hatchedToday}/{GameProgress.EggsPerDay}";
         UIInputBlocker.SetModal(this, true);
         StartCoroutine(Animate());
     }

@@ -233,6 +233,14 @@ public static class HudIcons
         p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
     });
 
+    /// <summary>퀘스트 (깃발)</summary>
+    public static Sprite Quest => Cached("quest", 128, p =>
+    {
+        p.Segment(34, 14, 34, 114, 10f);
+        p.Polygon(Color.white, new Vector2(38, 112), new Vector2(108, 92), new Vector2(38, 66));
+        p.Circle(34, 14, 9f);
+    });
+
     /// <summary>알 (아래가 둥글고 위가 좁은 달걀 모양) — 걷기 보상</summary>
     public static Sprite Egg => Cached("egg", 128, p =>
     {

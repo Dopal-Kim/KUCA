@@ -12,7 +12,7 @@ using UnityEngine.UI;
 /// - 프로필 (프로필 사진을 누르면): 캐릭터와 파트너, 레벨, 메뉴 4개, 활동 기록
 /// 걷은 거리와 방문한 경희스팟도 여기서 기록한다. GameHUD 가 같은 캔버스에 만든다.
 /// </summary>
-public class KhuMenus : MonoBehaviour
+public partial class KhuMenus : MonoBehaviour
 {
     public enum Tab { Dex, Monsters, Items }
 
@@ -124,6 +124,7 @@ public class KhuMenus : MonoBehaviour
         BuildProfile();
         BuildListPopup();
         BuildScrapbook();
+        BuildQuests();
     }
 
     void Start()
@@ -145,11 +146,13 @@ public class KhuMenus : MonoBehaviour
             RefreshBuddy();
         }
         OnProgressChanged(progress, types);
+        InitQuests();
     }
 
     void OnDestroy()
     {
-        foreach (var s in new[] { mainMenu, collection, profile })
+        OnDestroy_Quests();
+        foreach (var s in new[] { mainMenu, collection, profile, questScreen })
             UIInputBlocker.SetModal(s, false);
         if (profileTexture != null)
             profileTexture.Release();
@@ -199,9 +202,10 @@ public class KhuMenus : MonoBehaviour
     // ---------- 걷기 보상: 알 부화 (B-3) ----------
 
     /// <summary>알을 깨워 경희몬 한 마리를 도감에 넣고 부화 연출을 보여 준다.</summary>
-    void HatchEgg()
+    /// <param name="questReward">퀘스트 보상 알: 걷기 알과 별개라 하루 상한·게이지에 영향이 없다</param>
+    void HatchEgg(bool questReward = false)
     {
-        if (collect == null || spawner == null || !progress.EggReady)
+        if (collect == null || spawner == null || (!questReward && !progress.EggReady))
             return;
         string tier = GameProgress.RollEggTier(UnityEngine.Random.value);
         IReadOnlyList<string> pool = CreatureLibrary.SpeciesOfTier(tier);
@@ -209,10 +213,11 @@ public class KhuMenus : MonoBehaviour
         if (pool == null || pool.Count == 0 || type == null)
             return;
         string species = pool[UnityEngine.Random.Range(0, pool.Count)];
-        progress.MarkHatched();
-        collect.CompleteCatch(type, null, "", species); // 도감·XP·저장·토스트는 잡을 때와 같다
+        if (!questReward)
+            progress.MarkHatched();
+        collect.CompleteCatch(type, null, "", species, countForQuests: false); // 도감·XP·저장·토스트는 잡을 때와 같다
         hud?.ShowEgg(progress);
-        hud?.ShowHatch(species, tier, progress.HatchedToday);
+        hud?.ShowHatch(species, tier, questReward ? -1 : progress.HatchedToday);
     }
 
     // ---------- 활동 기록 (걸은 거리, 방문한 경희스팟) ----------
@@ -239,6 +244,7 @@ public class KhuMenus : MonoBehaviour
                 {
                     progress.walkedMeters += d;
                     progress.AddEggDistance(d);
+                    Quests.Report("walk", Mathf.RoundToInt(d));
                     dirty = true;
                     hud?.ShowEgg(progress);
                 }
@@ -258,6 +264,8 @@ public class KhuMenus : MonoBehaviour
                 if (s == null || !s.InRange || s.Building == null)
                     continue;
                 progress.VisitSpot(s.Building.buildingId, out bool isNew);
+                Quests.Report("visit_spot", 1, s.Building.buildingId); // 이번 주 들른 스팟 (스팟마다 한 번)
+                if (isNew) Quests.Report("visit_new");
                 if (isNew)
                 {
                     dirty = true;
@@ -294,9 +302,13 @@ public class KhuMenus : MonoBehaviour
     void BuildMainMenu()
     {
         mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-250f, 330f), () => OpenCollection(Tab.Dex));
-        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(0f, 600f), () => OpenCollection(Tab.Monsters));
-        MenuButton(inner, "도구", HudIcons.Bag, new Vector2(250f, 330f), () => OpenCollection(Tab.Items));
+        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-330f, 300f), () => OpenCollection(Tab.Dex));
+        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-125f, 600f), () => OpenCollection(Tab.Monsters));
+        MenuButton(inner, "퀘스트", HudIcons.Quest, new Vector2(125f, 600f), OpenQuests);
+        MenuButton(inner, "도구", HudIcons.Bag, new Vector2(330f, 300f), () => OpenCollection(Tab.Items));
+        questMenuBadge = Circle(menuButtons[menuButtons.Count - 2], "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
+        Place(questMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-18f, 180f));
+        questMenuBadge.gameObject.SetActive(false);
         CloseFab(inner, () => Show(mainMenu, false), filled: false, MenuNavy);
     }
 

@@ -153,7 +153,8 @@ public class CollectController : MonoBehaviour
 
     /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.
     /// speciesId: 동물 캐릭터면 그 id (도감 기록용), 아니면 null.</summary>
-    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null)
+    /// <param name="countForQuests">알에서 깨어난 경희몬은 "잡기" 퀘스트에 세지 않는다</param>
+    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null, bool countForQuests = true)
     {
         speciesId ??= target != null ? target.SpeciesId : null;
         GameProgress.Caught caught = Progress.Add(type, photoFile);
@@ -163,6 +164,8 @@ public class CollectController : MonoBehaviour
             Progress.AddSpecies(speciesId);
         }
         Progress.Save();
+        if (countForQuests)
+            Quests.Report("catch", 1, type.id);
         string name = CreatureLibrary.NameOf(speciesId);
         hud?.Toast($"{name} 획득!  쿠옹력 {caught.cp}  ·  +{type.points} XP");
         hud?.ShowProgress(Progress, spawner.types);
