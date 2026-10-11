@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 #if ENABLE_INPUT_SYSTEM
 using UnityEngine.InputSystem;
@@ -75,14 +76,30 @@ public class CollectController : MonoBehaviour
             HandleTap(screenPos);
     }
 
+    // UI(버튼·패널) 위에서 시작한 터치. 손을 뗄 때는 그 UI 가 이미 닫혀 없을 수 있어서 누른 순간에 기록해 둔다.
+    readonly HashSet<int> touchesStartedOnUI = new HashSet<int>();
+    bool mouseStartedOnUI;
+
+    static bool PointerOverUI(int pointerId) =>
+        UnityEngine.EventSystems.EventSystem.current != null && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(pointerId);
+
     bool TryGetTap(out Vector2 pos)
     {
         pos = default;
 #if ENABLE_INPUT_SYSTEM
         foreach (Touch t in Touch.activeTouches)
         {
+            if (t.phase == UnityEngine.InputSystem.TouchPhase.Began)
+            {
+                if (PointerOverUI(t.touchId) || !UIInputBlocker.AllowsGameInput(t.screenPosition))
+                    touchesStartedOnUI.Add(t.touchId);
+                else
+                    touchesStartedOnUI.Remove(t.touchId);
+            }
             if (t.phase != UnityEngine.InputSystem.TouchPhase.Ended)
                 continue;
+            if (touchesStartedOnUI.Remove(t.touchId))
+                continue; // UI 를 누른 손가락이다
             if (Touch.activeTouches.Count > 1)
                 return false;
             float moved = (t.screenPosition - t.startScreenPosition).magnitude;
@@ -95,8 +112,12 @@ public class CollectController : MonoBehaviour
         }
 
         Mouse mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+            mouseStartedOnUI = PointerOverUI(-1) || !UIInputBlocker.AllowsGameInput(mouse.position.ReadValue());
         if (Touch.activeTouches.Count == 0 && mouse != null && mouse.leftButton.wasReleasedThisFrame)
         {
+            if (mouseStartedOnUI)
+                return false;
             pos = mouse.position.ReadValue();
             return true;
         }
@@ -153,7 +174,8 @@ public class CollectController : MonoBehaviour
 
     /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.
     /// speciesId: 동물 캐릭터면 그 id (도감 기록용), 아니면 null.</summary>
-    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null)
+    /// <param name="countForQuests">알에서 깨어난 경희몬은 "잡기" 퀘스트에 세지 않는다</param>
+    public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null, bool countForQuests = true)
     {
         speciesId ??= target != null ? target.SpeciesId : null;
         GameProgress.Caught caught = Progress.Add(type, photoFile);
@@ -163,6 +185,8 @@ public class CollectController : MonoBehaviour
             Progress.AddSpecies(speciesId);
         }
         Progress.Save();
+        if (countForQuests)
+            Quests.Report("catch", 1, type.id);
         string name = CreatureLibrary.NameOf(speciesId);
         hud?.Toast($"{name} 획득!  쿠옹력 {caught.cp}  ·  +{type.points} XP");
         hud?.ShowProgress(Progress, spawner.types);

@@ -90,6 +90,23 @@ public class GameProgress
         eggMeters = 0f;
     }
 
+    // ---------- 퀘스트 (B-5): 매일 3개 + 주간 1개. 정의는 Quests.cs ----------
+    [Serializable]
+    public class QuestState
+    {
+        public string id;
+        public int progress;
+        public bool claimed;
+        /// <summary>한 번만 세야 하는 대상 (좋아요 누른 메모 id, 들른 스팟 id)</summary>
+        public List<string> seen = new List<string>();
+    }
+    /// <summary>오늘의 퀘스트를 뽑은 날 (yyyyMMdd)</summary>
+    public string questDay = "";
+    /// <summary>이번 주 퀘스트를 뽑은 주 (그 주 월요일 yyyyMMdd)</summary>
+    public string questWeek = "";
+    public List<QuestState> dailyQuests = new List<QuestState>();
+    public List<QuestState> weeklyQuests = new List<QuestState>();
+
     /// <summary>깨어날 등급: 초록 70% · 파랑 25% · 황금 5%</summary>
     public static string RollEggTier(float r) => r < 0.70f ? "sprout" : r < 0.95f ? "crystal" : "star";
 
@@ -201,6 +218,12 @@ public class GameProgress
         items ??= new List<Entry>();
         visitedSpots ??= new List<string>();
         eggDay ??= "";
+        questDay ??= "";
+        questWeek ??= "";
+        dailyQuests ??= new List<QuestState>();
+        weeklyQuests ??= new List<QuestState>();
+        foreach (QuestState q in dailyQuests) q.seen ??= new List<string>();
+        foreach (QuestState q in weeklyQuests) q.seen ??= new List<string>();
         eggMeters = Mathf.Clamp(eggMeters, 0f, EggMeters);
         foreach (Entry e in collected)
         {
