@@ -169,6 +169,10 @@ public partial class MemoBoard : MonoBehaviour
     {
         EnsureService();
         building = target;
+        locked = !IsVisited(target);
+        lockedCount = 0;
+        album.SetActive(false);
+        albumMode = false;
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
         title.text = target.DisplayName;
@@ -216,6 +220,7 @@ public partial class MemoBoard : MonoBehaviour
                 return;
             }
             listStatus.gameObject.SetActive(false);
+            lockedCount = locked ? memos.Count : 0;
             currentMemos.Clear();
             currentMemos.AddRange(memos);
             LayoutCollage(memos);
@@ -298,12 +303,22 @@ public partial class MemoBoard : MonoBehaviour
         UIKit.Stretch(paper.rectTransform);
         var b = paper.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => OpenViewer(m));
+        bool hide = locked; // 가 보지 않은 스팟: 흐리게만 보이고 열리지 않는다 (B-2)
+        b.onClick.AddListener(() =>
+        {
+            if (hide) ShowToast("이 경희스팟에 가 보면 쪽지가 열려요");
+            else OpenViewer(m);
+        });
         paper.gameObject.AddComponent<PressScale>();
 
         if (!m.HasPhoto)
         {
-            // 사진이 없는 예전 메모는 쪽지처럼
+            // 사진이 없는 예전 메모는 쪽지처럼 (가려졌으면 글 대신 자물쇠)
+            if (hide)
+            {
+                LockMark(paper.transform);
+                return holder;
+            }
             Text t = UIKit.Text(paper.transform, Clip(m.text, 60), 32, TextAnchor.UpperLeft, Ink);
             UIKit.Stretch(t.rectTransform, border + 18f, border + 18f);
             t.verticalOverflow = VerticalWrapMode.Truncate;
@@ -327,6 +342,8 @@ public partial class MemoBoard : MonoBehaviour
         var fit = go.GetComponent<AspectRatioFitter>();
         fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
+        if (hide)
+            LockMark(paper.transform);
         if (m.IsPending)
         {
             // 검토 대기: 나에게만 보이는 사진이라는 표시
@@ -345,7 +362,16 @@ public partial class MemoBoard : MonoBehaviour
             if (raw == null || tex == null)
                 return;
             // 내려받은 사진만 나중에 지운다 (예시 사진은 에셋이라 지우면 안 됨)
-            if (!m.photoUrl.StartsWith("resource://")) loadedPhotos.Add(tex);
+            bool asset = m.photoUrl.StartsWith("resource://");
+            if (hide)
+            {
+                Texture2D blurred = Blurred(tex);
+                if (!asset) Destroy(tex);
+                tex = blurred;
+                loadedPhotos.Add(tex);
+                raw.color = new Color(0.85f, 0.85f, 0.85f);
+            }
+            else if (!asset) loadedPhotos.Add(tex);
             raw.texture = tex;
             raw.enabled = true;
             fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
@@ -582,6 +608,13 @@ public partial class MemoBoard : MonoBehaviour
             return;
         if (stickers.Count > 0 && Mathf.Abs(((RectTransform)collageScroll.viewport).rect.width - laidOutWidth) > 1f)
             Relayout();
+        // 메모판을 연 채로 걸어서 스팟에 들어오면 (방문 기록이 생기면) 바로 연다.
+        if (locked && building != null && IsVisited(building))
+        {
+            locked = false;
+            ShowToast("쪽지가 열렸어요!");
+            Reload();
+        }
         // 걸어서 가까워지면 바로 쓰기 버튼이 켜지도록 매 프레임 확인한다.
         UpdateWriteState();
     }
@@ -590,8 +623,12 @@ public partial class MemoBoard : MonoBehaviour
     {
         canWrite = CanWrite(out float d);
         writeButtonFace.color = canWrite ? Ink : new Color(Ink.r, Ink.g, Ink.b, 0.35f);
-        writeHint.transform.parent.gameObject.SetActive(!canWrite);
-        if (!canWrite)
+        writeHint.transform.parent.gameObject.SetActive(!canWrite || locked);
+        if (locked)
+            writeHint.text = lockedCount > 0
+                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"
+                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m";
+        else if (!canWrite)
             writeHint.text = $"경희스팟까지 {d:F0}m  ·  {spots.interactRadius:F0}m 안에서 사진을 남길 수 있어요";
     }
 
