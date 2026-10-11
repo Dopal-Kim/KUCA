@@ -302,10 +302,11 @@ public partial class KhuMenus : MonoBehaviour
     void BuildMainMenu()
     {
         mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-330f, 300f), () => OpenCollection(Tab.Dex));
-        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-125f, 600f), () => OpenCollection(Tab.Monsters));
-        MenuButton(inner, "퀘스트", HudIcons.Quest, new Vector2(125f, 600f), OpenQuests);
-        MenuButton(inner, "도구", HudIcons.Bag, new Vector2(330f, 300f), () => OpenCollection(Tab.Items));
+        // 2×2 바둑판: 위 줄 경희몬·퀘스트, 아래 줄 도감·도구 (닫기 버튼 위 가운데에 모아 균형 있게)
+        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
+        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
+        MenuButton(inner, "퀘스트", HudIcons.Quest, new Vector2(160f, 600f), OpenQuests);
+        MenuButton(inner, "도구", HudIcons.Bag, new Vector2(160f, 270f), () => OpenCollection(Tab.Items));
         questMenuBadge = Circle(menuButtons[menuButtons.Count - 2], "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
         Place(questMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-18f, 180f));
         questMenuBadge.gameObject.SetActive(false);
