@@ -31,6 +31,38 @@ cd server
 - 기본 요금제 F1(무료)은 한동안 안 쓰면 잠들어서 첫 요청이 느립니다. 항상 켜 두려면 `SKU=B1` 로 만듭니다(크레딧 차감).
 - 앱에서는 설정 › 메모 서버에 위 주소를 넣습니다.
 
+## 산책 추천 AI (챗쿠) 키 넣기
+
+`POST /api/recommendations` 는 챗쿠 AI 로 코스를 짭니다.
+- 키가 없으면 가까운 경희스팟부터 고르는 규칙 추천(`source: "fallback"`)으로 동작합니다.
+- **키는 저장소(appsettings.json)에 넣지 않습니다.**
+
+| 설정 | 뜻 |
+| --- | --- |
+| `Recommend:Endpoint` | 채팅 API 전체 주소. 기본값: 챗쿠(BAZE) 게이트웨이 `https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions` |
+| `Recommend:ApiKey` | API 키 (BAZE › API Gateway 에서 발급). **이것만 넣으면 된다** |
+| `Recommend:Model` | 모델 이름. 기본값 `gpt-5.4-mini` (게이트웨이 `/models/` 의 다른 ID 로 바꿀 수 있음) |
+| `Recommend:AuthHeader` | 키를 보낼 헤더. 기본 `Authorization` |
+| `Recommend:AuthScheme` | 헤더 값 앞말. 기본 `Bearer`, 키만 보내려면 빈 값 |
+
+로컬 (`server/KucaMemoServer` 폴더에서):
+
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "Recommend:ApiKey" "발급받은 키"
+```
+
+Azure:
+
+```bash
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__ApiKey="발급받은 키"
+```
+
+- 챗쿠(BAZE) 게이트웨이는 OpenAI 호환입니다. 요청은 `{ model, messages }`, 답은 `choices[0].message.content` 입니다.
+- 키는 `Authorization: Bearer` 로 보냅니다.
+- 실측: `gpt-5.4-mini` 는 약 3초, `gemini-3.5-flash` 는 약 11초 걸렸습니다.
+- 사용량은 키를 만든 BAZE 계정에 청구됩니다.
+
 ## 테스트
 
 ```bash
