@@ -13,6 +13,10 @@ public class MemoData
     public string photoUrl;
     /// <summary>ISO 8601 UTC 문자열</summary>
     public string createdAt;
+    /// <summary>좋아요 수</summary>
+    public int likeCount;
+    /// <summary>이 기기가 좋아요를 눌렀는지 (목록을 X-Device-Id 와 함께 받았을 때만 채워짐)</summary>
+    public bool likedByMe;
 
     public bool HasPhoto => !string.IsNullOrEmpty(photoUrl);
 

@@ -384,7 +384,7 @@ public class GameHUD : MonoBehaviour
         {
             ("Compass", null, () => { if (cameraFollow != null) cameraFollow.ResetNorthUp(); }),
             ("Items", HudIcons.Bag, () => menus.OpenCollection(KhuMenus.Tab.Items)),
-            ("Customize", HudIcons.Shirt, OpenCustomizer),
+            ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),
         };
         for (int i = 0; i < buttons.Length; i++)
@@ -610,6 +610,13 @@ public class GameHUD : MonoBehaviour
         xpPopup.gameObject.SetActive(true);
         xpPopup.alpha = 1f;
         xpPopupTimer = 1.8f;
+    }
+
+    /// <summary>내 사진첩 (내가 메모판에 올린 사진들)</summary>
+    void OpenAlbum()
+    {
+        var board = FindAnyObjectByType<MemoBoard>();
+        if (board != null) board.OpenAlbum();
     }
 
     void OpenCustomizer()
