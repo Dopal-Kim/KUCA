@@ -17,6 +17,14 @@ public class MockMemoService : IMemoService
         public bool seeded;
         public List<MemoData> memos = new List<MemoData>();
         public List<string> owners = new List<string>(); // memos 와 같은 순서의 작성 기기 ID
+        public List<Like> likes = new List<Like>();
+    }
+
+    [Serializable]
+    class Like
+    {
+        public string memoId;
+        public string deviceId;
     }
 
     static string Dir => Path.Combine(Application.persistentDataPath, "mock_memos");
@@ -58,12 +66,46 @@ public class MockMemoService : IMemoService
         }
     }
 
-    public IEnumerator GetMemos(string buildingId, Action<List<MemoData>, string> onDone)
+    public IEnumerator GetMemos(string buildingId, string deviceId, Action<List<MemoData>, string> onDone)
     {
         yield return null; // 네트워크처럼 한 프레임 쉰다
+        Data.likes ??= new List<Like>();
         var list = Data.memos.FindAll(m => m.buildingId == buildingId);
         list.Sort((a, b) => string.CompareOrdinal(b.createdAt, a.createdAt));
+        foreach (MemoData m in list)
+        {
+            m.likeCount = Data.likes.FindAll(l => l.memoId == m.id).Count;
+            m.likedByMe = !string.IsNullOrEmpty(deviceId) && Data.likes.Exists(l => l.memoId == m.id && l.deviceId == deviceId);
+        }
         onDone(list, null);
+    }
+
+    public IEnumerator GetMemo(string memoId, string deviceId, Action<MemoData, string> onDone)
+    {
+        yield return null;
+        Data.likes ??= new List<Like>();
+        MemoData m = Data.memos.Find(x => x.id == memoId);
+        if (m == null) { onDone(null, "메모가 없습니다."); yield break; }
+        m.likeCount = Data.likes.FindAll(l => l.memoId == m.id).Count;
+        m.likedByMe = !string.IsNullOrEmpty(deviceId) && Data.likes.Exists(l => l.memoId == m.id && l.deviceId == deviceId);
+        onDone(m, null);
+    }
+
+    public string PublicPhotoUrl(MemoData memo) => null;
+    public string PublicPageUrl(string buildingId) => null;
+
+    public IEnumerator SetLike(string memoId, string deviceId, bool like, Action<int, bool, string> onDone)
+    {
+        yield return null;
+        Data.likes ??= new List<Like>();
+        if (!Data.memos.Exists(m => m.id == memoId)) { onDone(0, false, "메모가 없습니다."); yield break; }
+        bool mine = Data.likes.Exists(l => l.memoId == memoId && l.deviceId == deviceId);
+        if (like && !mine)
+            Data.likes.Add(new Like { memoId = memoId, deviceId = deviceId });
+        else if (!like)
+            Data.likes.RemoveAll(l => l.memoId == memoId && l.deviceId == deviceId);
+        Save();
+        onDone(Data.likes.FindAll(l => l.memoId == memoId).Count, like, null);
     }
 
     public IEnumerator CreateMemo(string buildingId, NewMemo memo, Action<MemoData, string> onDone)
@@ -105,6 +147,7 @@ public class MockMemoService : IMemoService
             File.Delete(photo);
         Data.memos.RemoveAt(i);
         Data.owners.RemoveAt(i);
+        Data.likes?.RemoveAll(l => l.memoId == memoId);
         Save();
         onDone(true, null);
     }

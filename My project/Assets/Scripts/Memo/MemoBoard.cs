@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// - 새 게시물: 사진 + 캡션 + 닉네임 + 위치를 넣어 공유한다 (SNS 새 게시물 화면처럼).
 /// serverUrl 이 비어 있으면 기기 안의 가짜 서버(MockMemoService)를 쓴다.
 /// </summary>
-public class MemoBoard : MonoBehaviour
+public partial class MemoBoard : MonoBehaviour
 {
     public CollectController collectController;
     public PhotoCaptureScreen photoCapture;
@@ -48,6 +48,7 @@ public class MemoBoard : MonoBehaviour
     static readonly Color Chip = new Color(0.94f, 0.95f, 0.96f);
     static readonly Color ShareBlue = new Color(0.29f, 0.37f, 0.98f);
     static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
+    static readonly Color LikeRed = new Color(0.93f, 0.25f, 0.33f);
 
     IMemoService service;
     string serviceUrl;
@@ -72,10 +73,22 @@ public class MemoBoard : MonoBehaviour
     KyungHeeSpot currentSpot;
     bool canWrite;
 
-    // 크게 보기
+    // 게시물 보기 (인스타그램 게시물처럼: 작성자 · 사진 · 좋아요 · 캡션)
     RawImage viewerPhoto;
+    Image viewerAvatar, viewerHeart;
+    Text viewerAvatarLetter, viewerAuthor, viewerLikes;
+    bool liking;
+    LayoutElement viewerPhotoSize;
+    Button viewerShare;
+
+    // 작성자 프로필 (이 장소에 그 사람이 남긴 게시물)
+    GameObject profile;
+    Image profileAvatar;
+    Text profileLetter, profileName, profileCount, profileEmpty;
+    RectTransform profileGrid;
+    readonly List<MemoData> currentMemos = new List<MemoData>();
     AspectRatioFitter viewerFitter;
-    Text viewerMeta, viewerText;
+    Text viewerText;
     Button viewerDelete;
     MemoData viewerMemo;
 
@@ -167,6 +180,10 @@ public class MemoBoard : MonoBehaviour
     {
         root.SetActive(false);
         viewer.SetActive(false);
+        profile.SetActive(false);
+        album.SetActive(false);
+        albumMode = false;
+        CloseShare();
         UIInputBlocker.SetModal(this, false);
         ClearList();
     }
@@ -188,7 +205,7 @@ public class MemoBoard : MonoBehaviour
         listStatus.text = "불러오는 중…";
         listStatus.gameObject.SetActive(true);
         string requested = building.buildingId;
-        StartCoroutine(service.GetMemos(requested, (memos, error) =>
+        StartCoroutine(service.GetMemos(requested, DeviceId, (memos, error) =>
         {
             if (building == null || building.buildingId != requested || !root.activeSelf)
                 return;
@@ -199,6 +216,8 @@ public class MemoBoard : MonoBehaviour
                 return;
             }
             listStatus.gameObject.SetActive(false);
+            currentMemos.Clear();
+            currentMemos.AddRange(memos);
             LayoutCollage(memos);
         }));
     }
@@ -329,10 +348,16 @@ public class MemoBoard : MonoBehaviour
         viewerMemo = m;
         viewerPhoto.texture = null;
         viewerPhoto.enabled = false;
-        viewerMeta.text = $"{m.author}  ·  {FormatTime(m.CreatedAtLocal)}";
-        viewerText.text = m.text;
+        SetAvatar(viewerAvatar, viewerAvatarLetter, m.author);
+        viewerAuthor.text = $"<b>{Escape(m.author)}</b>\n<size=26><color=#8C8C91>{FormatTime(m.CreatedAtLocal)}</color></size>";
+        viewerText.text = $"<b>{Escape(m.author)}</b>  {Escape(m.text)}";
         viewerDelete.gameObject.SetActive(IsMine(m.id));
+        viewerShare.gameObject.SetActive(albumMode && IsMine(m.id) && m.HasPhoto);
+        RefreshLike();
         viewer.SetActive(true);
+        viewer.transform.SetAsLastSibling();
+        Canvas.ForceUpdateCanvases();
+        viewerPhotoSize.preferredHeight = viewerPhotoSize.minHeight = ((RectTransform)viewerPhotoSize.transform).rect.width;
         if (m.HasPhoto)
             StartCoroutine(service.LoadPhoto(m, (tex, error) =>
             {
@@ -344,6 +369,156 @@ public class MemoBoard : MonoBehaviour
                 viewerFitter.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
             }));
     }
+
+    void RefreshLike()
+    {
+        if (viewerMemo == null)
+            return;
+        viewerHeart.sprite = viewerMemo.likedByMe ? HudIcons.Heart : HudIcons.HeartOutline;
+        viewerHeart.color = viewerMemo.likedByMe ? LikeRed : Ink;
+        viewerLikes.text = viewerMemo.likeCount > 0 ? $"좋아요 {viewerMemo.likeCount:N0}개" : "가장 먼저 좋아요를 눌러 보세요";
+    }
+
+    /// <summary>하트: 화면을 먼저 바꾸고(빠른 반응) 서버 응답으로 맞춘다. 실패하면 되돌린다.</summary>
+    void ToggleLike()
+    {
+        MemoData m = viewerMemo;
+        if (m == null || liking)
+            return;
+        bool like = !m.likedByMe;
+        int before = m.likeCount;
+        m.likedByMe = like;
+        m.likeCount = Mathf.Max(0, before + (like ? 1 : -1));
+        RefreshLike();
+        viewerHeart.transform.localScale = Vector3.one * 1.35f; // PressScale 이 원래 크기로 되돌리며 톡 튄다
+        liking = true;
+        StartCoroutine(service.SetLike(m.id, DeviceId, like, (count, likedByMe, error) =>
+        {
+            liking = false;
+            if (error != null)
+            {
+                m.likedByMe = !like;
+                m.likeCount = before;
+                ShowToast(error);
+            }
+            else
+            {
+                m.likeCount = count;
+                m.likedByMe = likedByMe;
+            }
+            if (viewerMemo == m)
+                RefreshLike();
+        }));
+    }
+
+    // ---------- 작성자 프로필 ----------
+
+    void OpenProfile(string author)
+    {
+        SetAvatar(profileAvatar, profileLetter, author);
+        profileName.text = author;
+        profile.SetActive(true);
+        ClearGrid(profileGrid);
+        var posts = currentMemos.FindAll(x => x.author == author && x.HasPhoto);
+        string where = albumMode ? "게시물" : "이 장소의 게시물";
+        profileCount.text = $"<b>{posts.Count}</b>\n<size=28>{where}</size>";
+        profileEmpty.text = posts.Count == 0 ? (albumMode ? "올린 사진이 없어요" : "이 장소에 남긴 사진이 없어요") : "";
+        foreach (MemoData m in posts)
+        {
+            MemoData memo = m;
+            AddGridPhoto(profileGrid, m, () =>
+            {
+                profile.SetActive(false);
+                OpenViewer(memo);
+            });
+        }
+        profile.SetActive(true);
+        profile.transform.SetAsLastSibling();
+    }
+
+    /// <summary>사진 격자를 비우고, 칸 크기를 지금 너비의 1/3 로 맞춘다 (격자가 켜진 상태에서 부른다).</summary>
+    static void ClearGrid(RectTransform grid)
+    {
+        for (int i = grid.childCount - 1; i >= 0; i--)
+        {
+            Transform old = grid.GetChild(i);
+            old.SetParent(null, false); // Destroy 는 프레임 끝이라, 격자에서 먼저 뺀다
+            Destroy(old.gameObject);
+        }
+        Canvas.ForceUpdateCanvases();
+        var g = grid.GetComponent<GridLayoutGroup>();
+        float side = Mathf.Floor((grid.rect.width - g.spacing.x * 2f) / 3f);
+        g.cellSize = new Vector2(side, side);
+    }
+
+    /// <summary>격자에 정사각형 사진 칸 하나 (누르면 onClick)</summary>
+    void AddGridPhoto(RectTransform grid, MemoData m, UnityEngine.Events.UnityAction onClick)
+    {
+        Image cell = UIKit.Image(grid, m.id, PaperDark, raycast: true);
+        cell.gameObject.AddComponent<RectMask2D>();
+        var b = cell.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+        go.transform.SetParent(cell.transform, false);
+        var raw = go.GetComponent<RawImage>();
+        raw.raycastTarget = false;
+        raw.enabled = false;
+        var fit = go.GetComponent<AspectRatioFitter>();
+        fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+        StartCoroutine(service.LoadPhoto(m, (tex, error) =>
+        {
+            if (raw == null || tex == null)
+                return;
+            if (!m.photoUrl.StartsWith("resource://")) loadedPhotos.Add(tex);
+            raw.texture = tex;
+            raw.enabled = true;
+            fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
+        }));
+    }
+
+    /// <summary>area 를 채우는 세로 스크롤 3열 사진 격자 (돌려주는 것은 칸이 들어갈 Content)</summary>
+    static RectTransform BuildGrid(RectTransform area)
+    {
+        var scroll = area.gameObject.AddComponent<ScrollRect>();
+        scroll.horizontal = false;
+        RectTransform viewport = UIKit.Rect(area, "Viewport");
+        UIKit.Stretch(viewport);
+        viewport.gameObject.AddComponent<RectMask2D>();
+        viewport.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
+        RectTransform content = UIKit.Rect(viewport, "Content");
+        content.anchorMin = new Vector2(0f, 1f);
+        content.anchorMax = new Vector2(1f, 1f);
+        content.pivot = new Vector2(0.5f, 1f);
+        content.offsetMin = content.offsetMax = Vector2.zero;
+        var g = content.gameObject.AddComponent<GridLayoutGroup>();
+        g.cellSize = new Vector2(330f, 330f);
+        g.spacing = new Vector2(6f, 6f);
+        g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        g.constraintCount = 3;
+        g.childAlignment = TextAnchor.UpperLeft;
+        content.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.viewport = viewport;
+        scroll.content = content;
+        return content;
+    }
+
+    static readonly Color[] AvatarColors =
+    {
+        new Color(0.91f, 0.45f, 0.42f), new Color(0.98f, 0.66f, 0.30f), new Color(0.40f, 0.72f, 0.45f),
+        new Color(0.33f, 0.62f, 0.90f), new Color(0.60f, 0.47f, 0.86f), new Color(0.86f, 0.44f, 0.66f),
+    };
+
+    /// <summary>프로필 사진 대신 닉네임 첫 글자와, 닉네임마다 정해진 색의 원</summary>
+    static void SetAvatar(Image circle, Text letter, string author)
+    {
+        string name = string.IsNullOrEmpty(author) ? "?" : author.Trim();
+        circle.color = AvatarColors[(StableHash(name) & int.MaxValue) % AvatarColors.Length];
+        letter.text = name.Length > 0 ? name.Substring(0, 1) : "?";
+    }
+
+    /// <summary>리치 텍스트로 넣을 사용자 글자에서 태그 기호를 무력화한다.</summary>
+    static string Escape(string s) => (s ?? "").Replace("<", "‹").Replace(">", "›");
 
     static string FormatTime(DateTime t)
     {
@@ -362,7 +537,8 @@ public class MemoBoard : MonoBehaviour
             if (!ok) { ShowToast(error); return; }
             SetMine(m.id, false);
             viewer.SetActive(false);
-            Reload();
+            if (albumMode) ReloadAlbum();
+            else Reload();
         }));
     }
 
@@ -380,6 +556,8 @@ public class MemoBoard : MonoBehaviour
 
     void Update()
     {
+        if (toast != null && toast.activeSelf && Time.unscaledTime > toastUntil)
+            toast.SetActive(false);
         if (root == null || !root.activeSelf || !listView.activeSelf)
             return;
         if (stickers.Count > 0 && Mathf.Abs(((RectTransform)collageScroll.viewport).rect.width - laidOutWidth) > 1f)
@@ -481,16 +659,56 @@ public class MemoBoard : MonoBehaviour
             UIKit.SetLabel(postButton, "공유하기");
             if (created == null) { writeError.text = error; return; }
             SetMine(created.id, true);
+            Texture2D shot = photoTexture;
+            photoTexture = null; // 공유 창이 쓰고 지운다
             SetPhoto(null, null);
             ShowList();
             ShowToast("사진을 붙였어요!");
+            OpenShare(created, shot, true);
         }));
     }
 
+    /// <summary>안내 문구. 메모판이 열려 있으면 HUD 토스트가 메모판 뒤에 가려지므로 메모판 위에 띄운다.</summary>
     void ShowToast(string message)
     {
+        if (string.IsNullOrEmpty(message))
+            return;
+        Debug.Log("[MemoBoard] " + message);
+        if (root != null && root.activeSelf && toast != null)
+        {
+            toastLabel.text = message;
+            toast.SetActive(true);
+            toast.transform.SetAsLastSibling();
+            toastUntil = Time.unscaledTime + 3.2f;
+            return;
+        }
         var hud = FindAnyObjectByType<GameHUD>();
         if (hud != null) hud.Toast(message);
+    }
+
+    GameObject toast;
+    Text toastLabel;
+    float toastUntil;
+
+    void BuildToast(Transform canvas)
+    {
+        Image bg = UIKit.Image(canvas, "MemoToast", new Color(Ink.r, Ink.g, Ink.b, 0.88f));
+        bg.sprite = HudIcons.Pill;
+        bg.type = Image.Type.Sliced;
+        bg.pixelsPerUnitMultiplier = 120f / 96f;
+        RectTransform r = bg.rectTransform;
+        r.anchorMin = new Vector2(0.06f, 0f);
+        r.anchorMax = new Vector2(0.94f, 0f);
+        r.pivot = new Vector2(0.5f, 0f);
+        r.sizeDelta = new Vector2(0f, 120f);
+        r.anchoredPosition = new Vector2(0f, 200f);
+        toastLabel = UIKit.Text(r, "", 32, TextAnchor.MiddleCenter, Color.white);
+        UIKit.Stretch(toastLabel.rectTransform, 40f, 8f);
+        toastLabel.resizeTextForBestFit = true;
+        toastLabel.resizeTextMinSize = 20;
+        toastLabel.resizeTextMaxSize = 32;
+        toast = bg.gameObject;
+        toast.SetActive(false);
     }
 
     // ---------- 내 메모 기록 (서버는 작성 기기를 알려 주지 않으므로 기기에 따로 적어 둔다) ----------
@@ -534,6 +752,10 @@ public class MemoBoard : MonoBehaviour
         BuildCollageView(safeMin, safeMax);
         BuildWriteView(safeMin, safeMax);
         BuildViewer();
+        BuildProfile();
+        BuildAlbum();
+        BuildShare();
+        BuildToast(canvas);
         root.SetActive(false);
     }
 
@@ -606,45 +828,160 @@ public class MemoBoard : MonoBehaviour
 
     void BuildViewer()
     {
-        viewer = UIKit.Image(root.transform, "Viewer", new Color(0.05f, 0.05f, 0.06f, 0.92f), raycast: true).gameObject;
+        viewer = UIKit.Image(root.transform, "Post", Color.white, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)viewer.transform);
+        Rect sa = Screen.safeArea;
+        RectTransform safe = SafeRect(viewer.transform, "Safe",
+            new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
+            new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
 
-        RectTransform box = UIKit.Rect(viewer.transform, "PhotoBox");
-        box.anchorMin = new Vector2(0f, 0.27f);
-        box.anchorMax = new Vector2(1f, 0.92f);
-        box.offsetMin = new Vector2(40f, 0f);
-        box.offsetMax = new Vector2(-40f, 0f);
-        var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
-        go.transform.SetParent(box, false);
+        // 위: 뒤로 · 장소 이름
+        Button back = RoundButton(safe, "Back", HudIcons.Chevron, 88f, Color.white, Ink, () => viewer.SetActive(false));
+        Place((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
+        back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
+        back.transform.Find("Shadow").GetComponent<Image>().color = Line;
+        Text head = UIKit.Text(safe, "게시물", 38, TextAnchor.MiddleCenter, Ink);
+        head.fontStyle = FontStyle.Bold;
+        TopBox(head.rectTransform, 30f, 88f, 140f);
+        Image hr = UIKit.Image(safe, "Line", Line);
+        TopBox(hr.rectTransform, 140f, 2f, 0f);
+
+        RectTransform area = UIKit.Rect(safe, "Body");
+        UIKit.StretchBetween(area, 0f, 142f);
+        RectTransform body = UIKit.ScrollList(area, 0f, new RectOffset(0, 0, 0, 80));
+
+        // 작성자 줄 (누르면 프로필)
+        Image authorRow = UIKit.Image(body, "Author", new Color(0f, 0f, 0f, 0f), raycast: true);
+        UIKit.Size(authorRow, 130f);
+        var ab = authorRow.gameObject.AddComponent<Button>();
+        ab.transition = Selectable.Transition.None;
+        ab.onClick.AddListener(() => { if (viewerMemo != null) OpenProfile(viewerMemo.author); });
+        viewerAvatar = Avatar(authorRow.transform, 84f, out viewerAvatarLetter);
+        Place(viewerAvatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(36f, 0f));
+        viewerAuthor = UIKit.Text(authorRow.transform, "", 34, TextAnchor.MiddleLeft, Ink);
+        viewerAuthor.rectTransform.anchorMin = Vector2.zero;
+        viewerAuthor.rectTransform.anchorMax = Vector2.one;
+        viewerAuthor.rectTransform.offsetMin = new Vector2(140f, 0f);
+        viewerAuthor.rectTransform.offsetMax = new Vector2(-200f, 0f);
+        viewerDelete = UIKit.Button(authorRow.transform, "삭제", () => { if (viewerMemo != null) Delete(viewerMemo); }, new Color(0f, 0f, 0f, 0f), 30);
+        viewerDelete.GetComponentInChildren<Text>().color = ErrorRed;
+        Place((RectTransform)viewerDelete.transform, new Vector2(1f, 0.5f), new Vector2(-24f, 0f));
+        ((RectTransform)viewerDelete.transform).sizeDelta = new Vector2(150f, 80f);
+
+        // 사진 (가로 꽉, 정사각형으로 잘라 보이기. 높이는 열 때 화면 너비에 맞춘다)
+        RectTransform gap = UIKit.Rect(body, "Gap");
+        UIKit.Size(gap, 20f);
+        RectTransform photoRow = UIKit.Rect(body, "Photo");
+        viewerPhotoSize = UIKit.Size(photoRow, 1000f);
+        photoRow.gameObject.AddComponent<RectMask2D>();
+        Image photoBg = UIKit.Image(photoRow, "Bg", PaperDark);
+        UIKit.Stretch(photoBg.rectTransform);
+        var go = new GameObject("Image", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
+        go.transform.SetParent(photoRow, false);
         viewerPhoto = go.GetComponent<RawImage>();
         viewerPhoto.raycastTarget = false;
         viewerFitter = go.GetComponent<AspectRatioFitter>();
-        viewerFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
+        viewerFitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
-        Image card = UIKit.Image(viewer.transform, "Card", Color.white);
-        card.sprite = HudIcons.TornPaper;
-        card.type = Image.Type.Sliced;
-        RectTransform cr = card.rectTransform;
-        cr.anchorMin = new Vector2(0f, 0.05f);
-        cr.anchorMax = new Vector2(1f, 0.24f);
-        cr.offsetMin = new Vector2(40f, 0f);
-        cr.offsetMax = new Vector2(-40f, 0f);
-        viewerMeta = UIKit.Text(card.transform, "", 30, TextAnchor.UpperLeft, InkQuiet);
-        TopBox(viewerMeta.rectTransform, 40f, 46f, 44f);
-        viewerText = UIKit.Text(card.transform, "", 38, TextAnchor.UpperLeft, Ink);
-        viewerText.rectTransform.anchorMin = Vector2.zero;
-        viewerText.rectTransform.anchorMax = Vector2.one;
-        viewerText.rectTransform.offsetMin = new Vector2(44f, 110f);
-        viewerText.rectTransform.offsetMax = new Vector2(-44f, -100f);
-        viewerText.verticalOverflow = VerticalWrapMode.Truncate;
-        viewerDelete = UIKit.Button(card.transform, "삭제", () => { if (viewerMemo != null) Delete(viewerMemo); }, new Color(0f, 0f, 0f, 0f), 32);
-        viewerDelete.GetComponentInChildren<Text>().color = ErrorRed;
-        Place((RectTransform)viewerDelete.transform, new Vector2(1f, 0f), new Vector2(-30f, 24f));
-        ((RectTransform)viewerDelete.transform).sizeDelta = new Vector2(160f, 80f);
+        // 왼쪽 아래 하트
+        RectTransform actions = UIKit.Rect(body, "Actions");
+        UIKit.Size(actions, 110f);
+        Image hit = UIKit.Image(actions, "Like", new Color(0f, 0f, 0f, 0f), raycast: true);
+        Place(hit.rectTransform, new Vector2(0f, 0.5f), new Vector2(18f, 0f));
+        hit.rectTransform.sizeDelta = new Vector2(100f, 100f);
+        var lb = hit.gameObject.AddComponent<Button>();
+        lb.transition = Selectable.Transition.None;
+        lb.onClick.AddListener(ToggleLike);
+        viewerHeart = UIKit.Image(hit.transform, "Heart", Ink);
+        viewerHeart.sprite = HudIcons.HeartOutline;
+        Place(viewerHeart.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        viewerHeart.rectTransform.sizeDelta = new Vector2(68f, 68f);
+        viewerHeart.gameObject.AddComponent<PressScale>();
+        // 사진첩에서 연 내 게시물은 하트 옆에 공유
+        Image shareHit = UIKit.Image(actions, "Share", new Color(0f, 0f, 0f, 0f), raycast: true);
+        Place(shareHit.rectTransform, new Vector2(0f, 0.5f), new Vector2(122f, 0f));
+        shareHit.rectTransform.sizeDelta = new Vector2(100f, 100f);
+        viewerShare = shareHit.gameObject.AddComponent<Button>();
+        viewerShare.transition = Selectable.Transition.None;
+        viewerShare.onClick.AddListener(() =>
+        {
+            if (viewerMemo != null && viewerPhoto.texture is Texture2D shown)
+                OpenShare(viewerMemo, shown, false);
+            else
+                ShowToast("사진을 불러온 뒤에 공유할 수 있어요");
+        });
+        Image shareIcon = UIKit.Image(shareHit.transform, "Icon", Ink);
+        shareIcon.sprite = HudIcons.Send;
+        Place(shareIcon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        shareIcon.rectTransform.sizeDelta = new Vector2(64f, 64f);
+        shareIcon.gameObject.AddComponent<PressScale>();
 
-        Button close = RoundButton(viewer.transform, "Close", HudIcons.Close, 96f, Color.white, Ink, () => viewer.SetActive(false));
-        Place((RectTransform)close.transform, new Vector2(1f, 1f), new Vector2(-40f, -60f));
+        // 좋아요 수 · 캡션
+        RectTransform likesRow = UIKit.Rect(body, "Likes");
+        UIKit.Size(likesRow, 56f);
+        viewerLikes = UIKit.Text(likesRow, "", 32, TextAnchor.MiddleLeft, Ink);
+        viewerLikes.fontStyle = FontStyle.Bold;
+        UIKit.Stretch(viewerLikes.rectTransform, 36f, 0f);
+        RectTransform captionRow = UIKit.Rect(body, "Caption");
+        UIKit.Vertical(captionRow, 0f, new RectOffset(36, 36, 8, 8));
+        viewerText = UIKit.Text(captionRow, "", 34, TextAnchor.UpperLeft, Ink);
+
         viewer.SetActive(false);
+    }
+
+    void BuildProfile()
+    {
+        profile = UIKit.Image(root.transform, "Profile", Color.white, raycast: true).gameObject;
+        UIKit.Stretch((RectTransform)profile.transform);
+        Rect sa = Screen.safeArea;
+        RectTransform safe = SafeRect(profile.transform, "Safe",
+            new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
+            new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
+
+        Button back = RoundButton(safe, "Back", HudIcons.Chevron, 88f, Color.white, Ink, () => profile.SetActive(false));
+        Place((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
+        back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
+        back.transform.Find("Shadow").GetComponent<Image>().color = Line;
+        Text head = UIKit.Text(safe, "프로필", 38, TextAnchor.MiddleCenter, Ink);
+        head.fontStyle = FontStyle.Bold;
+        TopBox(head.rectTransform, 30f, 88f, 140f);
+        Image hr = UIKit.Image(safe, "Line", Line);
+        TopBox(hr.rectTransform, 140f, 2f, 0f);
+
+        // 프로필 사진 · 닉네임 · 게시물 수
+        profileAvatar = Avatar(safe, 190f, out profileLetter);
+        Place(profileAvatar.rectTransform, new Vector2(0f, 1f), new Vector2(50f, -190f));
+        profileLetter.fontSize = 90;
+        profileName = UIKit.Text(safe, "", 44, TextAnchor.MiddleLeft, Ink);
+        profileName.fontStyle = FontStyle.Bold;
+        TopBox(profileName.rectTransform, 410f, 70f, 0f);
+        profileName.rectTransform.offsetMin = new Vector2(56f, profileName.rectTransform.offsetMin.y);
+        profileCount = UIKit.Text(safe, "", 40, TextAnchor.MiddleCenter, Ink);
+        Place(profileCount.rectTransform, new Vector2(0f, 1f), new Vector2(330f, -220f));
+        profileCount.rectTransform.sizeDelta = new Vector2(320f, 130f);
+        Image hr2 = UIKit.Image(safe, "Line2", Line);
+        TopBox(hr2.rectTransform, 500f, 2f, 0f);
+
+        // 사진 3열 격자
+        RectTransform area = UIKit.Rect(safe, "Grid");
+        UIKit.StretchBetween(area, 0f, 504f);
+        profileGrid = BuildGrid(area);
+        profileEmpty = UIKit.Text(area, "", 34, TextAnchor.UpperCenter, InkQuiet);
+        UIKit.Stretch(profileEmpty.rectTransform, 40f, 80f);
+
+        profile.SetActive(false);
+    }
+
+    /// <summary>색 원 + 가운데 첫 글자</summary>
+    static Image Avatar(Transform parent, float size, out Text letter)
+    {
+        Image circle = UIKit.Image(parent, "Avatar", AvatarColors[0]);
+        circle.sprite = HudIcons.Circle;
+        circle.rectTransform.sizeDelta = new Vector2(size, size);
+        letter = UIKit.Text(circle.transform, "", Mathf.RoundToInt(size * 0.45f), TextAnchor.MiddleCenter, Color.white);
+        letter.fontStyle = FontStyle.Bold;
+        UIKit.Stretch(letter.rectTransform);
+        return circle;
     }
 
     void BuildWriteView(Vector2 safeMin, Vector2 safeMax)

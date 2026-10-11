@@ -176,6 +176,50 @@ public static class HudIcons
     });
 
 
+    /// <summary>꽉 찬 하트 (좋아요 누름)</summary>
+    public static Sprite Heart => Cached("heart", 128, p =>
+    {
+        p.Circle(44, 76, 28f);
+        p.Circle(84, 76, 28f);
+        p.Polygon(Color.white, new Vector2(18, 68), new Vector2(110, 68), new Vector2(64, 16));
+    });
+
+    /// <summary>테두리 하트 (좋아요 안 누름)</summary>
+    public static Sprite HeartOutline => Cached("heart_outline", 128, p =>
+    {
+        p.Circle(44, 76, 28f);
+        p.Circle(84, 76, 28f);
+        p.Polygon(Color.white, new Vector2(18, 68), new Vector2(110, 68), new Vector2(64, 16));
+        p.Erase(q => Mathf.Min(Mathf.Min(q.CircleD(44, 76, 19f), q.CircleD(84, 76, 19f)),
+            q.PolygonD(new[] { new Vector2(30, 70), new Vector2(98, 70), new Vector2(64, 30) })));
+    });
+
+    /// <summary>보내기 (종이비행기)</summary>
+    public static Sprite Send => Cached("send", 128, p =>
+    {
+        p.Polygon(Color.white, new Vector2(12, 66), new Vector2(116, 112), new Vector2(72, 14));
+        p.Erase(q => q.SegmentD(112, 108, 54, 60, 7f));
+    });
+
+    /// <summary>말풍선 (카카오톡)</summary>
+    public static Sprite Bubble => Cached("bubble", 128, p =>
+    {
+        p.Fill(q => Mathf.Sqrt((q.x - 64f) * (q.x - 64f) / 1.25f + (q.y - 70f) * (q.y - 70f)) - 44f, Color.white); // 가로로 긴 타원
+        p.Polygon(Color.white, new Vector2(30, 46), new Vector2(54, 32), new Vector2(22, 14));
+    });
+
+    /// <summary>사진첩 (겹친 사진 두 장)</summary>
+    public static Sprite Photos => Cached("photos", 128, p =>
+    {
+        p.Segment(18, 34, 18, 104, 9f);
+        p.Segment(18, 104, 94, 104, 9f);
+        p.Box(72, 54, 42f, 36f, 10f);
+        p.Box(72, 54, 33f, 27f, 5f, erase: true);
+        p.Polygon(Color.white, new Vector2(44, 30), new Vector2(64, 62), new Vector2(82, 30));
+        p.Polygon(Color.white, new Vector2(68, 30), new Vector2(84, 50), new Vector2(100, 30));
+        p.Circle(88, 70, 7f);
+    });
+
     /// <summary>메모 쓰기 (종이 위 연필)</summary>
     public static Sprite MemoWrite => Cached("memowrite", 128, p =>
     {
