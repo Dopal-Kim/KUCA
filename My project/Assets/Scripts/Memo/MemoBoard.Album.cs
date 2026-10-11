@@ -66,6 +66,8 @@ public partial class MemoBoard
         {
             StartCoroutine(service.GetMemo(id, DeviceId, (m, error) =>
             {
+                if (error == MemoData.NotFound)
+                    SetMine(id, false); // 서버에서 지워진 메모는 내 목록에서도 뺀다
                 if (m != null)
                 {
                     int i = seen.ids.IndexOf(m.id);
@@ -119,14 +121,19 @@ public partial class MemoBoard
             return;
 
         var found = new MemoData[ids.Count];
-        int pending = ids.Count;
+        int pending = ids.Count, failed = 0;
         for (int i = 0; i < ids.Count; i++)
         {
             int index = i;
-            StartCoroutine(service.GetMemo(ids[i], DeviceId, (m, error) =>
+            string id = ids[i];
+            StartCoroutine(service.GetMemo(id, DeviceId, (m, error) =>
             {
                 if (request != albumRequest)
                     return;
+                if (error == MemoData.NotFound)
+                    SetMine(id, false); // 서버에서 지워진 메모는 내 목록에서도 뺀다
+                else if (m == null)
+                    failed++;
                 if (m != null && m.HasPhoto)
                     found[index] = m;
                 if (--pending > 0)
@@ -146,7 +153,9 @@ public partial class MemoBoard
                         LikeChip(cell.transform, memo.likeCount, added > 0);
                 }
                 albumCount.text = $"게시물 {currentMemos.Count}";
-                albumEmpty.text = currentMemos.Count == 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요" : "";
+                albumEmpty.text = currentMemos.Count > 0 ? ""
+                    : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
+                    : "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요";
                 if (currentMemos.Count > 0)
                 {
                     SaveSeen(currentMemos);

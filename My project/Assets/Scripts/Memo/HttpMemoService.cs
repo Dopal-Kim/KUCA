@@ -92,6 +92,7 @@ public class HttpMemoService : IMemoService
         req.downloadHandler = new DownloadHandlerBuffer();
         req.timeout = TimeoutSeconds;
         yield return req.SendWebRequest();
+        if (req.responseCode == 404) { onDone(false, MemoData.NotFound); yield break; }
         if (req.result != UnityWebRequest.Result.Success) { onDone(false, ErrorOf(req)); yield break; }
         onDone(true, null);
     }
@@ -103,6 +104,7 @@ public class HttpMemoService : IMemoService
             req.SetRequestHeader("X-Device-Id", deviceId);
         req.timeout = TimeoutSeconds;
         yield return req.SendWebRequest();
+        if (req.responseCode == 404) { onDone(null, MemoData.NotFound); yield break; }
         if (req.result != UnityWebRequest.Result.Success) { onDone(null, ErrorOf(req)); yield break; }
         onDone(JsonUtility.FromJson<MemoData>(req.downloadHandler.text), null);
     }

@@ -255,9 +255,32 @@ public class GameHUD : MonoBehaviour
             ShowXpPopup(progress.score - lastScore);
         lastScore = progress.score;
 
+        ShowEgg(progress);
         if (menus != null)
             menus.OnProgressChanged(progress, types);
     }
+
+    // ---------- 걷기 보상: 알 게이지 (닉네임 아래) ----------
+
+    Text eggText;
+    RectTransform eggFill;
+
+    /// <summary>품은 알이 얼마나 자랐는지 (1km 마다 부화, 하루 3번)</summary>
+    public void ShowEgg(GameProgress progress)
+    {
+        if (progress == null || eggText == null)
+            return;
+        bool doneToday = progress.HatchedToday >= GameProgress.EggsPerDay;
+        float m = progress.eggMeters;
+        eggText.text = doneToday
+            ? $"오늘 알 {GameProgress.EggsPerDay}개 다 깼어요"
+            : $"{m:N0} / {GameProgress.EggMeters:N0}m";
+        eggFill.anchorMax = new Vector2(doneToday ? 1f : Mathf.Clamp01(m / GameProgress.EggMeters), 1f);
+        eggFill.GetComponent<Image>().color = doneToday ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
+    }
+
+    /// <summary>알이 깨어나는 연출 (KhuMenus 가 부른다)</summary>
+    public void ShowHatch(string species, string tier, int hatchedToday) => HatchScreen.Show(species, tier, hatchedToday);
 
     /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*50 XP 가 필요하다.</summary>
     public static void LevelOf(int score, out int level, out int xpInLevel, out int xpNeeded)
@@ -358,6 +381,38 @@ public class GameHUD : MonoBehaviour
         nicknameText = UIKit.Text(nick.transform, defaultNickname, 32, TextAnchor.MiddleCenter);
         nicknameText.fontStyle = FontStyle.Bold;
         UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
+
+        // 알 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 알이 깨어난다
+        Image eggPill = Glass(root, "EggGauge", new Vector2(300f, 60f), 30f);
+        Place(eggPill.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f - 64f - 12f));
+        Image eggIcon = UIKit.Image(eggPill.transform, "Egg", new Color(1f, 0.95f, 0.84f));
+        eggIcon.sprite = HudIcons.Egg;
+        eggIcon.rectTransform.anchorMin = eggIcon.rectTransform.anchorMax = eggIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
+        eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
+        eggText = UIKit.Text(eggPill.transform, "", 26, TextAnchor.MiddleLeft);
+        eggText.fontStyle = FontStyle.Bold;
+        eggText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        eggText.rectTransform.anchorMin = new Vector2(0f, 0.25f);
+        eggText.rectTransform.anchorMax = new Vector2(1f, 1f);
+        eggText.rectTransform.offsetMin = new Vector2(62f, 0f);
+        eggText.rectTransform.offsetMax = new Vector2(-12f, 0f);
+        Image eggBar = UIKit.Image(eggPill.transform, "Bar", new Color(1f, 1f, 1f, 0.15f));
+        eggBar.sprite = HudIcons.Pill;
+        eggBar.type = Image.Type.Sliced;
+        eggBar.pixelsPerUnitMultiplier = 12f;
+        eggBar.rectTransform.anchorMin = new Vector2(0f, 0f);
+        eggBar.rectTransform.anchorMax = new Vector2(1f, 0f);
+        eggBar.rectTransform.offsetMin = new Vector2(62f, 9f);
+        eggBar.rectTransform.offsetMax = new Vector2(-18f, 17f);
+        Image eggBarFill = UIKit.Image(eggBar.transform, "Fill", new Color(1f, 0.85f, 0.4f));
+        eggBarFill.sprite = HudIcons.Pill;
+        eggBarFill.type = Image.Type.Sliced;
+        eggBarFill.pixelsPerUnitMultiplier = 12f;
+        eggFill = eggBarFill.rectTransform;
+        eggFill.anchorMin = Vector2.zero;
+        eggFill.anchorMax = new Vector2(0f, 1f);
+        eggFill.offsetMin = eggFill.offsetMax = Vector2.zero;
 
         // "+N XP" (레벨 카드 아래 오른쪽에 잠깐)
         Image pill = UIKit.Image(root, "XpPopup", XpPink);

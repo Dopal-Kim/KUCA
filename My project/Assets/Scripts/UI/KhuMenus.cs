@@ -100,8 +100,16 @@ public class KhuMenus : MonoBehaviour
     float profileYaw;
 
     // 활동 기록
-    Vector3 lastPlayerPos;
-    bool hasLastPos;
+    // 걸은 거리: 마지막 기준점에서 AnchorMeters 이상 벗어날 때만, 걷는 속도일 때만 센다 (GPS 튐 거르기)
+    const float AnchorMeters = 8f, MaxGpsAccuracy = 30f;
+#if UNITY_EDITOR
+    const float MaxWalkSpeed = 20f; // 에디터 키보드 걷기(5m/s, Shift 15m/s)도 세지게
+#else
+    const float MaxWalkSpeed = 3.5f; // 뛰는 정도까지. 차·버스·순간이동은 세지 않는다
+#endif
+    Vector3 anchorPos;
+    float anchorTime;
+    bool hasAnchor;
     float saveTimer, spotTimer;
     bool dirty;
 
@@ -188,6 +196,25 @@ public class KhuMenus : MonoBehaviour
         }
     }
 
+    // ---------- 걷기 보상: 알 부화 (B-3) ----------
+
+    /// <summary>알을 깨워 경희몬 한 마리를 도감에 넣고 부화 연출을 보여 준다.</summary>
+    void HatchEgg()
+    {
+        if (collect == null || spawner == null || !progress.EggReady)
+            return;
+        string tier = GameProgress.RollEggTier(UnityEngine.Random.value);
+        IReadOnlyList<string> pool = CreatureLibrary.SpeciesOfTier(tier);
+        CollectibleType type = spawner.TypeOf(tier);
+        if (pool == null || pool.Count == 0 || type == null)
+            return;
+        string species = pool[UnityEngine.Random.Range(0, pool.Count)];
+        progress.MarkHatched();
+        collect.CompleteCatch(type, null, "", species); // 도감·XP·저장·토스트는 잡을 때와 같다
+        hud?.ShowEgg(progress);
+        hud?.ShowHatch(species, tier, progress.HatchedToday);
+    }
+
     // ---------- 활동 기록 (걸은 거리, 방문한 경희스팟) ----------
 
     void TrackActivity()
@@ -195,20 +222,34 @@ public class KhuMenus : MonoBehaviour
         if (progress == null || collect == null || collect.campusMap == null || collect.campusMap.player == null)
             return;
         Vector3 p = collect.campusMap.player.position;
-        if (hasLastPos)
+        if (!hasAnchor)
         {
-            float d = CollectibleSpawner.HorizontalDistance(p, lastPlayerPos);
-            // GPS 가 튀거나 순간이동한 경우는 세지 않는다.
-            if (d > 0.05f && d < 30f)
+            anchorPos = p;
+            anchorTime = Time.unscaledTime;
+            hasAnchor = true;
+        }
+        else
+        {
+            float d = CollectibleSpawner.HorizontalDistance(p, anchorPos);
+            if (d >= AnchorMeters)
             {
-                progress.walkedMeters += d;
-                dirty = true;
+                float speed = d / Mathf.Max(0.05f, Time.unscaledTime - anchorTime);
+                float accuracy = collect.campusMap.CurrentAccuracy;
+                if (speed <= MaxWalkSpeed && (accuracy <= 0f || accuracy <= MaxGpsAccuracy))
+                {
+                    progress.walkedMeters += d;
+                    progress.AddEggDistance(d);
+                    dirty = true;
+                    hud?.ShowEgg(progress);
+                }
+                anchorPos = p;
+                anchorTime = Time.unscaledTime;
             }
         }
-        lastPlayerPos = p;
-        hasLastPos = true;
 
         spotTimer -= Time.unscaledDeltaTime;
+        if (spotTimer <= 0f && progress.EggReady)
+            HatchEgg(); // 다 자란 알 (오늘 상한에 걸렸던 알은 날이 바뀌면 여기서 깨어난다)
         if (spotTimer <= 0f && spots != null)
         {
             spotTimer = 1f;

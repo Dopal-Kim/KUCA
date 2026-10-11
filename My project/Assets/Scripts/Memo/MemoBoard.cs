@@ -583,7 +583,8 @@ public partial class MemoBoard : MonoBehaviour
     {
         StartCoroutine(service.DeleteMemo(m.id, DeviceId, (ok, error) =>
         {
-            if (!ok) { ShowToast(error); return; }
+            // 이미 서버에서 지워진 메모면 지운 것으로 본다
+            if (!ok && error != MemoData.NotFound) { ShowToast(error); return; }
             SetMine(m.id, false);
             viewer.SetActive(false);
             if (albumMode) ReloadAlbum();

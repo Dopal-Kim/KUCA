@@ -85,7 +85,7 @@ public class MockMemoService : IMemoService
         yield return null;
         Data.likes ??= new List<Like>();
         MemoData m = Data.memos.Find(x => x.id == memoId);
-        if (m == null) { onDone(null, "메모가 없습니다."); yield break; }
+        if (m == null) { onDone(null, MemoData.NotFound); yield break; }
         m.likeCount = Data.likes.FindAll(l => l.memoId == m.id).Count;
         m.likedByMe = !string.IsNullOrEmpty(deviceId) && Data.likes.Exists(l => l.memoId == m.id && l.deviceId == deviceId);
         onDone(m, null);
@@ -139,7 +139,7 @@ public class MockMemoService : IMemoService
     {
         yield return null;
         int i = Data.memos.FindIndex(m => m.id == memoId);
-        if (i < 0) { onDone(false, "메모가 없습니다."); yield break; }
+        if (i < 0) { onDone(false, MemoData.NotFound); yield break; }
         if (Data.owners[i] != deviceId) { onDone(false, "내가 쓴 메모만 지울 수 있어요."); yield break; }
 
         string photo = Path.Combine(Dir, memoId + ".jpg");
