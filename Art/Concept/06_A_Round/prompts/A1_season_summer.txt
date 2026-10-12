@@ -1,0 +1,3 @@
+Edit the attached screenshot of the KUCA mobile game map. Keep EXACTLY the same camera angle, framing, layout, buildings, roads, track, fountain plaza and trees, and the same clean low-poly toy-diorama rendering style (bright, soft, slightly glossy, gentle shadows). Do not add people, text, labels, logos or UI.
+Only change the following, and keep the whole image bright, friendly and readable (colors must stay clearly distinguishable even at night):
+Season = SUMMER: lush deep saturated green trees and lawns, strong bright sun, crisp shadows, the fountain sparkling.

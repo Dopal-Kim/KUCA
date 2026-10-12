@@ -36,6 +36,12 @@ if ! az webapp show --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" >/dev/
     WEBSITES_ENABLE_APP_SERVICE_STORAGE=true >/dev/null
 fi
 
+# 기상청 키: KMA_KEY=<공공데이터포털 키> ./deploy-azure.sh 로 넘기면 앱 설정에 넣는다 (저장소에는 넣지 않음)
+if [ -n "${KMA_KEY:-}" ]; then
+  echo "▶ 기상청 키 설정 (Kma__ServiceKey)"
+  az webapp config appsettings set --name "$APP_NAME" --resource-group "$RESOURCE_GROUP" --settings Kma__ServiceKey="$KMA_KEY" >/dev/null
+fi
+
 echo "▶ 빌드 (dotnet publish)"
 rm -rf ../publish ../publish.zip
 dotnet publish -c Release -o ../publish >/dev/null

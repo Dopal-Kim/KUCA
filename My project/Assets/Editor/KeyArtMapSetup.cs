@@ -250,6 +250,7 @@ public static class KeyArtMapSetup
     // ---------- 시간대 ----------
 
     [MenuItem("KUCA/Time of Day/Auto (기기 시계)")] static void TimeAuto() => SetTime(KeyArtLook.Mode.Auto);
+    [MenuItem("KUCA/Time of Day/Morning 아침")] static void TimeMorning() => SetTime(KeyArtLook.Mode.Morning);
     [MenuItem("KUCA/Time of Day/Day 낮")] static void TimeDay() => SetTime(KeyArtLook.Mode.Day);
     [MenuItem("KUCA/Time of Day/Sunset 노을")] static void TimeSunset() => SetTime(KeyArtLook.Mode.Sunset);
     [MenuItem("KUCA/Time of Day/Night 밤")] static void TimeNight() => SetTime(KeyArtLook.Mode.Night);

@@ -32,6 +32,13 @@ public class CollectibleSpawner : MonoBehaviour
         new CollectibleType { id = "star", points = 100, weight = 10f },    // 황금 동물 (랜드마크 근처에서만)
     };
 
+    [Header("출현 조건 테스트 (A-1, 시연·에디터용)")]
+    [Tooltip("켜면 아래 값으로 시간대·계절·날씨를 강제한다. 끄면 기기 시각·날짜와 서버 날씨를 쓴다")]
+    public bool overrideConditions;
+    public SpawnConditions.TimeSlot testTime = SpawnConditions.TimeSlot.Night;
+    public SpawnConditions.Season testSeason = SpawnConditions.Season.Spring;
+    public SpawnConditions.Weather testWeather = SpawnConditions.Weather.Clear;
+
     public IReadOnlyList<Collectible> Active => active;
 
     public CollectibleType TypeOf(string id) => types.Find(t => t.id == id);
@@ -46,6 +53,7 @@ public class CollectibleSpawner : MonoBehaviour
             return;
 
         Vector3 center = campusMap.player.position;
+        ApplyTestConditions();
 
         for (int i = active.Count - 1; i >= 0; i--)
         {
@@ -102,8 +110,9 @@ public class CollectibleSpawner : MonoBehaviour
         if (type.id == "star")
         {
             // 노랑(황금) 동물은 자기 랜드마크 범위 안에서만 나온다. 범위 밖이면 파랑으로 바꾼다
+            // 지금 시간대·계절·날씨가 그 동물에 잘 맞을수록 황금으로 나올 확률이 높다 (SpawnConditions.GoldChance)
             CreatureLibrary.GoldZone zone = CreatureLibrary.GoldZoneAt(px, pz);
-            if (zone != null)
+            if (zone != null && Random.value < SpawnConditions.GoldChance(zone.species))
                 species = zone.species;
             else
                 type = types.Find(t => t.id == "crystal") ?? type;
@@ -113,6 +122,13 @@ public class CollectibleSpawner : MonoBehaviour
             return false; // 동물 모델이 없으면 내보내지 않는다
         active.Add(c);
         return true;
+    }
+
+    void ApplyTestConditions()
+    {
+        SpawnConditions.OverrideTime = overrideConditions ? testTime : (SpawnConditions.TimeSlot?)null;
+        SpawnConditions.OverrideSeason = overrideConditions ? testSeason : (SpawnConditions.Season?)null;
+        SpawnConditions.OverrideWeather = overrideConditions ? testWeather : (SpawnConditions.Weather?)null;
     }
 
     bool IsInsideMap(Vector3 p)
