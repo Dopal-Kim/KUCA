@@ -235,6 +235,9 @@ public static class CreatureLibrary
         return id != null && farMeshes.TryGetValue(id, out mesh);
     }
 
+    /// <summary>같은 형식(v3)의 다른 메시 파일을 읽는다 (예: 액세서리). 키 = 메시 이름 ("Creature_" 는 뗌)</summary>
+    public static Dictionary<string, Mesh> LoadMeshes(string path, bool quiet = false) => Load(path, quiet);
+
     static Dictionary<string, Mesh> Load(string path, bool quiet = false)
     {
         var result = new Dictionary<string, Mesh>();
