@@ -1,25 +1,55 @@
 """
-제미나이 이미지 생성 (Art/Concept/06_A라운드_제미나이_프롬프트.md 의 프롬프트용).
-  python tools/keyart/gemini_image.py <out.png> <prompt.txt> [레퍼런스 이미지 ...]
-키: 환경 변수 GEMINI_API_KEY (Google AI Studio). 저장소에 넣지 않는다.
+제미나이 이미지 생성 (BAZE · 챗쿠 API 게이트웨이, 모델 gemini-3.1-flash-image-preview).
+  python tools/keyart/gemini_image.py <out.png> <prompt.txt> [레퍼런스 이미지 ...] [--ratio 16:9] [--size 2K]
+키: 환경 변수 BAZE_API_KEY (BAZE › API Gateway 에서 발급). 저장소에 넣지 않는다.
+레퍼런스 이미지는 그림체를 맞출 기준 (게임 렌더, 키아트, 피규어 렌더 등)으로 함께 보낸다.
 """
-import base64, json, os, sys, urllib.request, mimetypes, pathlib
-MODEL = 'gemini-3-pro-image'
-out, ptxt, refs = sys.argv[1], pathlib.Path(sys.argv[2]).read_text(), sys.argv[3:]
-parts = []
-for r in refs:
-    mt = mimetypes.guess_type(r)[0] or 'image/png'
-    parts.append({'inline_data': {'mime_type': mt, 'data': base64.b64encode(open(r, 'rb').read()).decode()}})
-parts.append({'text': ptxt})
-body = {'contents': [{'parts': parts}], 'generationConfig': {'responseModalities': ['IMAGE', 'TEXT']}}
-req = urllib.request.Request(f'https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent',
-                             data=json.dumps(body).encode(), headers={'Content-Type': 'application/json',
-                                      **({'x-goog-api-key': os.environ['GEMINI_API_KEY']} if os.environ.get('GEMINI_API_KEY') else {})})
-d = json.load(urllib.request.urlopen(req, timeout=300))
-for c in d.get('candidates', []):
-    for p in c.get('content', {}).get('parts', []):
-        if 'inlineData' in p or 'inline_data' in p:
-            data = (p.get('inlineData') or p.get('inline_data'))['data']
-            open(out, 'wb').write(base64.b64decode(data)); print('saved', out); sys.exit()
-        if 'text' in p: print('text:', p['text'][:300])
-print('no image', json.dumps(d)[:500])
+import base64
+import json
+import mimetypes
+import os
+import pathlib
+import sys
+import urllib.request
+
+URL = 'https://factchat-cloud.mindlogic.ai/v1/gateway/images/generate/'
+MODEL = os.environ.get('KUCA_IMAGE_MODEL', 'gemini-3.1-flash-image-preview')
+
+
+def main(argv):
+    opts = {'--ratio': '1:1', '--size': '1K'}
+    args = []
+    it = iter(argv)
+    for a in it:
+        if a in opts:
+            opts[a] = next(it)
+        else:
+            args.append(a)
+    out, prompt_file, refs = args[0], args[1], args[2:]
+    key = os.environ.get('BAZE_API_KEY')
+    if not key:
+        sys.exit('BAZE_API_KEY 환경 변수가 없습니다')
+    images = []
+    for r in refs:
+        mt = mimetypes.guess_type(r)[0] or 'image/png'
+        images.append(f'data:{mt};base64,' + base64.b64encode(open(r, 'rb').read()).decode())
+    body = {'model': MODEL, 'prompt': pathlib.Path(prompt_file).read_text(), 'number_of_images': 1,
+            'image_size': opts['--size'], 'aspect_ratio': opts['--ratio']}
+    if images:
+        body['input_images'] = images
+    req = urllib.request.Request(URL, data=json.dumps(body).encode(), headers={
+        'Content-Type': 'application/json', 'x-api-key': key, 'User-Agent': 'curl/8.5.0'})
+    d = json.load(urllib.request.urlopen(req, timeout=600))
+    url = d['data'][0]['url']
+    raw = base64.b64decode(url.split(',', 1)[1]) if url.startswith('data:') else urllib.request.urlopen(url).read()
+    try:
+        import io
+        from PIL import Image
+        Image.open(io.BytesIO(raw)).save(out)   # 확장자대로 저장 (png 등)
+    except ImportError:
+        open(out, 'wb').write(raw)
+    print('saved', out, 'credits', d.get('credits_charged'))
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
