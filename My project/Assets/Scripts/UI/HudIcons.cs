@@ -176,6 +176,50 @@ public static class HudIcons
     });
 
 
+    /// <summary>꽉 찬 하트 (좋아요 누름)</summary>
+    public static Sprite Heart => Cached("heart", 128, p =>
+    {
+        p.Circle(44, 76, 28f);
+        p.Circle(84, 76, 28f);
+        p.Polygon(Color.white, new Vector2(18, 68), new Vector2(110, 68), new Vector2(64, 16));
+    });
+
+    /// <summary>테두리 하트 (좋아요 안 누름)</summary>
+    public static Sprite HeartOutline => Cached("heart_outline", 128, p =>
+    {
+        p.Circle(44, 76, 28f);
+        p.Circle(84, 76, 28f);
+        p.Polygon(Color.white, new Vector2(18, 68), new Vector2(110, 68), new Vector2(64, 16));
+        p.Erase(q => Mathf.Min(Mathf.Min(q.CircleD(44, 76, 19f), q.CircleD(84, 76, 19f)),
+            q.PolygonD(new[] { new Vector2(30, 70), new Vector2(98, 70), new Vector2(64, 30) })));
+    });
+
+    /// <summary>보내기 (종이비행기)</summary>
+    public static Sprite Send => Cached("send", 128, p =>
+    {
+        p.Polygon(Color.white, new Vector2(12, 66), new Vector2(116, 112), new Vector2(72, 14));
+        p.Erase(q => q.SegmentD(112, 108, 54, 60, 7f));
+    });
+
+    /// <summary>말풍선 (카카오톡)</summary>
+    public static Sprite Bubble => Cached("bubble", 128, p =>
+    {
+        p.Fill(q => Mathf.Sqrt((q.x - 64f) * (q.x - 64f) / 1.25f + (q.y - 70f) * (q.y - 70f)) - 44f, Color.white); // 가로로 긴 타원
+        p.Polygon(Color.white, new Vector2(30, 46), new Vector2(54, 32), new Vector2(22, 14));
+    });
+
+    /// <summary>사진첩 (겹친 사진 두 장)</summary>
+    public static Sprite Photos => Cached("photos", 128, p =>
+    {
+        p.Segment(18, 34, 18, 104, 9f);
+        p.Segment(18, 104, 94, 104, 9f);
+        p.Box(72, 54, 42f, 36f, 10f);
+        p.Box(72, 54, 33f, 27f, 5f, erase: true);
+        p.Polygon(Color.white, new Vector2(44, 30), new Vector2(64, 62), new Vector2(82, 30));
+        p.Polygon(Color.white, new Vector2(68, 30), new Vector2(84, 50), new Vector2(100, 30));
+        p.Circle(88, 70, 7f);
+    });
+
     /// <summary>메모 쓰기 (종이 위 연필)</summary>
     public static Sprite MemoWrite => Cached("memowrite", 128, p =>
     {
@@ -187,6 +231,49 @@ public static class HudIcons
         p.Erase(q => q.SegmentD(70, 40, 108, 96, 26f));
         p.Segment(72, 42, 106, 92, 13f);
         p.Polygon(Color.white, new Vector2(62, 30), new Vector2(78, 36), new Vector2(66, 44));
+    });
+
+    /// <summary>퀘스트 (깃발)</summary>
+    public static Sprite Quest => Cached("quest", 128, p =>
+    {
+        p.Segment(34, 14, 34, 114, 10f);
+        p.Polygon(Color.white, new Vector2(38, 112), new Vector2(108, 92), new Vector2(38, 66));
+        p.Circle(34, 14, 9f);
+    });
+
+    /// <summary>알 (아래가 둥글고 위가 좁은 달걀 모양) — 걷기 보상</summary>
+    public static Sprite Egg => Cached("egg", 128, p =>
+    {
+        p.Fill(q =>
+        {
+            float dy = q.y - 58f;
+            float rx = 40f * (dy > 0f ? 1f - 0.22f * dy / 56f : 1f); // 위로 갈수록 좁게
+            float ry = dy > 0f ? 56f : 46f;
+            float k = Mathf.Sqrt((q.x - 64f) * (q.x - 64f) / (rx * rx) + dy * dy / (ry * ry));
+            return (k - 1f) * Mathf.Min(rx, ry);
+        }, Color.white);
+    });
+
+    /// <summary>길 (구불구불한 길 + 도착 핀) — 산책 길잡이</summary>
+    public static Sprite Route => Cached("route", 128, p =>
+    {
+        p.Segment(26, 22, 58, 40, 11f);
+        p.Segment(58, 40, 34, 66, 11f);
+        p.Segment(34, 66, 70, 84, 11f);
+        p.Circle(26, 22, 11f);
+        p.Circle(94, 92, 22f);
+        p.Polygon(Color.white, new Vector2(76, 86), new Vector2(112, 86), new Vector2(94, 58));
+        p.Erase(q => q.CircleD(94, 93, 8f));
+    });
+
+    /// <summary>자물쇠 (가 보지 않은 곳의 쪽지)</summary>
+    public static Sprite Lock => Cached("lock", 128, p =>
+    {
+        p.Ring(64, 78, 24f, 10f);
+        p.Erase(q => q.BoxD(64, 58, 40f, 22f, 0f, 0f));
+        p.Box(64, 46, 38f, 30f, 8f);
+        p.Erase(q => q.CircleD(64, 50, 8f));
+        p.Erase(q => q.BoxD(64, 38, 3.5f, 10f, 2f, 0f));
     });
 
     public static Sprite Camera => Cached("camera", 128, p =>

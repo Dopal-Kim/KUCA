@@ -48,6 +48,38 @@ az webapp config appsettings set --name kuca-memo --resource-group <리소스 �
 
 키가 없으면 `/api/weather` 가 503 을 돌려주고, 앱은 날씨 조건 없이 동작합니다.
 
+## 산책 추천 AI (챗쿠) 키 넣기
+
+`POST /api/recommendations` 는 챗쿠 AI 로 코스를 짭니다.
+- 키가 없으면 가까운 경희스팟부터 고르는 규칙 추천(`source: "fallback"`)으로 동작합니다.
+- **키는 저장소(appsettings.json)에 넣지 않습니다.**
+
+| 설정 | 뜻 |
+| --- | --- |
+| `Recommend:Endpoint` | 채팅 API 전체 주소. 기본값: 챗쿠(BAZE) 게이트웨이 `https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions` |
+| `Recommend:ApiKey` | API 키 (BAZE › API Gateway 에서 발급). **이것만 넣으면 된다** |
+| `Recommend:Model` | 모델 이름. 기본값 `gpt-5.4-mini` (게이트웨이 `/models/` 의 다른 ID 로 바꿀 수 있음) |
+| `Recommend:AuthHeader` | 키를 보낼 헤더. 기본 `Authorization` |
+| `Recommend:AuthScheme` | 헤더 값 앞말. 기본 `Bearer`, 키만 보내려면 빈 값 |
+
+로컬 (`server/KucaMemoServer` 폴더에서):
+
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "Recommend:ApiKey" "발급받은 키"
+```
+
+Azure:
+
+```bash
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__ApiKey="발급받은 키"
+```
+
+- 챗쿠(BAZE) 게이트웨이는 OpenAI 호환입니다. 요청은 `{ model, messages }`, 답은 `choices[0].message.content` 입니다.
+- 키는 `Authorization: Bearer` 로 보냅니다.
+- 실측: `gpt-5.4-mini` 는 약 3초, `gemini-3.5-flash` 는 약 11초 걸렸습니다.
+- 사용량은 키를 만든 BAZE 계정에 청구됩니다.
+
 ## 테스트
 
 ```bash
@@ -55,7 +87,7 @@ cd server/KucaMemoServer.Tests
 dotnet test
 ```
 
-임시 폴더에 DB와 사진을 만들어 `docs/api.md` 의 규칙(최신순·limit·before, 글자 수, 사진 형식·크기, 기기 ID 삭제 권한, 404/400/403)을 확인합니다.
+임시 폴더에 DB와 사진을 만들어 `docs/api.md` 의 규칙(최신순·limit·before, 글자 수, 사진 형식·크기, 기기 ID 삭제 권한, 좋아요 중복 방지·likedByMe, 댓글 순서·삭제 권한, 404/400/403)을 확인합니다.
 
 ## 폴더
 
@@ -64,10 +96,11 @@ dotnet test
 | `Program.cs` | 서버 시작점. 서비스 등록과 API 연결 |
 | `Endpoints/BuildingEndpoints.cs` | 건물 API (완성된 예시) |
 | `Endpoints/MemoEndpoints.cs` | 메모 API (목록·작성·조회·삭제) |
+| `Endpoints/ReactionEndpoints.cs` | 좋아요·댓글 API |
 | `Endpoints/WebPages.cs` | 브라우저용 페이지 `/`, `/buildings/{id}` |
-| `Models/` | `Building`, `Memo` 데이터 모양 |
+| `Models/` | `Building`, `Memo`, `Comment` 데이터 모양 |
 | `Services/BuildingStore.cs` | `Data/buildings.json` 을 읽는 건물 목록 |
-| `Services/MemoStore.cs` | 메모 저장 (SQLite `memos.db`) |
+| `Services/MemoStore.cs` | 메모·좋아요·댓글 저장 (SQLite `memos.db`, 표가 없으면 시작할 때 만든다) |
 | `Services/PhotoStore.cs` | 사진 저장·삭제, JPEG/PNG 판별 |
 | `Data/buildings.json` | 캠퍼스 건물 632개 (앱과 같은 ID) |
 | `wwwroot/photos/` | 업로드된 사진 (깃에 올리지 않음) |

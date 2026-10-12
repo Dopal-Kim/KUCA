@@ -21,6 +21,9 @@ builder.Services.AddSingleton<PhotoStore>();
 // 캠퍼스 날씨 (기상청 초단기 실황·예보, 키는 설정 Kma:ServiceKey)
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<KmaWeatherService>();
+// 산책 추천: 챗쿠 AI (설정 Recommend:Endpoint / Recommend:ApiKey 가 없으면 규칙 기반으로만 추천)
+builder.Services.AddHttpClient<IRouteAi, ChatKuClient>(c => c.Timeout = TimeSpan.FromSeconds(25));
+builder.Services.AddScoped<RouteRecommender>();
 
 // 메모 작성 본문 크기 제한: 사진 10MB + 글자 여유분
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);
@@ -47,6 +50,8 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
 app.MapBuildingEndpoints();
 app.MapMemoEndpoints();
 app.MapWeatherEndpoints();
+app.MapReactionEndpoints();
+app.MapRecommendEndpoints();
 app.MapWebPages();
 
 app.Run();

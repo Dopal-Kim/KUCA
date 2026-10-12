@@ -13,8 +13,18 @@ public class MemoData
     public string photoUrl;
     /// <summary>ISO 8601 UTC 문자열</summary>
     public string createdAt;
+    /// <summary>좋아요 수</summary>
+    public int likeCount;
+    /// <summary>이 기기가 좋아요를 눌렀는지 (목록을 X-Device-Id 와 함께 받았을 때만 채워짐)</summary>
+    public bool likedByMe;
+    /// <summary>"visible" 또는 "pending"(서버 내용 검사에서 검토 대기. 작성한 기기에만 보임)</summary>
+    public string status;
+
+    /// <summary>서버에 그 메모가 없을 때(지워짐) GetMemo·DeleteMemo 가 돌려주는 에러 문구</summary>
+    public const string NotFound = "메모가 없습니다.";
 
     public bool HasPhoto => !string.IsNullOrEmpty(photoUrl);
+    public bool IsPending => status == "pending";
 
     public DateTime CreatedAtLocal =>
         DateTime.TryParse(createdAt, null, System.Globalization.DateTimeStyles.RoundtripKind, out DateTime t) ? t.ToLocalTime() : DateTime.MinValue;

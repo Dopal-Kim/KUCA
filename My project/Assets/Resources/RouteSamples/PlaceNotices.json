@@ -1,0 +1,40 @@
+{
+  "items": [
+    {
+      "id": "sample-library-hours",
+      "buildingId": "way-474085534",
+      "buildingName": "중앙도서관",
+      "title": "[예시] 중간고사 기간 열람실 연장 운영",
+      "summary": "시험 기간 동안 제1열람실을 밤 12시까지 엽니다. 실제 공지가 아닌 화면 확인용 예시입니다.",
+      "url": "https://www.khu.ac.kr/kor/notice/list.do",
+      "postedAt": "2026-10-08"
+    },
+    {
+      "id": "sample-union-fair",
+      "buildingId": "way-474085535",
+      "buildingName": "학생회관",
+      "title": "[예시] 동아리 박람회 안내",
+      "summary": "학생회관 1층 로비에서 동아리 박람회가 열립니다. 실제 공지가 아닌 화면 확인용 예시입니다.",
+      "url": "https://www.khu.ac.kr/kor/notice/list.do",
+      "postedAt": "2026-10-06"
+    },
+    {
+      "id": "sample-theater-festival",
+      "buildingId": "way-474531805",
+      "buildingName": "노천극장",
+      "title": "[예시] 가을 축제 무대 리허설",
+      "summary": "노천극장에서 축제 리허설이 있어 일부 좌석 출입이 제한됩니다. 실제 공지가 아닌 화면 확인용 예시입니다.",
+      "url": "https://www.khu.ac.kr/kor/notice/list.do",
+      "postedAt": "2026-10-04"
+    },
+    {
+      "id": "sample-gym-closed",
+      "buildingId": "way-455726113",
+      "buildingName": "체육대학관",
+      "title": "[예시] 체육관 바닥 공사로 임시 휴관",
+      "summary": "체육대학관 체육관이 공사로 일주일간 문을 닫습니다. 실제 공지가 아닌 화면 확인용 예시입니다.",
+      "url": "https://www.khu.ac.kr/kor/notice/list.do",
+      "postedAt": "2026-10-02"
+    }
+  ]
+}
