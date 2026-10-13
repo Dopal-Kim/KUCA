@@ -121,6 +121,7 @@ public partial class KhuMenus : MonoBehaviour
         BuildMainMenu();
         BuildCollection();
         BuildDetail();
+        BuildAccessoryPopup();
         BuildProfile();
         BuildListPopup();
         BuildScrapbook();
@@ -700,6 +701,9 @@ public partial class KhuMenus : MonoBehaviour
         detailPartnerButton = PillButton(card, "파트너로 지정", Teal, Color.white, SetDetailAsPartner);
         Place((RectTransform)detailPartnerButton.transform, new Vector2(0.5f, 0f), new Vector2(-180f, 60f));
         ((RectTransform)detailPartnerButton.transform).sizeDelta = new Vector2(380f, 116f);
+        Button dress = PillButton(card, "꾸미기", Orange, Color.white, () => OpenAccessories(detailTarget));
+        Place((RectTransform)dress.transform, new Vector2(0.5f, 0f), new Vector2(0f, 196f));
+        ((RectTransform)dress.transform).sizeDelta = new Vector2(700f, 104f);
         Button close = PillButton(card, "닫기", new Color(0.88f, 0.92f, 0.9f), Gray, () => SetActive(detail, false));
         Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(210f, 60f));
         ((RectTransform)close.transform).sizeDelta = new Vector2(300f, 116f);
@@ -742,7 +746,7 @@ public partial class KhuMenus : MonoBehaviour
         if (p == null)
             buddy.Hide();
         else
-            buddy.Show(p.speciesId);
+            buddy.Show(p.speciesId, p.accessories);
     }
 
     // ---------- 목록 팝업 (역대 파트너, 모험노트, 도감·도구 정보) ----------

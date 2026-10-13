@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -16,9 +17,11 @@ public class PartnerBuddy : MonoBehaviour
 
     string speciesId;
     Transform visual;    // 발밑이 피벗인 피규어
+    Transform figure;    // 메시가 붙은 오브젝트 (액세서리를 이 아래에 붙인다)
     float phase;
 
-    public void Show(string species)
+    /// <param name="accessories">쓰고 있는 액세서리 id (없으면 null)</param>
+    public void Show(string species, IList<string> accessories = null)
     {
         if (string.IsNullOrEmpty(species) || !CreatureLibrary.TryGetMesh(species, out Mesh mesh))
         {
@@ -26,7 +29,10 @@ public class PartnerBuddy : MonoBehaviour
             return;
         }
         if (visual != null && speciesId == species)
+        {
+            ApplyAccessories(accessories);
             return;
+        }
         Hide();
         speciesId = species;
 
@@ -51,8 +57,23 @@ public class PartnerBuddy : MonoBehaviour
             g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         visual = pivot;
+        figure = body.transform;
         visual.localScale = Vector3.one * ScaleFor(mesh);
+        ApplyAccessories(accessories);
         SnapToTarget();
+    }
+
+    /// <summary>부위마다 쓰고 있는 액세서리로 바꾼다 (목록에 없는 부위는 뗀다)</summary>
+    void ApplyAccessories(IList<string> accessories)
+    {
+        if (figure == null)
+            return;
+        foreach (CreatureAccessories.Slot slot in System.Enum.GetValues(typeof(CreatureAccessories.Slot)))
+            CreatureAccessories.Detach(figure, slot);
+        if (accessories == null)
+            return;
+        foreach (string id in accessories)
+            CreatureAccessories.Attach(figure, speciesId, id);
     }
 
     public void Hide()
@@ -60,6 +81,7 @@ public class PartnerBuddy : MonoBehaviour
         if (visual != null)
             Destroy(visual.gameObject);
         visual = null;
+        figure = null;
         speciesId = null;
     }
 
