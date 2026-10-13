@@ -19,7 +19,8 @@ public interface IEmailSender
 public class SmtpEmailSender(IConfiguration config, ILogger<SmtpEmailSender> log) : IEmailSender
 {
     string User => config["Email:User"] ?? "";
-    string Password => config["Email:Password"] ?? "";
+    // Google 은 앱 비밀번호를 "abcd efgh ijkl mnop" 처럼 띄어서 보여 준다. 띄어 쓴 채로 넣어도 되게 공백을 뺀다.
+    string Password => (config["Email:Password"] ?? "").Replace(" ", "");
     public bool IsConfigured => User.Length > 0 && Password.Length > 0;
 
     public async Task<bool> SendAsync(string to, string subject, string body, CancellationToken ct)
