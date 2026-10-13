@@ -312,6 +312,63 @@
 - `url` 은 원문 링크입니다 (항상 있음). 앱은 누르면 브라우저로 엽니다
 - `postedAt` 은 공지 게시일 `YYYY-MM-DD`
 
+## 로그인 · 계정
+
+앱은 **로그인 필수**입니다. 흐름은 다음과 같습니다.
+1. 카카오 또는 Apple 로 로그인 → KUCA 로그인 토큰을 받는다.
+2. 경희대 메일(@khu.ac.kr) 인증.
+3. 닉네임.
+4. 산책 취향 체크리스트.
+
+이후 요청에는 헤더 `Authorization: Bearer {토큰}` 를 붙입니다. 토큰은 90일 동안 쓸 수 있습니다.
+
+### Account
+
+```json
+{
+  "id": "3f0c…", "provider": "kakao", "nickname": "원준",
+  "khuEmail": "wonjun@khu.ac.kr", "emailVerified": true,
+  "preferencesJson": "{\"walkTimes\":[\"evening\"],…}",
+  "createdAt": "2026-10-13T12:00:00Z", "ready": true
+}
+```
+
+- `ready`: 메일 인증과 닉네임이 모두 끝났으면 `true`. `false` 면 앱은 남은 단계를 보여 줍니다.
+- `preferencesJson`: 앱의 `WalkPreferences` JSON 원문입니다 (AI 산책메이트 매칭용).
+
+### POST /api/auth/kakao · POST /api/auth/apple
+
+- 카카오 본문: `{ "accessToken": "카카오 SDK 의 액세스 토큰" }`
+  - 서버가 카카오에 토큰을 확인합니다. 앱 ID 가 설정 `Kakao:AppId` 와 같아야 합니다.
+- Apple 본문: `{ "identityToken": "Sign in with Apple 의 JWT" }`
+  - 서버가 Apple 공개키로 서명을 확인하고, `aud` 가 번들 ID 인지 봅니다.
+- 응답 `200 { "token": "…", "user": Account }`. 처음이면 계정을 새로 만듭니다.
+- 실패: `400` 본문 없음, `401` 확인 실패, `503` 카카오 설정 없음.
+
+### GET /api/me · PUT /api/me/nickname · PUT /api/me/preferences · POST /api/auth/logout
+
+- `GET /api/me`: 내 계정. 토큰이 없거나 만료면 `401`.
+- `PUT /api/me/nickname`: `{ "nickname": "1~20자" }`
+- `PUT /api/me/preferences`: 본문은 `WalkPreferences` JSON 그대로 (4KB 이하).
+- `POST /api/auth/logout`: 토큰을 지웁니다 (`204`).
+
+### POST /api/me/email/start · POST /api/me/email/verify
+
+- `start` 본문 `{ "email": "…@khu.ac.kr" }`: 6자리 인증번호를 메일로 보냅니다. 10분 동안 쓸 수 있습니다.
+  - `400` 경희대 메일이 아님, `409` 다른 계정이 이미 인증한 메일, `429` 60초 안에 다시 요청.
+  - `503`/`502` 메일 설정 없음/보내기 실패.
+- `verify` 본문 `{ "code": "123456" }`: 맞으면 `200 Account` (`emailVerified: true`).
+  - 5번 틀리면 `429` 이고, 인증번호를 다시 받아야 합니다.
+
+### 서버 설정 (키는 저장소에 넣지 않음)
+
+| 설정 | 뜻 |
+| --- | --- |
+| `Kakao:AppId` | 카카오 개발자 콘솔의 "앱 ID" (숫자) |
+| `Apple:BundleId` | 기본 `com.mungim.kuca` |
+| `Email:User` / `Email:Password` | 인증 메일을 보낼 Gmail 주소와 **앱 비밀번호** |
+| `Auth:DevLogin`, `Email:DevEcho` | 로컬 테스트 전용. 앞의 것은 `POST /api/auth/dev` 를 켜고, 뒤의 것은 메일 대신 응답에 번호를 넣습니다. **Azure 에서는 켜지 않습니다** |
+
 ## 관리자 API (검토 대기 처리, 앱과 무관)
 
 운영자가 검토 대기 메모·댓글을 공개하거나 지웁니다. 헤더 `X-Admin-Key` 가 서버 설정 `Admin:Key` 와 같아야 하고, 다르면 `403` 입니다. 서버에 `Admin:Key` 가 설정되지 않았으면 관리자 API 는 꺼져 있습니다 (`404`).
