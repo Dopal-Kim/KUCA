@@ -68,6 +68,17 @@ public class RoutePlanner : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "RouteCanvas", 20);
         canvasRect = (RectTransform)canvas.transform;
         BuildRouteUi();
+        // 산책 취향(체크리스트)이 있으면 걸을 시간·취향 칩의 기본값으로 쓴다
+        WalkPreferences prefs = WalkPreferences.Load();
+        if (prefs.IsComplete)
+        {
+            minutes = prefs.walkMinutes <= 15 ? 15 : prefs.walkMinutes <= 30 ? 30 : 60;
+            tastes.Clear();
+            foreach (string t in prefs.tastes)
+                if (System.Array.Exists(TasteChoices, c => c.id == t))
+                    tastes.Add(t);
+            if (tastes.Count == 0) tastes.Add("unvisited");
+        }
         BuildSheet();
         BuildLoading();
         BuildPlacePopup();

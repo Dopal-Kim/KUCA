@@ -155,6 +155,8 @@ public class GameHUD : MonoBehaviour
 
     void Start()
     {
+        // 첫 실행: 산책 취향 체크리스트 (나중에 로그인이 생기면 로그인 직후로 옮긴다)
+        Invoke(nameof(AskPreferencesOnce), 1.5f);
         if (character == null)
             character = FindAnyObjectByType<ModularCharacter>();
         if (customizer == null)
@@ -680,6 +682,8 @@ public class GameHUD : MonoBehaviour
 
     Image albumBadge, menuBadge;
 
+    void AskPreferencesOnce() => PreferenceSurvey.OpenIfNeeded();
+
     /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
     public void SetMenuBadge(bool on)
     {
@@ -821,6 +825,8 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(custom, 110f);
         Button north = UIKit.Button(optCard.transform, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); }, UIKit.ButtonGray, 38);
         UIKit.Size(north, 110f);
+        Button prefs = UIKit.Button(optCard.transform, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); }, UIKit.ButtonGray, 38);
+        UIKit.Size(prefs, 110f);
 
         UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대학교 캠퍼스 탐험", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
     }
