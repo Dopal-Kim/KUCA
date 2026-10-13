@@ -186,6 +186,8 @@ public class PreferenceSurvey : MonoBehaviour
         };
         p.Save();
         Debug.Log("[Preferences] " + p.ToJson());
+        if (AuthService.HasToken && AuthService.HasServer)
+            StartCoroutine(AuthService.SavePreferences(p, (_, error) => { if (error != null) Toast("취향을 서버에 올리지 못했어요: " + error); }));
         root.SetActive(false);
         UIInputBlocker.SetModal(this, false);
         Toast("산책 취향을 저장했어요");

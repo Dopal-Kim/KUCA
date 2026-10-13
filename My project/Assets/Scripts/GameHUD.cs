@@ -155,8 +155,8 @@ public class GameHUD : MonoBehaviour
 
     void Start()
     {
-        // 첫 실행: 산책 취향 체크리스트 (나중에 로그인이 생기면 로그인 직후로 옮긴다)
-        Invoke(nameof(AskPreferencesOnce), 1.5f);
+        // 로그인 (필수): 카카오/Apple → 경희대 메일 인증 → 닉네임 → 산책 취향 체크리스트
+        LoginScreen.Begin();
         if (character == null)
             character = FindAnyObjectByType<ModularCharacter>();
         if (customizer == null)
@@ -682,7 +682,6 @@ public class GameHUD : MonoBehaviour
 
     Image albumBadge, menuBadge;
 
-    void AskPreferencesOnce() => PreferenceSurvey.OpenIfNeeded();
 
     /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
     public void SetMenuBadge(bool on)
@@ -827,6 +826,12 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(north, 110f);
         Button prefs = UIKit.Button(optCard.transform, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); }, UIKit.ButtonGray, 38);
         UIKit.Size(prefs, 110f);
+        Button logout = UIKit.Button(optCard.transform, "로그아웃", () =>
+        {
+            CloseSettings();
+            StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+        }, UIKit.ButtonGray, 38);
+        UIKit.Size(logout, 110f);
 
         UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대학교 캠퍼스 탐험", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
     }
@@ -884,9 +889,12 @@ public class GameHUD : MonoBehaviour
 
     void SaveNickname()
     {
-        PlayerPrefs.SetString(NicknameKey, nicknameInput.text.Trim());
+        string nick = nicknameInput.text.Trim();
+        PlayerPrefs.SetString(NicknameKey, nick);
         PlayerPrefs.Save();
         Toast("닉네임을 저장했어요");
+        if (AuthService.HasToken && nick.Length is >= 1 and <= 20)
+            StartCoroutine(AuthService.SetNickname(nick, (_, error) => { if (error != null) Toast(error); })); // 계정에도
     }
 
     // ---------- 공통 ----------
