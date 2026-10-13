@@ -18,6 +18,9 @@ builder.Services.AddSingleton<BuildingStore>();
 builder.Services.AddSingleton<MemoStore>();
 builder.Services.AddSingleton<PhotoStore>();
 
+// 쪽지·댓글 내용 검사 (AI: FactChat 게이트웨이, 키가 없거나 장애면 금지어 검사로 대체)
+// 설정: Ai:ApiKey (없으면 Recommend:ApiKey 를 같이 씀. 저장소에 넣지 않음), Ai:FilterModel 등
+builder.Services.AddHttpClient<IContentModerator, AiModerator>();
 // 캠퍼스 날씨 (기상청 초단기 실황·예보, 키는 설정 Kma:ServiceKey)
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<KmaWeatherService>();
@@ -52,6 +55,7 @@ app.MapMemoEndpoints();
 app.MapWeatherEndpoints();
 app.MapReactionEndpoints();
 app.MapRecommendEndpoints();
+app.MapAdminEndpoints();
 app.MapWebPages();
 
 app.Run();
