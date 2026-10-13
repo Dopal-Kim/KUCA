@@ -1,0 +1,5 @@
+Edit the attached KUCA in-game map screenshot crop. Keep the exact same map, camera and rendering style. Add three special "limited-time spawn" ground markers on three open lawn spots, each a soft glowing circular ring on the grass with gentle rising light particles, subtle enough to sit under a small toy creature (leave the center of each ring empty):
+marker 1: warm golden glow (legendary landmark animal),
+marker 2: moonlight blue glow with tiny stars (night-only animal),
+marker 3: cherry-pink glow with a few petals (season-only animal).
+Same toy-diorama lighting. No text, no UI, no characters.

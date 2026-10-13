@@ -68,6 +68,23 @@ public class AiModeratorTests
     }
 
     [Fact]
+    public async Task Ai_설정이_없으면_산책_추천의_Recommend_키와_주소를_같이_쓴다()
+    {
+        var handler = Replying("""{"verdict":"allow","reason":"none","note":""}""");
+        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["Recommend:Endpoint"] = "https://example.test/v1/chat/completions",
+            ["Recommend:ApiKey"] = "shared-key",
+        }).Build();
+
+        var result = await new AiModerator(new HttpClient(handler), config, NullLogger<AiModerator>.Instance).CheckAsync("글", null);
+
+        Assert.False(result.UsedFallback);
+        Assert.Equal("https://example.test/v1/chat/completions", handler.Request!.RequestUri!.ToString());
+        Assert.Equal("shared-key", handler.Request.Headers.Authorization!.Parameter);
+    }
+
+    [Fact]
     public async Task 사진이_없으면_글만_보낸다()
     {
         var handler = Replying("""{"verdict":"allow","reason":"none","note":""}""");

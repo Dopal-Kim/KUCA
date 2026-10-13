@@ -10,7 +10,7 @@ using UnityEngine;
 [ExecuteAlways]
 public class KeyArtLook : MonoBehaviour
 {
-    public enum Mode { Auto, Day, Sunset, Night }
+    public enum Mode { Auto, Day, Sunset, Night, Morning }
     public enum Season { Auto, Spring, Summer, Autumn, Winter }
 
     [System.Serializable]
@@ -74,6 +74,19 @@ public class KeyArtLook : MonoBehaviour
     public Preset day = new Preset();
     public Preset sunset = new Preset();
     public Preset night = new Preset();
+    [Tooltip("아침 (A-1 출현 시간대와 맞춤): 낮게 뜬 옅은 금빛 해, 긴 그림자, 옅은 아침 안개")]
+    public Preset morning = MorningDefault();
+
+    /// <summary>씬에 아침 값이 저장돼 있지 않을 때 쓰는 기본값 (Art/Concept/06_A_Round/A1_분위기_time_morning.png 기준)</summary>
+    static Preset MorningDefault() => new Preset
+    {
+        sunColor = new Color(1f, 0.88f, 0.68f), sunIntensity = 0.9f, sunPitch = 22f, sunYaw = 80f,
+        skyAmbient = new Vector3(0.58f, 0.64f, 0.74f), groundAmbient = new Vector3(0.60f, 0.58f, 0.50f),
+        shadowStrength = 0.6f, wrap = 0.38f, shadowTint = new Vector3(0.82f, 0.90f, 1.10f),
+        warmTop = 0.2f, rim = 0.32f, saturation = 1.1f, wash = 0.18f, washColor = new Color(1f, 0.92f, 0.76f),
+        fogColor = new Color(0.93f, 0.94f, 0.92f), fogStart = 600f, fogEnd = 2200f, night = 0f,
+        skyTint = new Color(0.70f, 0.78f, 0.95f), skyExposure = 1.25f,
+    };
 
     [Header("계절 (Auto = 기기 날짜: 3~5 봄, 6~8 여름, 9~11 가을, 12~2 겨울)")]
     public Season season = Season.Auto;
@@ -175,20 +188,41 @@ public class KeyArtLook : MonoBehaviour
             case Mode.Day: return day;
             case Mode.Sunset: return sunset;
             case Mode.Night: return night;
+            case Mode.Morning: return morning;
         }
+        // 출현 조건 테스트로 시간대를 강제했으면 지도 빛도 그 시간대로 (CollectibleSpawner 인스펙터)
+        if (SpawnConditions.OverrideTime is SpawnConditions.TimeSlot slot)
+            return PresetFor(slot);
         float h = previewHour >= 0f ? previewHour : (float)System.DateTime.Now.TimeOfDay.TotalHours;
         return ForHour(h);
     }
 
-    /// <summary>시각(0~24) → 프리셋. 밤 ~5:00, 새벽 노을 6:15, 낮 7:30~17:00, 저녁 노을 18:15, 밤 19:30~</summary>
+    /// <summary>출현 시간대(SpawnConditions.TimeSlot)의 대표 프리셋</summary>
+    public Preset PresetFor(SpawnConditions.TimeSlot slot)
+    {
+        switch (slot)
+        {
+            case SpawnConditions.TimeSlot.Morning: return morning;
+            case SpawnConditions.TimeSlot.Evening: return sunset;
+            case SpawnConditions.TimeSlot.Night: return night;
+            default: return day;
+        }
+    }
+
+    /// <summary>
+    /// 시각(0~24) → 프리셋. 캐릭터 출현 시간대(아침 06–11 · 낮 11–17 · 저녁 17–20 · 밤 20–06)와 맞추고,
+    /// 경계 앞뒤로 천천히 섞는다: 밤 ~5:00 → 아침 6:00~10:00 → 낮 11:00~16:30 → 노을 17:30~19:30 → 밤 20:30~
+    /// </summary>
     public Preset ForHour(float h)
     {
-        if (h < 5f || h >= 19.5f) return night;
-        if (h < 6.25f) return Preset.Lerp(night, sunset, Mathf.InverseLerp(5f, 6.25f, h));
-        if (h < 7.5f) return Preset.Lerp(sunset, day, Mathf.InverseLerp(6.25f, 7.5f, h));
-        if (h < 17f) return day;
-        if (h < 18.25f) return Preset.Lerp(day, sunset, Mathf.InverseLerp(17f, 18.25f, h));
-        return Preset.Lerp(sunset, night, Mathf.InverseLerp(18.25f, 19.5f, h));
+        if (h < 5f || h >= 20.5f) return night;
+        if (h < 6f) return Preset.Lerp(night, morning, Mathf.InverseLerp(5f, 6f, h));
+        if (h < 10f) return morning;
+        if (h < 11f) return Preset.Lerp(morning, day, Mathf.InverseLerp(10f, 11f, h));
+        if (h < 16.5f) return day;
+        if (h < 17.5f) return Preset.Lerp(day, sunset, Mathf.InverseLerp(16.5f, 17.5f, h));
+        if (h < 19.5f) return sunset;
+        return Preset.Lerp(sunset, night, Mathf.InverseLerp(19.5f, 20.5f, h));
     }
 
     public void Apply()

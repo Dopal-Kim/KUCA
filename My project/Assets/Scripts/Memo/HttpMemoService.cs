@@ -56,9 +56,11 @@ public class HttpMemoService : IMemoService
                 : $"서버 응답 오류 ({req.responseCode})");
     }
 
-    public IEnumerator GetMemos(string buildingId, Action<List<MemoData>, string> onDone)
+    public IEnumerator GetMemos(string buildingId, string deviceId, Action<List<MemoData>, string> onDone)
     {
         using var req = UnityWebRequest.Get($"{baseUrl}/api/buildings/{UnityWebRequest.EscapeURL(buildingId)}/memos?limit=50");
+        if (!string.IsNullOrEmpty(deviceId))
+            req.SetRequestHeader("X-Device-Id", deviceId); // likedByMe 를 받으려고
         req.timeout = TimeoutSeconds;
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success) { onDone(null, ErrorOf(req)); yield break; }
@@ -90,8 +92,41 @@ public class HttpMemoService : IMemoService
         req.downloadHandler = new DownloadHandlerBuffer();
         req.timeout = TimeoutSeconds;
         yield return req.SendWebRequest();
+        if (req.responseCode == 404) { onDone(false, MemoData.NotFound); yield break; }
         if (req.result != UnityWebRequest.Result.Success) { onDone(false, ErrorOf(req)); yield break; }
         onDone(true, null);
+    }
+
+    public IEnumerator GetMemo(string memoId, string deviceId, Action<MemoData, string> onDone)
+    {
+        using var req = UnityWebRequest.Get($"{baseUrl}/api/memos/{UnityWebRequest.EscapeURL(memoId)}");
+        if (!string.IsNullOrEmpty(deviceId))
+            req.SetRequestHeader("X-Device-Id", deviceId);
+        req.timeout = TimeoutSeconds;
+        yield return req.SendWebRequest();
+        if (req.responseCode == 404) { onDone(null, MemoData.NotFound); yield break; }
+        if (req.result != UnityWebRequest.Result.Success) { onDone(null, ErrorOf(req)); yield break; }
+        onDone(JsonUtility.FromJson<MemoData>(req.downloadHandler.text), null);
+    }
+
+    public string PublicPhotoUrl(MemoData memo) =>
+        memo == null || !memo.HasPhoto ? null : memo.photoUrl.StartsWith("http") ? memo.photoUrl : baseUrl + memo.photoUrl;
+
+    public string PublicPageUrl(string buildingId) => $"{baseUrl}/buildings/{UnityWebRequest.EscapeURL(buildingId)}";
+
+    [Serializable] class LikeBody { public int likeCount; public bool likedByMe; }
+
+    /// <summary>PUT(누르기) / DELETE(취소) /api/memos/{id}/like</summary>
+    public IEnumerator SetLike(string memoId, string deviceId, bool like, Action<int, bool, string> onDone)
+    {
+        string url = $"{baseUrl}/api/memos/{UnityWebRequest.EscapeURL(memoId)}/like";
+        using var req = new UnityWebRequest(url, like ? "PUT" : "DELETE", new DownloadHandlerBuffer(), null);
+        req.SetRequestHeader("X-Device-Id", deviceId);
+        req.timeout = TimeoutSeconds;
+        yield return req.SendWebRequest();
+        if (req.result != UnityWebRequest.Result.Success) { onDone(0, !like, ErrorOf(req)); yield break; }
+        var body = JsonUtility.FromJson<LikeBody>(req.downloadHandler.text);
+        onDone(body.likeCount, body.likedByMe, null);
     }
 
     public IEnumerator LoadPhoto(MemoData memo, Action<Texture2D, string> onDone)

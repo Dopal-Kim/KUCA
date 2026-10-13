@@ -1,0 +1,23 @@
+UI STYLE:
+Mobile game UI for a cheerful campus walking-and-collecting game, inspired by the attached marker icons.
+Soft 3D-ish flat icons with rounded shapes, thick soft drop shadows, glossy highlights, bright saturated pastel colors,
+navy (#13245A) and Kyung Hee crimson (#A6192E) as accent colors, cream (#FFF8EC) panels with large corner radius.
+Readable at very small sizes. Clean, friendly, premium, no clutter.
+Absolutely no text, letters, numbers or logos.
+
+OUTPUT = ICON SHEET:
+A 4 x 3 grid of square game icons on a plain light cream background, evenly spaced, each icon centered in its cell, same size and style.
+Row 1 (time of day): early morning sunrise, bright midday sun, sunset dusk, night moon with stars.
+Row 2 (season): spring cherry blossom, summer green leaf with sun, autumn red maple leaf, winter snowflake.
+Row 3 (weather): clear sky, soft cloud, rain drops with umbrella, snow.
+Each icon is a rounded badge with a soft colored circle background that fits its meaning.
+
+
+--- 수정 (같은 이미지를 레퍼런스로) ---
+Same icon sheet as the attached image, same style, layout and colors. Change only these so every icon reads differently at a glance:
+- Row 1, icon 1 (morning): a small sun just rising over soft green hills with a light pale-gold sky and a tiny bird, clearly brighter and cooler than the sunset icon.
+- Row 1, icon 3 (evening/sunset): keep the warm orange-purple sunset.
+- Row 3, icon 1 (clear weather): a bright smiling-free simple sun in a clear blue sky circle, no cloud.
+- Row 3, icon 2 (cloudy): keep the grey cloud.
+- Row 3, icon 4 (snow weather): a soft white cloud with falling snow dots underneath, so it differs from the winter snowflake season icon.
+No text, letters or numbers.

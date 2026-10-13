@@ -210,7 +210,8 @@ public static class CreatureLibrary
     {
         if (!TierSpecies.TryGetValue(tierId, out string[] list) || list.Length == 0)
             return null;
-        string id = list[Random.Range(0, list.Length)];
+        // 시간대·계절·날씨에 맞는 동물이 더 자주 나온다 (SpawnConditions)
+        string id = SpawnConditions.PickWeighted(list);
         return TryGetMesh(id, out _) ? id : null;
     }
 
@@ -233,6 +234,9 @@ public static class CreatureLibrary
         mesh = null;
         return id != null && farMeshes.TryGetValue(id, out mesh);
     }
+
+    /// <summary>같은 형식(v3)의 다른 메시 파일을 읽는다 (예: 액세서리). 키 = 메시 이름 ("Creature_" 는 뗌)</summary>
+    public static Dictionary<string, Mesh> LoadMeshes(string path, bool quiet = false) => Load(path, quiet);
 
     static Dictionary<string, Mesh> Load(string path, bool quiet = false)
     {

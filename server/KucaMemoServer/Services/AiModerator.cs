@@ -10,8 +10,8 @@ namespace KucaMemoServer.Services;
 /// 키가 없거나, 요청이 실패하거나, 시간이 초과되거나, 응답 형식이 틀리면 KeywordModerator 로 대신 검사한다.
 ///
 /// 설정 (appsettings / Azure 앱 설정 / dotnet user-secrets):
-///   Ai:Endpoint        채팅 API 주소 (기본: FactChat 게이트웨이)
-///   Ai:ApiKey          API 키. 저장소에 넣지 않는다. Azure 는 앱 설정 Ai__ApiKey, 로컬은 user-secrets
+///   Ai:Endpoint        채팅 API 주소 (없으면 Recommend:Endpoint, 그것도 없으면 FactChat 게이트웨이)
+///   Ai:ApiKey          API 키 (없으면 산책 추천과 같은 Recommend:ApiKey). 저장소에 넣지 않는다
 ///   Ai:FilterModel     검사에 쓸 모델 (기본 claude-haiku-5-5)
 ///   Ai:TimeoutSeconds  이 시간 안에 답이 없으면 대체 검사 (기본 15초, 사진이 있으면 더 걸림)
 /// </summary>
@@ -47,11 +47,14 @@ public class AiModerator : IContentModerator
     {
         this.http = http;
         this.logger = logger;
-        endpoint = config["Ai:Endpoint"] is { Length: > 0 } e ? e : DefaultEndpoint;
-        apiKey = config["Ai:ApiKey"] is { Length: > 0 } k ? k : null;
+        // 산책 추천(ChatKuClient)과 같은 게이트웨이·키를 쓰므로, Ai:* 가 없으면 Recommend:* 를 그대로 쓴다.
+        endpoint = FirstSet(config["Ai:Endpoint"], config["Recommend:Endpoint"]) ?? DefaultEndpoint;
+        apiKey = FirstSet(config["Ai:ApiKey"], config["Recommend:ApiKey"]);
         model = config["Ai:FilterModel"] is { Length: > 0 } m ? m : DefaultModel;
         timeout = TimeSpan.FromSeconds(int.TryParse(config["Ai:TimeoutSeconds"], out int s) && s > 0 ? s : 15);
     }
+
+    static string? FirstSet(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     public async Task<ModerationResult> CheckAsync(string text, ModerationImage? image, CancellationToken cancellationToken = default)
     {

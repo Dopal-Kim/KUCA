@@ -19,8 +19,14 @@ builder.Services.AddSingleton<MemoStore>();
 builder.Services.AddSingleton<PhotoStore>();
 
 // 쪽지·댓글 내용 검사 (AI: FactChat 게이트웨이, 키가 없거나 장애면 금지어 검사로 대체)
-// 설정: Ai:ApiKey (저장소에 넣지 않음 - Azure 앱 설정 Ai__ApiKey / 로컬 dotnet user-secrets), Ai:FilterModel 등
+// 설정: Ai:ApiKey (없으면 Recommend:ApiKey 를 같이 씀. 저장소에 넣지 않음), Ai:FilterModel 등
 builder.Services.AddHttpClient<IContentModerator, AiModerator>();
+// 캠퍼스 날씨 (기상청 초단기 실황·예보, 키는 설정 Kma:ServiceKey)
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton<KmaWeatherService>();
+// 산책 추천: 챗쿠 AI (설정 Recommend:Endpoint / Recommend:ApiKey 가 없으면 규칙 기반으로만 추천)
+builder.Services.AddHttpClient<IRouteAi, ChatKuClient>(c => c.Timeout = TimeSpan.FromSeconds(25));
+builder.Services.AddScoped<RouteRecommender>();
 
 // 메모 작성 본문 크기 제한: 사진 10MB + 글자 여유분
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);
@@ -46,7 +52,9 @@ app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }))
 
 app.MapBuildingEndpoints();
 app.MapMemoEndpoints();
+app.MapWeatherEndpoints();
 app.MapReactionEndpoints();
+app.MapRecommendEndpoints();
 app.MapAdminEndpoints();
 app.MapWebPages();
 

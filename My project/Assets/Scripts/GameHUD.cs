@@ -255,9 +255,32 @@ public class GameHUD : MonoBehaviour
             ShowXpPopup(progress.score - lastScore);
         lastScore = progress.score;
 
+        ShowEgg(progress);
         if (menus != null)
             menus.OnProgressChanged(progress, types);
     }
+
+    // ---------- 걷기 보상: 알 게이지 (닉네임 아래) ----------
+
+    Text eggText;
+    RectTransform eggFill;
+
+    /// <summary>품은 알이 얼마나 자랐는지 (1km 마다 부화, 하루 3번)</summary>
+    public void ShowEgg(GameProgress progress)
+    {
+        if (progress == null || eggText == null)
+            return;
+        bool doneToday = progress.HatchedToday >= GameProgress.EggsPerDay;
+        float m = progress.eggMeters;
+        eggText.text = doneToday
+            ? $"오늘 알 {GameProgress.EggsPerDay}개 다 깼어요"
+            : $"{m:N0} / {GameProgress.EggMeters:N0}m";
+        eggFill.anchorMax = new Vector2(doneToday ? 1f : Mathf.Clamp01(m / GameProgress.EggMeters), 1f);
+        eggFill.GetComponent<Image>().color = doneToday ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
+    }
+
+    /// <summary>알이 깨어나는 연출 (KhuMenus 가 부른다)</summary>
+    public void ShowHatch(string species, string tier, int hatchedToday) => HatchScreen.Show(species, tier, hatchedToday);
 
     /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*50 XP 가 필요하다.</summary>
     public static void LevelOf(int score, out int level, out int xpInLevel, out int xpNeeded)
@@ -359,6 +382,38 @@ public class GameHUD : MonoBehaviour
         nicknameText.fontStyle = FontStyle.Bold;
         UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
 
+        // 알 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 알이 깨어난다
+        Image eggPill = Glass(root, "EggGauge", new Vector2(300f, 60f), 30f);
+        Place(eggPill.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f - 64f - 12f));
+        Image eggIcon = UIKit.Image(eggPill.transform, "Egg", new Color(1f, 0.95f, 0.84f));
+        eggIcon.sprite = HudIcons.Egg;
+        eggIcon.rectTransform.anchorMin = eggIcon.rectTransform.anchorMax = eggIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
+        eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
+        eggText = UIKit.Text(eggPill.transform, "", 26, TextAnchor.MiddleLeft);
+        eggText.fontStyle = FontStyle.Bold;
+        eggText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        eggText.rectTransform.anchorMin = new Vector2(0f, 0.25f);
+        eggText.rectTransform.anchorMax = new Vector2(1f, 1f);
+        eggText.rectTransform.offsetMin = new Vector2(62f, 0f);
+        eggText.rectTransform.offsetMax = new Vector2(-12f, 0f);
+        Image eggBar = UIKit.Image(eggPill.transform, "Bar", new Color(1f, 1f, 1f, 0.15f));
+        eggBar.sprite = HudIcons.Pill;
+        eggBar.type = Image.Type.Sliced;
+        eggBar.pixelsPerUnitMultiplier = 12f;
+        eggBar.rectTransform.anchorMin = new Vector2(0f, 0f);
+        eggBar.rectTransform.anchorMax = new Vector2(1f, 0f);
+        eggBar.rectTransform.offsetMin = new Vector2(62f, 9f);
+        eggBar.rectTransform.offsetMax = new Vector2(-18f, 17f);
+        Image eggBarFill = UIKit.Image(eggBar.transform, "Fill", new Color(1f, 0.85f, 0.4f));
+        eggBarFill.sprite = HudIcons.Pill;
+        eggBarFill.type = Image.Type.Sliced;
+        eggBarFill.pixelsPerUnitMultiplier = 12f;
+        eggFill = eggBarFill.rectTransform;
+        eggFill.anchorMin = Vector2.zero;
+        eggFill.anchorMax = new Vector2(0f, 1f);
+        eggFill.offsetMin = eggFill.offsetMax = Vector2.zero;
+
         // "+N XP" (레벨 카드 아래 오른쪽에 잠깐)
         Image pill = UIKit.Image(root, "XpPopup", XpPink);
         pill.sprite = HudIcons.Pill;
@@ -382,15 +437,22 @@ public class GameHUD : MonoBehaviour
         const float size = 120f, gap = 26f;
         var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
-            ("Compass", null, () => { if (cameraFollow != null) cameraFollow.ResetNorthUp(); }),
+            ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
             ("Items", HudIcons.Bag, () => menus.OpenCollection(KhuMenus.Tab.Items)),
-            ("Customize", HudIcons.Shirt, OpenCustomizer),
+            ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),
         };
         for (int i = 0; i < buttons.Length; i++)
         {
             RectTransform face = RoundButton(hud, buttons[i].name, size, buttons[i].action);
             Place(face, new Vector2(1f, 1f), new Vector2(-Margin, -Margin - i * (size + gap)));
+            if (buttons[i].name == "Album")
+            {
+                // 내 게시물에 새 좋아요가 오면 빨간 점
+                albumBadge = Circle(face, "Badge", new Color(0.93f, 0.25f, 0.33f), 34f);
+                Place(albumBadge.rectTransform, new Vector2(1f, 1f), new Vector2(-4f, -4f));
+                albumBadge.gameObject.SetActive(false);
+            }
             Image icon;
             if (buttons[i].icon != null)
             {
@@ -471,6 +533,10 @@ public class GameHUD : MonoBehaviour
         Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         Image face = Circle(ring.transform, "Face", Color.white, size - 12f);
         Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        // 받을 퀘스트 보상이 있으면 빨간 점
+        menuBadge = Circle(root, "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
+        Place(menuBadge.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(size * 0.36f, size * 0.36f));
+        menuBadge.gameObject.SetActive(false);
 
         if (logo != null)
         {
@@ -610,6 +676,33 @@ public class GameHUD : MonoBehaviour
         xpPopup.gameObject.SetActive(true);
         xpPopup.alpha = 1f;
         xpPopupTimer = 1.8f;
+    }
+
+    Image albumBadge, menuBadge;
+
+    /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
+    public void SetMenuBadge(bool on)
+    {
+        if (menuBadge == null) return;
+        menuBadge.gameObject.SetActive(on);
+        menuBadge.transform.SetAsLastSibling();
+    }
+
+    /// <summary>사진첩 버튼의 새 반응 점</summary>
+    public void SetAlbumBadge(bool on)
+    {
+        if (albumBadge != null)
+        {
+            albumBadge.gameObject.SetActive(on);
+            albumBadge.transform.SetAsLastSibling();
+        }
+    }
+
+    /// <summary>내 사진첩 (내가 메모판에 올린 사진들)</summary>
+    void OpenAlbum()
+    {
+        var board = FindAnyObjectByType<MemoBoard>();
+        if (board != null) board.OpenAlbum();
     }
 
     void OpenCustomizer()

@@ -21,9 +21,9 @@ http://localhost:5080/ 에서는 메모가 있는 건물과 메모를 웹 페이
 
 | 설정 | 기본값 | 설명 |
 | --- | --- | --- |
-| `Ai:ApiKey` | 없음 | FactChat API 키. **저장소에 넣지 않습니다.** 없으면 AI 대신 금지어·패턴 검사만 합니다 |
+| `Ai:ApiKey` | `Recommend:ApiKey` | FactChat API 키. **따로 넣지 않으면 아래 "산책 추천 AI" 의 `Recommend:ApiKey` 를 같이 씁니다** (키 하나로 둘 다). 둘 다 없으면 AI 대신 금지어·패턴 검사만 합니다. 저장소에 넣지 않습니다 |
 | `Ai:FilterModel` | `claude-haiku-5-5` | 검사에 쓸 모델 |
-| `Ai:Endpoint` | FactChat 게이트웨이 `.../v1/gateway/chat/completions` | 다른 게이트웨이로 바꿀 때 |
+| `Ai:Endpoint` | `Recommend:Endpoint` → FactChat 게이트웨이 | 다른 게이트웨이로 바꿀 때 |
 | `Ai:TimeoutSeconds` | `15` | 이 안에 답이 없으면 금지어 검사로 대신 판단 (작성은 막히지 않음) |
 | `Admin:Key` | 없음 | 관리자 API(`/api/admin/...`, 검토 대기 처리) 키. 없으면 관리자 API 가 꺼짐 |
 
@@ -31,14 +31,15 @@ http://localhost:5080/ 에서는 메모가 있는 건물과 메모를 웹 페이
 
 ```bash
 cd server/KucaMemoServer
-dotnet user-secrets set "Ai:ApiKey" "FactChat 키"
+# AI 키는 산책 추천과 같은 Recommend:ApiKey 하나면 충분 (아래 "산책 추천 AI" 참고)
 dotnet user-secrets set "Admin:Key" "아무도 모를 긴 문자열"
 ```
 
 **Azure** (콜론 대신 밑줄 두 개):
 
 ```bash
-az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Ai__ApiKey="FactChat 키" Admin__Key="긴 문자열"
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Admin__Key="긴 문자열"
+# AI 키는 Recommend__ApiKey 하나로 산책 추천과 내용 검사가 같이 씁니다
 ```
 
 **검토 대기 처리** — 애매하다고 판단된 글은 `pending` 으로 저장되고 작성자에게만 보입니다. 관리자가 공개하거나 지웁니다 (예시는 `KucaMemoServer.http`).
@@ -64,6 +65,55 @@ cd server
 - 메모 DB 와 사진은 앱 폴더가 아닌 `/home/data` 에 둡니다 (`Memos__DatabasePath`, `Photos__Directory` 앱 설정). 재배포해도 지워지지 않습니다.
 - 기본 요금제 F1(무료)은 한동안 안 쓰면 잠들어서 첫 요청이 느립니다. 항상 켜 두려면 `SKU=B1` 로 만듭니다(크레딧 차감).
 - 앱에서는 설정 › 메모 서버에 위 주소를 넣습니다.
+
+## 날씨 (기상청 API 키)
+
+`GET /api/weather` 는 기상청 단기예보 조회서비스를 씁니다. 공공데이터포털에서 받은 키를 **저장소가 아니라 설정에** 넣습니다 (Decoding·Encoding 키 둘 다 됨).
+
+```bash
+# 로컬
+cd server/KucaMemoServer
+dotnet user-secrets set "Kma:ServiceKey" "<공공데이터포털 키>"
+
+# Azure: 배포하면서 넣기
+KMA_KEY="<공공데이터포털 키>" ./deploy-azure.sh
+# 또는 직접
+az webapp config appsettings set --name kuca-memo --resource-group <리소스 그룹> --settings Kma__ServiceKey="<공공데이터포털 키>"
+```
+
+키가 없으면 `/api/weather` 가 503 을 돌려주고, 앱은 날씨 조건 없이 동작합니다.
+
+## 산책 추천 AI (챗쿠) 키 넣기
+
+`POST /api/recommendations` 는 챗쿠 AI 로 코스를 짭니다.
+- 키가 없으면 가까운 경희스팟부터 고르는 규칙 추천(`source: "fallback"`)으로 동작합니다.
+- **키는 저장소(appsettings.json)에 넣지 않습니다.**
+
+| 설정 | 뜻 |
+| --- | --- |
+| `Recommend:Endpoint` | 채팅 API 전체 주소. 기본값: 챗쿠(BAZE) 게이트웨이 `https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions` |
+| `Recommend:ApiKey` | API 키 (BAZE › API Gateway 에서 발급). **이것만 넣으면 된다** |
+| `Recommend:Model` | 모델 이름. 기본값 `gpt-5.4-mini` (게이트웨이 `/models/` 의 다른 ID 로 바꿀 수 있음) |
+| `Recommend:AuthHeader` | 키를 보낼 헤더. 기본 `Authorization` |
+| `Recommend:AuthScheme` | 헤더 값 앞말. 기본 `Bearer`, 키만 보내려면 빈 값 |
+
+로컬 (`server/KucaMemoServer` 폴더에서):
+
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "Recommend:ApiKey" "발급받은 키"
+```
+
+Azure:
+
+```bash
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__ApiKey="발급받은 키"
+```
+
+- 챗쿠(BAZE) 게이트웨이는 OpenAI 호환입니다. 요청은 `{ model, messages }`, 답은 `choices[0].message.content` 입니다.
+- 키는 `Authorization: Bearer` 로 보냅니다.
+- 실측: `gpt-5.4-mini` 는 약 3초, `gemini-3.5-flash` 는 약 11초 걸렸습니다.
+- 사용량은 키를 만든 BAZE 계정에 청구됩니다.
 
 ## 테스트
 

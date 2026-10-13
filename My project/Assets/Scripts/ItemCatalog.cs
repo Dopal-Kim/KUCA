@@ -19,6 +19,13 @@ public static class ItemCatalog
         new Item { id = "incense", name = "탐험 향로", description = "주변에 경희몬을 불러 모으는 향로예요. (사용 기능 준비 중)" },
     };
 
+    /// <summary>퀘스트 보상 액세서리(A-3)도 도구 목록에 넣는다 (id = CreatureAccessories 의 id)</summary>
+    static ItemCatalog()
+    {
+        foreach (CreatureAccessories.Accessory a in CreatureAccessories.All)
+            All.Add(new Item { id = a.id, name = a.name, description = "경희몬에게 씌워 꾸밀 수 있는 액세서리예요." });
+    }
+
     public static Item Get(string id) => All.Find(i => i.id == id);
 
     /// <summary>처음 시작할 때 받는 도구 (레벨 1 보상)</summary>
