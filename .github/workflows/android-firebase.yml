@@ -1,15 +1,10 @@
-# 안드로이드 APK 를 빌드해서 Firebase App Distribution 으로 팀·테스터 폰에 보낸다.
-# 설정 방법: docs/안드로이드_자동배포.md  (Secrets 9개를 팀 저장소에 등록해야 돈다)
-name: Android → Firebase
+# 안드로이드 APK 를 빌드해서 Firebase App Distribution 으로 보내는 자동화 — 지금은 쓰지 않음 (수동 실행만 남김).
+# Unity Personal 라이선스는 GitHub 서버에서 활성화할 수 없어서 빌드 단계에서 멈춘다.
+# 지금 배포 방식: Unity 메뉴 KUCA › 안드로이드 APK 빌드 → Firebase 콘솔에 올리기 (docs/안드로이드_자동배포.md)
+# 다시 켜려면: Unity Pro 시리얼(UNITY_SERIAL)을 쓰거나 팀원 PC 를 self-hosted runner 로 쓰고, 아래 on 에 push 를 되살린다.
+name: Android → Firebase (보류)
 
 on:
-  push:
-    branches: [main, feature/android-support]
-    paths:
-      - 'My project/Assets/**'
-      - 'My project/Packages/**'
-      - 'My project/ProjectSettings/**'
-      - '.github/workflows/android-firebase.yml'
   workflow_dispatch:
     inputs:
       notes:
