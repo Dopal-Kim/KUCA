@@ -74,3 +74,17 @@ X-Admin-Key: {{adminKey}}
 ### (C-2) 검토 대기 메모 거절 (삭제)
 DELETE {{host}}/api/admin/memos/여기에-메모-id
 X-Admin-Key: {{adminKey}}
+
+### (C-4) 장소 공지 목록 (앱이 쓰는 것)
+GET {{host}}/api/notices?buildingId=way-474085534
+
+### (C-4) 공지 넣기 (관리자)
+POST {{host}}/api/admin/notices
+X-Admin-Key: {{adminKey}}
+Content-Type: application/json
+
+{ "title": "중간고사 기간 열람실 연장 운영", "body": "시험 기간 동안 중앙도서관 제1열람실을 밤 12시까지 엽니다.", "url": "https://www.khu.ac.kr/", "postedAt": "2026-10-08" }
+
+### (C-4) 공지 지우기 (관리자)
+DELETE {{host}}/api/admin/notices/여기에-공지-id
+X-Admin-Key: {{adminKey}}

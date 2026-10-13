@@ -23,6 +23,7 @@ public sealed class TestServer : WebApplicationFactory<Program>
     public string Root { get; } = Path.Combine(Path.GetTempPath(), "kuca-test-" + Guid.NewGuid().ToString("N"));
     public string PhotosDir => Path.Combine(Root, "wwwroot", "photos");
     public FakeModerator Moderator { get; } = new();
+    public FakeNoticeClassifier NoticeClassifier { get; } = new();
 
     public TestServer() => Directory.CreateDirectory(Path.Combine(Root, "wwwroot"));
 
@@ -36,6 +37,12 @@ public sealed class TestServer : WebApplicationFactory<Program>
         {
             services.RemoveAll<IContentModerator>();
             services.AddSingleton<IContentModerator>(Moderator);
+            services.RemoveAll<INoticeClassifier>();
+            services.AddSingleton<INoticeClassifier>(sp =>
+            {
+                NoticeClassifier.Spots = sp.GetRequiredService<SpotStore>().All;
+                return NoticeClassifier;
+            });
         });
     }
 
