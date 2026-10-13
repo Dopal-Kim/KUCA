@@ -6,7 +6,7 @@ using static KucaMemoServer.Endpoints.MemoEndpoints;
 namespace KucaMemoServer.Endpoints;
 
 /// <summary>
-/// 관리자 API: 내용 검사에서 검토 대기(pending)가 된 메모·댓글을 공개하거나 지운다 (docs/api.md 의 "관리자 API").
+/// 관리자 API: 내용 검사에서 검토 대기(pending)가 된 메모·댓글을 공개하거나 지우고, 장소 공지를 넣는다 (docs/api.md 의 "관리자 API").
 /// 헤더 X-Admin-Key 가 설정 Admin:Key 와 같아야 한다. 설정이 없으면 관리자 API 는 꺼진다(404).
 /// Admin:Key 는 저장소에 넣지 않는다: Azure 는 앱 설정 Admin__Key, 로컬은 dotnet user-secrets.
 /// </summary>
@@ -49,6 +49,9 @@ public static class AdminEndpoints
 
         admin.MapDelete("/comments/{commentId}", (string commentId, MemoStore memos) =>
             memos.DeleteComment(commentId) ? Results.NoContent() : CommentNotFound(commentId));
+
+        // 장소 공지 넣기·지우기 (C-4)
+        admin.MapNoticeAdmin();
     }
 
     static IResult CommentNotFound(string id) => Error(StatusCodes.Status404NotFound, $"댓글을 찾을 수 없습니다: {id}");
