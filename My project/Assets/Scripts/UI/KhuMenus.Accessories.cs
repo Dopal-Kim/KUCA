@@ -49,7 +49,7 @@ public partial class KhuMenus
                 row.Add((id, b));
             }
             accessoryButtons[slot] = row;
-            top += 210f;
+            top += 195f;
         }
 
         accessoryNote = T(card, "", 30, TextAnchor.MiddleCenter, Gray);
