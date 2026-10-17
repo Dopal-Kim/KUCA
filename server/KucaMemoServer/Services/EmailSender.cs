@@ -42,7 +42,43 @@ public class SmtpEmailSender(IConfiguration config, ILogger<SmtpEmailSender> log
         }
         catch (Exception e) when (e is SmtpException or InvalidOperationException or FormatException)
         {
-            log.LogWarning("인증 메일 보내기 실패: {Message}", e.Message);
+            // SmtpException 은 겉 메시지가 "Failure sending mail." 뿐이라 안쪽 원인까지 남긴다.
+            var reasons = new List<string>();
+            for (Exception? x = e; x != null; x = x.InnerException)
+                reasons.Add($"{x.GetType().Name}: {x.Message}");
+            log.LogWarning("인증 메일 보내기 실패: {Reasons}", string.Join(" → ", reasons));
+            return false;
+        }
+    }
+}
+
+/// <summary>
+/// Azure Communication Services Email 로 보낸다 (HTTPS). Gmail 이 서버 로그인을 막을 때 쓰는 기본 경로.
+///   Email:ConnectionString  ACS 연결 문자열 (저장소에 넣지 말 것. Azure 앱 설정 Email__ConnectionString)
+///   Email:From              보내는 주소 (예: DoNotReply@xxxx.azurecomm.net)
+/// </summary>
+public class AzureEmailSender(IConfiguration config, ILogger<AzureEmailSender> log) : IEmailSender
+{
+    string ConnectionString => config["Email:ConnectionString"] ?? "";
+    string From => config["Email:From"] ?? "";
+    public bool IsConfigured => ConnectionString.Length > 0 && From.Length > 0;
+
+    public async Task<bool> SendAsync(string to, string subject, string body, CancellationToken ct)
+    {
+        if (!IsConfigured)
+            return false;
+        try
+        {
+            var client = new Azure.Communication.Email.EmailClient(ConnectionString);
+            var message = new Azure.Communication.Email.EmailMessage(From, to,
+                new Azure.Communication.Email.EmailContent(subject) { PlainText = body });
+            // Started 까지만 기다린다: 접수되면 몇 초 안에 도착하고, 앱이 오래 기다리지 않게.
+            await client.SendAsync(Azure.WaitUntil.Started, message, ct);
+            return true;
+        }
+        catch (Exception e) when (e is Azure.RequestFailedException or FormatException or ArgumentException)
+        {
+            log.LogWarning("인증 메일 보내기 실패 (Azure): {Type}: {Message}", e.GetType().Name, e.Message);
             return false;
         }
     }
