@@ -131,6 +131,19 @@ public class LoginScreen : MonoBehaviour
         };
         if (provider == "kakao") NativeLogin.Kakao(afterNative);
         else if (provider == "apple") NativeLogin.Apple(afterNative);
+        StopCoroutine(nameof(LoginTimeout));
+        StartCoroutine(nameof(LoginTimeout));
+    }
+
+    /// <summary>로그인 앱에서 돌아왔는데 답이 없으면 (중간에 닫는 등) 다시 누를 수 있게 한다.</summary>
+    IEnumerator LoginTimeout()
+    {
+        yield return new WaitForSecondsRealtime(60f);
+        if (busy && loginPage.activeSelf)
+        {
+            busy = false;
+            errorText.text = "로그인 응답이 없어요. 다시 눌러 주세요.";
+        }
     }
 
     // ---------- 경희대 메일 ----------
