@@ -9,7 +9,8 @@ namespace KucaMemoServer.Endpoints;
 /// <summary>
 /// 로그인 · 계정 API (docs/api.md 의 "로그인 · 계정").
 /// 카카오 / Apple 로 로그인하면 KUCA 로그인 토큰을 준다. 이후 요청은 헤더 Authorization: Bearer {토큰}.
-/// 앱을 쓰려면 경희대 메일(@khu.ac.kr) 인증과 닉네임이 필요하다 (Account.Ready).
+/// 앱을 쓰려면 경희대 메일(@khu.ac.kr) 인증 · 닉네임 · 성별이 필요하다 (Account.Ready).
+/// 체험 계정(/api/auth/guest)은 메일 인증 없이 성별만 넣으면 되고, 7일 뒤 지워진다.
 /// </summary>
 public static partial class AuthEndpoints
 {
@@ -53,6 +54,13 @@ public static partial class AuthEndpoints
                 : Results.Ok(Login(store, "dev", name));
         });
 
+        // 체험 모드: 로그인 없이 둘러보기. 메일 인증이 면제된 체험 계정과 토큰(7일)을 준다.
+        auth.MapPost("/guest", (AccountStore store) =>
+        {
+            Account guest = store.CreateGuest();
+            return Results.Ok(new LoginResult(store.CreateSession(guest.Id, AccountStore.GuestLifetime), guest));
+        });
+
         auth.MapPost("/logout", (HttpRequest req, AccountStore store) =>
         {
             if (TokenOf(req) is { } token)
@@ -74,6 +82,27 @@ public static partial class AuthEndpoints
                 return Results.BadRequest(new { error = "닉네임은 1~20자로 써 주세요." });
             store.SetNickname(user.Id, nick);
             return Results.Ok(store.Find(user.Id));
+        });
+
+        // 성별: 매칭 "동성만" 조건에만 쓰고 다른 사람에게 보여 주지 않는다.
+        me.MapPut("/gender", (GenderRequest? body, HttpRequest req, AccountStore store) =>
+        {
+            if (Current(req, store) is not { } user)
+                return Unauthorized();
+            string gender = (body?.Gender ?? "").Trim().ToLowerInvariant();
+            if (gender is not ("male" or "female"))
+                return Results.BadRequest(new { error = "gender 는 male 또는 female 이에요." });
+            store.SetGender(user.Id, gender);
+            return Results.Ok(store.Find(user.Id));
+        });
+
+        // 회원 탈퇴: 계정 · 로그인 토큰 · 인증번호를 지운다.
+        me.MapDelete("/", (HttpRequest req, AccountStore store) =>
+        {
+            if (Current(req, store) is not { } user)
+                return Unauthorized();
+            store.DeleteAccount(user.Id);
+            return Results.NoContent();
         });
 
         // 산책 취향 체크리스트. 앱의 WalkPreferences JSON 을 그대로 받아 저장한다 (AI 산책메이트 매칭용).

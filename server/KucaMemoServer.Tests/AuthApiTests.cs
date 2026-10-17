@@ -139,7 +139,54 @@ public class AuthApiTests : IDisposable
         Assert.False(user.GetProperty("ready").GetBoolean()); // 닉네임이 아직 없다
 
         user = await Ok(await client.SendAsync(Req(HttpMethod.Put, "/api/me/nickname", token, new { nickname = "원준" })));
+        Assert.False(user.GetProperty("ready").GetBoolean()); // 성별이 아직 없다
+
+        user = await Ok(await client.SendAsync(Req(HttpMethod.Put, "/api/me/gender", token, new { gender = "male" })));
+        Assert.Equal("male", user.GetProperty("gender").GetString());
         Assert.True(user.GetProperty("ready").GetBoolean());
+    }
+
+    [Fact]
+    public async Task 성별은_male_female_만()
+    {
+        var (token, _) = await KakaoLogin("g1");
+        var bad = await client.SendAsync(Req(HttpMethod.Put, "/api/me/gender", token, new { gender = "other" }));
+        Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.SendAsync(Req(HttpMethod.Put, "/api/me/gender", null, new { gender = "female" }))).StatusCode);
+    }
+
+    [Fact]
+    public async Task 체험_계정은_메일_인증_없이_성별만_넣으면_준비됨()
+    {
+        JsonElement r = await Ok(await client.PostAsync("/api/auth/guest", null));
+        string token = r.GetProperty("token").GetString()!;
+        JsonElement user = r.GetProperty("user");
+        Assert.Equal("guest", user.GetProperty("provider").GetString());
+        Assert.True(user.GetProperty("isGuest").GetBoolean());
+        Assert.StartsWith("체험생-", user.GetProperty("nickname").GetString());
+        Assert.False(user.GetProperty("ready").GetBoolean());
+
+        user = await Ok(await client.SendAsync(Req(HttpMethod.Put, "/api/me/gender", token, new { gender = "female" })));
+        Assert.True(user.GetProperty("ready").GetBoolean());
+        Assert.False(user.GetProperty("emailVerified").GetBoolean());
+
+        // 체험 계정마다 다른 계정
+        JsonElement other = await Ok(await client.PostAsync("/api/auth/guest", null));
+        Assert.NotEqual(user.GetProperty("id").GetString(), other.GetProperty("user").GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public async Task 회원_탈퇴하면_계정과_토큰이_지워진다()
+    {
+        var (token, user) = await KakaoLogin("bye");
+        var res = await client.SendAsync(Req(HttpMethod.Delete, "/api/me", token));
+        Assert.Equal(HttpStatusCode.NoContent, res.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(Req(HttpMethod.Get, "/api/me", token))).StatusCode);
+
+        // 같은 카카오 계정으로 다시 로그인하면 새 계정
+        var (_, again) = await KakaoLogin("bye");
+        Assert.NotEqual(user.GetProperty("id").GetString(), again.GetProperty("id").GetString());
     }
 
     [Fact]

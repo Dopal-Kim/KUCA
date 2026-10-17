@@ -15,6 +15,10 @@ public class KucaAccount
     public bool emailVerified;
     public string preferencesJson;
     public string createdAt;
+    /// <summary>"male" · "female" (없으면 빈 값). 매칭 "동성만" 조건에만 쓰고 다른 사람에게 보이지 않는다</summary>
+    public string gender;
+    /// <summary>로그인 없이 둘러보는 체험 계정 (메일 인증 없음, 7일 뒤 삭제)</summary>
+    public bool isGuest;
     public bool ready;
 }
 
@@ -94,13 +98,14 @@ public static class AuthService
         done(Current, null, false);
     }
 
-    /// <summary>provider: "kakao" · "apple" · "dev"</summary>
+    /// <summary>provider: "kakao" · "apple" · "dev" · "guest"(체험 모드, providerToken 없음)</summary>
     public static IEnumerator Login(string provider, string providerToken, Action<KucaAccount, string> done)
     {
         string json = provider switch
         {
             "kakao" => JsonUtility.ToJson(new KakaoBody { accessToken = providerToken }),
             "apple" => JsonUtility.ToJson(new AppleBody { identityToken = providerToken }),
+            "guest" => "{}",
             _ => JsonUtility.ToJson(new DevBody { name = providerToken }),
         };
         SaveToken("");
@@ -119,6 +124,7 @@ public static class AuthService
     [Serializable] class EmailBody { public string email; }
     [Serializable] class CodeBody { public string code; }
     [Serializable] class NickBody { public string nickname; }
+    [Serializable] class GenderBody { public string gender; }
 
     /// <summary>경희대 메일로 인증번호를 보낸다. done(에러, 개발용 번호)</summary>
     public static IEnumerator StartEmail(string email, Action<string, string> done)
@@ -137,6 +143,10 @@ public static class AuthService
     public static IEnumerator SetNickname(string nickname, Action<KucaAccount, string> done) =>
         SendForAccount("PUT", "/api/me/nickname", JsonUtility.ToJson(new NickBody { nickname = nickname }), done);
 
+    /// <summary>gender: "male" · "female"</summary>
+    public static IEnumerator SetGender(string gender, Action<KucaAccount, string> done) =>
+        SendForAccount("PUT", "/api/me/gender", JsonUtility.ToJson(new GenderBody { gender = gender }), done);
+
     public static IEnumerator SavePreferences(WalkPreferences prefs, Action<KucaAccount, string> done) =>
         SendForAccount("PUT", "/api/me/preferences", prefs.ToJson(), done);
 
@@ -147,6 +157,16 @@ public static class AuthService
         if (req.result != UnityWebRequest.Result.Success) { done(null, ErrorOf(req)); yield break; }
         Current = JsonUtility.FromJson<KucaAccount>(req.downloadHandler.text);
         done(Current, null);
+    }
+
+    /// <summary>회원 탈퇴: 서버에서 계정을 지우고 기기의 토큰도 지운다. done(에러 또는 null)</summary>
+    public static IEnumerator DeleteAccount(Action<string> done)
+    {
+        using var req = Request("DELETE", "/api/me");
+        yield return req.SendWebRequest();
+        if (req.result != UnityWebRequest.Result.Success && req.responseCode != 401) { done(ErrorOf(req)); yield break; }
+        ForgetToken();
+        done(null);
     }
 
     public static IEnumerator Logout(Action done)

@@ -314,13 +314,14 @@
 
 ## 로그인 · 계정
 
-앱은 **로그인 필수**입니다. 흐름은 다음과 같습니다.
-1. 카카오 또는 Apple 로 로그인 → KUCA 로그인 토큰을 받는다.
-2. 경희대 메일(@khu.ac.kr) 인증.
-3. 닉네임.
-4. 산책 취향 체크리스트.
+앱은 **로그인 필수**입니다 (또는 체험 모드). 흐름은 다음과 같습니다.
+1. 카카오 또는 Apple 로 로그인 → KUCA 로그인 토큰을 받는다. 체험 모드는 `POST /api/auth/guest`.
+2. 경희대 메일(@khu.ac.kr) 인증. 체험 계정은 건너뜀.
+3. 닉네임. 체험 계정은 서버가 `체험생-1234` 로 정해 줌.
+4. 성별 (필수).
+5. 산책 취향 체크리스트.
 
-이후 요청에는 헤더 `Authorization: Bearer {토큰}` 를 붙입니다. 토큰은 90일 동안 쓸 수 있습니다.
+이후 요청에는 헤더 `Authorization: Bearer {토큰}` 를 붙입니다. 토큰은 90일 (체험 계정은 7일) 동안 쓸 수 있습니다.
 
 ### Account
 
@@ -329,11 +330,14 @@
   "id": "3f0c…", "provider": "kakao", "nickname": "원준",
   "khuEmail": "wonjun@khu.ac.kr", "emailVerified": true,
   "preferencesJson": "{\"walkTimes\":[\"evening\"],…}",
-  "createdAt": "2026-10-13T12:00:00Z", "ready": true
+  "createdAt": "2026-10-13T12:00:00Z", "gender": "male",
+  "isGuest": false, "ready": true
 }
 ```
 
-- `ready`: 메일 인증과 닉네임이 모두 끝났으면 `true`. `false` 면 앱은 남은 단계를 보여 줍니다.
+- `ready`: 메일 인증 (체험 계정은 면제) · 닉네임 · 성별이 모두 끝났으면 `true`. `false` 면 앱은 남은 단계를 보여 줍니다.
+- `gender`: `"male"` · `"female"` · 아직 없으면 `null`. 매칭 "동성만" 조건에만 쓰고 **다른 사람에게 보여 주지 않습니다.**
+- `isGuest`: 체험 계정이면 `true`.
 - `preferencesJson`: 앱의 `WalkPreferences` JSON 원문입니다 (AI 산책메이트 매칭용).
 
 ### POST /api/auth/kakao · POST /api/auth/apple
@@ -345,10 +349,18 @@
 - 응답 `200 { "token": "…", "user": Account }`. 처음이면 계정을 새로 만듭니다.
 - 실패: `400` 본문 없음, `401` 확인 실패, `503` 카카오 설정 없음.
 
-### GET /api/me · PUT /api/me/nickname · PUT /api/me/preferences · POST /api/auth/logout
+### POST /api/auth/guest (체험 모드)
+
+- 본문 없음. 응답 `200 { "token": "…", "user": Account }` (`provider: "guest"`, `isGuest: true`, 닉네임 `체험생-1234`).
+- 메일 인증 없이 성별만 넣으면 `ready: true` 가 되어 모든 기능을 쓸 수 있습니다.
+- 만든 지 **7일**이 지나면 계정과 토큰이 지워집니다 (`AccountStore.GuestLifetime`).
+
+### GET /api/me · PUT /api/me/nickname · PUT /api/me/gender · PUT /api/me/preferences · DELETE /api/me · POST /api/auth/logout
 
 - `GET /api/me`: 내 계정. 토큰이 없거나 만료면 `401`.
 - `PUT /api/me/nickname`: `{ "nickname": "1~20자" }`
+- `PUT /api/me/gender`: `{ "gender": "male" | "female" }`. 그 밖의 값은 `400`.
+- `DELETE /api/me`: 회원 탈퇴. 계정 · 토큰 · 인증번호를 지웁니다 (`204`). 같은 카카오 계정으로 다시 로그인하면 새 계정입니다.
 - `PUT /api/me/preferences`: 본문은 `WalkPreferences` JSON 그대로 (4KB 이하).
 - `POST /api/auth/logout`: 토큰을 지웁니다 (`204`).
 
@@ -366,7 +378,8 @@
 | --- | --- |
 | `Kakao:AppId` | 카카오 개발자 콘솔의 "앱 ID" (숫자) |
 | `Apple:BundleId` | 기본 `com.mungim.kuca` |
-| `Email:User` / `Email:Password` | 인증 메일을 보낼 Gmail 주소와 **앱 비밀번호** |
+| `Email:ConnectionString` / `Email:From` | 인증 메일을 보낼 **Azure Communication Services** 연결 문자열과 보내는 주소 (있으면 이것을 씀) |
+| `Email:User` / `Email:Password` | (대체) Gmail 주소와 **앱 비밀번호** |
 | `Auth:DevLogin`, `Email:DevEcho` | 로컬 테스트 전용. 앞의 것은 `POST /api/auth/dev` 를 켜고, 뒤의 것은 메일 대신 응답에 번호를 넣습니다. **Azure 에서는 켜지 않습니다** |
 
 ## 관리자 API (검토 대기 처리, 앱과 무관)

@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 로그인 (필수). 앱이 켜지면 저장된 토큰을 확인하고, 없거나 만료면 로그인 화면을 띄운다.
-/// 흐름: 카카오 / Apple 로그인 → 경희대 메일 인증 → 닉네임 → 산책 취향 체크리스트 → 시작.
+/// 로그인 (필수, 또는 체험 모드). 앱이 켜지면 저장된 토큰을 확인하고, 없거나 만료면 로그인 화면을 띄운다.
+/// 흐름: (첫 실행) 개인정보 안내 → 카카오 / Apple 로그인 → 경희대 메일 인증 → 닉네임 → 성별 → 산책 취향 체크리스트 → 시작.
+/// 체험 모드("로그인 없이 둘러보기")는 서버가 만든 체험 계정으로 메일 인증 · 닉네임을 건너뛰고 성별만 받는다.
 /// 이미 끝낸 단계는 건너뛴다 (예: 토큰이 살아 있고 모두 끝났으면 바로 시작).
 /// </summary>
 public class LoginScreen : MonoBehaviour
@@ -17,7 +18,11 @@ public class LoginScreen : MonoBehaviour
     static readonly Color Field = new Color(0.95f, 0.96f, 0.97f);
     static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
 
-    GameObject root, checking, loginPage, emailPage, nickPage;
+    const string PrivacySeenKey = "privacy_seen";
+
+    GameObject root, checking, loginPage, emailPage, nickPage, genderPage, privacyPage;
+    Button privacyButton;
+    bool privacyOnly; // 설정에서 열었으면 확인을 눌러도 닫기만 한다
     Text checkingText, errorText, emailHint, codeHint;
     InputField emailInput, codeInput, nickInput;
     Button sendButton, verifyButton, nickButton, retryButton;
@@ -34,13 +39,48 @@ public class LoginScreen : MonoBehaviour
         s.StartFlow();
     }
 
+    /// <summary>설정의 "개인정보 안내": 안내 화면만 띄웠다가 닫는다.</summary>
+    public static void ShowPrivacy()
+    {
+        LoginScreen s = FindAnyObjectByType<LoginScreen>();
+        if (s == null)
+            s = new GameObject("LoginScreen").AddComponent<LoginScreen>();
+        s.privacyOnly = true;
+        s.root.SetActive(true);
+        UIInputBlocker.SetModal(s, true);
+        s.errorText.text = "";
+        UIKit.SetLabel(s.privacyButton, "닫기");
+        s.Show(s.privacyPage);
+    }
+
     void Awake() => Build();
+
+    void ConfirmPrivacy()
+    {
+        PlayerPrefs.SetInt(PrivacySeenKey, 1);
+        PlayerPrefs.Save();
+        if (privacyOnly)
+        {
+            privacyOnly = false;
+            root.SetActive(false);
+            UIInputBlocker.SetModal(this, false);
+            return;
+        }
+        StartFlow();
+    }
 
     void StartFlow()
     {
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
         errorText.text = "";
+        privacyOnly = false;
+        if (PlayerPrefs.GetInt(PrivacySeenKey, 0) == 0)
+        {
+            UIKit.SetLabel(privacyButton, "확인하고 시작");
+            Show(privacyPage);
+            return;
+        }
         if (!AuthService.HasServer)
         {
             // 서버 주소가 없는 가짜 서버 모드(개발용): 계정을 만들 곳이 없어 로그인 없이 진행한다.
@@ -68,7 +108,7 @@ public class LoginScreen : MonoBehaviour
     void Continue(KucaAccount a)
     {
         errorText.text = "";
-        if (!a.emailVerified)
+        if (!a.emailVerified && !a.isGuest)
         {
             Show(emailPage);
             codeRow.SetActive(false);
@@ -83,7 +123,12 @@ public class LoginScreen : MonoBehaviour
         }
         PlayerPrefs.SetString("memo_author", a.nickname); // 메모·HUD 에 쓰는 닉네임
         PlayerPrefs.Save();
-        if (string.IsNullOrEmpty(a.preferencesJson))
+        if (string.IsNullOrEmpty(a.gender))
+        {
+            Show(genderPage);
+            return;
+        }
+        if (!PreferencesComplete(a.preferencesJson)) // 없거나, 새 문항(매칭 상대)에 아직 답하지 않음
         {
             WalkPreferences local = WalkPreferences.Load();
             if (local.IsComplete)
@@ -97,6 +142,14 @@ public class LoginScreen : MonoBehaviour
             return;
         }
         Finish();
+    }
+
+    static bool PreferencesComplete(string json)
+    {
+        if (string.IsNullOrEmpty(json))
+            return false;
+        try { return JsonUtility.FromJson<WalkPreferences>(json)?.IsComplete ?? false; }
+        catch (System.ArgumentException) { return false; }
     }
 
     void Finish()
@@ -133,6 +186,21 @@ public class LoginScreen : MonoBehaviour
         else if (provider == "apple") NativeLogin.Apple(afterNative);
         StopCoroutine(nameof(LoginTimeout));
         StartCoroutine(nameof(LoginTimeout));
+    }
+
+    /// <summary>체험 모드: 서버가 체험 계정을 만들어 준다 (메일 인증 없음, 7일 뒤 삭제).</summary>
+    void StartGuest()
+    {
+        if (busy) return;
+        busy = true;
+        errorText.text = "체험 계정을 만드는 중…";
+        StartCoroutine(AuthService.Login("guest", null, (account, err) =>
+        {
+            busy = false;
+            if (account == null) { errorText.text = err; return; }
+            errorText.text = "";
+            Continue(account);
+        }));
     }
 
     /// <summary>로그인 앱에서 돌아왔는데 답이 없으면 (중간에 닫는 등) 다시 누를 수 있게 한다.</summary>
@@ -224,11 +292,26 @@ public class LoginScreen : MonoBehaviour
         }));
     }
 
+    // ---------- 성별 ----------
+
+    void SaveGender(string gender)
+    {
+        if (busy) return;
+        busy = true;
+        errorText.text = "";
+        StartCoroutine(AuthService.SetGender(gender, (account, error) =>
+        {
+            busy = false;
+            if (account == null) { errorText.text = error; return; }
+            Continue(account);
+        }));
+    }
+
     // ---------- 화면 ----------
 
     void Show(GameObject page)
     {
-        foreach (GameObject p in new[] { checking, loginPage, emailPage, nickPage })
+        foreach (GameObject p in new[] { checking, loginPage, emailPage, nickPage, genderPage, privacyPage })
             p.SetActive(p == page);
     }
 
@@ -263,7 +346,7 @@ public class LoginScreen : MonoBehaviour
         Text brand = UIKit.Text(safe, "KUCA", 120, TextAnchor.MiddleCenter, Color.white);
         brand.fontStyle = FontStyle.Bold;
         Box(brand.rectTransform, 0f, 90f, 0f, 150f);
-        Text tag = UIKit.Text(safe, "경희대 국제캠퍼스를 걸으며 모으는 경희몬", 34, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.85f));
+        Text tag = UIKit.Text(safe, "경희대 국제캠퍼스를 함께 걷는 산책 동반자", 34, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.85f));
         Box(tag.rectTransform, 0f, 245f, 0f, 60f);
 
         RectTransform panel = UIKit.Rect(safe, "Panel");
@@ -301,6 +384,12 @@ public class LoginScreen : MonoBehaviour
             Pill(loginPage.transform, "Apple로 계속하기", Color.black, Color.white, () => LoginWith("apple"), y);
             y += 132f;
         }
+        Button guest = UIKit.Button(loginPage.transform, "로그인 없이 둘러보기", StartGuest, new Color(0f, 0f, 0f, 0f), 34);
+        guest.GetComponentInChildren<Text>().color = Ink;
+        Box((RectTransform)guest.transform, 60f, y + 10f, 60f, 90f);
+        Text guestHint = UIKit.Text(loginPage.transform, "체험 계정은 7일 뒤 지워져요. 나중에 로그인해도 진행은 이어져요.", 26, TextAnchor.MiddleCenter, InkQuiet);
+        Box(guestHint.rectTransform, 60f, y + 92f, 60f, 50f);
+        y += 170f;
 #if UNITY_EDITOR
         // 에디터에는 카카오·Apple 이 없으니 테스트용으로 건너뛸 수 있게 한다 (빌드에는 없음).
         Button skip = UIKit.Button(loginPage.transform, "에디터: 로그인 건너뛰기", Finish, new Color(0f, 0f, 0f, 0f), 30);
@@ -346,7 +435,63 @@ public class LoginScreen : MonoBehaviour
         nickInput.characterLimit = 20;
         nickButton = Pill(nickPage.transform, "다음", Accent, Color.white, SaveNickname, 360f);
 
+        // 성별 (필수)
+        genderPage = UIKit.Rect(panel, "GenderPage").gameObject;
+        UIKit.Stretch((RectTransform)genderPage.transform);
+        Text gt = UIKit.Text(genderPage.transform, "성별을 알려 주세요", 52, TextAnchor.MiddleLeft, Ink);
+        gt.fontStyle = FontStyle.Bold;
+        Box(gt.rectTransform, 60f, 60f, 60f, 80f);
+        Text gh = UIKit.Text(genderPage.transform, "상대에게 보이지 않아요. 산책메이트 '동성만' 조건에만 써요.", 28, TextAnchor.UpperLeft, InkQuiet);
+        Box(gh.rectTransform, 60f, 140f, 60f, 60f);
+        Pill(genderPage.transform, "남자", Field, Ink, () => SaveGender("male"), 240f);
+        Pill(genderPage.transform, "여자", Field, Ink, () => SaveGender("female"), 380f);
+
+        BuildPrivacy(panel);
+
         root.SetActive(false);
+    }
+
+    /// <summary>개인정보 안내: 무엇을 왜 받고 언제 지우는지</summary>
+    void BuildPrivacy(RectTransform panel)
+    {
+        privacyPage = UIKit.Rect(panel, "PrivacyPage").gameObject;
+        UIKit.Stretch((RectTransform)privacyPage.transform);
+        Text pt = UIKit.Text(privacyPage.transform, "개인정보 안내", 52, TextAnchor.MiddleLeft, Ink);
+        pt.fontStyle = FontStyle.Bold;
+        Box(pt.rectTransform, 60f, 50f, 60f, 80f);
+        Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요.", 28, TextAnchor.UpperLeft, InkQuiet);
+        Box(ph.rectTransform, 60f, 130f, 60f, 50f);
+
+        (string item, string use, string keep)[] rows =
+        {
+            ("경희대 메일", "경희대 학생인지 확인", "탈퇴할 때까지"),
+            ("성별", "산책메이트 '동성만' 조건에만 (상대에게 안 보임)", "탈퇴할 때까지"),
+            ("산책 취향", "산책 추천 · 산책메이트 찾기", "탈퇴할 때까지"),
+            ("위치", "건물 단위로만, 산책 추천 · 매칭에", "산책이 끝나면 삭제"),
+            ("인상착의", "만나기로 한 상대에게만", "산책이 끝나면 삭제"),
+            ("사진 · 메모", "경희스팟 메모판에 공개", "직접 지울 때까지"),
+            ("체험 계정", "로그인 없이 둘러보기", "만든 지 7일 뒤 삭제"),
+        };
+        float top = 200f;
+        foreach (var (item, use, keep) in rows)
+        {
+            Image row = UIKit.Image(privacyPage.transform, item, Field);
+            row.sprite = HudIcons.Rounded;
+            row.type = Image.Type.Sliced;
+            row.pixelsPerUnitMultiplier = 0.8f;
+            Box(row.rectTransform, 60f, top, 60f, 116f);
+            Text name = UIKit.Text(row.transform, item, 32, TextAnchor.UpperLeft, Ink);
+            name.fontStyle = FontStyle.Bold;
+            Box(name.rectTransform, 32f, 18f, 32f, 44f);
+            Text k = UIKit.Text(row.transform, keep, 26, TextAnchor.UpperRight, Burgundy);
+            Box(k.rectTransform, 32f, 22f, 32f, 40f);
+            Text u = UIKit.Text(row.transform, use, 26, TextAnchor.UpperLeft, InkQuiet);
+            Box(u.rectTransform, 32f, 64f, 32f, 40f);
+            top += 128f;
+        }
+        Text foot = UIKit.Text(privacyPage.transform, "설정 › 회원 탈퇴로 계정과 정보를 언제든 지울 수 있어요.", 26, TextAnchor.UpperLeft, InkQuiet);
+        Box(foot.rectTransform, 60f, top + 6f, 60f, 50f);
+        privacyButton = Pill(privacyPage.transform, "확인하고 시작", Burgundy, Color.white, ConfirmPrivacy, top + 80f);
     }
 
     InputField Input(Transform parent, string placeholder, float top, float left, float right)

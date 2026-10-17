@@ -16,6 +16,10 @@ public class AccountStore
     public static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
     public const int MaxCodeAttempts = 5;
 
+    /// <summary>체험 계정: 로그인 없이 둘러보기. 만든 지 이만큼 지나면 계정과 로그인 토큰을 지운다.</summary>
+    public const string GuestProvider = "guest";
+    public static readonly TimeSpan GuestLifetime = TimeSpan.FromDays(7);
+
     readonly string connectionString;
     readonly TimeProvider clock;
 
@@ -56,6 +60,21 @@ public class AccountStore
             );
             """;
         cmd.ExecuteNonQuery();
+        AddColumnIfMissing(conn, "users", "gender", "TEXT");
+        PurgeExpiredGuests();
+    }
+
+    /// <summary>예전 데이터베이스에 새 칸을 더한다 (이미 있으면 그대로)</summary>
+    static void AddColumnIfMissing(SqliteConnection conn, string table, string column, string type)
+    {
+        using var check = conn.CreateCommand();
+        check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = $c";
+        check.Parameters.AddWithValue("$c", column);
+        if (Convert.ToInt32(check.ExecuteScalar()) > 0)
+            return;
+        using var alter = conn.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {type}";
+        alter.ExecuteNonQuery();
     }
 
     SqliteConnection Open()
@@ -100,17 +119,52 @@ public class AccountStore
     {
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT id, provider, nickname, khu_email, email_verified, preferences, created_at FROM users WHERE id = $id";
+        cmd.CommandText = "SELECT id, provider, nickname, khu_email, email_verified, preferences, created_at, gender FROM users WHERE id = $id";
         cmd.Parameters.AddWithValue("$id", id);
         using var r = cmd.ExecuteReader();
         if (!r.Read())
             return null;
         return new Account(r.GetString(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2),
             r.IsDBNull(3) ? null : r.GetString(3), r.GetInt64(4) == 1, r.IsDBNull(5) ? null : r.GetString(5),
-            new DateTime(r.GetInt64(6), DateTimeKind.Utc));
+            new DateTime(r.GetInt64(6), DateTimeKind.Utc), r.IsDBNull(7) ? null : r.GetString(7));
+    }
+
+    /// <summary>체험 계정을 새로 만든다 (닉네임 "체험생-1234")</summary>
+    public Account CreateGuest()
+    {
+        PurgeExpiredGuests();
+        Account guest = FindOrCreate(GuestProvider, Guid.NewGuid().ToString());
+        SetNickname(guest.Id, $"체험생-{RandomNumberGenerator.GetInt32(1000, 10000)}");
+        return Find(guest.Id)!;
+    }
+
+    /// <summary>계정과 그 계정의 로그인 토큰 · 인증번호를 지운다 (회원 탈퇴)</summary>
+    public void DeleteAccount(string userId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM sessions WHERE user_id = $u; DELETE FROM email_codes WHERE user_id = $u; DELETE FROM users WHERE id = $u";
+        cmd.Parameters.AddWithValue("$u", userId);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>만든 지 GuestLifetime 이 지난 체험 계정을 지운다</summary>
+    public void PurgeExpiredGuests()
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE provider = $g AND created_at < $cut);
+            DELETE FROM email_codes WHERE user_id IN (SELECT id FROM users WHERE provider = $g AND created_at < $cut);
+            DELETE FROM users WHERE provider = $g AND created_at < $cut;
+            """;
+        cmd.Parameters.AddWithValue("$g", GuestProvider);
+        cmd.Parameters.AddWithValue("$cut", Now - GuestLifetime.Ticks);
+        cmd.ExecuteNonQuery();
     }
 
     public void SetNickname(string userId, string nickname) => Update(userId, "nickname", nickname);
+    public void SetGender(string userId, string gender) => Update(userId, "gender", gender);
     public void SetPreferences(string userId, string json) => Update(userId, "preferences", json);
 
     void Update(string userId, string column, string value)
@@ -125,7 +179,7 @@ public class AccountStore
 
     // ---------- 로그인 토큰 ----------
 
-    public string CreateSession(string userId)
+    public string CreateSession(string userId, TimeSpan? lifetime = null)
     {
         string token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         using var conn = Open();
@@ -133,7 +187,7 @@ public class AccountStore
         cmd.CommandText = "INSERT INTO sessions (token_hash, user_id, expires_at) VALUES ($h, $u, $e)";
         cmd.Parameters.AddWithValue("$h", Hash(token));
         cmd.Parameters.AddWithValue("$u", userId);
-        cmd.Parameters.AddWithValue("$e", Now + SessionLifetime.Ticks);
+        cmd.Parameters.AddWithValue("$e", Now + (lifetime ?? SessionLifetime).Ticks);
         cmd.ExecuteNonQuery();
         return token;
     }
