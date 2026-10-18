@@ -270,6 +270,21 @@ public class RoutePlanner : MonoBehaviour
             + $"<size=22><color=#8C8C91>{RouteMath.HealthNote}</color></size>";
         BuildCards();
         routeUi.SetActive(true);
+        WalkSession.BeginCourse(result.title, route.totalMeters, kept.Count);
+    }
+
+    /// <summary>코스 지우기 (X). 코스의 80% 이상 걸었으면 완료 화면을 띄운다 (B-V4)</summary>
+    void CloseRoute()
+    {
+        if (route != null && WalkSession.Active && WalkSession.Kind == WalkSession.Course)
+        {
+            int doneCount = done.FindAll(x => x).Count;
+            if (WalkSession.WalkedMeters >= route.totalMeters * LocalWalkService.CourseRatio || doneCount > 0)
+                WalkCompleteScreen.Show(WalkSession.Finish(doneCount));
+            else
+                WalkSession.Abandon();
+        }
+        ClearRoute();
     }
 
     void ClearRoute()
@@ -336,7 +351,14 @@ public class RoutePlanner : MonoBehaviour
             MarkDone(i);
             bool finished = done.TrueForAll(x => x);
             Toast(finished ? "코스 완주! 수고했어요" : $"{route.stops[i].name} 도착!");
-            if (finished) Quests.Report("course_done");
+            if (finished)
+            {
+                Quests.Report("course_done");
+                if (WalkSession.Active && WalkSession.Kind == WalkSession.Course)
+                    WalkCompleteScreen.Show(WalkSession.Finish(done.Count));
+                ClearRoute();
+                return;
+            }
         }
     }
 
@@ -585,7 +607,7 @@ public class RoutePlanner : MonoBehaviour
         Image x = UIKit.Image(head.transform, "Clear", new Color(0f, 0f, 0f, 0f), raycast: true);
         Place(x.rectTransform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f));
         x.rectTransform.sizeDelta = new Vector2(76f, 76f);
-        x.gameObject.AddComponent<Button>().onClick.AddListener(ClearRoute);
+        x.gameObject.AddComponent<Button>().onClick.AddListener(CloseRoute);
         Image xi = UIKit.Image(x.transform, "Icon", InkQuiet);
         xi.sprite = HudIcons.Close;
         Place(xi.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);

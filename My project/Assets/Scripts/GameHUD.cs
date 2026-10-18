@@ -567,6 +567,7 @@ public class GameHUD : MonoBehaviour
         Vector2 size = new Vector2(cell * 3f + gap * 2f + pad * 2f, cell * 2f + gap + pad * 2f);
         Button button = InvisibleButton(hud, "Nearby", ShowNearbyToast, 0f);
         RectTransform root = (RectTransform)button.transform;
+        nearbyRoot = root.gameObject;
         Place(root, new Vector2(1f, 0f), new Vector2(-BottomSide, BottomGap));
         root.sizeDelta = size;
         UIInputBlocker.Register(root);
@@ -606,8 +607,14 @@ public class GameHUD : MonoBehaviour
 
     readonly List<Collectible> nearbyBuffer = new List<Collectible>();
 
+    GameObject nearbyRoot;
+
     void RefreshNearby()
     {
+        // v2: 지도 위 자연 출현이 꺼져 있으면 (뽑기로만 얻음) 주변 칸도 숨긴다
+        bool spawning = collect != null && collect.spawner != null && collect.spawner.naturalSpawn;
+        if (nearbyRoot != null && nearbyRoot.activeSelf != spawning)
+            nearbyRoot.SetActive(spawning);
         nearbyBuffer.Clear();
         if (collect != null && collect.spawner != null && collect.campusMap != null && collect.campusMap.player != null)
         {
