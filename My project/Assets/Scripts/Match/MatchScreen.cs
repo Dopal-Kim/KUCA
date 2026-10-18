@@ -134,6 +134,18 @@ public class MatchScreen : MonoBehaviour
         state = s;
         if (before != s.status)
         {
+            // 산책 기록 (B-V4): 시작하면 걸은 거리를 재기 시작하고, 끝나면 완료 화면으로
+            if (s.status == MatchState.Walking)
+                WalkSession.BeginMate(s.matchId, s.partner?.nickname);
+            else if (s.status == MatchState.Ended && WalkSession.Active && WalkSession.Kind == WalkSession.Mate)
+            {
+                WalkCompleteScreen.Show(WalkSession.Finish(0));
+                Again();
+                Show(false);
+                return;
+            }
+            else if (!s.Active && WalkSession.Active && WalkSession.Kind == WalkSession.Mate)
+                WalkSession.Abandon();
             // 화면을 닫아 둔 사이 상대가 나타나거나 매칭이 끝나면 알려 주고 다시 연다
             if (!root.activeSelf && (s.status == MatchState.Proposed || s.status == MatchState.Matched
                 || s.status == MatchState.Cancelled || s.status == MatchState.Expired))
