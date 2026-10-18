@@ -440,7 +440,7 @@ public class GameHUD : MonoBehaviour
         var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
             ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
-            ("Items", HudIcons.Bag, () => menus.OpenCollection(KhuMenus.Tab.Items)),
+            ("Match", HudIcons.Partner, MatchScreen.Open), // 산책메이트 매칭 (v2 에서 도구 버튼 자리)
             ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),
         };
