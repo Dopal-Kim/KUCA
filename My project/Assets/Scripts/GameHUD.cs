@@ -83,7 +83,7 @@ public class GameHUD : MonoBehaviour
     GameObject noticeScreen, settingsScreen;
     RectTransform noticeList, settingsList;
     InputField nicknameInput;
-    Button logoutButton, deleteAccountButton;
+    Button logoutButton, deleteAccountButton, virtualWalkButton;
     float deleteConfirmUntil; // 회원 탈퇴는 4초 안에 한 번 더 눌러야 한다
     InputField serverInput;
     Text serverStatus;
@@ -161,6 +161,8 @@ public class GameHUD : MonoBehaviour
     {
         // 로그인 (필수): 카카오/Apple → 경희대 메일 인증 → 닉네임 → 산책 취향 체크리스트
         LoginScreen.Begin();
+        if (FindAnyObjectByType<VirtualWalk>() == null)
+            new GameObject("VirtualWalk").AddComponent<VirtualWalk>(); // 체험 계정 가상 산책 (심사 설명용)
         if (character == null)
             character = FindAnyObjectByType<ModularCharacter>();
         if (customizer == null)
@@ -796,6 +798,8 @@ public class GameHUD : MonoBehaviour
         bool guest = AuthService.Current != null && AuthService.Current.isGuest;
         UIKit.SetLabel(logoutButton, guest ? "로그인하기 (체험 끝내기)" : "로그아웃");
         deleteAccountButton.gameObject.SetActive(AuthService.HasToken);
+        virtualWalkButton.gameObject.SetActive(VirtualWalk.Allowed);
+        UIKit.SetLabel(virtualWalkButton, VirtualWalk.Instance != null && VirtualWalk.Instance.On ? "가상 산책 끄기" : "가상 산책 켜기 (체험 계정)");
         deleteConfirmUntil = 0f;
         UIKit.SetLabel(deleteAccountButton, "회원 탈퇴");
     }
@@ -861,6 +865,15 @@ public class GameHUD : MonoBehaviour
         Button privacy = UIKit.Button(optCard.transform, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); }, UIKit.ButtonGray, 38);
         UIKit.Size(privacy, 110f);
         // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        // 체험 계정만: 캠퍼스 밖에서도 정문부터 가상으로 걸어 보기 (공모전 심사 설명용)
+        virtualWalkButton = UIKit.Button(optCard.transform, "가상 산책 켜기 (체험 계정)", () =>
+        {
+            CloseSettings();
+            var v = VirtualWalk.Instance;
+            if (v == null) return;
+            if (v.On) v.Stop(); else v.Begin();
+        }, UIKit.ButtonGray, 38);
+        UIKit.Size(virtualWalkButton, 110f);
         logoutButton = UIKit.Button(optCard.transform, "로그아웃", () =>
         {
             CloseSettings();

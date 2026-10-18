@@ -74,6 +74,36 @@ public class CampusMap : MonoBehaviour
     bool hasFix;
     double lastTimestamp;
 
+    // ---------- 가상 산책 (v2, 체험 계정 · 심사 설명용. VirtualWalk 가 켜고 움직인다) ----------
+
+    /// <summary>켜져 있으면 GPS 대신 가상 위치를 쓴다</summary>
+    public bool VirtualWalk { get; private set; }
+    double virtualLongitude, virtualLatitude;
+
+    public void StartVirtualWalk(double longitude, double latitude)
+    {
+        VirtualWalk = true;
+        virtualLongitude = System.Math.Clamp(longitude, minLongitude, maxLongitude);
+        virtualLatitude = System.Math.Clamp(latitude, minLatitude, maxLatitude);
+        CurrentAccuracy = 5f;
+        StatusMessage = "가상 산책 중";
+        SetLocation(virtualLongitude, virtualLatitude);
+    }
+
+    public void StopVirtualWalk() => VirtualWalk = false;
+
+    /// <summary>지도 평면 방향 (x = 동, z = 북) 으로 meters 만큼 가상 위치를 옮긴다</summary>
+    public void MoveVirtual(Vector3 direction, float meters)
+    {
+        if (!VirtualWalk || direction.sqrMagnitude < 1e-6f)
+            return;
+        direction.y = 0f;
+        Vector3 world = GeoToMapPlane(virtualLongitude, virtualLatitude) + direction.normalized * meters;
+        Vector2d geo = WorldToGeo(world);
+        virtualLongitude = System.Math.Clamp(geo.x, minLongitude, maxLongitude);
+        virtualLatitude = System.Math.Clamp(geo.y, minLatitude, maxLatitude);
+    }
+
     IEnumerator Start()
     {
         if (player != null)
@@ -154,14 +184,21 @@ public class CampusMap : MonoBehaviour
 
     void Update()
     {
+        if (VirtualWalk)
+        {
+            SetLocation(virtualLongitude, virtualLatitude);
+        }
+        else
+        {
 #if UNITY_EDITOR
-        MoveTestLocationWithKeyboard();
-        // 인스펙터에서 테스트 좌표를 바꾸면 바로 반영
-        SetLocation(testLongitude, testLatitude);
+            MoveTestLocationWithKeyboard();
+            // 인스펙터에서 테스트 좌표를 바꾸면 바로 반영
+            SetLocation(testLongitude, testLatitude);
 #else
-        if (IsLocationReady && Input.location.status == LocationServiceStatus.Running)
-            ReadGps();
+            if (IsLocationReady && Input.location.status == LocationServiceStatus.Running)
+                ReadGps();
 #endif
+        }
 
         if (player == null || !hasFix)
             return;
