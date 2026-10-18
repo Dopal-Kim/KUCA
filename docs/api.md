@@ -382,6 +382,360 @@
 | `Email:User` / `Email:Password` | (대체) Gmail 주소와 **앱 비밀번호** |
 | `Auth:DevLogin`, `Email:DevEcho` | 로컬 테스트 전용. 앞의 것은 `POST /api/auth/dev` 를 켜고, 뒤의 것은 메일 대신 응답에 번호를 넣습니다. **Azure 에서는 켜지 않습니다** |
 
+## v2 · 추천 v2 · 산책 매칭 · 산책 완료 (C-V0 초안)
+
+> **상태: 초안. 서버는 아직 없습니다.**
+> - B 는 이 모양으로 가짜 구현(로컬)을 먼저 만들고, 서버가 나오면 HTTP 구현으로 바꿉니다.
+> - 바꿀 곳이 보이면 이 절을 고치는 PR 이나 V0 회의에서 맞춥니다.
+> - `[가정]` 은 아직 정하지 않은 값의 제안입니다. `Q5` 같은 번호는 `docs/산책추천_v2_라운드.md` 3장의 결정 항목입니다.
+> - 서버 구현은 라운드별로 나눕니다: 추천 v2 = C-V2, 매칭 = C-V3, 산책 완료·리뷰·보상 = C-V4.
+
+### 공통 규칙
+
+- v2 API 는 모두 **로그인 토큰**이 필요합니다. 헤더는 `Authorization: Bearer {토큰}` 이고, 체험 계정도 됩니다. 메모판처럼 기기 ID 로 구분하지 않습니다.
+- 성별·닉네임 등 설정이 덜 끝난 계정(`ready: false`)은 매칭을 쓸 수 없습니다.
+- 앱 취향 값은 `WalkPreferences` 의 영어 코드를 그대로 씁니다.
+  - 시간대: `morning` · `day` · `evening` · `night`
+  - 속도: `slow` · `normal` · `fast`
+  - 취향: `photo` · `quiet` · `food` · `unvisited` · `partner` · `exercise`
+  - 매칭 상대: `same` · `any`
+
+| 코드 | v2 에서의 뜻 |
+| --- | --- |
+| 401 | 토큰이 없거나 만료됨 → 로그인 화면으로 |
+| 403 | 할 수 없는 상태. 본문 `reason` 으로 구분합니다: `not_ready`(계정 설정 덜 끝남) · `closed`(매칭 운영 시간 아님) · `not_yours`(내 매칭·산책이 아님) |
+| 404 | 매칭·산책이 없음 (끝난 지 오래되어 지워진 경우 포함) |
+| 409 | 지금 상태에서 할 수 없음. 예: 이미 대기 중인데 또 들어가기, 이미 끝난 매칭에 수락 |
+| 422 | 내용 검사에서 거절됨. 인상착의·리뷰 글은 메모와 같은 검사를 거칩니다 (위 "내용 검사") |
+
+### 경희스팟 정보 (`spots.json`, A 와 맞출 필드 이름)
+
+추천 v2 가 쓰는 소개글·태그는 A 가 `server/KucaMemoServer/Data/spots.json` 에 넣습니다. 앱이 보내는 값이 아니라 서버가 읽는 값입니다.
+
+```json
+{
+  "id": "way-474085534", "name": "중앙도서관", "aliases": ["도서관"], "meetSpecies": "library_owl",
+  "intro": "국제캠 한가운데 있는 도서관. 창가 열람석에서 노을이 잘 보여요.",
+  "seasons": ["autumn", "winter"],
+  "times": ["day", "evening"],
+  "indoor": true,
+  "tastes": ["quiet", "photo"]
+}
+```
+
+| 필드 | 값 |
+| --- | --- |
+| `intro` | 2~3줄 소개. AI 가 추천 이유를 쓸 때 **이 안의 사실만** 씁니다 |
+| `seasons` | `spring` · `summer` · `autumn` · `winter` 중 어울리는 것 |
+| `times` | `morning` · `day` · `evening` · `night` 중 어울리는 것 (앱 취향과 같은 코드) |
+| `indoor` | 실내면 `true`. 비·눈 오는 날 실내 스팟에 점수를 더 줍니다 |
+| `tastes` | (선택) 어울리는 취향 코드. 없으면 취향 점수는 0 |
+| `meetSpecies` | (있으면) 만남 스팟. 그 자리에 세울 경희몬 ID. 앱의 `MeetSpotCatalog` 와 같아야 함 |
+
+### POST /api/recommendations (v2)
+
+v1 요청 본문(위 "POST /api/recommendations")은 **그대로 받습니다.** v2 필드는 모두 선택이라서, 지금 앱도 계속 동작합니다.
+
+```json
+{
+  "minutes": 30,
+  "tastes": ["photo", "quiet"],
+  "lat": 37.2440, "lon": 127.0800,
+  "visitedBuildingIds": ["way-474085534"],
+  "pace": "normal",
+  "afterMeal": false,
+  "weightKg": 60
+}
+```
+
+| 새 필드 | 설명 |
+| --- | --- |
+| `pace` | `slow` · `normal` · `fast`. 없으면 계정 취향의 `pace`, 그것도 없으면 `normal`. 걷는 시간과 칼로리 계산에 씁니다 |
+| `afterMeal` | 식후 걷기 버튼으로 요청했으면 `true`. 오르막이 적고 가까운 코스를 고르고, 응답에 `healthNote` 를 넣습니다 |
+| `weightKg` | (선택, Q5) 30~200. 없으면 60kg 으로 칼로리를 셉니다 `[가정]` |
+
+- 시간대·계절·날씨는 **서버가 직접 정합니다** (한국 시각, 기상청 날씨). 앱은 보내지 않습니다.
+- `minutes` 는 15 · 30 · 60 중 하나입니다 (D7).
+
+**점수 (규칙 추천·AI 공통):** 취향 × 3 + 계절·시간 × 2 + 가까움 × 1
+
+- 취향: 요청 `tastes` 와 스팟 `tastes` 의 겹침 수
+- 계절·시간: 지금 계절·시간대가 스팟 `seasons`·`times` 에 있으면 각 1
+- 가까움: 지금 위치에서 가까울수록 1 → 0
+- 비·눈일 때는 실내 스팟에 +1 `[가정]`
+- AI 는 점수 상위 10곳 `[가정]` 안에서만 고르고 순서를 정합니다. 서버는 답을 검증합니다.
+  - 후보 밖의 ID 는 버립니다.
+  - `reason` 은 소개글·태그·날씨에 없는 내용이면 버리고 규칙 문구로 바꿉니다.
+
+`200`
+
+```json
+{
+  "id": "rec_8c1f…",
+  "title": "노을 보며 걷는 30분 코스",
+  "source": "ai",
+  "context": { "timeOfDay": "evening", "season": "autumn", "weather": "clear" },
+  "stops": [
+    {
+      "buildingId": "way-474085534", "name": "중앙도서관",
+      "reason": "창가 열람석에서 노을이 잘 보여요",
+      "walkMinutes": 6, "distanceM": 420,
+      "lat": 37.2421, "lon": 127.0796
+    }
+  ],
+  "totalDistanceM": 1850,
+  "totalMinutes": 28,
+  "kcal": 92,
+  "healthNote": null
+}
+```
+
+| 새 필드 | 설명 |
+| --- | --- |
+| `id` | 추천 ID. 이 코스로 산책을 시작할 때 `POST /api/walks` 에 넣습니다 (AI·규칙 추천 수락률을 세는 데 씀) |
+| `context` | 서버가 쓴 시간대·계절·날씨. `weather` 는 `GET /api/weather` 의 `condition`, 모르면 `null` |
+| `stops[].distanceM` | 앞 장소(첫 곳은 지금 위치)에서 걷는 거리 (m, 직선 × 1.3 `[가정]`) |
+| `totalDistanceM`, `totalMinutes` | 코스 전체. `totalMinutes` 는 `minutes` 를 넘지 않게 고릅니다 |
+| `kcal` | 걷기 칼로리 = MET × 체중(kg) × 시간(h). MET 은 slow 2.8 · normal 3.5 · fast 4.3 `[가정]` |
+| `healthNote` | `afterMeal` 이면 안내 문구. 끝에 "일반 건강 정보이며 의료 조언이 아닙니다." 가 붙습니다. 근거 문구는 A 가 줍니다 |
+
+- 걷는 속도: slow 60 · normal 75 · fast 90 m/분 `[가정]`
+- `source`: `ai` 또는 `fallback`. 앱은 "AI 추천 / 기본 추천" 으로 표시합니다
+
+### 매칭 흐름 한눈에
+
+```
+idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ──둘 다 수락──▶ meeting ──둘 다 도착──▶ walking ──산책 끝──▶ ended
+                    │ 10분 동안 못 찾음        │ 거절·응답 없음              │ 10분 노쇼·취소·신고          │ 취소·신고
+                    ▼                         ▼                            ▼                             ▼
+                  ended                     waiting (다시 찾기) / ended    ended                          ended
+```
+
+- 앱은 `GET /api/match` 를 **3초마다** 불러서 상태를 봅니다 (폴링). 화면은 `state` 로 고릅니다.
+- 한 계정은 한 번에 매칭 하나만 할 수 있습니다.
+- 끝난 매칭(`ended`)은 앱이 다시 들어가거나 1시간이 지나면 `idle` 로 돌아갑니다.
+
+### POST /api/match/queue (대기열 들어가기)
+
+```json
+{ "minutes": 30, "matchGender": "same", "buildingId": "way-474085535" }
+```
+
+| 필드 | 설명 |
+| --- | --- |
+| `minutes` | 30 · 60 |
+| `matchGender` | `same`(동성만) · `any`(상관없음). 없으면 계정 취향의 값, 그것도 없으면 `any` |
+| `buildingId` | 지금 가장 가까운 **건물 ID**. GPS 좌표는 보내지 않고, 서버도 건물 단위로만 저장합니다 |
+
+- `200 MatchState` (`state: "waiting"`) 를 돌려줍니다.
+- `403 reason: "not_ready"`: 성별 등 계정 설정이 덜 끝남
+- `403 reason: "closed"`: 운영 시간이 아님. 본문에 `opensAt` 이 있습니다
+- `409`: 이미 대기 중이거나 매칭 중
+
+**짝 찾기 (서버)**
+1. **구역**: 두 사람의 건물이 가까운 순서
+2. **시간**: `minutes` 가 같은 사람
+3. **취향 점수**: 계정 취향(`preferencesJson`)의 `tastes`·`walkTimes`·`talkStyle` 겹침
+4. **성별 조건**: 한쪽이라도 `same` 이면 성별이 같아야 함
+5. **제외**: 서로 차단한 사람, 매칭 별점 평균이 낮은 사람 (2.0 미만, 리뷰 3개 이상일 때 `[가정]`), 최근 신고 대상
+
+### DELETE /api/match/queue (대기 취소)
+
+- `204`. 대기열에서 빠지고 위치(건물) 기록을 지웁니다.
+- 대기 중이 아니어도 `204` 입니다.
+
+### GET /api/match (지금 상태, 폴링)
+
+`200 MatchState`
+
+```json
+{
+  "state": "meeting",
+  "matchId": "m_5a2e…",
+  "minutes": 30,
+  "partner": { "nickname": "민지", "commonTastes": ["photo", "quiet"], "appearance": "검은 후드, 흰 운동화" },
+  "respondBy": null,
+  "myAnswer": "accepted",
+  "meetSpot": {
+    "buildingId": "way-474085535", "name": "학생회관",
+    "lat": 37.2446, "lon": 127.0794, "meetSpecies": "pigeon"
+  },
+  "meetBy": "2026-10-20T03:22:00Z",
+  "smalltalk": ["학식 최애 메뉴 있어요?", "요즘 날씨에 걷기 좋은 길 알아요?", "아직 한 번도 안 가 본 건물 있어요?"],
+  "smalltalkSource": "ai",
+  "myAppearance": "회색 맨투맨, 파란 백팩",
+  "arrived": { "me": true, "partner": false },
+  "walkId": null,
+  "endReason": null
+}
+```
+
+| `state` | 뜻 | 채워지는 필드 |
+| --- | --- | --- |
+| `idle` | 매칭 안 함 | 없음 |
+| `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`) |
+| `proposed` | 상대를 찾음, 수락 기다림 | `partner.nickname`, `partner.commonTastes`, `respondBy` (60초 `[가정]`), `myAnswer` (`null` · `accepted`) |
+| `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `myAppearance`, `partner.appearance`, `arrived` |
+| `walking` | 만나서 산책 중 | `walkId` (산책 완료 API 에 씀) |
+| `ended` | 끝남 | `endReason` |
+
+- **`endReason`**
+  - `no_partner`: 대기 시간 안에 못 찾음
+  - `declined`: 상대 거절
+  - `timeout`: 응답 없음
+  - `cancelled`: 누군가 취소. `cancelledBy` 는 `me` · `partner`
+  - `noshow`: `meetBy` 까지 한쪽이 안 옴
+  - `reported`: 신고로 끝남
+  - `completed`: 산책 완료
+- `proposed` 에서 상대가 거절하거나 응답하지 않으면, 수락한 쪽은 자동으로 `waiting` 으로 돌아가 다시 찾습니다.
+- **상대 정보는 닉네임·공통 취향·인상착의만** 보입니다. 성별·계정 ID·건물은 보이지 않습니다.
+- `partner.appearance` 는 상대가 입력하기 전에는 `null` 입니다.
+- 만남 스팟은 `meetSpecies` 가 있는 스팟 10곳 중 두 사람의 건물에서 걸리는 시간이 가장 비슷하고 짧은 곳입니다.
+
+### POST /api/match/{matchId}/accept · POST /api/match/{matchId}/decline
+
+- 본문 없음. `200 MatchState`.
+- 둘 다 수락하면 `meeting` 이 됩니다. 이때 만남 스팟과 스몰토크 3개가 정해집니다.
+- 거절하면 나는 `ended` (`endReason: "declined"`, `cancelledBy: "me"`) 가 됩니다. 상대는 다시 대기합니다.
+- `409`: `proposed` 가 아님 (이미 끝났거나 시간이 지남)
+
+### PUT /api/match/{matchId}/appearance (인상착의)
+
+```json
+{ "text": "회색 맨투맨, 파란 백팩" }
+```
+
+- 1~60자 `[가정]`. 저장 전에 메모와 같은 내용 검사를 거칩니다. 거절되면 `422`.
+  - 애매함(`review`)도 저장하지 않고 `422` 로 돌려줍니다. 검토 대기를 기다릴 시간이 없기 때문입니다.
+- **상대에게만** 보이고, 매칭이 끝나면 지웁니다.
+- `200 MatchState`. `meeting` 에서만 쓸 수 있고, 다른 상태면 `409` 입니다.
+
+### POST /api/match/{matchId}/smalltalk (다음 주제)
+
+- 본문 없음. `200 { "smalltalk": ["…", "…", "…"], "source": "ai" }`
+- 새 주제 3개를 돌려주고, 두 사람 모두 같은 카드를 봅니다.
+- 앱의 "다음 주제" 버튼은 받은 3개를 먼저 넘기고, 다 보면 이걸 부릅니다.
+- AI 는 공통 취향 + 만남 스팟 + 날씨로 씁니다. AI 가 실패하면 `Data/smalltalk.json` 예시 20개 중에서 고릅니다 (`source: "fallback"`).
+- 매칭 하나에 5번까지 됩니다 `[가정]`. 넘으면 `429` 입니다.
+
+### POST /api/match/{matchId}/arrived (만남 스팟 도착)
+
+- 본문 `{ "buildingId": "way-474085535" }`. 앱은 스팟 30m 안에 들어오면 부르거나, "도착했어요" 버튼으로 부릅니다.
+- 둘 다 도착하면 `walking` 이 되고 `walkId` 가 생깁니다. 산책 기록은 아래 "산책" API 와 같습니다.
+- `200 MatchState`
+
+### POST /api/match/{matchId}/cancel
+
+- 본문 `{ "reason": "late" }` (선택): `late`(늦어짐) · `changed_mind`(마음이 바뀜) · `other`
+- `200 MatchState` (`ended`, `endReason: "cancelled"`)
+- `meeting`·`walking` 에서 취소하면 상대에게 "상대가 취소했어요" 로 보입니다.
+
+### POST /api/reports (신고) · POST /api/blocks (차단)
+
+```json
+{ "matchId": "m_5a2e…", "reason": "rude", "text": "선택, 0~300자" }
+```
+
+- 신고 `reason`: `noshow`(안 나옴) · `rude`(무례함) · `unsafe`(불안·위험) · `fake`(사칭·광고) · `other`
+- 신고하면 그 상대를 **자동으로 차단**합니다. 진행 중인 매칭이면 바로 `ended` (`endReason: "reported"`) 가 됩니다.
+- 차단만 할 때는 `POST /api/blocks` 본문 `{ "matchId": "…" }` 를 보냅니다. 차단한 사람과는 다시 짝이 되지 않습니다.
+- 상대 계정 ID 는 앱에 주지 않으므로 **`matchId` 로 상대를 가리킵니다.** 지난 매칭도 기록이 남아 있는 동안(아래 보관 기간)은 됩니다.
+- 응답 `201`. 남의 매칭이면 `403`.
+
+### 시연용 가상 상대
+
+- 서버 설정 `Match:DemoPartner = true` 일 때만 켜집니다. **Azure 에서는 시연 기간에만** 켭니다.
+- 대기열에 사람이 들어오면 5초 뒤 가상 상대 `체험메이트` 가 나타납니다.
+  - 자동으로 수락하고, 인상착의를 넣고, 바로 도착합니다.
+- 앱은 다른 처리 없이 평소처럼 동작합니다. 시연 영상에서 폰 한 대로 전체 흐름을 보여 줄 수 있습니다.
+
+### 산책 · 완료 · 리뷰 · 보상
+
+#### POST /api/walks (산책 시작, 혼자 걷기)
+
+```json
+{ "recommendationId": "rec_8c1f…", "minutes": 30 }
+```
+
+- 추천 코스로 혼자 걸을 때 부릅니다. `recommendationId` 는 선택이며, 없으면 자유 산책입니다.
+  - 매칭 산책은 둘 다 도착하는 순간 서버가 만듭니다 (`MatchState.walkId`).
+- `201 { "id": "w_91d0…", "startedAt": "…", "plannedDistanceM": 1850, "stops": ["way-…"] }`
+
+#### POST /api/walks/{walkId}/finish (산책 끝)
+
+```json
+{ "distanceM": 1620, "durationSec": 1560, "visitedBuildingIds": ["way-474085534", "way-474085535"] }
+```
+
+- **완료 판정 (서버):** 마지막 스팟 도착 또는 계획 거리의 80% 이상
+  - 자유 산책은 500m 이상이면 완료 `[가정]`
+- 걸은 거리가 시간에 비해 너무 길면(초속 2.5m 초과) 거리를 깎습니다 `[가정]`. 탈것으로 이동한 경우를 막기 위해서입니다.
+- 매칭 산책은 한 사람이 `finish` 하면 그 사람 산책이 끝납니다. 두 사람 모두 끝나면 매칭이 `ended` (`completed`) 가 됩니다.
+
+`200`
+
+```json
+{
+  "completed": true,
+  "kcal": 81,
+  "reward": {
+    "tickets": 1,
+    "xp": 106,
+    "breakdown": [
+      { "kind": "distance", "xp": 16 },
+      { "kind": "walk", "xp": 30 },
+      { "kind": "together", "xp": 60 }
+    ]
+  },
+  "progress": { "level": 3, "xp": 240, "levelXp": 200, "nextLevelXp": 300 }
+}
+```
+
+- **경험치 표 (Q6 제안):** 1km 10 (100m 단위 버림) · 산책 완료 30 · 함께 걸음 60 · 리뷰 10. 위 예시는 1.62km 를 함께 걸은 경우입니다. 완료가 아니면(`completed: false`) 거리 경험치만 줍니다.
+- **보상 티켓:** 완료 1장 `[가정]`. 걸은 거리 티켓(1km = 1장)은 V1 처럼 **앱이 계속 셉니다.** 서버는 완료 보너스만 줍니다 (B 와 맞출 것).
+- **레벨:** 다음 레벨까지 100 × 레벨 `[가정]` (1→2 100, 2→3 200 …). 앱은 받은 값만 표시합니다 (D9).
+- 이미 끝낸 산책을 또 `finish` 하면 `409` 입니다.
+
+#### POST /api/walks/{walkId}/review (리뷰)
+
+```json
+{ "courseRating": 5, "partnerRating": 4, "text": "벤치 쉬는 곳이 좋았어요" }
+```
+
+- `courseRating` 1~5 (필수), `partnerRating` 1~5 (매칭 산책만, 혼자 걷기면 무시), `text` 0~100자 (내용 검사, 거절은 `422`)
+- `partnerRating` 은 상대에게 보이지 않고 **매칭 품질(짝 찾기 제외 기준)에만** 씁니다.
+- 산책 하나에 한 번만 됩니다 (`409`). 끝난 뒤 24시간 안에만 됩니다 `[가정]`.
+- `201 { "reward": { "xp": 10 }, "progress": { … } }`
+
+#### GET /api/me/progress
+
+- `200 { "level": 3, "xp": 240, "levelXp": 200, "nextLevelXp": 300, "totalWalks": 7, "totalDistanceM": 12400, "togetherWalks": 2 }`
+- 앱 시작과 산책 완료 화면에서 부릅니다.
+
+### 개인정보 보관 기간 (Q8 제안)
+
+| 정보 | 어디에 씀 | 보관 |
+| --- | --- | --- |
+| 성별 | "동성만" 조건 | 탈퇴할 때까지. 다른 사람에게 보이지 않음 |
+| 위치 (건물 단위) | 짝 찾기·만남 스팟 | **대기 취소·매칭 끝나면 바로 삭제**. GPS 좌표는 받지 않음 |
+| 인상착의 | 상대가 나를 알아보기 | **매칭 끝나면 바로 삭제** |
+| 매칭 기록 (두 계정·스팟·시각·끝난 이유) | 신고·차단, 성사율 집계 | 30일 `[가정]` |
+| 신고 | 안전 | 90일 `[가정]` |
+| 차단 | 다시 짝이 되지 않게 | 탈퇴할 때까지 |
+| 산책·리뷰·경험치 | 보상, 완주율 집계 | 탈퇴할 때까지. 리뷰 글은 상대에게 보이지 않음 |
+| 체험 계정 | 시연 | 7일 (지금 `AccountStore.GuestLifetime`) |
+
+- 탈퇴(`DELETE /api/me`)하면 위 기록을 모두 지웁니다. 집계 숫자(성사율 등)에는 개인을 알 수 없는 개수만 남깁니다.
+
+### 지표 (C-V6, 앱이 따로 할 일 없음)
+
+서버가 아래 순간을 스스로 기록합니다.
+- 추천: 표시(`POST /api/recommendations`) → 시작(`POST /api/walks` 의 `recommendationId`) → 완료
+- 매칭: 요청 → 성사(`meeting`) → 완료
+- 리뷰 작성
+
+관리자 집계 API 에서 AI 추천과 규칙 추천의 수락률·완주율, 매칭 성사율을 봅니다. 모양은 V6 에 정합니다.
+
 ## 관리자 API (검토 대기 처리, 앱과 무관)
 
 운영자가 검토 대기 메모·댓글을 공개하거나 지웁니다. 헤더 `X-Admin-Key` 가 서버 설정 `Admin:Key` 와 같아야 하고, 다르면 `403` 입니다. 서버에 `Admin:Key` 가 설정되지 않았으면 관리자 API 는 꺼져 있습니다 (`404`).
