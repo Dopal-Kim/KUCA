@@ -869,6 +869,7 @@ public partial class MemoBoard : MonoBehaviour
     void BuildUI(Transform canvas)
     {
         root = UIKit.Image(canvas, "MemoBoard", Paper, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         Vector2 safeMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
@@ -956,6 +957,7 @@ public partial class MemoBoard : MonoBehaviour
     void BuildViewer()
     {
         viewer = UIKit.Image(root.transform, "Post", Color.white, raycast: true).gameObject;
+        BackButton.Attach(viewer, () => viewer.SetActive(false));
         UIKit.Stretch((RectTransform)viewer.transform);
         Rect sa = Screen.safeArea;
         RectTransform safe = SafeRect(viewer.transform, "Safe",

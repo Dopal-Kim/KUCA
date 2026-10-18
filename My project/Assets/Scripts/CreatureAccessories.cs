@@ -16,23 +16,28 @@ public static class CreatureAccessories
         public string id;
         public string name;
         public Slot slot;
+        /// <summary>버튼에 쓸 짧은 이름</summary>
+        public string shortName;
     }
+
+    /// <summary>부위 이름 (화면)</summary>
+    public static string SlotName(Slot s) => s switch { Slot.Head => "머리띠", Slot.Neck => "목걸이", Slot.Eyes => "선글라스", _ => "귀걸이" };
 
     /// <summary>액세서리 목록 (퀘스트 보상 아이템 id 와 같다)</summary>
     public static readonly List<Accessory> All = new List<Accessory>
     {
-        new Accessory { id = "headband_blossom", name = "벚꽃 머리띠", slot = Slot.Head },
-        new Accessory { id = "headband_crimson_ears", name = "크림슨 리본 귀 머리띠", slot = Slot.Head },
-        new Accessory { id = "headband_laurel", name = "황금 월계수 머리띠", slot = Slot.Head },
-        new Accessory { id = "necklace_star", name = "별 펜던트 목걸이", slot = Slot.Neck },
-        new Accessory { id = "necklace_beads", name = "알록달록 구슬 목걸이", slot = Slot.Neck },
-        new Accessory { id = "necklace_heart", name = "크림슨 하트 목걸이", slot = Slot.Neck },
-        new Accessory { id = "glasses_round", name = "동그란 크림슨 선글라스", slot = Slot.Eyes },
-        new Accessory { id = "glasses_heart", name = "하트 선글라스", slot = Slot.Eyes },
-        new Accessory { id = "glasses_star", name = "별 선글라스", slot = Slot.Eyes },
-        new Accessory { id = "earrings_star", name = "금별 귀걸이", slot = Slot.Ears },
-        new Accessory { id = "earrings_pearl", name = "진주 귀걸이", slot = Slot.Ears },
-        new Accessory { id = "earrings_blossom", name = "벚꽃 귀걸이", slot = Slot.Ears },
+        new Accessory { id = "headband_blossom", name = "벚꽃 머리띠", slot = Slot.Head, shortName = "벚꽃" },
+        new Accessory { id = "headband_crimson_ears", name = "크림슨 리본 귀 머리띠", slot = Slot.Head, shortName = "리본 귀" },
+        new Accessory { id = "headband_laurel", name = "황금 월계수 머리띠", slot = Slot.Head, shortName = "월계수" },
+        new Accessory { id = "necklace_star", name = "별 펜던트 목걸이", slot = Slot.Neck, shortName = "별" },
+        new Accessory { id = "necklace_beads", name = "알록달록 구슬 목걸이", slot = Slot.Neck, shortName = "구슬" },
+        new Accessory { id = "necklace_heart", name = "크림슨 하트 목걸이", slot = Slot.Neck, shortName = "하트" },
+        new Accessory { id = "glasses_round", name = "동그란 크림슨 선글라스", slot = Slot.Eyes, shortName = "동그란" },
+        new Accessory { id = "glasses_heart", name = "하트 선글라스", slot = Slot.Eyes, shortName = "하트" },
+        new Accessory { id = "glasses_star", name = "별 선글라스", slot = Slot.Eyes, shortName = "별" },
+        new Accessory { id = "earrings_star", name = "금별 귀걸이", slot = Slot.Ears, shortName = "금별" },
+        new Accessory { id = "earrings_pearl", name = "진주 귀걸이", slot = Slot.Ears, shortName = "진주" },
+        new Accessory { id = "earrings_blossom", name = "벚꽃 귀걸이", slot = Slot.Ears, shortName = "벚꽃" },
     };
 
     public static Accessory Get(string id) => All.Find(a => a.id == id);

@@ -31,6 +31,59 @@ public static class CreatureLibrary
         { "business_fox", "국제·경영대학관 여우" }, { "multimedia_meerkat", "멀티미디어·글로벌관 미어캣" },
     };
 
+    // ---------- v2 경희몬: 등급 · 뽑기 확률 · 진화 (A-V1 확정 값, GachaRules 가 읽는다) ----------
+
+    /// <summary>
+    /// v2 등급. 초록 4종 C · 파랑 4종 B · 랜드마크 16종은 A 8 · S 8.
+    /// S = 학교를 대표하는 장소의 동물 (정문 · 중앙도서관 · 사자 · 시계탑 · 공학관 · 사색의 광장 · 대운동장 · 노천극장).
+    /// </summary>
+    public static readonly Dictionary<string, GachaRules.Grade> Grades = new Dictionary<string, GachaRules.Grade>
+    {
+        { "pigeon", GachaRules.Grade.C }, { "snail", GachaRules.Grade.C }, { "ant", GachaRules.Grade.C }, { "ladybug", GachaRules.Grade.C },
+        { "stray_cat", GachaRules.Grade.B }, { "squirrel", GachaRules.Grade.B }, { "crow", GachaRules.Grade.B }, { "raccoon_dog", GachaRules.Grade.B },
+        { "art_chameleon", GachaRules.Grade.A }, { "ceramics_mole", GachaRules.Grade.A }, { "observatory_squirrel", GachaRules.Grade.A },
+        { "language_parrot", GachaRules.Grade.A }, { "dorm_hamster", GachaRules.Grade.A }, { "electronics_hedgehog", GachaRules.Grade.A },
+        { "business_fox", GachaRules.Grade.A }, { "multimedia_meerkat", GachaRules.Grade.A },
+        { "gate_magpie", GachaRules.Grade.S }, { "library_owl", GachaRules.Grade.S }, { "lion_cub", GachaRules.Grade.S },
+        { "clock_rooster", GachaRules.Grade.S }, { "space_rabbit", GachaRules.Grade.S }, { "plaza_duck", GachaRules.Grade.S },
+        { "stadium_jindo", GachaRules.Grade.S }, { "amphitheater_frog", GachaRules.Grade.S },
+    };
+
+    /// <summary>1장 뽑기 (C~A)</summary>
+    public static readonly (GachaRules.Grade grade, float chance)[] SingleOdds =
+        { (GachaRules.Grade.C, 0.70f), (GachaRules.Grade.B, 0.25f), (GachaRules.Grade.A, 0.05f) };
+    /// <summary>5장 뽑기 (B~S). 5장 = 하루 걷기 상한이라 하루치 보상답게 S 10%</summary>
+    public static readonly (GachaRules.Grade grade, float chance)[] PremiumOdds =
+        { (GachaRules.Grade.B, 0.60f), (GachaRules.Grade.A, 0.30f), (GachaRules.Grade.S, 0.10f) };
+
+    /// <summary>파트너로 함께 이만큼 걸을 때마다 진화 경험치 +1</summary>
+    public const float GrowthMetersPerPoint = 100f;
+    /// <summary>진화 경험치가 이 값 이상이면 1단계, 2단계 (5km · 20km). 1주 실사용 테스트 안에 첫 진화를 보도록 낮춤</summary>
+    public static readonly int[] StageThresholds = { 50, 200 };
+    /// <summary>같은 종이 또 나왔을 때 그 종의 진화 경험치</summary>
+    public static int DuplicateGrowth(GachaRules.Grade g) => g switch
+    {
+        GachaRules.Grade.C => 10, GachaRules.Grade.B => 20, GachaRules.Grade.A => 30, _ => 40,
+    };
+
+    /// <summary>진화 단계(0~2)마다 피규어 크기 배율 · 테두리 빛 (CreatureToy _Rim)</summary>
+    public static readonly float[] StageScales = { 1f, 1.15f, 1.3f };
+    public static readonly float[] StageRims = { 0.25f, 0.5f, 0.85f };
+
+    /// <summary>
+    /// 진화 단계 이름: 0 "아기 올빼미" → 1 "중앙도서관 올빼미"(도감 이름) → 2 "빛나는 중앙도서관 올빼미".
+    /// 아기 단계는 도감 이름의 마지막 낱말만 쓴다 (장소 이름은 자라면서 얻는다).
+    /// </summary>
+    public static string StageName(string species, int stage)
+    {
+        string name = NameOf(species);
+        if (string.IsNullOrEmpty(name))
+            return name;
+        if (stage <= 0)
+            return "아기 " + name.Substring(name.LastIndexOf(' ') + 1);
+        return stage == 1 ? name : "빛나는 " + name;
+    }
+
     /// <summary>등급 이름 (HUD)</summary>
     public static readonly Dictionary<string, string> TierLabels = new Dictionary<string, string>
     {

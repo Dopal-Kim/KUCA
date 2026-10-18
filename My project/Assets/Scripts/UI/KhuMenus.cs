@@ -121,6 +121,7 @@ public partial class KhuMenus : MonoBehaviour
         BuildMainMenu();
         BuildCollection();
         BuildDetail();
+        BuildAccessoryPopup();
         BuildProfile();
         BuildListPopup();
         BuildScrapbook();
@@ -308,6 +309,7 @@ public partial class KhuMenus : MonoBehaviour
         UIKit.Stretch(gachaMenuBadgeText.rectTransform);
         gachaMenuBadge.gameObject.SetActive(false);
         CloseFab(inner, () => Show(mainMenu, false), filled: false, MenuNavy);
+        BackButton.Attach(mainMenu, () => Show(mainMenu, false));
     }
 
     void MenuButton(RectTransform parent, string label, Sprite icon, Vector2 pos, UnityEngine.Events.UnityAction onClick)
@@ -436,6 +438,7 @@ public partial class KhuMenus : MonoBehaviour
         sortButton = sort.gameObject;
 
         CloseFab(inner, () => Show(collection, false), filled: true);
+        BackButton.Attach(collection, () => Show(collection, false));
     }
 
     void SelectTab(Tab which)
@@ -725,7 +728,11 @@ public partial class KhuMenus : MonoBehaviour
         detailPartnerButton = PillButton(card, "파트너로 지정", Teal, Color.white, SetDetailAsPartner);
         Place((RectTransform)detailPartnerButton.transform, new Vector2(0.5f, 0f), new Vector2(-180f, 60f));
         ((RectTransform)detailPartnerButton.transform).sizeDelta = new Vector2(380f, 116f);
+        Button dress = PillButton(card, "꾸미기", Orange, Color.white, () => OpenAccessories(detailTarget));
+        Place((RectTransform)dress.transform, new Vector2(0.5f, 0f), new Vector2(0f, 196f));
+        ((RectTransform)dress.transform).sizeDelta = new Vector2(700f, 104f);
         Button close = PillButton(card, "닫기", new Color(0.88f, 0.92f, 0.9f), Gray, () => SetActive(detail, false));
+        BackButton.Attach(detail, () => SetActive(detail, false));
         Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(210f, 60f));
         ((RectTransform)close.transform).sizeDelta = new Vector2(300f, 116f);
     }
@@ -768,7 +775,7 @@ public partial class KhuMenus : MonoBehaviour
         if (p == null)
             buddy.Hide();
         else
-            buddy.Show(p.speciesId);
+            buddy.Show(p.speciesId, p.accessories);
     }
 
     // ---------- 목록 팝업 (역대 파트너, 모험노트, 도감·도구 정보) ----------
@@ -786,6 +793,7 @@ public partial class KhuMenus : MonoBehaviour
         listContent = ScrollContent(area, out _);
         UIKit.Vertical(listContent, 6f, new RectOffset(20, 20, 10, 20));
         Button close = PillButton(card, "닫기", Teal, Color.white, () => SetActive(listPopup, false));
+        BackButton.Attach(listPopup, () => SetActive(listPopup, false));
         Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f));
         ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
     }
@@ -844,6 +852,7 @@ public partial class KhuMenus : MonoBehaviour
         scrapEmpty = T(area, "", 36, TextAnchor.MiddleCenter, Gray);
         UIKit.Stretch(scrapEmpty.rectTransform, 60f, 100f);
         Button close = PillButton(card, "닫기", Teal, Color.white, CloseScrapbook);
+        BackButton.Attach(scrapbook, CloseScrapbook);
         Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f));
         ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
 
@@ -865,6 +874,7 @@ public partial class KhuMenus : MonoBehaviour
         scrapCaption = T(dim.transform, "", 36, TextAnchor.MiddleCenter, Color.white, bold: true);
         BottomBox(scrapCaption.rectTransform, 210f, 100f);
         Button back = PillButton(dim.transform, "닫기", new Color(1f, 1f, 1f, 0.15f), Color.white, () => scrapViewer.SetActive(false));
+        BackButton.Attach(scrapViewer, () => scrapViewer.SetActive(false));
         Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0f, 80f));
         ((RectTransform)back.transform).sizeDelta = new Vector2(320f, 110f);
         scrapViewer.SetActive(false);
@@ -962,6 +972,7 @@ public partial class KhuMenus : MonoBehaviour
     void BuildProfile()
     {
         profile = FullScreen("Profile", new Color(0.62f, 0.13f, 0.22f), new Color(0.24f, 0.02f, 0.08f), out RectTransform inner);
+        BackButton.Attach(profile, CloseProfile);
         Frame(profile.transform, new Color(0.40f, 0.05f, 0.12f));
 
         // 탭: 나 / 프렌드 / 소셜

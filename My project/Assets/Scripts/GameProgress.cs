@@ -30,6 +30,8 @@ public class GameProgress
         public string photo = "";
         /// <summary>동물 캐릭터 id (CreatureLibrary), 일반 경희몬이면 빈 문자열</summary>
         public string speciesId = "";
+        /// <summary>쓰고 있는 액세서리 id (CreatureAccessories, 부위마다 하나)</summary>
+        public List<string> accessories = new List<string>();
 
         public DateTime CaughtAt => new DateTime(caughtAt);
     }
@@ -340,6 +342,8 @@ public class GameProgress
     void Migrate()
     {
         caught ??= new List<Caught>();
+        foreach (Caught c in caught)
+            c.accessories ??= new List<string>();
         species ??= new List<Entry>();
         partnerHistory ??= new List<PartnerRecord>();
         items ??= new List<Entry>();

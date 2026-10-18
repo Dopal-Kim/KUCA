@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -16,9 +17,39 @@ public class PartnerBuddy : MonoBehaviour
 
     string speciesId;
     Transform visual;    // 발밑이 피벗인 피규어
+    Transform figure;    // 메시가 붙은 오브젝트 (액세서리를 이 아래에 붙인다)
+    float baseScale;
+    int stage;           // 진화 단계 0~2
     float phase;
 
-    public void Show(string species)
+    static readonly int RimId = Shader.PropertyToID("_Rim");
+
+    /// <summary>
+    /// v2 진화 단계(0~2)로 크기·테두리 빛을 바꾸고 단계 이름을 돌려준다 (예: "아기 올빼미").
+    /// Show 로 종을 바꾼 뒤나 진화했을 때 부른다. 값은 CreatureLibrary 의 StageScales · StageRims · StageName.
+    /// </summary>
+    public string SetStage(int value)
+    {
+        stage = Mathf.Clamp(value, 0, CreatureLibrary.StageScales.Length - 1);
+        ApplyStage(figure, stage);
+        if (visual != null)
+            visual.localScale = Vector3.one * baseScale * CreatureLibrary.StageScales[stage];
+        return CreatureLibrary.StageName(speciesId, stage);
+    }
+
+    /// <summary>피규어(메시 오브젝트)에 단계 테두리 빛을 입힌다. 크기는 부르는 쪽이 정한다 (사진 화면도 같이 쓴다).</summary>
+    public static void ApplyStage(Transform figureRoot, int stage)
+    {
+        if (figureRoot == null || !figureRoot.TryGetComponent(out MeshRenderer r))
+            return;
+        var block = new MaterialPropertyBlock();
+        r.GetPropertyBlock(block);
+        block.SetFloat(RimId, CreatureLibrary.StageRims[Mathf.Clamp(stage, 0, CreatureLibrary.StageRims.Length - 1)]);
+        r.SetPropertyBlock(block);
+    }
+
+    /// <param name="accessories">쓰고 있는 액세서리 id (없으면 null)</param>
+    public void Show(string species, IList<string> accessories = null)
     {
         if (string.IsNullOrEmpty(species) || !CreatureLibrary.TryGetMesh(species, out Mesh mesh))
         {
@@ -26,7 +57,10 @@ public class PartnerBuddy : MonoBehaviour
             return;
         }
         if (visual != null && speciesId == species)
+        {
+            ApplyAccessories(accessories);
             return;
+        }
         Hide();
         speciesId = species;
 
@@ -51,8 +85,25 @@ public class PartnerBuddy : MonoBehaviour
             g.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         visual = pivot;
-        visual.localScale = Vector3.one * ScaleFor(mesh);
+        figure = body.transform;
+        baseScale = ScaleFor(mesh);
+        visual.localScale = Vector3.one * baseScale * CreatureLibrary.StageScales[stage];
+        ApplyStage(figure, stage);
+        ApplyAccessories(accessories);
         SnapToTarget();
+    }
+
+    /// <summary>부위마다 쓰고 있는 액세서리로 바꾼다 (목록에 없는 부위는 뗀다)</summary>
+    void ApplyAccessories(IList<string> accessories)
+    {
+        if (figure == null)
+            return;
+        foreach (CreatureAccessories.Slot slot in System.Enum.GetValues(typeof(CreatureAccessories.Slot)))
+            CreatureAccessories.Detach(figure, slot);
+        if (accessories == null)
+            return;
+        foreach (string id in accessories)
+            CreatureAccessories.Attach(figure, speciesId, id);
     }
 
     public void Hide()
@@ -60,7 +111,9 @@ public class PartnerBuddy : MonoBehaviour
         if (visual != null)
             Destroy(visual.gameObject);
         visual = null;
+        figure = null;
         speciesId = null;
+        stage = 0;   // 다른 종이면 단계를 다시 받는다 (SetStage)
     }
 
     float ScaleFor(Mesh mesh)
