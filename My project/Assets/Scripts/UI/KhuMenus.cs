@@ -126,6 +126,8 @@ public partial class KhuMenus : MonoBehaviour
         BuildListPopup();
         BuildScrapbook();
         BuildQuests();
+        BuildGacha();
+        BuildStarter();
     }
 
     void Start()
@@ -167,25 +169,22 @@ public partial class KhuMenus : MonoBehaviour
         if (progress == null)
             return;
 
+        // v2: 도구(가방)는 숨겼으니 레벨 보상 도구는 주지 않고 알림만 (보상은 C-V4 서버 값으로)
         GameHUD.LevelOf(progress.score, out int level, out _, out _);
         if (progress.rewardedLevel < level)
         {
-            var got = new List<(string, int)>();
-            for (int lv = Mathf.Max(1, progress.rewardedLevel + 1); lv <= level; lv++)
-                foreach (var r in ItemCatalog.RewardsFor(lv))
-                {
-                    progress.AddItem(r.id, r.count);
-                    got.Add(r);
-                }
             bool levelUp = progress.rewardedLevel > 0;
             progress.rewardedLevel = level;
             progress.Save();
             if (levelUp && hud != null)
-                hud.Toast($"레벨 {level} 달성!  보상: {ItemCatalog.Describe(got)}");
+                hud.Toast($"레벨 {level} 달성!");
         }
 
         if (collection != null && collection.activeSelf)
             FillCollection();
+        if (gachaScreen != null && gachaScreen.activeSelf)
+            FillGacha();
+        RefreshGachaBadge();
         if (profile != null && profile.activeSelf)
             FillProfile();
     }
@@ -193,32 +192,12 @@ public partial class KhuMenus : MonoBehaviour
     void Update()
     {
         TrackActivity();
+        MaybeOfferStarter();
         if (profile != null && profile.activeSelf)
         {
             UpdateProfileCamera();
             profileRays.localRotation = Quaternion.Euler(0f, 0f, Time.unscaledTime * 4f);
         }
-    }
-
-    // ---------- 걷기 보상: 알 부화 (B-3) ----------
-
-    /// <summary>알을 깨워 경희몬 한 마리를 도감에 넣고 부화 연출을 보여 준다.</summary>
-    /// <param name="questReward">퀘스트 보상 알: 걷기 알과 별개라 하루 상한·게이지에 영향이 없다</param>
-    void HatchEgg(bool questReward = false)
-    {
-        if (collect == null || spawner == null || (!questReward && !progress.EggReady))
-            return;
-        string tier = GameProgress.RollEggTier(UnityEngine.Random.value);
-        IReadOnlyList<string> pool = CreatureLibrary.SpeciesOfTier(tier);
-        CollectibleType type = spawner.TypeOf(tier);
-        if (pool == null || pool.Count == 0 || type == null)
-            return;
-        string species = pool[UnityEngine.Random.Range(0, pool.Count)];
-        if (!questReward)
-            progress.MarkHatched();
-        collect.CompleteCatch(type, null, "", species, countForQuests: false); // 도감·XP·저장·토스트는 잡을 때와 같다
-        hud?.ShowEgg(progress);
-        hud?.ShowHatch(species, tier, questReward ? -1 : progress.HatchedToday);
     }
 
     // ---------- 활동 기록 (걸은 거리, 방문한 경희스팟) ----------
@@ -242,21 +221,13 @@ public partial class KhuMenus : MonoBehaviour
                 float speed = d / Mathf.Max(0.05f, Time.unscaledTime - anchorTime);
                 float accuracy = collect.campusMap.CurrentAccuracy;
                 if (speed <= MaxWalkSpeed && (accuracy <= 0f || accuracy <= MaxGpsAccuracy))
-                {
-                    progress.walkedMeters += d;
-                    progress.AddEggDistance(d);
-                    Quests.Report("walk", Mathf.RoundToInt(d));
-                    dirty = true;
-                    hud?.ShowEgg(progress);
-                }
+                    OnWalked(d);
                 anchorPos = p;
                 anchorTime = Time.unscaledTime;
             }
         }
 
         spotTimer -= Time.unscaledDeltaTime;
-        if (spotTimer <= 0f && progress.EggReady)
-            HatchEgg(); // 다 자란 알 (오늘 상한에 걸렸던 알은 날이 바뀌면 여기서 깨어난다)
         if (spotTimer <= 0f && spots != null)
         {
             spotTimer = 1f;
@@ -284,6 +255,30 @@ public partial class KhuMenus : MonoBehaviour
         }
     }
 
+    /// <summary>걸은 거리: 티켓 (1km, 하루 상한) · 경험치 (1km 10) · 파트너 진화 경험치 (100m 1)</summary>
+    void OnWalked(float meters)
+    {
+        GameProgress.WalkResult r = progress.AddWalk(meters);
+        Quests.Report("walk", Mathf.RoundToInt(meters));
+        dirty = true;
+        if (r.tickets > 0)
+        {
+            progress.Save();
+            hud?.Toast($"티켓 {r.tickets}장을 받았어요!  오늘 {progress.TicketsToday}/{GachaRules.TicketsPerDay}");
+        }
+        if (r.evolved && progress.Partner != null)
+        {
+            progress.Save();
+            string name = NameOf(progress.Partner);
+            hud?.Toast($"{name}{CatchCameraScreen.Josa(name, "이", "가")} 함께 걸어서 {r.stage}단계로 진화했어요!");
+            RefreshBuddy();
+        }
+        if (r.xp > 0 || r.tickets > 0)
+            hud?.ShowProgress(progress, types, popup: false); // 걷기 경험치는 조금씩 쌓여서 "+1 XP" 는 띄우지 않는다
+        else
+            hud?.ShowTickets(progress);
+    }
+
     void OnApplicationPause(bool paused)
     {
         if (paused && progress != null)
@@ -303,14 +298,16 @@ public partial class KhuMenus : MonoBehaviour
     void BuildMainMenu()
     {
         mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
-        // 2×2 바둑판: 위 줄 경희몬·퀘스트, 아래 줄 도감·도구 (닫기 버튼 위 가운데에 모아 균형 있게)
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
+        // 위 줄 경희몬 · 뽑기, 아래 줄 가운데 도감. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
         MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
-        MenuButton(inner, "퀘스트", HudIcons.Quest, new Vector2(160f, 600f), OpenQuests);
-        MenuButton(inner, "도구", HudIcons.Bag, new Vector2(160f, 270f), () => OpenCollection(Tab.Items));
-        questMenuBadge = Circle(menuButtons[menuButtons.Count - 2], "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
-        Place(questMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-18f, 180f));
-        questMenuBadge.gameObject.SetActive(false);
+        MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 600f), OpenGacha);
+        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(0f, 270f), () => OpenCollection(Tab.Dex));
+        // 뽑기 버튼의 빨간 원: 가진 티켓 수
+        gachaMenuBadge = Circle(menuButtons[1], "Badge", new Color(0.93f, 0.25f, 0.33f), 56f);
+        Place(gachaMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-14f, 176f));
+        gachaMenuBadgeText = T(gachaMenuBadge.transform, "", 30, TextAnchor.MiddleCenter, Color.white, bold: true);
+        UIKit.Stretch(gachaMenuBadgeText.rectTransform);
+        gachaMenuBadge.gameObject.SetActive(false);
         CloseFab(inner, () => Show(mainMenu, false), filled: false, MenuNavy);
     }
 
@@ -365,13 +362,15 @@ public partial class KhuMenus : MonoBehaviour
         tabs.offsetMin = tabs.offsetMax = Vector2.zero;
         tabs.sizeDelta = new Vector2(0f, 210f);
         string[] names = { "도감", "경희몬", "도구" };
+        const int shownTabs = 2; // v2: 도구 탭은 숨김 (결정 D4)
         for (int i = 0; i < 3; i++)
         {
             Tab which = (Tab)i;
             Button b = InvisibleButton(tabs, names[i], () => SelectTab(which), Vector2.zero);
             RectTransform br = (RectTransform)b.transform;
-            br.anchorMin = new Vector2(i / 3f, 0f);
-            br.anchorMax = new Vector2((i + 1) / 3f, 1f);
+            b.gameObject.SetActive(i < shownTabs);
+            br.anchorMin = new Vector2(i / (float)shownTabs, 0f);
+            br.anchorMax = new Vector2((i + 1) / (float)shownTabs, 1f);
             br.offsetMin = br.offsetMax = Vector2.zero;
             tabLabels[i] = T(br, names[i], 42, TextAnchor.MiddleCenter, Gray, bold: true);
             SetBox(tabLabels[i].rectTransform, 0f, 0.5f, 0.85f, 0f);
@@ -481,10 +480,10 @@ public partial class KhuMenus : MonoBehaviour
         switch (tab)
         {
             case Tab.Dex:
-                // 초록 → 파랑 → 황금 구역. 번호는 도감 전체 순서, 못 만난 동물은 그림자로.
-                foreach (string tier in CreatureLibrary.Tiers)
+                // C → B → A → S 구역 (v2 등급). 번호는 도감 전체 순서, 못 만난 동물은 그림자로.
+                foreach (GachaRules.Grade grade in System.Enum.GetValues(typeof(GachaRules.Grade)))
                 {
-                    IReadOnlyList<string> species = CreatureLibrary.SpeciesOfTier(tier);
+                    IReadOnlyList<string> species = GachaRules.SpeciesOf(grade);
                     var visible = new List<string>();
                     int tierFound = 0;
                     foreach (string id in species)
@@ -496,7 +495,7 @@ public partial class KhuMenus : MonoBehaviour
                     }
                     if (visible.Count == 0)
                         continue;
-                    RectTransform section = Section(CreatureLibrary.TierLabel(tier), CreatureLibrary.TierColor(tier),
+                    RectTransform section = Section($"{GachaRules.Label(grade)} 등급", GachaRules.ColorOf(grade),
                         $"{tierFound} / {species.Count} 발견");
                     foreach (string id in visible)
                     {
@@ -524,7 +523,7 @@ public partial class KhuMenus : MonoBehaviour
                     shown++;
                 }
                 emptyText.text = shown > 0 ? "" : q.Length > 0 ? "검색 결과가 없어요"
-                    : "아직 잡은 경희몬이 없어요\n지도에서 경희몬을 찾아 걸어가 보세요";
+                    : "아직 경희몬이 없어요\n걸어서 티켓을 모아 뽑아 보세요";
                 break;
 
             case Tab.Items:
@@ -588,8 +587,9 @@ public partial class KhuMenus : MonoBehaviour
         Text name = T(cell, NameOf(c), 38, TextAnchor.MiddleCenter, Gray);
         BottomBox(name.rectTransform, 40f, 60f);
         FitOneLine(name, 38);
-        // 막대 색 = 등급 (초록·파랑·황금)
-        Image bar = UIKit.Image(cell, "Bar", CreatureLibrary.TierColor(c.typeId));
+        StageDots(cell, progress.StageOf(c.speciesId), new Vector2(-96f, -96f));
+        // 막대 색 = 등급 (C · B · A · S)
+        Image bar = UIKit.Image(cell, "Bar", GachaRules.ColorOf(GachaRules.GradeOf(c.speciesId)));
         bar.sprite = HudIcons.Pill;
         bar.type = Image.Type.Sliced;
         bar.pixelsPerUnitMultiplier = 12f;
@@ -611,14 +611,14 @@ public partial class KhuMenus : MonoBehaviour
 
     void DexCell(RectTransform parent, int number, string species, bool known)
     {
-        string tier = CreatureLibrary.TierOf(species);
+        GachaRules.Grade grade = GachaRules.GradeOf(species);
         Button b = InvisibleButton(parent, species, () =>
         {
             if (known)
                 ShowList(CreatureLibrary.NameOf(species), DexRows(species));
             else
-                hud?.Toast(tier == "star" ? "아직 만나지 못한 황금 동물이에요. 캠퍼스 랜드마크 근처를 찾아보세요"
-                                          : "아직 만나지 못한 동물이에요");
+                hud?.Toast(grade >= GachaRules.Grade.B ? $"아직 만나지 못한 {GachaRules.Label(grade)} 등급이에요. 5장 뽑기에서 나와요"
+                                                       : "아직 만나지 못한 경희몬이에요. 1장 뽑기에서 나와요");
         }, Vector2.zero);
         Transform cell = b.transform;
         Text no = T(cell, $"No.{number:000}", 32, TextAnchor.MiddleCenter, Gray, bold: true);
@@ -627,8 +627,34 @@ public partial class KhuMenus : MonoBehaviour
         Text name = T(cell, known ? CreatureLibrary.NameOf(species) : "???", 34, TextAnchor.MiddleCenter, Gray);
         BottomBox(name.rectTransform, 40f, 56f);
         FitOneLine(name, 34);
-        Text cnt = T(cell, known ? $"잡은 수 {progress.SpeciesCountOf(species)}" : "", 28, TextAnchor.MiddleCenter, ValueGreen);
+        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}" : "", 28, TextAnchor.MiddleCenter, ValueGreen);
         BottomBox(cnt.rectTransform, 6f, 36f);
+        GradeChip(cell, grade);
+        if (known)
+            StageDots(cell, progress.StageOf(species), new Vector2(104f, -36f));
+    }
+
+    /// <summary>칸 왼쪽 위 등급 표시 (C · B · A · S)</summary>
+    static void GradeChip(Transform cell, GachaRules.Grade grade)
+    {
+        Image chip = Circle(cell, "Grade", GachaRules.ColorOf(grade), 52f);
+        Place(chip.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -34f));
+        Text g = T(chip.transform, GachaRules.Label(grade), 30, TextAnchor.MiddleCenter, Color.white, bold: true);
+        UIKit.Stretch(g.rectTransform);
+    }
+
+    /// <summary>진화 단계 점 ●●○ (0~2단계 → 1~3개 채움)</summary>
+    static void StageDots(Transform cell, int stage, Vector2 pos)
+    {
+        RectTransform row = UIKit.Rect(cell, "Stage");
+        row.anchorMin = row.anchorMax = row.pivot = new Vector2(0.5f, 1f);
+        row.anchoredPosition = pos;
+        row.sizeDelta = new Vector2(90f, 22f);
+        for (int i = 0; i <= GachaRules.MaxStage; i++)
+        {
+            Image dot = Circle(row, "Dot" + i, i <= stage ? Orange : new Color(0f, 0f, 0f, 0.14f), 20f);
+            Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 30f, 0f));
+        }
     }
 
     List<(string, string)> DexRows(string species)
@@ -641,20 +667,19 @@ public partial class KhuMenus : MonoBehaviour
             best = Mathf.Max(best, c.cp);
             first = Math.Min(first, c.caughtAt);
         }
-        string tier = CreatureLibrary.TierOf(species);
-        CollectibleType t = TypeOf(tier);
+        GachaRules.Grade grade = GachaRules.GradeOf(species);
+        int growth = progress.GrowthOf(species);
+        int next = GachaRules.NextThreshold(growth);
         var rows = new List<(string, string)>
         {
-            ("등급", CreatureLibrary.TierLabel(tier)),
-            ("잡은 수", $"{progress.SpeciesCountOf(species)}마리"),
+            ("등급", $"{GachaRules.Label(grade)} 등급"),
+            ("진화 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
+            ("만난 수", $"{progress.SpeciesCountOf(species)}마리"),
             ("가지고 있는 수", $"{mine.Count}마리"),
             ("최고 쿠옹력", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
+            ("진화하려면", "파트너로 함께 걷거나 (100m 1), 뽑기에서 또 만나기"),
         };
-        if (t != null)
-            rows.Add(("1마리당 경험치", $"+{t.points} XP"));
-        if (tier == "star")
-            rows.Add(("사는 곳", "캠퍼스 랜드마크 근처에서만 나와요"));
         return rows;
     }
 
@@ -712,12 +737,13 @@ public partial class KhuMenus : MonoBehaviour
     void OpenDetail(GameProgress.Caught c)
     {
         detailTarget = c;
-        CollectibleType t = TypeOf(c.typeId);
         detailThumb.texture = ThumbOf(c.speciesId);
         detailCp.text = $"<size=40>쿠옹력</size> {c.cp}";
         detailName.text = NameOf(c);
-        string xp = t != null ? $"  ·  1마리당 +{t.points} XP" : "";
-        detailInfo.text = $"{CreatureLibrary.TierLabel(c.typeId)}{xp}\n잡은 날짜  {c.CaughtAt:yyyy.MM.dd HH:mm}";
+        int growth = progress.GrowthOf(c.speciesId);
+        int next = GachaRules.NextThreshold(growth);
+        string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (진화 경험치 {growth}/{next})" : " (최종)");
+        detailInfo.text = $"{GachaRules.Label(GachaRules.GradeOf(c.speciesId))} 등급  ·  {stage}\n만난 날짜  {c.CaughtAt:yyyy.MM.dd HH:mm}";
         bool isPartner = c.uid == progress.partnerUid;
         detailPartner.text = isPartner ? "♥ 지금 함께 다니는 파트너예요" : "";
         detailPartnerButton.interactable = !isPartner;

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 퀘스트 화면 (B-5): 메뉴 › 퀘스트. 오늘의 퀘스트 3개와 이번 주 퀘스트 1개, 진행 막대와 보상 받기 버튼.
 /// 받을 보상이 있으면 가운데 경희 로고와 메뉴의 퀘스트 버튼에 빨간 점.
+/// v2: 잡기가 없어져 퀘스트는 잠시 숨김 (QuestsEnabled, 결정 D3). 코드는 남겨 둔다.
 /// </summary>
 public partial class KhuMenus
 {
@@ -18,9 +19,12 @@ public partial class KhuMenus
     Text questTimer;
     Image questMenuBadge;
 
+    /// <summary>v2 에서 퀘스트 화면 · 배지를 숨긴다 (다시 켜려면 true, 메뉴 버튼도 다시 넣어야 함)</summary>
+    const bool QuestsEnabled = false;
+
     void InitQuests()
     {
-        if (progress == null)
+        if (progress == null || !QuestsEnabled)
             return;
         Quests.Ensure(progress, spots != null ? spots.Spots.Count : 30);
         progress.Save();
@@ -139,7 +143,11 @@ public partial class KhuMenus
             return;
         hud?.ShowProgress(progress, types); // XP·레벨 갱신 ("+N XP")
         if (egg)
-            HatchEgg(questReward: true);
+        {
+            progress.tickets++; // v2: 알 대신 티켓 1장
+            progress.Save();
+            hud?.Toast($"퀘스트 보상 +{xp} XP  ·  티켓 1장");
+        }
         else
             hud?.Toast($"퀘스트 보상 +{xp} XP");
         FillQuests();

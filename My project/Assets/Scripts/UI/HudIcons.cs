@@ -254,6 +254,35 @@ public static class HudIcons
         }, Color.white);
     });
 
+    /// <summary>별 (별점). 다각형이 볼록해야 해서 가운데 오각형 + 뾰족한 삼각형 5개로 그린다</summary>
+    public static Sprite Star => Cached("star", 128, p =>
+    {
+        Vector2 At(int i, float r)
+        {
+            float a = Mathf.PI / 2f + i * Mathf.PI / 5f;
+            return new Vector2(64f + Mathf.Cos(a) * r, 62f + Mathf.Sin(a) * r);
+        }
+        var inner = new Vector2[5];
+        for (int k = 0; k < 5; k++)
+            inner[k] = At(2 * k + 1, 25f);
+        p.Polygon(Color.white, inner);
+        for (int k = 0; k < 5; k++)
+            p.Polygon(Color.white, At(2 * k - 1, 25f), At(2 * k, 58f), At(2 * k + 1, 25f));
+    });
+
+    /// <summary>티켓 (양쪽이 파인 표 + 가운데 점선) — 걸어서 모으는 뽑기 티켓</summary>
+    public static Sprite Ticket => Cached("ticket", 128, p =>
+    {
+        p.Box(64, 64, 54, 34, 8f);
+        p.Erase(q => q.CircleD(10, 64, 12f));
+        p.Erase(q => q.CircleD(118, 64, 12f));
+        for (int i = 0; i < 4; i++)
+        {
+            float y = 40 + i * 16;
+            p.Erase(q => q.BoxD(84, y, 2.5f, 5f, 1f, 0f));
+        }
+    });
+
     /// <summary>길 (구불구불한 길 + 도착 핀) — 산책 길잡이</summary>
     public static Sprite Route => Cached("route", 128, p =>
     {

@@ -4,7 +4,8 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// 점수, 잡은 경희몬(한 마리씩), 파트너, 도구, 활동 기록을 기기에 JSON으로 저장한다.
+/// 점수(경험치), 가진 경희몬(한 마리씩), 파트너, 티켓 · 진화, 도구, 활동 기록을 기기에 JSON으로 저장한다.
+/// v2 (B-V1): 알 대신 티켓 → 뽑기, 종마다 진화 경험치. 규칙 값은 GachaRules.
 /// 경로: Application.persistentDataPath/progress.json
 /// </summary>
 [Serializable]
@@ -59,37 +60,166 @@ public class GameProgress
     public float walkedMeters;
     public List<string> visitedSpots = new List<string>();
 
-    // ---------- 걷기 보상: 경희몬 알 (B-3) ----------
-    // 늘 알 하나를 품고 걷는다. EggMeters 를 걸으면 깨어나 경희몬 한 마리가 도감에 들어온다 (하루 EggsPerDay 번까지).
-    public const float EggMeters = 1000f;
-    public const int EggsPerDay = 3;
-    /// <summary>지금 품은 알이 걸은 거리 (m). 오늘 다 깼으면 EggMeters 에서 멈춰 있다가 내일 깨어난다</summary>
-    public float eggMeters;
-    /// <summary>hatchedToday 를 센 날 (yyyyMMdd)</summary>
-    public string eggDay = "";
-    public int hatchedToday;
+    // ---------- v2: 티켓 · 진화 (B-V1, 규칙은 GachaRules) ----------
+
+    /// <summary>저장 형식 버전. 2 = v2 (알 삭제, 레벨 초기화)</summary>
+    public int dataVersion;
+    public int tickets;
+    /// <summary>다음 티켓까지 걸은 거리 (m). 오늘 상한이면 TicketMeters 에서 멈춰 있다가 내일 1장이 된다</summary>
+    public float ticketMeters;
+    /// <summary>ticketsToday 를 센 날 (yyyyMMdd)</summary>
+    public string ticketDay = "";
+    public int ticketsToday;
+    /// <summary>파트너로 함께 걸은 거리 중 아직 진화 경험치로 바꾸지 않은 나머지 (m)</summary>
+    public float partnerMeters;
+    /// <summary>아직 경험치로 바꾸지 않은 걸은 거리 (m)</summary>
+    public float xpMeters;
+
+    [Serializable]
+    public class Growth
+    {
+        public string id;   // 동물 id
+        public int points;  // 진화 경험치
+    }
+    /// <summary>종별 진화 경험치</summary>
+    public List<Growth> growth = new List<Growth>();
 
     static string Today => DateTime.Now.ToString("yyyyMMdd");
 
-    /// <summary>오늘 깨운 알 수</summary>
-    public int HatchedToday => eggDay == Today ? hatchedToday : 0;
+    public int TicketsToday => ticketDay == Today ? ticketsToday : 0;
+    public bool TicketCapped => TicketsToday >= GachaRules.TicketsPerDay;
 
-    /// <summary>알이 다 자랐고 오늘 더 깨울 수 있으면 true</summary>
-    public bool EggReady => eggMeters >= EggMeters && HatchedToday < EggsPerDay;
-
-    /// <summary>걸은 거리를 알에 더한다 (EggMeters 를 넘지 않음)</summary>
-    public void AddEggDistance(float meters) => eggMeters = Mathf.Min(EggMeters, eggMeters + Mathf.Max(0f, meters));
-
-    /// <summary>알을 깨운 것으로 기록하고 새 알을 품는다</summary>
-    public void MarkHatched()
+    public int GrowthOf(string species)
     {
-        if (eggDay != Today)
+        Growth g = growth.Find(x => x.id == species);
+        return g != null ? g.points : 0;
+    }
+
+    public int StageOf(string species) => GachaRules.StageOf(GrowthOf(species));
+
+    /// <summary>그 종에 진화 경험치를 더한다. 단계가 올랐으면 true</summary>
+    public bool AddGrowth(string species, int points, out int stage)
+    {
+        stage = StageOf(species);
+        if (string.IsNullOrEmpty(species) || points <= 0)
+            return false;
+        Growth g = growth.Find(x => x.id == species);
+        if (g == null)
+            growth.Add(g = new Growth { id = species });
+        int before = stage;
+        g.points += points;
+        stage = GachaRules.StageOf(g.points);
+        return stage > before;
+    }
+
+    public struct WalkResult
+    {
+        public int tickets;     // 새로 받은 티켓
+        public int xp;          // 새로 받은 경험치
+        public bool evolved;    // 파트너가 진화했는지
+        public int stage;       // 파트너의 지금 단계
+    }
+
+    /// <summary>
+    /// 걸은 거리를 더한다: 1km 마다 티켓 (하루 상한), 경험치 (1km 10), 파트너 진화 경험치 (100m 1).
+    /// 상한에 걸린 날의 거리는 TicketMeters 에서 멈추고, 날이 바뀐 뒤 처음 걸을 때 1장이 된다.
+    /// </summary>
+    public WalkResult AddWalk(float meters)
+    {
+        var r = new WalkResult();
+        meters = Mathf.Max(0f, meters);
+        walkedMeters += meters;
+
+        if (ticketDay != Today)
         {
-            eggDay = Today;
-            hatchedToday = 0;
+            ticketDay = Today;
+            ticketsToday = 0;
         }
-        hatchedToday++;
-        eggMeters = 0f;
+        ticketMeters += meters;
+        while (ticketMeters >= GachaRules.TicketMeters && ticketsToday < GachaRules.TicketsPerDay)
+        {
+            ticketMeters -= GachaRules.TicketMeters;
+            ticketsToday++;
+            tickets++;
+            r.tickets++;
+        }
+        if (ticketsToday >= GachaRules.TicketsPerDay)
+            ticketMeters = Mathf.Min(ticketMeters, GachaRules.TicketMeters);
+
+        xpMeters += meters;
+        float perXp = 1000f / GachaRules.XpPerKm;
+        while (xpMeters >= perXp)
+        {
+            xpMeters -= perXp;
+            score++;
+            r.xp++;
+        }
+
+        Caught partner = Partner;
+        if (partner != null && !string.IsNullOrEmpty(partner.speciesId))
+        {
+            partnerMeters += meters;
+            int points = Mathf.FloorToInt(partnerMeters / GachaRules.GrowthMetersPerPoint);
+            partnerMeters -= points * GachaRules.GrowthMetersPerPoint;
+            r.evolved = AddGrowth(partner.speciesId, points, out r.stage);
+        }
+        return r;
+    }
+
+    public struct DrawResult
+    {
+        public string species;
+        public GachaRules.Grade grade;
+        public bool isNew;       // 도감에 처음 들어옴
+        public int growthAdded;  // 중복이면 그 종의 진화 경험치
+        public bool evolved;
+        public int stage;
+        public Caught caught;
+    }
+
+    /// <summary>티켓을 써서 뽑는다 (1장: C~A, 5장: B~S). 티켓이 모자라면 false</summary>
+    public bool Draw(bool premium, float rGrade, float rSpecies, out DrawResult result)
+    {
+        result = default;
+        int cost = premium ? GachaRules.PremiumCost : GachaRules.SingleCost;
+        string species = GachaRules.RollSpecies(premium, rGrade, rSpecies);
+        if (tickets < cost || species == null)
+            return false;
+        tickets -= cost;
+        result.species = species;
+        result.grade = GachaRules.GradeOf(species);
+        result.isNew = SpeciesCountOf(species) == 0;
+        if (!result.isNew)
+        {
+            result.growthAdded = GachaRules.DuplicateGrowth(result.grade);
+            result.evolved = AddGrowth(species, result.growthAdded, out result.stage);
+        }
+        else
+            result.stage = StageOf(species);
+        result.caught = AddCreature(species);
+        return true;
+    }
+
+    /// <summary>뽑기 · 첫 파트너로 얻은 경희몬 (경험치 없이 도감과 가방에만)</summary>
+    public Caught AddCreature(string species)
+    {
+        string tier = CreatureLibrary.TierOf(species) ?? "sprout";
+        totalCollected++;
+        Entry e = collected.Find(x => x.id == tier);
+        if (e == null)
+            collected.Add(e = new Entry { id = tier });
+        e.count++;
+        var c = new Caught
+        {
+            uid = Guid.NewGuid().ToString("N"),
+            typeId = tier,
+            cp = RollCp(new CollectibleType { id = tier, points = PointsGuess(tier) }, UnityEngine.Random.value, UnityEngine.Random.value),
+            caughtAt = DateTime.Now.Ticks,
+            speciesId = species,
+        };
+        caught.Add(c);
+        AddSpecies(species);
+        return c;
     }
 
     // ---------- 퀘스트 (B-5): 매일 3개 + 주간 1개. 정의는 Quests.cs ----------
@@ -108,9 +238,6 @@ public class GameProgress
     public string questWeek = "";
     public List<QuestState> dailyQuests = new List<QuestState>();
     public List<QuestState> weeklyQuests = new List<QuestState>();
-
-    /// <summary>깨어날 등급: 초록 70% · 파랑 25% · 황금 5%</summary>
-    public static string RollEggTier(float r) => r < 0.70f ? "sprout" : r < 0.95f ? "crystal" : "star";
 
     static string FilePath => Path.Combine(Application.persistentDataPath, "progress.json");
 
@@ -221,14 +348,14 @@ public class GameProgress
         partnerHistory ??= new List<PartnerRecord>();
         items ??= new List<Entry>();
         visitedSpots ??= new List<string>();
-        eggDay ??= "";
+        ticketDay ??= "";
+        growth ??= new List<Growth>();
         questDay ??= "";
         questWeek ??= "";
         dailyQuests ??= new List<QuestState>();
         weeklyQuests ??= new List<QuestState>();
         foreach (QuestState q in dailyQuests) q.seen ??= new List<string>();
         foreach (QuestState q in weeklyQuests) q.seen ??= new List<string>();
-        eggMeters = Mathf.Clamp(eggMeters, 0f, EggMeters);
         foreach (Entry e in collected)
         {
             int have = caught.FindAll(c => c.typeId == e.id).Count;
@@ -258,6 +385,22 @@ public class GameProgress
         }
     }
 
+    /// <summary>
+    /// v2 로 한 번 옮기기 (결정 D1 · D9): 알은 버리고 (예전 필드는 읽지 않음), 레벨 · 경험치는 0 부터,
+    /// 퀘스트는 숨기므로 비운다. 가진 경희몬 · 도감 · 파트너는 그대로.
+    /// </summary>
+    public void MigrateToV2()
+    {
+        if (dataVersion >= 2)
+            return;
+        score = 0;
+        rewardedLevel = 0;
+        dailyQuests.Clear();
+        weeklyQuests.Clear();
+        questDay = questWeek = "";
+        dataVersion = 2;
+    }
+
     static int StableHash(string s)
     {
         int h = 17;
@@ -266,7 +409,7 @@ public class GameProgress
         return h;
     }
 
-    static int PointsGuess(string id) => id == "star" ? 100 : id == "crystal" ? 30 : 10;
+    internal static int PointsGuess(string id) => id == "star" ? 100 : id == "crystal" ? 30 : 10;
 
     public static GameProgress Load()
     {
@@ -280,8 +423,12 @@ public class GameProgress
         {
             Debug.LogWarning($"[GameProgress] 저장 데이터를 읽지 못했습니다: {e.Message}");
         }
+        bool fresh = p == null;
         p ??= new GameProgress();
         p.Migrate();
+        if (fresh)
+            p.dataVersion = 2; // 새로 깐 앱은 옮길 것이 없다
+        p.MigrateToV2();
         return p;
     }
 

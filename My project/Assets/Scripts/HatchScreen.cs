@@ -3,14 +3,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 걷기 보상(B-3) 알 부화 연출. 알이 흔들리다 번쩍 깨지고, 나온 경희몬과 등급을 보여 준다.
+/// 뽑기 결과 연출 (B-V1, 예전 알 부화 화면을 고쳐 씀). 티켓이 흔들리다 번쩍 열리고, 나온 경희몬 · 등급 · 진화 경험치를 보여 준다.
 /// 메모판·산책 길잡이 위에서도 보이도록 자기 캔버스(순서 40)를 쓴다.
 /// </summary>
 public class HatchScreen : MonoBehaviour
 {
     static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
     static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color EggShell = new Color(1f, 0.95f, 0.84f);
+    static readonly Color TicketPaper = new Color(1f, 0.93f, 0.78f);
+    static readonly Color TicketGold = new Color(1f, 0.78f, 0.25f);
 
     GameObject root;
     RectTransform egg, creature, rays;
@@ -18,39 +19,44 @@ public class HatchScreen : MonoBehaviour
     Image flash;
     Text title, nameText, tierText, info;
     Button ok;
+    System.Action onClose;
 
-    public static void Show(string species, string tier, int hatchedToday)
+    /// <summary>뽑기 결과를 보여 준다. premium: 5장 뽑기 (티켓이 금색)</summary>
+    public static void Show(GameProgress.DrawResult r, bool premium, int ticketsLeft, System.Action closed = null)
     {
         HatchScreen s = FindAnyObjectByType<HatchScreen>();
         if (s == null)
             s = new GameObject("HatchScreen").AddComponent<HatchScreen>();
-        s.Play(species, tier, hatchedToday);
+        s.Play(r, premium, ticketsLeft, closed);
     }
 
     void Awake() => Build();
 
-    void Play(string species, string tier, int hatchedToday)
+    void Play(GameProgress.DrawResult r, bool premium, int ticketsLeft, System.Action closed)
     {
         StopAllCoroutines();
+        onClose = closed;
         root.SetActive(true);
         Texture2D tex = null;
-        try { tex = MonsterThumbnails.Get(species); }
+        try { tex = MonsterThumbnails.Get(r.species); }
         catch (System.Exception e) { Debug.LogWarning("[Hatch] 썸네일 실패: " + e.Message); }
         creatureImage.texture = tex;
         creatureImage.enabled = tex != null;
-        nameText.text = CreatureLibrary.NameOf(species);
-        tierText.text = CreatureLibrary.TierLabel(tier);
-        tierText.color = CreatureLibrary.TierColor(tier);
-        info.text = hatchedToday < 0
-            ? "도감에 등록됐어요  ·  퀘스트 보상"
-            : $"도감에 등록됐어요  ·  오늘 {hatchedToday}/{GameProgress.EggsPerDay}";
+        egg.GetComponent<Image>().color = premium ? TicketGold : TicketPaper;
+        nameText.text = CreatureLibrary.NameOf(r.species);
+        tierText.text = $"{GachaRules.Label(r.grade)} 등급";
+        tierText.color = GachaRules.ColorOf(r.grade);
+        string what = r.isNew ? "새 경희몬!  도감에 등록됐어요"
+            : r.evolved ? $"진화 경험치 +{r.growthAdded}  ·  {r.stage}단계로 진화했어요!"
+            : $"이미 있는 경희몬  ·  진화 경험치 +{r.growthAdded}";
+        info.text = $"{what}\n남은 티켓 {ticketsLeft}장";
         UIInputBlocker.SetModal(this, true);
         StartCoroutine(Animate());
     }
 
     IEnumerator Animate()
     {
-        title.text = "알이 깨어나고 있어요…";
+        title.text = "티켓을 여는 중…";
         egg.gameObject.SetActive(true);
         creature.gameObject.SetActive(false);
         rays.gameObject.SetActive(false);
@@ -70,7 +76,7 @@ public class HatchScreen : MonoBehaviour
         egg.gameObject.SetActive(false);
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
-        title.text = "알이 깨어났어요!";
+        title.text = "뽑았어요!";
         foreach (Text t in new[] { nameText, tierText, info }) t.enabled = true;
         ok.gameObject.SetActive(true);
         for (float t = 0f; t < 0.45f; t += Time.unscaledDeltaTime)
@@ -97,6 +103,9 @@ public class HatchScreen : MonoBehaviour
         StopAllCoroutines();
         root.SetActive(false);
         UIInputBlocker.SetModal(this, false);
+        System.Action done = onClose;
+        onClose = null;
+        done?.Invoke();
     }
 
     void OnDisable() => UIInputBlocker.SetModal(this, false);
@@ -123,11 +132,11 @@ public class HatchScreen : MonoBehaviour
         rays.GetComponent<Image>().sprite = HudIcons.Rays;
         Center(rays, -370f, 640f);
 
-        egg = UIKit.Image(cr, "Egg", EggShell).rectTransform;
-        egg.GetComponent<Image>().sprite = HudIcons.Egg;
-        egg.gameObject.AddComponent<Outline>().effectColor = new Color(0.85f, 0.7f, 0.45f);
+        egg = UIKit.Image(cr, "Ticket", TicketPaper).rectTransform; // 흔들리다 열리는 티켓
+        egg.GetComponent<Image>().sprite = HudIcons.Ticket;
+        egg.gameObject.AddComponent<Outline>().effectColor = new Color(0.85f, 0.6f, 0.3f);
         egg.GetComponent<Outline>().effectDistance = new Vector2(4f, -4f);
-        Center(egg, -370f, 300f);
+        Center(egg, -370f, 340f);
 
         var go = new GameObject("Creature", typeof(RectTransform), typeof(RawImage));
         go.transform.SetParent(cr, false);
@@ -143,7 +152,7 @@ public class HatchScreen : MonoBehaviour
         tierText.fontStyle = FontStyle.Bold;
         Place(tierText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -692f), new Vector2(760f, 50f));
         info = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
-        Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -754f), new Vector2(760f, 46f));
+        Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -754f), new Vector2(760f, 96f));
 
         ok = UIKit.Button(cr, "확인", Close, Ink, 38);
         Image oi = ok.GetComponent<Image>();

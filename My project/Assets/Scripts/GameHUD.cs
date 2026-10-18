@@ -83,6 +83,8 @@ public class GameHUD : MonoBehaviour
     GameObject noticeScreen, settingsScreen;
     RectTransform noticeList, settingsList;
     InputField nicknameInput;
+    Button logoutButton, deleteAccountButton;
+    float deleteConfirmUntil; // 회원 탈퇴는 4초 안에 한 번 더 눌러야 한다
     InputField serverInput;
     Text serverStatus;
 
@@ -155,6 +157,8 @@ public class GameHUD : MonoBehaviour
 
     void Start()
     {
+        // 로그인 (필수): 카카오/Apple → 경희대 메일 인증 → 닉네임 → 산책 취향 체크리스트
+        LoginScreen.Begin();
         if (character == null)
             character = FindAnyObjectByType<ModularCharacter>();
         if (customizer == null)
@@ -239,7 +243,8 @@ public class GameHUD : MonoBehaviour
         toastTimer = toastDuration;
     }
 
-    public void ShowProgress(GameProgress progress, IList<CollectibleType> types)
+    /// <param name="popup">경험치가 늘었을 때 "+N XP" 를 띄울지 (걷기처럼 조금씩 쌓일 때는 false)</param>
+    public void ShowProgress(GameProgress progress, IList<CollectibleType> types, bool popup = true)
     {
         if (progress == null || levelText == null)
             return;
@@ -251,36 +256,33 @@ public class GameHUD : MonoBehaviour
         nextText.text = $"다음 레벨까지 {xpNeeded - xpInLevel} XP";
         xpFill.anchorMax = new Vector2(xpNeeded > 0 ? (float)xpInLevel / xpNeeded : 0f, 1f);
 
-        if (lastScore >= 0 && progress.score > lastScore)
+        if (popup && lastScore >= 0 && progress.score > lastScore)
             ShowXpPopup(progress.score - lastScore);
         lastScore = progress.score;
 
-        ShowEgg(progress);
+        ShowTickets(progress);
         if (menus != null)
             menus.OnProgressChanged(progress, types);
     }
 
-    // ---------- 걷기 보상: 알 게이지 (닉네임 아래) ----------
+    // ---------- 걷기 보상: 티켓 게이지 (닉네임 아래, B-V1) ----------
 
     Text eggText;
     RectTransform eggFill;
 
-    /// <summary>품은 알이 얼마나 자랐는지 (1km 마다 부화, 하루 3번)</summary>
-    public void ShowEgg(GameProgress progress)
+    /// <summary>가진 티켓 수와 다음 티켓까지 (1km 마다 1장, 하루 상한)</summary>
+    public void ShowTickets(GameProgress progress)
     {
         if (progress == null || eggText == null)
             return;
-        bool doneToday = progress.HatchedToday >= GameProgress.EggsPerDay;
-        float m = progress.eggMeters;
-        eggText.text = doneToday
-            ? $"오늘 알 {GameProgress.EggsPerDay}개 다 깼어요"
-            : $"{m:N0} / {GameProgress.EggMeters:N0}m";
-        eggFill.anchorMax = new Vector2(doneToday ? 1f : Mathf.Clamp01(m / GameProgress.EggMeters), 1f);
-        eggFill.GetComponent<Image>().color = doneToday ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
+        bool capped = progress.TicketCapped;
+        float m = progress.ticketMeters;
+        eggText.text = capped
+            ? $"{progress.tickets}장  ·  오늘 다 받음"
+            : $"{progress.tickets}장  ·  {m:N0}/{GachaRules.TicketMeters:N0}m";
+        eggFill.anchorMax = new Vector2(capped ? 1f : Mathf.Clamp01(m / GachaRules.TicketMeters), 1f);
+        eggFill.GetComponent<Image>().color = capped ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
     }
-
-    /// <summary>알이 깨어나는 연출 (KhuMenus 가 부른다)</summary>
-    public void ShowHatch(string species, string tier, int hatchedToday) => HatchScreen.Show(species, tier, hatchedToday);
 
     /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*50 XP 가 필요하다.</summary>
     public static void LevelOf(int score, out int level, out int xpInLevel, out int xpNeeded)
@@ -382,11 +384,11 @@ public class GameHUD : MonoBehaviour
         nicknameText.fontStyle = FontStyle.Bold;
         UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
 
-        // 알 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 알이 깨어난다
-        Image eggPill = Glass(root, "EggGauge", new Vector2(300f, 60f), 30f);
+        // 티켓 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 티켓 1장
+        Image eggPill = Glass(root, "TicketGauge", new Vector2(300f, 60f), 30f);
         Place(eggPill.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f - 64f - 12f));
-        Image eggIcon = UIKit.Image(eggPill.transform, "Egg", new Color(1f, 0.95f, 0.84f));
-        eggIcon.sprite = HudIcons.Egg;
+        Image eggIcon = UIKit.Image(eggPill.transform, "Ticket", new Color(1f, 0.93f, 0.78f));
+        eggIcon.sprite = HudIcons.Ticket;
         eggIcon.rectTransform.anchorMin = eggIcon.rectTransform.anchorMax = eggIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
         eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
         eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
@@ -438,7 +440,7 @@ public class GameHUD : MonoBehaviour
         var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
             ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
-            ("Items", HudIcons.Bag, () => menus.OpenCollection(KhuMenus.Tab.Items)),
+            ("Match", HudIcons.Partner, MatchScreen.Open), // 산책메이트 매칭 (v2 에서 도구 버튼 자리)
             ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),
         };
@@ -565,6 +567,7 @@ public class GameHUD : MonoBehaviour
         Vector2 size = new Vector2(cell * 3f + gap * 2f + pad * 2f, cell * 2f + gap + pad * 2f);
         Button button = InvisibleButton(hud, "Nearby", ShowNearbyToast, 0f);
         RectTransform root = (RectTransform)button.transform;
+        nearbyRoot = root.gameObject;
         Place(root, new Vector2(1f, 0f), new Vector2(-BottomSide, BottomGap));
         root.sizeDelta = size;
         UIInputBlocker.Register(root);
@@ -604,8 +607,14 @@ public class GameHUD : MonoBehaviour
 
     readonly List<Collectible> nearbyBuffer = new List<Collectible>();
 
+    GameObject nearbyRoot;
+
     void RefreshNearby()
     {
+        // v2: 지도 위 자연 출현이 꺼져 있으면 (뽑기로만 얻음) 주변 칸도 숨긴다
+        bool spawning = collect != null && collect.spawner != null && collect.spawner.naturalSpawn;
+        if (nearbyRoot != null && nearbyRoot.activeSelf != spawning)
+            nearbyRoot.SetActive(spawning);
         nearbyBuffer.Clear();
         if (collect != null && collect.spawner != null && collect.campusMap != null && collect.campusMap.player != null)
         {
@@ -679,6 +688,7 @@ public class GameHUD : MonoBehaviour
     }
 
     Image albumBadge, menuBadge;
+
 
     /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
     public void SetMenuBadge(bool on)
@@ -781,6 +791,29 @@ public class GameHUD : MonoBehaviour
         SetScreen(settingsScreen, true, null);
         nicknameInput.text = PlayerPrefs.GetString(NicknameKey, "");
         RefreshServerStatus();
+        bool guest = AuthService.Current != null && AuthService.Current.isGuest;
+        UIKit.SetLabel(logoutButton, guest ? "로그인하기 (체험 끝내기)" : "로그아웃");
+        deleteAccountButton.gameObject.SetActive(AuthService.HasToken);
+        deleteConfirmUntil = 0f;
+        UIKit.SetLabel(deleteAccountButton, "회원 탈퇴");
+    }
+
+    void DeleteAccount()
+    {
+        if (Time.unscaledTime > deleteConfirmUntil)
+        {
+            deleteConfirmUntil = Time.unscaledTime + 4f;
+            UIKit.SetLabel(deleteAccountButton, "한 번 더 누르면 계정과 정보가 지워져요");
+            return;
+        }
+        deleteConfirmUntil = 0f;
+        StartCoroutine(AuthService.DeleteAccount(error =>
+        {
+            if (error != null) { Toast("탈퇴하지 못했어요: " + error); return; }
+            CloseSettings();
+            Toast("계정을 지웠어요");
+            LoginScreen.Begin();
+        }));
     }
 
     void CloseSettings() => SetScreen(settingsScreen, false, null);
@@ -821,8 +854,22 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(custom, 110f);
         Button north = UIKit.Button(optCard.transform, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); }, UIKit.ButtonGray, 38);
         UIKit.Size(north, 110f);
+        Button prefs = UIKit.Button(optCard.transform, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); }, UIKit.ButtonGray, 38);
+        UIKit.Size(prefs, 110f);
+        Button privacy = UIKit.Button(optCard.transform, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); }, UIKit.ButtonGray, 38);
+        UIKit.Size(privacy, 110f);
+        // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        logoutButton = UIKit.Button(optCard.transform, "로그아웃", () =>
+        {
+            CloseSettings();
+            StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+        }, UIKit.ButtonGray, 38);
+        UIKit.Size(logoutButton, 110f);
+        deleteAccountButton = UIKit.Button(optCard.transform, "회원 탈퇴", DeleteAccount, UIKit.ButtonGray, 38);
+        deleteAccountButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);
+        UIKit.Size(deleteAccountButton, 110f);
 
-        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대학교 캠퍼스 탐험", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
+        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
     }
 
     string DefaultMemoServer
@@ -878,9 +925,12 @@ public class GameHUD : MonoBehaviour
 
     void SaveNickname()
     {
-        PlayerPrefs.SetString(NicknameKey, nicknameInput.text.Trim());
+        string nick = nicknameInput.text.Trim();
+        PlayerPrefs.SetString(NicknameKey, nick);
         PlayerPrefs.Save();
         Toast("닉네임을 저장했어요");
+        if (AuthService.HasToken && nick.Length is >= 1 and <= 20)
+            StartCoroutine(AuthService.SetNickname(nick, (_, error) => { if (error != null) Toast(error); })); // 계정에도
     }
 
     // ---------- 공통 ----------

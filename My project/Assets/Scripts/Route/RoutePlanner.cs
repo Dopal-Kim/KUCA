@@ -7,7 +7,8 @@ using UnityEngine.UI;
 /// - 산책 추천: 걸을 시간·취향을 고르면 AI(서버)가 경희스팟 코스를 짠다. 기다리는 동안 파트너가 길을 찾는 연출,
 ///   받으면 지도 아래에 장소 카드(①②③, 추천 이유)를 보여 준다. 카드를 누르면 팝업 미니맵에
 ///   지금 위치 → ①②③ 경로를 파란 선과 번호로 그리고, 그 장소의 공지(원문 링크)를 함께 보여 준다.
-/// - 장소 공지: 학교 공지 중 장소와 연결된 것.
+/// - v2 (B-V2): 식후 걷기 버튼 (점심 · 저녁 시간대 강조), 코스 전체 거리 · 시간 · 칼로리, 장소별 거리. 계산은 RouteMath.
+/// - 장소 공지는 경희스팟 메모판의 공지 탭에 있다 (MemoBoard.Notices). 여기서는 코스 카드의 공지 수와 장소 팝업에만 쓴다.
 /// 서버에 API 가 없거나 AI 가 실패하면 기기 안 기본 추천으로 바꿔서 화면이 깨지지 않는다 (HttpRouteService).
 /// </summary>
 [DefaultExecutionOrder(1000)] // 카메라가 움직인 뒤에 핀 자리를 잡는다
@@ -30,9 +31,12 @@ public class RoutePlanner : MonoBehaviour
     string serviceUrl;
 
     RectTransform canvasRect;
-    GameObject sheet, recommendPanel, noticePanel, loading, placePopup, routeUi;
-    Image[] tabFaces, timeChips, tasteChips;
-    RectTransform noticeList, cardsContent, popupNotices;
+    GameObject sheet, recommendPanel, loading, placePopup, routeUi;
+    Image[] timeChips, tasteChips;
+    Image mealChip;
+    Text mealNote;
+    bool afterMeal;
+    RectTransform cardsContent, popupNotices;
     Text routeTitle, popupName, popupReason;
     RawImage loadingPartner;
     Button popupBoardButton;
@@ -68,6 +72,17 @@ public class RoutePlanner : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "RouteCanvas", 20);
         canvasRect = (RectTransform)canvas.transform;
         BuildRouteUi();
+        // 산책 취향(체크리스트)이 있으면 걸을 시간·취향 칩의 기본값으로 쓴다
+        WalkPreferences prefs = WalkPreferences.Load();
+        if (prefs.IsComplete)
+        {
+            minutes = prefs.walkMinutes <= 15 ? 15 : prefs.walkMinutes <= 30 ? 30 : 60;
+            tastes.Clear();
+            foreach (string t in prefs.tastes)
+                if (System.Array.Exists(TasteChoices, c => c.id == t))
+                    tastes.Add(t);
+            if (tastes.Count == 0) tastes.Add("unvisited");
+        }
         BuildSheet();
         BuildLoading();
         BuildPlacePopup();
@@ -102,7 +117,6 @@ public class RoutePlanner : MonoBehaviour
                     noticesByPlace[n.buildingId ?? ""] = l = new List<PlaceNotice>();
                 l.Add(n);
             }
-            FillNoticeList();
             if (route != null) BuildCards(); // 공지 수 표시를 맞춘다
         }));
     }
@@ -120,7 +134,7 @@ public class RoutePlanner : MonoBehaviour
         sheet.SetActive(true);
         sheet.transform.SetAsLastSibling();
         UIInputBlocker.SetModal(this, true);
-        SetTab(0);
+        afterMeal = RouteMath.MealOf(System.DateTime.Now) != null; // 점심 · 저녁 시간이면 켜 둔다
         RefreshChips();
     }
 
@@ -130,23 +144,16 @@ public class RoutePlanner : MonoBehaviour
         UIInputBlocker.SetModal(this, loading.activeSelf || placePopup.activeSelf);
     }
 
-    void SetTab(int tab)
-    {
-        for (int i = 0; i < tabFaces.Length; i++)
-        {
-            tabFaces[i].color = i == tab ? Ink : ChipOff;
-            tabFaces[i].GetComponentInChildren<Text>().color = i == tab ? Color.white : Ink;
-        }
-        recommendPanel.SetActive(tab == 0);
-        noticePanel.SetActive(tab == 1);
-    }
-
     void RefreshChips()
     {
         for (int i = 0; i < timeChips.Length; i++)
             SetChip(timeChips[i], TimeChoices[i].minutes == minutes);
         for (int i = 0; i < tasteChips.Length; i++)
             SetChip(tasteChips[i], tastes.Contains(TasteChoices[i].id));
+        string meal = RouteMath.MealOf(System.DateTime.Now);
+        SetChip(mealChip, afterMeal);
+        UIKit.SetLabel(mealChip.GetComponent<Button>(), meal != null ? $"식후 걷기  ·  지금 {meal}시간" : "식후 걷기");
+        mealNote.text = afterMeal ? $"가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : "";
     }
 
     static void SetChip(Image chip, bool on)
@@ -157,7 +164,15 @@ public class RoutePlanner : MonoBehaviour
 
     void RequestRoute()
     {
-        var req = new RouteRequest { minutes = minutes, tastes = new List<string>(tastes) };
+        var req = new RouteRequest
+        {
+            minutes = minutes,
+            tastes = new List<string>(tastes),
+            pace = Pace,
+            afterMeal = afterMeal,
+            weightKg = 0f, // 체중 입력은 V0 결정 Q5 를 따름 (지금은 60kg 로 계산)
+            localTime = System.DateTimeOffset.Now.ToString("yyyy-MM-dd'T'HH:mm:sszzz"),
+        };
         if (collect != null && collect.campusMap != null)
         {
             req.lat = collect.campusMap.CurrentLatitude;
@@ -188,6 +203,16 @@ public class RoutePlanner : MonoBehaviour
             if (result.source != "ai" && serviceUrl.Length > 0)
                 Toast("AI 추천을 받지 못해 가까운 경희스팟으로 코스를 짰어요");
         }));
+    }
+
+    /// <summary>취향 체크리스트의 걷는 속도 (없으면 보통)</summary>
+    static string Pace
+    {
+        get
+        {
+            string p = WalkPreferences.Load().pace;
+            return string.IsNullOrEmpty(p) ? "normal" : p;
+        }
     }
 
     void ShowLoading(bool on)
@@ -237,9 +262,29 @@ public class RoutePlanner : MonoBehaviour
         }
         for (int i = 0; i < kept.Count; i++)
             done.Add(false);
-        routeTitle.text = $"<b>{Escape(result.title)}</b>  <size=26><color=#8C8C91>{(result.source == "ai" ? "AI 추천" : "기본 추천")}</color></size>";
+        RouteMath.Fill(route, points, Pace, 0f); // v1 서버 · 기기 추천은 거리 · 시간 · 칼로리를 여기서 채운다
+        string source = result.source == "ai" ? "AI 추천" : "기본 추천";
+        string weather = string.IsNullOrEmpty(result.weather) ? "" : $"  ·  {Escape(result.weather)}";
+        routeTitle.text = $"<b>{Escape(result.title)}</b>  <size=26><color=#8C8C91>{source}</color></size>\n"
+            + $"<size=28>{RouteMath.Distance(route.totalMeters)}  ·  약 {route.totalMinutes}분  ·  {route.kcal}kcal{weather}</size>\n"
+            + $"<size=22><color=#8C8C91>{RouteMath.HealthNote}</color></size>";
         BuildCards();
         routeUi.SetActive(true);
+        WalkSession.BeginCourse(result.title, route.totalMeters, kept.Count);
+    }
+
+    /// <summary>코스 지우기 (X). 코스의 80% 이상 걸었으면 완료 화면을 띄운다 (B-V4)</summary>
+    void CloseRoute()
+    {
+        if (route != null && WalkSession.Active && WalkSession.Kind == WalkSession.Course)
+        {
+            int doneCount = done.FindAll(x => x).Count;
+            if (WalkSession.WalkedMeters >= route.totalMeters * LocalWalkService.CourseRatio || doneCount > 0)
+                WalkCompleteScreen.Show(WalkSession.Finish(doneCount));
+            else
+                WalkSession.Abandon();
+        }
+        ClearRoute();
     }
 
     void ClearRoute()
@@ -306,7 +351,14 @@ public class RoutePlanner : MonoBehaviour
             MarkDone(i);
             bool finished = done.TrueForAll(x => x);
             Toast(finished ? "코스 완주! 수고했어요" : $"{route.stops[i].name} 도착!");
-            if (finished) Quests.Report("course_done");
+            if (finished)
+            {
+                Quests.Report("course_done");
+                if (WalkSession.Active && WalkSession.Kind == WalkSession.Course)
+                    WalkCompleteScreen.Show(WalkSession.Finish(done.Count));
+                ClearRoute();
+                return;
+            }
         }
     }
 
@@ -349,7 +401,8 @@ public class RoutePlanner : MonoBehaviour
             name.fontStyle = FontStyle.Bold;
             Box(name.rectTransform, 108f, 28f, 30f, 64f);
             int count = NoticesOf(s.buildingId).Count;
-            string meta = $"도보 {s.walkMinutes}분" + (count > 0 ? $"  ·  <color=#D23A4A>공지 {count}</color>" : "");
+            string dist = s.distanceMeters > 0 ? $"  ·  {RouteMath.Distance(s.distanceMeters)}" : "";
+            string meta = $"도보 {s.walkMinutes}분{dist}" + (count > 0 ? $"  ·  <color=#D23A4A>공지 {count}</color>" : "");
             Text info = UIKit.Text(card.transform, meta, 27, TextAnchor.MiddleLeft, InkQuiet);
             Box(info.rectTransform, 30f, 104f, 30f, 40f);
             Text reason = UIKit.Text(card.transform, s.reason, 28, TextAnchor.UpperLeft, Ink);
@@ -502,22 +555,8 @@ public class RoutePlanner : MonoBehaviour
         UIInputBlocker.SetModal(this, sheet.activeSelf || loading.activeSelf);
     }
 
-    void FillNoticeList()
-    {
-        for (int i = noticeList.childCount - 1; i >= 0; i--)
-            Destroy(noticeList.GetChild(i).gameObject);
-        if (allNotices.Count == 0)
-        {
-            Text none = UIKit.Text(noticeList, noticeError != null ? $"{noticeError}\n잠시 뒤 다시 열어 주세요" : "장소와 관련된 공지가 아직 없어요", 30, TextAnchor.MiddleCenter, InkQuiet);
-            UIKit.Size(none, 160f);
-            return;
-        }
-        foreach (PlaceNotice n in allNotices)
-            NoticeRow(noticeList, n, true);
-    }
-
     /// <summary>공지 한 줄: (장소) 제목 · 요약 · 날짜 · 원문 보기. 누르면 원문을 연다.</summary>
-    static void NoticeRow(RectTransform parent, PlaceNotice n, bool withPlace)
+    internal static void NoticeRow(RectTransform parent, PlaceNotice n, bool withPlace)
     {
         Image row = UIKit.Image(parent, "Notice", ChipOff, raycast: true);
         row.sprite = HudIcons.Rounded;
@@ -550,7 +589,7 @@ public class RoutePlanner : MonoBehaviour
         rr.anchorMin = new Vector2(0f, 0f);
         rr.anchorMax = new Vector2(1f, 0f);
         rr.pivot = new Vector2(0.5f, 0f);
-        rr.sizeDelta = new Vector2(0f, 330f);
+        rr.sizeDelta = new Vector2(0f, 400f);
         rr.anchoredPosition = new Vector2(0f, 520f);
         UIInputBlocker.Register(rr);
 
@@ -558,15 +597,17 @@ public class RoutePlanner : MonoBehaviour
         Image head = UIKit.Image(rr, "Head", new Color(1f, 1f, 1f, 0.94f), raycast: true);
         head.sprite = HudIcons.Pill;
         head.type = Image.Type.Sliced;
-        head.pixelsPerUnitMultiplier = 120f / 80f;
+        head.sprite = HudIcons.Rounded;
+        head.pixelsPerUnitMultiplier = 0.6f;
         Place(head.rectTransform, new Vector2(0f, 1f), new Vector2(40f, 0f));
-        head.rectTransform.sizeDelta = new Vector2(620f, 80f);
+        head.rectTransform.sizeDelta = new Vector2(820f, 148f);
         routeTitle = UIKit.Text(head.transform, "", 32, TextAnchor.MiddleLeft, Ink);
-        Box(routeTitle.rectTransform, 30f, 0f, 90f, 80f);
+        routeTitle.lineSpacing = 1.05f;
+        Box(routeTitle.rectTransform, 30f, 8f, 90f, 132f);
         Image x = UIKit.Image(head.transform, "Clear", new Color(0f, 0f, 0f, 0f), raycast: true);
         Place(x.rectTransform, new Vector2(1f, 0.5f), new Vector2(-8f, 0f));
         x.rectTransform.sizeDelta = new Vector2(76f, 76f);
-        x.gameObject.AddComponent<Button>().onClick.AddListener(ClearRoute);
+        x.gameObject.AddComponent<Button>().onClick.AddListener(CloseRoute);
         Image xi = UIKit.Image(x.transform, "Icon", InkQuiet);
         xi.sprite = HudIcons.Close;
         Place(xi.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
@@ -614,7 +655,7 @@ public class RoutePlanner : MonoBehaviour
         pr.anchorMin = new Vector2(0f, 0f);
         pr.anchorMax = new Vector2(1f, 0f);
         pr.pivot = new Vector2(0.5f, 0f);
-        pr.sizeDelta = new Vector2(0f, 1260f);
+        pr.sizeDelta = new Vector2(0f, 1150f);
         pr.anchoredPosition = new Vector2(0f, -40f); // 아래 둥근 모서리는 화면 밖으로
         Swallow(panel.gameObject); // 판을 눌러도 바깥(닫기)으로 전달되지 않게
 
@@ -630,21 +671,10 @@ public class RoutePlanner : MonoBehaviour
         Place(ci.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         ci.rectTransform.sizeDelta = new Vector2(40f, 40f);
 
-        string[] tabs = { "산책 추천", "장소 공지" };
-        tabFaces = new Image[tabs.Length];
-        for (int i = 0; i < tabs.Length; i++)
-        {
-            int tab = i;
-            Image t = Chip(pr, tabs[i], () => SetTab(tab), 34);
-            Place(t.rectTransform, new Vector2(0f, 1f), new Vector2(50f + i * 270f, -140f));
-            t.rectTransform.sizeDelta = new Vector2(250f, 88f);
-            tabFaces[i] = t;
-        }
-
         // 산책 추천
         recommendPanel = UIKit.Rect(pr, "Recommend").gameObject;
         var rp = (RectTransform)recommendPanel.transform;
-        UIKit.StretchBetween(rp, 40f, 270f);
+        UIKit.StretchBetween(rp, 40f, 150f);
         Text q1 = UIKit.Text(rp, "얼마나 걸을까요?", 36, TextAnchor.MiddleLeft, Ink);
         q1.fontStyle = FontStyle.Bold;
         Box(q1.rectTransform, 50f, 0f, 50f, 60f);
@@ -673,6 +703,13 @@ public class RoutePlanner : MonoBehaviour
             c.rectTransform.sizeDelta = new Vector2(310f, 92f);
             tasteChips[i] = c;
         }
+        // 식후 걷기 (점심 · 저녁 시간대에는 켜진 채로 열리고, 시간대를 알려 준다)
+        mealChip = Chip(rp, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); }, 32);
+        Place(mealChip.rectTransform, new Vector2(0f, 1f), new Vector2(50f, -560f));
+        mealChip.rectTransform.sizeDelta = new Vector2(500f, 92f);
+        mealNote = UIKit.Text(rp, "", 26, TextAnchor.UpperLeft, InkQuiet);
+        Box(mealNote.rectTransform, 50f, 668f, 50f, 70f);
+
         Button go = UIKit.Button(rp, "코스 추천 받기", RequestRoute, RouteBlue, 40);
         Image gi = go.GetComponent<Image>();
         gi.sprite = HudIcons.Pill;
@@ -686,14 +723,6 @@ public class RoutePlanner : MonoBehaviour
         gr.pivot = new Vector2(0.5f, 0f);
         gr.sizeDelta = new Vector2(-100f, 124f);
         gr.anchoredPosition = new Vector2(0f, 60f);
-
-        // 장소 공지
-        noticePanel = UIKit.Rect(pr, "Notices").gameObject;
-        var np = (RectTransform)noticePanel.transform;
-        UIKit.StretchBetween(np, 40f, 270f);
-        noticeList = UIKit.ScrollList(np, 18f, new RectOffset(50, 50, 0, 40));
-        Text loadingText = UIKit.Text(noticeList, "공지를 불러오는 중…", 30, TextAnchor.MiddleCenter, InkQuiet);
-        UIKit.Size(loadingText, 160f);
 
         sheet.SetActive(false);
     }

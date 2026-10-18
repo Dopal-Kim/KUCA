@@ -235,7 +235,7 @@
 
 > **상태**
 > - 산책 추천: 서버 구현 완료 (챗쿠 AI. 키가 없으면 규칙 기반).
-> - 장소 공지: 제안 (C 구현 예정).
+> - 장소 공지: 명세 확정 (C-4, 아래 "GET /api/notices" 와 "관리자 API › 공지 넣기").
 > - 서버에 아직 없으면(`404`·연결 실패) 앱이 기기 안 기본 추천과 예시 공지로 대신합니다.
 > - 모양을 바꿔야 하면 이 절을 고치는 PR 로 B 와 합의해 주세요.
 
@@ -300,9 +300,87 @@
 ]
 ```
 
+| 쿼리 | 기본값 | 설명 |
+| --- | --- | --- |
+| `buildingId` | 없음 | 이 장소 공지만 |
+| `limit` | 20 | 1~50. 범위를 벗어나면 가까운 값으로 맞춤 |
+
 - 장소와 연결되지 않은 공지는 넣지 않습니다
-- 공지 ↔ 장소 연결은 서버(AI 판별)가 정합니다
-- `url` 은 원문 링크입니다. 앱은 누르면 브라우저로 엽니다
+- 공지 ↔ 장소 연결은 서버(AI 판별)가 정합니다. 연결 후보는 **경희스팟 25곳**뿐입니다 (`server/KucaMemoServer/Data/spots.json`, 앱의 `KyungHeeSpots` 목록과 같아야 함)
+- 한 공지가 여러 장소에 해당하면 **장소마다 한 줄씩** 나옵니다 (`id` 는 같고 `buildingId` 가 다름). 한 공지당 최대 3곳
+- `summary` 는 AI 가 쓴 한두 문장 요약(100자 이내)입니다. AI 가 실패하면 본문 앞부분입니다
+- `url` 은 원문 링크입니다 (항상 있음). 앱은 누르면 브라우저로 엽니다
+- `postedAt` 은 공지 게시일 `YYYY-MM-DD`
+
+## 로그인 · 계정
+
+앱은 **로그인 필수**입니다 (또는 체험 모드). 흐름은 다음과 같습니다.
+1. 카카오 또는 Apple 로 로그인 → KUCA 로그인 토큰을 받는다. 체험 모드는 `POST /api/auth/guest`.
+2. 경희대 메일(@khu.ac.kr) 인증. 체험 계정은 건너뜀.
+3. 닉네임. 체험 계정은 서버가 `체험생-1234` 로 정해 줌.
+4. 성별 (필수).
+5. 산책 취향 체크리스트.
+
+이후 요청에는 헤더 `Authorization: Bearer {토큰}` 를 붙입니다. 토큰은 90일 (체험 계정은 7일) 동안 쓸 수 있습니다.
+
+### Account
+
+```json
+{
+  "id": "3f0c…", "provider": "kakao", "nickname": "원준",
+  "khuEmail": "wonjun@khu.ac.kr", "emailVerified": true,
+  "preferencesJson": "{\"walkTimes\":[\"evening\"],…}",
+  "createdAt": "2026-10-13T12:00:00Z", "gender": "male",
+  "isGuest": false, "ready": true
+}
+```
+
+- `ready`: 메일 인증 (체험 계정은 면제) · 닉네임 · 성별이 모두 끝났으면 `true`. `false` 면 앱은 남은 단계를 보여 줍니다.
+- `gender`: `"male"` · `"female"` · 아직 없으면 `null`. 매칭 "동성만" 조건에만 쓰고 **다른 사람에게 보여 주지 않습니다.**
+- `isGuest`: 체험 계정이면 `true`.
+- `preferencesJson`: 앱의 `WalkPreferences` JSON 원문입니다 (AI 산책메이트 매칭용).
+
+### POST /api/auth/kakao · POST /api/auth/apple
+
+- 카카오 본문: `{ "accessToken": "카카오 SDK 의 액세스 토큰" }`
+  - 서버가 카카오에 토큰을 확인합니다. 앱 ID 가 설정 `Kakao:AppId` 와 같아야 합니다.
+- Apple 본문: `{ "identityToken": "Sign in with Apple 의 JWT" }`
+  - 서버가 Apple 공개키로 서명을 확인하고, `aud` 가 번들 ID 인지 봅니다.
+- 응답 `200 { "token": "…", "user": Account }`. 처음이면 계정을 새로 만듭니다.
+- 실패: `400` 본문 없음, `401` 확인 실패, `503` 카카오 설정 없음.
+
+### POST /api/auth/guest (체험 모드)
+
+- 본문 없음. 응답 `200 { "token": "…", "user": Account }` (`provider: "guest"`, `isGuest: true`, 닉네임 `체험생-1234`).
+- 메일 인증 없이 성별만 넣으면 `ready: true` 가 되어 모든 기능을 쓸 수 있습니다.
+- 만든 지 **7일**이 지나면 계정과 토큰이 지워집니다 (`AccountStore.GuestLifetime`).
+
+### GET /api/me · PUT /api/me/nickname · PUT /api/me/gender · PUT /api/me/preferences · DELETE /api/me · POST /api/auth/logout
+
+- `GET /api/me`: 내 계정. 토큰이 없거나 만료면 `401`.
+- `PUT /api/me/nickname`: `{ "nickname": "1~20자" }`
+- `PUT /api/me/gender`: `{ "gender": "male" | "female" }`. 그 밖의 값은 `400`.
+- `DELETE /api/me`: 회원 탈퇴. 계정 · 토큰 · 인증번호를 지웁니다 (`204`). 같은 카카오 계정으로 다시 로그인하면 새 계정입니다.
+- `PUT /api/me/preferences`: 본문은 `WalkPreferences` JSON 그대로 (4KB 이하).
+- `POST /api/auth/logout`: 토큰을 지웁니다 (`204`).
+
+### POST /api/me/email/start · POST /api/me/email/verify
+
+- `start` 본문 `{ "email": "…@khu.ac.kr" }`: 6자리 인증번호를 메일로 보냅니다. 10분 동안 쓸 수 있습니다.
+  - `400` 경희대 메일이 아님, `409` 다른 계정이 이미 인증한 메일, `429` 60초 안에 다시 요청.
+  - `503`/`502` 메일 설정 없음/보내기 실패.
+- `verify` 본문 `{ "code": "123456" }`: 맞으면 `200 Account` (`emailVerified: true`).
+  - 5번 틀리면 `429` 이고, 인증번호를 다시 받아야 합니다.
+
+### 서버 설정 (키는 저장소에 넣지 않음)
+
+| 설정 | 뜻 |
+| --- | --- |
+| `Kakao:AppId` | 카카오 개발자 콘솔의 "앱 ID" (숫자) |
+| `Apple:BundleId` | 기본 `com.mungim.kuca` |
+| `Email:ConnectionString` / `Email:From` | 인증 메일을 보낼 **Azure Communication Services** 연결 문자열과 보내는 주소 (있으면 이것을 씀) |
+| `Email:User` / `Email:Password` | (대체) Gmail 주소와 **앱 비밀번호** |
+| `Auth:DevLogin`, `Email:DevEcho` | 로컬 테스트 전용. 앞의 것은 `POST /api/auth/dev` 를 켜고, 뒤의 것은 메일 대신 응답에 번호를 넣습니다. **Azure 에서는 켜지 않습니다** |
 
 ## 관리자 API (검토 대기 처리, 앱과 무관)
 
@@ -317,6 +395,31 @@
 | `DELETE /api/admin/comments/{id}` | 댓글 거절 (삭제) | `204` |
 
 `PendingMemo`·`PendingComment` 는 Memo·Comment 에 검사 메모 `flagNote`(AI 가 애매하다고 본 이유) 가 더해진 모양입니다.
+
+### 공지 넣기 (C-4)
+
+운영자가 학교 공지를 붙여 넣으면 서버가 AI 로 **관련 경희스팟**과 **짧은 요약**을 붙여 저장합니다. 앱은 `GET /api/notices` 로 받아 갑니다.
+
+| 요청 | 하는 일 | 응답 |
+| --- | --- | --- |
+| `POST /api/admin/notices` | 공지 넣기 (아래 본문) | `201` 저장됨 / `200` 관련 장소가 없어 버림 |
+| `DELETE /api/admin/notices/{id}` | 공지 지우기 (모든 장소에서) | `204` / `404` |
+
+```json
+{ "title": "중간고사 기간 열람실 연장 운영", "body": "공지 본문 전체…", "url": "https://www.khu.ac.kr/...", "postedAt": "2026-10-08" }
+```
+
+| 필드 | 필수 | 규칙 |
+| --- | --- | --- |
+| `title` | 예 | 1~200자 |
+| `body` | 예 | 1~5000자 (원문 본문을 붙여 넣음) |
+| `url` | 예 | `http://` 또는 `https://` 로 시작하는 원문 링크 (품질 관리: 원문 링크 필수) |
+| `postedAt` | 아니오 | `YYYY-MM-DD`. 없으면 넣은 날(한국 시간) |
+
+- `201`: `{"id": "...", "buildingIds": ["way-474085534"], "summary": "...", "source": "ai"}` — 저장됨
+- `200`: `{"saved": false, "reason": "no_place", "source": "ai"}` — 어느 경희스팟과도 관련이 없어 저장하지 않음
+- `source`: `ai` 또는 `fallback`(AI 실패 시 제목·본문에 경희스팟 이름이 나오는지로 판단하고, 요약은 본문 앞부분)
+- `400` 필드 규칙 위반, `409` 같은 `url` 의 공지가 이미 있음
 
 ## 웹 페이지 (앱과 무관, 브라우저용)
 

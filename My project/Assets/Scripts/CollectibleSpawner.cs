@@ -13,6 +13,8 @@ public class CollectibleSpawner : MonoBehaviour
     public Transform buildingsRoot;
 
     [Header("Spawn")]
+    [Tooltip("v2: 경희몬은 뽑기로 얻는다. 지도 위 자연 출현 · 탭 잡기는 끈다 (코드는 남김, A-V1). 켜면 v1 처럼 나온다")]
+    public bool naturalSpawn = false;
     public int targetCount = 25;
     [Tooltip("Player로부터 이 거리(m) 안에 스폰")]
     public float spawnRadius = 300f;
@@ -49,6 +51,15 @@ public class CollectibleSpawner : MonoBehaviour
 
     void Update()
     {
+        if (!naturalSpawn)
+        {
+            // 꺼져 있으면 지도에 남아 있는 것도 치운다
+            for (int i = active.Count - 1; i >= 0; i--)
+                if (active[i] != null)
+                    Destroy(active[i].gameObject);
+            active.Clear();
+            return;
+        }
         if (campusMap == null || campusMap.player == null || !campusMap.HasLocation)
             return;
 
