@@ -243,7 +243,8 @@ public class GameHUD : MonoBehaviour
         toastTimer = toastDuration;
     }
 
-    public void ShowProgress(GameProgress progress, IList<CollectibleType> types)
+    /// <param name="popup">경험치가 늘었을 때 "+N XP" 를 띄울지 (걷기처럼 조금씩 쌓일 때는 false)</param>
+    public void ShowProgress(GameProgress progress, IList<CollectibleType> types, bool popup = true)
     {
         if (progress == null || levelText == null)
             return;
@@ -255,36 +256,33 @@ public class GameHUD : MonoBehaviour
         nextText.text = $"다음 레벨까지 {xpNeeded - xpInLevel} XP";
         xpFill.anchorMax = new Vector2(xpNeeded > 0 ? (float)xpInLevel / xpNeeded : 0f, 1f);
 
-        if (lastScore >= 0 && progress.score > lastScore)
+        if (popup && lastScore >= 0 && progress.score > lastScore)
             ShowXpPopup(progress.score - lastScore);
         lastScore = progress.score;
 
-        ShowEgg(progress);
+        ShowTickets(progress);
         if (menus != null)
             menus.OnProgressChanged(progress, types);
     }
 
-    // ---------- 걷기 보상: 알 게이지 (닉네임 아래) ----------
+    // ---------- 걷기 보상: 티켓 게이지 (닉네임 아래, B-V1) ----------
 
     Text eggText;
     RectTransform eggFill;
 
-    /// <summary>품은 알이 얼마나 자랐는지 (1km 마다 부화, 하루 3번)</summary>
-    public void ShowEgg(GameProgress progress)
+    /// <summary>가진 티켓 수와 다음 티켓까지 (1km 마다 1장, 하루 상한)</summary>
+    public void ShowTickets(GameProgress progress)
     {
         if (progress == null || eggText == null)
             return;
-        bool doneToday = progress.HatchedToday >= GameProgress.EggsPerDay;
-        float m = progress.eggMeters;
-        eggText.text = doneToday
-            ? $"오늘 알 {GameProgress.EggsPerDay}개 다 깼어요"
-            : $"{m:N0} / {GameProgress.EggMeters:N0}m";
-        eggFill.anchorMax = new Vector2(doneToday ? 1f : Mathf.Clamp01(m / GameProgress.EggMeters), 1f);
-        eggFill.GetComponent<Image>().color = doneToday ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
+        bool capped = progress.TicketCapped;
+        float m = progress.ticketMeters;
+        eggText.text = capped
+            ? $"{progress.tickets}장  ·  오늘 다 받음"
+            : $"{progress.tickets}장  ·  {m:N0}/{GachaRules.TicketMeters:N0}m";
+        eggFill.anchorMax = new Vector2(capped ? 1f : Mathf.Clamp01(m / GachaRules.TicketMeters), 1f);
+        eggFill.GetComponent<Image>().color = capped ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
     }
-
-    /// <summary>알이 깨어나는 연출 (KhuMenus 가 부른다)</summary>
-    public void ShowHatch(string species, string tier, int hatchedToday) => HatchScreen.Show(species, tier, hatchedToday);
 
     /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*50 XP 가 필요하다.</summary>
     public static void LevelOf(int score, out int level, out int xpInLevel, out int xpNeeded)
@@ -386,11 +384,11 @@ public class GameHUD : MonoBehaviour
         nicknameText.fontStyle = FontStyle.Bold;
         UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
 
-        // 알 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 알이 깨어난다
-        Image eggPill = Glass(root, "EggGauge", new Vector2(300f, 60f), 30f);
+        // 티켓 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 티켓 1장
+        Image eggPill = Glass(root, "TicketGauge", new Vector2(300f, 60f), 30f);
         Place(eggPill.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f - 64f - 12f));
-        Image eggIcon = UIKit.Image(eggPill.transform, "Egg", new Color(1f, 0.95f, 0.84f));
-        eggIcon.sprite = HudIcons.Egg;
+        Image eggIcon = UIKit.Image(eggPill.transform, "Ticket", new Color(1f, 0.93f, 0.78f));
+        eggIcon.sprite = HudIcons.Ticket;
         eggIcon.rectTransform.anchorMin = eggIcon.rectTransform.anchorMax = eggIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
         eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
         eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
