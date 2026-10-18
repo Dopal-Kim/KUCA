@@ -269,7 +269,7 @@ public partial class KhuMenus : MonoBehaviour
         if (r.evolved && progress.Partner != null)
         {
             progress.Save();
-            hud?.Toast(EvolvedMessage(progress.Partner.speciesId, r.stage, "함께 걸어서 "));
+            EvolutionScreen.Queue(progress.Partner.speciesId, r.fromStage, r.stage); // 다른 화면이 열려 있으면 닫힌 뒤에
             RefreshBuddy();
         }
         if (r.xp > 0 || r.tickets > 0)

@@ -78,6 +78,8 @@ public partial class KhuMenus
         progress.Save();
         if (r.evolved && progress.Partner != null && progress.Partner.speciesId == r.species)
             RefreshBuddy();
+        if (r.evolved)
+            EvolutionScreen.Queue(r.species, r.fromStage, r.stage); // 뽑기 결과를 닫으면 뜬다
         hud?.ShowTickets(progress);
         FillGacha();
         HatchScreen.Show(r, premium, progress.tickets, FillGacha);

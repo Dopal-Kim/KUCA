@@ -124,7 +124,10 @@ public class WalkCompleteScreen : MonoBehaviour
         string partnerName = null;
         if (growth > 0 && p.Partner != null && !string.IsNullOrEmpty(p.Partner.speciesId))
         {
+            int before = p.StageOf(p.Partner.speciesId);
             evolved = p.AddGrowth(p.Partner.speciesId, growth, out stage);
+            if (evolved)
+                EvolutionScreen.Queue(p.Partner.speciesId, before, stage); // 완료 화면을 닫으면 뜬다
             partnerName = CreatureLibrary.NameOf(p.Partner.speciesId);
         }
         p.Save();

@@ -117,6 +117,7 @@ public class GameProgress
         public int tickets;     // 새로 받은 티켓
         public int xp;          // 새로 받은 경험치
         public bool evolved;    // 파트너가 진화했는지
+        public int fromStage;   // 진화 전 단계
         public int stage;       // 파트너의 지금 단계
     }
 
@@ -161,6 +162,7 @@ public class GameProgress
             partnerMeters += meters;
             int points = Mathf.FloorToInt(partnerMeters / GachaRules.GrowthMetersPerPoint);
             partnerMeters -= points * GachaRules.GrowthMetersPerPoint;
+            r.fromStage = StageOf(partner.speciesId);
             r.evolved = AddGrowth(partner.speciesId, points, out r.stage);
         }
         return r;
@@ -173,6 +175,7 @@ public class GameProgress
         public bool isNew;       // 도감에 처음 들어옴
         public int growthAdded;  // 중복이면 그 종의 진화 경험치
         public bool evolved;
+        public int fromStage;
         public int stage;
         public Caught caught;
     }
@@ -192,6 +195,7 @@ public class GameProgress
         if (!result.isNew)
         {
             result.growthAdded = GachaRules.DuplicateGrowth(result.grade);
+            result.fromStage = StageOf(species);
             result.evolved = AddGrowth(species, result.growthAdded, out result.stage);
         }
         else
