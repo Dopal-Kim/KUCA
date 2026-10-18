@@ -131,6 +131,30 @@ public static class SpawnConditions
         return candidates[candidates.Count - 1];
     }
 
+    /// <summary>
+    /// v2 뽑기 가중치: 지금 시간·계절·날씨에 어울리는 종일수록 크다 (1 = 보통).
+    /// 출현 배수는 0.15~10 까지 벌어져 뽑기에 그대로 쓰면 한 종만 나오므로, 제곱근을 0.5~2 로 묶는다.
+    /// </summary>
+    public static float GachaWeight(string species) => Mathf.Clamp(Mathf.Sqrt(Multiplier(species)), 0.5f, 2f);
+
+    /// <summary>등급 안 후보(pool)에서 지금 어울리는 종을 가중치로 고른다. r: 0~1 균등 난수 (테스트에서 고정)</summary>
+    public static string PickForGacha(IList<string> pool, float r)
+    {
+        if (pool == null || pool.Count == 0)
+            return null;
+        float total = 0f;
+        foreach (string id in pool)
+            total += GachaWeight(id);
+        float x = Mathf.Clamp01(r) * total;
+        foreach (string id in pool)
+        {
+            x -= GachaWeight(id);
+            if (x < 0f)
+                return id;
+        }
+        return pool[pool.Count - 1];
+    }
+
     /// <summary>황금 동물이 랜드마크에서 지금 황금으로 나올 확률 (0~1)</summary>
     public static float GoldChance(string species) => Mathf.Clamp01(Multiplier(species) / GoldFullMultiplier);
 

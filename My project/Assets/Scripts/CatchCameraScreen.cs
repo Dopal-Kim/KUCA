@@ -15,6 +15,7 @@ using UnityEngine.Android;
 /// - AR 끔: 잔디밭과 나무 두 그루가 있는 배경에 경희몬이 서 있다.
 /// 오른쪽 위 스위치로 바꾸고, 고른 값은 기억한다. 화면을 좌우로 끌면 경희몬을 돌려 볼 수 있다.
 /// 셔터를 누르면 사진을 찍고, 그 사진과 함께 경희몬을 얻는다 (사진은 스크랩북에 저장).
+/// v2 (A-V4): OpenPartnerPhoto 로 열면 잡기 없이 파트너(진화 단계·액세서리 그대로)와 사진만 찍는다.
 /// </summary>
 public class CatchCameraScreen : MonoBehaviour
 {
@@ -58,6 +59,7 @@ public class CatchCameraScreen : MonoBehaviour
     GameObject stage;
     GameObject scenery;           // 잔디밭·나무 (AR 끔에서만)
     Transform monster;
+    float monsterScale = 1f;      // 파트너 진화 단계 크기 (잡기는 1)
     Transform shadow;
     float phase;
     float spin;                   // 끌어서 돌린 각도
@@ -69,6 +71,8 @@ public class CatchCameraScreen : MonoBehaviour
     CollectibleType type;
     CollectController owner;
     bool busy;
+    GameProgress partnerProgress;   // 파트너 사진 모드일 때만 (잡기 대신 사진만)
+    bool partnerPhotoKept;          // 찍은 사진을 파트너 카드(스크랩북)에 넣었는지
     Texture2D lastPhoto;
     string lastPhotoPath;
 
@@ -83,13 +87,46 @@ public class CatchCameraScreen : MonoBehaviour
     {
         if (IsOpen || target == null || !CreatureLibrary.TryGetMesh(target.SpeciesId, out Mesh body))
             return;
-        if (root == null)
-            Build();
         this.target = target;
         this.owner = owner;
         type = target.Type;
-        speciesId = target.SpeciesId;
-        displayName = target.DisplayName;
+        partnerProgress = null;
+        Begin(target.SpeciesId, target.DisplayName, body);
+        title.text = $"야생의 {displayName}{Josa(displayName, "이", "가")} 나타났다!";
+    }
+
+    /// <summary>
+    /// v2 (A-V4): 파트너 경희몬과 사진 찍기. 잡기·점수 없이 찍어 스크랩북에 저장하고 앨범 저장도 고를 수 있다.
+    /// 산책 완료 화면의 "파트너와 사진 찍기" (WalkCompleteScreen.PartnerPhoto) 가 부른다.
+    /// </summary>
+    public void OpenPartnerPhoto(GameProgress progress)
+    {
+        GameProgress.Caught partner = progress?.Partner;
+        if (IsOpen || partner == null || !CreatureLibrary.TryGetMesh(partner.speciesId, out Mesh body))
+            return;
+        target = null;
+        owner = null;
+        partnerProgress = progress;
+        int stage = progress.StageOf(partner.speciesId);
+        Begin(partner.speciesId, CreatureLibrary.StageName(partner.speciesId, stage), body);
+        title.text = $"{displayName}{Josa(displayName, "과", "와")} 함께 한 장!";
+
+        // 진화 단계 크기·빛과 쓰고 있는 액세서리를 지도 위 파트너와 똑같이
+        monsterScale = CreatureLibrary.StageScales[Mathf.Clamp(stage, 0, CreatureLibrary.StageScales.Length - 1)];
+        Transform figure = monster.childCount > 0 ? monster.GetChild(0) : null;
+        PartnerBuddy.ApplyStage(figure, stage);
+        if (partner.accessories != null)
+            foreach (string id in partner.accessories)
+                CreatureAccessories.Attach(figure, partner.speciesId, id);
+    }
+
+    void Begin(string species, string name, Mesh body)
+    {
+        if (root == null)
+            Build();
+        speciesId = species;
+        displayName = name;
+        monsterScale = 1f;
         IsOpen = true;
         busy = false;
         spin = 0f;
@@ -99,7 +136,6 @@ public class CatchCameraScreen : MonoBehaviour
         resultCard.SetActive(false);
         controls.alpha = 1f;
         controls.blocksRaycasts = true;
-        title.text = $"야생의 {displayName}{Josa(displayName, "이", "가")} 나타났다!";
         hint.text = "셔터를 눌러 함께 찍어 보세요";
         note.text = "";
 
@@ -127,6 +163,7 @@ public class CatchCameraScreen : MonoBehaviour
         if (root != null)
             root.SetActive(false);
         target = null;
+        partnerProgress = null;
         IsOpen = false;
         UIInputBlocker.SetModal(this, false);
     }
@@ -218,7 +255,8 @@ public class CatchCameraScreen : MonoBehaviour
 
     void Build()
     {
-        canvas = UIKit.CreateCanvas(transform, "CatchCanvas", 25);
+        // 산책 완료 화면(52) 위에서 파트너 사진으로 열리므로 그보다 위 (로그인 60 보다는 아래)
+        canvas = UIKit.CreateCanvas(transform, "CatchCanvas", 55);
         root = UIKit.Image(canvas.transform, "CatchScreen", Color.black, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)root.transform);
 
@@ -636,7 +674,7 @@ public class CatchCameraScreen : MonoBehaviour
         float hop = jump * jump * monsterHeight * 0.12f;
         float squash = 1f + 0.05f * Mathf.Sin(phase * 4.8f);
         monster.localPosition = new Vector3(0f, hop, 0f);
-        monster.localScale = new Vector3(1f / Mathf.Sqrt(squash), squash, 1f / Mathf.Sqrt(squash));
+        monster.localScale = new Vector3(1f / Mathf.Sqrt(squash), squash, 1f / Mathf.Sqrt(squash)) * monsterScale;
         monster.localRotation = Quaternion.Euler(0f, 180f + spin + Mathf.Sin(phase * 0.9f) * 12f, 0f);
         // 높이 뛸수록 그림자가 옅어진다.
         float lift = hop / (monsterHeight * 0.12f + 1e-4f);
@@ -686,6 +724,15 @@ public class CatchCameraScreen : MonoBehaviour
 
         GameProgress.Caught caught = owner != null ? owner.CompleteCatch(type, target, file, speciesId) : null;
         target = null;
+        partnerPhotoKept = false;
+        GameProgress.Caught partner = partnerProgress?.Partner;
+        if (partner != null && !string.IsNullOrEmpty(file) && string.IsNullOrEmpty(partner.photo))
+        {
+            // 뽑기로 얻은 파트너는 사진이 없다 → 첫 산책 사진을 카드 사진으로 (잡을 때 찍은 사진은 덮어쓰지 않음)
+            partner.photo = file;
+            partnerProgress.Save();
+            partnerPhotoKept = true;
+        }
         lastPhoto = shot;
         lastPhotoPath = string.IsNullOrEmpty(file) ? null : path;
 
@@ -699,10 +746,18 @@ public class CatchCameraScreen : MonoBehaviour
         shadow.gameObject.SetActive(false);
         resultPhoto.texture = lastPhoto;
         resultFitter.aspectRatio = lastPhoto != null && lastPhoto.height > 0 ? (float)lastPhoto.width / lastPhoto.height : 0.5625f;
-        resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 잡았다!";
-        resultSub.text = caught != null
-            ? $"쿠옹력 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
-            : "사진을 저장했어요";
+        if (partnerProgress != null)
+        {
+            resultTitle.text = $"{displayName}{Josa(displayName, "과", "와")} 함께 찍었어요!";
+            resultSub.text = partnerPhotoKept ? "파트너 카드 사진이 됐어요 (프로필 › 스크랩북)" : "앨범에도 저장할 수 있어요";
+        }
+        else
+        {
+            resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 잡았다!";
+            resultSub.text = caught != null
+                ? $"쿠옹력 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
+                : "사진을 저장했어요";
+        }
         albumButton.interactable = lastPhotoPath != null;
         UIKit.SetLabel(albumButton, "앨범에도 저장");
         resultCard.SetActive(true);
