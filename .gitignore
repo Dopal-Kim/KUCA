@@ -57,3 +57,9 @@ tools/keyart/tiles/
 tools/keyart/preview/node_modules/
 tools/keyart/preview/data/
 tools/keyart/preview/shots/
+
+# 서명 키·서비스 계정 키 (GitHub Secrets 로만 관리, docs/안드로이드_자동배포.md)
+*.keystore
+*.jks
+**/*firebase*adminsdk*.json
+**/*service-account*.json

@@ -258,6 +258,7 @@ public class CatchCameraScreen : MonoBehaviour
         // 산책 완료 화면(52) 위에서 파트너 사진으로 열리므로 그보다 위 (로그인 60 보다는 아래)
         canvas = UIKit.CreateCanvas(transform, "CatchCanvas", 55);
         root = UIKit.Image(canvas.transform, "CatchScreen", Color.black, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
 
         // AR 켬인데 카메라가 없을 때 (에디터 등) 보여 줄 배경
