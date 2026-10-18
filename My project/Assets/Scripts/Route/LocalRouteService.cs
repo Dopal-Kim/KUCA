@@ -51,7 +51,14 @@ public class LocalRouteService : IRouteService
         int maxStops = request.minutes <= 15 ? 2 : request.minutes <= 30 ? 3 : 5;
         float budget = request.minutes * WalkMetersPerMinute * 0.75f; // 들러서 구경할 시간을 남긴다
 
-        var result = new RouteResult { title = $"{request.minutes}분 산책 코스", source = "fallback" };
+        // 식후 걷기: 소화에 무리가 없게 가까운 곳 위주로 (거리 점수를 두 배로)
+        float distanceWeight = request.afterMeal ? 2f : 1f;
+        string length = request.minutes >= 60 ? "1시간" : $"{request.minutes}분";
+        var result = new RouteResult
+        {
+            title = request.afterMeal ? $"밥 먹고 가볍게 {length}" : $"{length} 산책 코스",
+            source = "fallback",
+        };
         Vector3 at = player();
         float walked = 0f;
         while (result.stops.Count < maxStops && candidates.Count > 0)
@@ -65,7 +72,7 @@ public class LocalRouteService : IRouteService
                 if (walked + d > budget && result.stops.Count > 0)
                     continue;
                 string id = s.Building.buildingId;
-                float score = -d / 150f;
+                float score = -d / 150f * distanceWeight;
                 string matched = null;
                 if (tastes.Contains("unvisited") && !visited.Contains(id)) { score += 2f; matched = "unvisited"; }
                 foreach (string t in tastes)
@@ -91,7 +98,8 @@ public class LocalRouteService : IRouteService
             {
                 buildingId = best.Building.buildingId,
                 name = best.Building.DisplayName,
-                reason = bestTaste != null ? TasteReason[bestTaste] : "가는 길에 들르기 좋아요",
+                reason = bestTaste != null ? TasteReason[bestTaste]
+                    : request.afterMeal ? "가까워서 식후에 가볍게 걷기 좋아요" : "가는 길에 들르기 좋아요",
                 walkMinutes = Mathf.Max(1, Mathf.CeilToInt(bestDist / WalkMetersPerMinute)),
             });
         }
