@@ -47,7 +47,8 @@ public static class CreatureAccessories
     /// <summary>그 동물에 맞춘 액세서리 메시 (없으면 false)</summary>
     public static bool TryGetMesh(string species, string accessoryId, out Mesh mesh)
     {
-        meshes ??= CreatureLibrary.LoadMeshes("KUCA/CreatureAccessories", quiet: true);
+        if (meshes == null || CreatureLibrary.IsStale(meshes)) // 에디터에서 지난 플레이의 지워진 메시 (CreatureLibrary.IsStale)
+            meshes = CreatureLibrary.LoadMeshes("KUCA/CreatureAccessories", quiet: true);
         mesh = null;
         return species != null && accessoryId != null && meshes.TryGetValue($"Acc_{species}_{accessoryId}", out mesh);
     }
