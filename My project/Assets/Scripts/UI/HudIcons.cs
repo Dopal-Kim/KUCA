@@ -254,6 +254,19 @@ public static class HudIcons
         }, Color.white);
     });
 
+    /// <summary>티켓 (양쪽이 파인 표 + 가운데 점선) — 걸어서 모으는 뽑기 티켓</summary>
+    public static Sprite Ticket => Cached("ticket", 128, p =>
+    {
+        p.Box(64, 64, 54, 34, 8f);
+        p.Erase(q => q.CircleD(10, 64, 12f));
+        p.Erase(q => q.CircleD(118, 64, 12f));
+        for (int i = 0; i < 4; i++)
+        {
+            float y = 40 + i * 16;
+            p.Erase(q => q.BoxD(84, y, 2.5f, 5f, 1f, 0f));
+        }
+    });
+
     /// <summary>길 (구불구불한 길 + 도착 핀) — 산책 길잡이</summary>
     public static Sprite Route => Cached("route", 128, p =>
     {
