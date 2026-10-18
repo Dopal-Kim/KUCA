@@ -273,7 +273,7 @@ public static class CreatureLibrary
     /// <summary>가까이에서 보일 메시 (LOD0)</summary>
     public static bool TryGetMesh(string id, out Mesh mesh)
     {
-        if (meshes == null)
+        if (meshes == null || IsStale(meshes))
             meshes = Load("KUCA/CreatureMeshes");
         mesh = null;
         return id != null && meshes.TryGetValue(id, out mesh);
@@ -282,10 +282,21 @@ public static class CreatureLibrary
     /// <summary>멀리서 보일 가벼운 메시 (LOD1). 파일이 없으면 false (가까운 메시만 쓴다)</summary>
     public static bool TryGetFarMesh(string id, out Mesh mesh)
     {
-        if (farMeshes == null)
+        if (farMeshes == null || IsStale(farMeshes))
             farMeshes = Load("KUCA/CreatureMeshesFar", quiet: true);
         mesh = null;
         return id != null && farMeshes.TryGetValue(id, out mesh);
+    }
+
+    /// <summary>
+    /// 에디터에서 "도메인 다시 불러오기 안 함" (Enter Play Mode Options) 이면 static 목록이 지난 플레이에서 지워진 메시를 들고 있다.
+    /// 그 메시를 읽으면 MissingReferenceException 이 나서 (예: 파트너가 (0,0,0) 에 멈춤) 다시 불러온다. 빌드에서는 늘 false.
+    /// </summary>
+    public static bool IsStale(Dictionary<string, Mesh> cache)
+    {
+        foreach (Mesh m in cache.Values)
+            return m == null; // 한꺼번에 만들고 한꺼번에 지워지니 하나만 보면 된다
+        return false;
     }
 
     /// <summary>같은 형식(v3)의 다른 메시 파일을 읽는다 (예: 액세서리). 키 = 메시 이름 ("Creature_" 는 뗌)</summary>
