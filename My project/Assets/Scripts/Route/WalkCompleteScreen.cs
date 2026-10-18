@@ -19,8 +19,8 @@ public class WalkCompleteScreen : MonoBehaviour
     static readonly Color Green = new Color(0.24f, 0.68f, 0.38f);
 
     /// <summary>
-    /// A-V4: 파트너와 AR 사진 화면을 여는 함수. A 가 CatchCameraScreen 쪽에서 넣어 준다
-    /// (예: WalkCompleteScreen.PartnerPhoto = () => catchScreen.OpenPartnerPhoto();). 비어 있으면 안내만.
+    /// A-V4: 파트너와 AR 사진 화면을 여는 함수. CollectController 가 CatchCameraScreen.OpenPartnerPhoto 를 넣어 준다.
+    /// 비어 있으면 (사진 화면이 없는 씬 등) 안내만.
     /// </summary>
     public static System.Action PartnerPhoto;
 
@@ -136,7 +136,12 @@ public class WalkCompleteScreen : MonoBehaviour
         var parts = new System.Collections.Generic.List<string>();
         if (xp > 0) parts.Add($"{label} +{xp}");
         if (tickets > 0) parts.Add($"티켓 +{tickets}");
-        if (growth > 0 && partnerName != null) parts.Add($"{partnerName} 진화 경험치 +{growth}" + (evolved ? $" → {stage}단계로 진화!" : ""));
+        if (growth > 0 && partnerName != null) parts.Add($"{partnerName} 진화 경험치 +{growth}");
+        if (evolved && p.Partner != null)
+        {
+            parts.Add(KhuMenus.EvolvedMessage(p.Partner.speciesId, stage));
+            FindAnyObjectByType<KhuMenus>()?.RefreshPartner();
+        }
         if (parts.Count > 0)
             rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts);
         else if (rewardText.text.Length == 0)
@@ -216,7 +221,7 @@ public class WalkCompleteScreen : MonoBehaviour
             return;
         }
         var hud = FindAnyObjectByType<GameHUD>();
-        if (hud != null) hud.Toast("파트너와 사진 찍기는 곧 생겨요");
+        if (hud != null) hud.Toast("지금은 파트너와 사진을 찍을 수 없어요");
     }
 
     void Close()

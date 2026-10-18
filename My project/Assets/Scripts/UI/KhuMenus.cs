@@ -269,8 +269,7 @@ public partial class KhuMenus : MonoBehaviour
         if (r.evolved && progress.Partner != null)
         {
             progress.Save();
-            string name = NameOf(progress.Partner);
-            hud?.Toast($"{name}{CatchCameraScreen.Josa(name, "이", "가")} 함께 걸어서 {r.stage}단계로 진화했어요!");
+            hud?.Toast(EvolvedMessage(progress.Partner.speciesId, r.stage, "함께 걸어서 "));
             RefreshBuddy();
         }
         if (r.xp > 0 || r.tickets > 0)
@@ -742,7 +741,7 @@ public partial class KhuMenus : MonoBehaviour
         detailTarget = c;
         detailThumb.texture = ThumbOf(c.speciesId);
         detailCp.text = $"<size=40>쿠옹력</size> {c.cp}";
-        detailName.text = NameOf(c);
+        detailName.text = string.IsNullOrEmpty(c.speciesId) ? NameOf(c) : CreatureLibrary.StageName(c.speciesId, progress.StageOf(c.speciesId));
         int growth = progress.GrowthOf(c.speciesId);
         int next = GachaRules.NextThreshold(growth);
         string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (진화 경험치 {growth}/{next})" : " (최종)");
@@ -775,7 +774,31 @@ public partial class KhuMenus : MonoBehaviour
         if (p == null)
             buddy.Hide();
         else
+        {
             buddy.Show(p.speciesId, p.accessories);
+            buddy.SetStage(progress.StageOf(p.speciesId)); // 진화 단계: 크기 · 테두리 빛 (A-V1)
+        }
+    }
+
+    /// <summary>파트너가 진화했을 때 (완료 화면 보상 등 메뉴 밖에서) 지도 위 파트너를 다시 그린다</summary>
+    public void RefreshPartner() => RefreshBuddy();
+
+    /// <summary>"아기 비둘기가 함께 걸어서 비둘기로 진화했어요!" (단계 이름은 A 의 CreatureLibrary.StageName)</summary>
+    public static string EvolvedMessage(string species, int stage, string how = "")
+    {
+        string before = CreatureLibrary.StageName(species, stage - 1);
+        string after = CreatureLibrary.StageName(species, stage);
+        return $"{before}{CatchCameraScreen.Josa(before, "이", "가")} {how}{after}{Ro(after)} 진화했어요!";
+    }
+
+    /// <summary>"으로" / "로" (받침이 없거나 ㄹ 받침이면 "로")</summary>
+    static string Ro(string word)
+    {
+        if (string.IsNullOrEmpty(word)) return "로";
+        char c = word[word.Length - 1];
+        if (c < 0xAC00 || c > 0xD7A3) return "로";
+        int final = (c - 0xAC00) % 28;
+        return final == 0 || final == 8 ? "로" : "으로";
     }
 
     // ---------- 목록 팝업 (역대 파트너, 모험노트, 도감·도구 정보) ----------

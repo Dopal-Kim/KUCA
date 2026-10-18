@@ -47,7 +47,7 @@ public class HatchScreen : MonoBehaviour
         tierText.text = $"{GachaRules.Label(r.grade)} 등급";
         tierText.color = GachaRules.ColorOf(r.grade);
         string what = r.isNew ? "새 경희몬!  도감에 등록됐어요"
-            : r.evolved ? $"진화 경험치 +{r.growthAdded}  ·  {r.stage}단계로 진화했어요!"
+            : r.evolved ? $"진화 경험치 +{r.growthAdded}\n{KhuMenus.EvolvedMessage(r.species, r.stage)}"
             : $"이미 있는 경희몬  ·  진화 경험치 +{r.growthAdded}";
         info.text = $"{what}\n남은 티켓 {ticketsLeft}장";
         UIInputBlocker.SetModal(this, true);
