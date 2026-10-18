@@ -5,28 +5,17 @@ using UnityEngine;
 /// v2 경희몬 규칙 (B-V1): 걸어서 티켓 → 뽑기 → 중복·함께 걷기로 진화.
 /// 화면이 없는 계산만 모아 EditMode 테스트로 확인한다 (Assets/Editor/Tests/GachaRulesTests.cs).
 ///
-/// ⚠ 등급표 · 확률 · 진화 기준은 **임시 값**이다. 정식 값은 A 가 CreatureLibrary 에 넣기로 했다
-/// (docs/guides/v2_역할분담.md "A → B 등급 표·확률표·진화 거리 상수"). 넣으면 아래 "임시" 표시가 붙은 곳만 바꾼다.
+/// 등급표 · 확률 · 진화 기준은 A 가 정한 값 (CreatureLibrary, A-V1) 을 그대로 읽는다. 값을 바꿀 때는 CreatureLibrary 에서.
+/// 등급 안에서 어떤 종이 나올지는 지금 시간 · 계절 · 날씨에 어울리는 종일수록 잘 나온다 (SpawnConditions.PickForGacha).
 /// </summary>
 public static class GachaRules
 {
     public enum Grade { C, B, A, S }
 
-    // ---------- 등급 (임시) ----------
+    // ---------- 등급 (A: CreatureLibrary.Grades) ----------
 
-    /// <summary>임시: 랜드마크 16종 중 S. 나머지 랜드마크는 A, 파랑 4종은 B, 초록 4종은 C</summary>
-    static readonly HashSet<string> TempS = new HashSet<string>
-    {
-        "lion_cub", "library_owl", "plaza_duck", "gate_magpie", "clock_rooster", "space_rabbit", "stadium_jindo", "amphitheater_frog",
-    };
-
-    public static Grade GradeOf(string species)
-    {
-        string tier = CreatureLibrary.TierOf(species);
-        if (tier == "sprout") return Grade.C;
-        if (tier == "crystal") return Grade.B;
-        return TempS.Contains(species) ? Grade.S : Grade.A;
-    }
+    public static Grade GradeOf(string species) =>
+        species != null && CreatureLibrary.Grades.TryGetValue(species, out Grade g) ? g : Grade.C;
 
     static Dictionary<Grade, List<string>> byGrade;
 
@@ -57,16 +46,16 @@ public static class GachaRules
 
     /// <summary>이만큼 걸으면 티켓 1장</summary>
     public const float TicketMeters = 1000f;
-    /// <summary>하루에 걸어서 받을 수 있는 티켓 수 (V0 결정 Q3, 임시 5)</summary>
+    /// <summary>하루에 걸어서 받을 수 있는 티켓 수 (V0 결정 Q3: 5장 = 5장 뽑기 한 번)</summary>
     public const int TicketsPerDay = 5;
     public const int SingleCost = 1, PremiumCost = 5;
 
-    // ---------- 뽑기 확률 (임시) ----------
+    // ---------- 뽑기 확률 (A: CreatureLibrary) ----------
 
     /// <summary>1장 뽑기: C~A</summary>
-    public static readonly (Grade grade, float chance)[] SingleOdds = { (Grade.C, 0.70f), (Grade.B, 0.25f), (Grade.A, 0.05f) };
+    public static (Grade grade, float chance)[] SingleOdds => CreatureLibrary.SingleOdds;
     /// <summary>5장 뽑기: B~S</summary>
-    public static readonly (Grade grade, float chance)[] PremiumOdds = { (Grade.B, 0.70f), (Grade.A, 0.25f), (Grade.S, 0.05f) };
+    public static (Grade grade, float chance)[] PremiumOdds => CreatureLibrary.PremiumOdds;
 
     public static (Grade grade, float chance)[] OddsOf(bool premium) => premium ? PremiumOdds : SingleOdds;
 
@@ -84,28 +73,23 @@ public static class GachaRules
         return odds[odds.Length - 1].grade;
     }
 
-    /// <summary>
-    /// 등급을 정하고 그 등급 안에서 한 종을 고른다.
-    /// 지금은 등급 안에서 균등. A 의 SpawnConditions "지금 어울리는 종 가중치" 함수가 나오면 여기서 가중치로 고른다.
-    /// </summary>
+    /// <summary>등급을 정하고, 그 등급 안에서 지금 어울리는 종을 가중치로 고른다 (A: SpawnConditions.PickForGacha)</summary>
     public static string RollSpecies(bool premium, float rGrade, float rSpecies)
     {
-        IReadOnlyList<string> pool = SpeciesOf(RollGrade(premium, rGrade));
-        if (pool.Count == 0)
-            return null;
-        return pool[Mathf.Clamp(Mathf.FloorToInt(rSpecies * pool.Count), 0, pool.Count - 1)];
+        var pool = new List<string>(SpeciesOf(RollGrade(premium, rGrade)));
+        return pool.Count == 0 ? null : SpawnConditions.PickForGacha(pool, rSpecies);
     }
 
-    // ---------- 진화 (임시) ----------
+    // ---------- 진화 (A: CreatureLibrary) ----------
 
     /// <summary>파트너로 함께 이만큼 걸을 때마다 진화 경험치 +1</summary>
-    public const float GrowthMetersPerPoint = 100f;
+    public const float GrowthMetersPerPoint = CreatureLibrary.GrowthMetersPerPoint;
     /// <summary>진화 경험치가 이 값 이상이면 단계 1, 2 (단계는 0~2)</summary>
-    public static readonly int[] StageThresholds = { 100, 300 };
-    public const int MaxStage = 2;
+    public static int[] StageThresholds => CreatureLibrary.StageThresholds;
+    public static int MaxStage => CreatureLibrary.StageScales.Length - 1;
 
     /// <summary>같은 종이 또 나왔을 때 그 종의 진화 경험치</summary>
-    public static int DuplicateGrowth(Grade g) => g switch { Grade.C => 10, Grade.B => 20, Grade.A => 30, _ => 40 };
+    public static int DuplicateGrowth(Grade g) => CreatureLibrary.DuplicateGrowth(g);
 
     public static int StageOf(int growth)
     {

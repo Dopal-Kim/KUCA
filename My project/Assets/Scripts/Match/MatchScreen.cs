@@ -71,7 +71,7 @@ public class MatchScreen : MonoBehaviour
         if (service != null && url == serviceUrl)
             return;
         serviceUrl = url;
-        var mock = new MockMatchService(NearestSpot);
+        var mock = new MockMatchService(NearestMeetSpot);
         service = url.Length == 0 ? mock : new HttpMatchService(url, mock);
     }
 
@@ -203,7 +203,7 @@ public class MatchScreen : MonoBehaviour
             case MatchState.Ended:
                 ShowPage(endPage);
                 endTitle.text = "산책을 마쳤어요";
-                endMessage.text = $"{state.partner?.nickname ?? "산책메이트"}님과 함께 걸었어요. 완료 · 리뷰 화면은 곧 생겨요";
+                endMessage.text = $"{state.partner?.nickname ?? "산책메이트"}님과 함께 걸었어요";
                 break;
             case MatchState.Cancelled:
             case MatchState.Expired:
@@ -387,8 +387,13 @@ public class MatchScreen : MonoBehaviour
 
     // ---------- 위치 ----------
 
-    /// <summary>지금 위치에서 가장 가까운 경희스팟 (대기열의 건물 ID, 가상 상대의 만남 스팟)</summary>
-    MeetSpot NearestSpot()
+    /// <summary>지금 위치에서 가장 가까운 경희스팟 (대기열에 보내는 건물 ID)</summary>
+    MeetSpot NearestSpot() => Nearest(false);
+
+    /// <summary>가장 가까운 만남 스팟과 그 앞의 경희몬 (A-V3 MeetSpotCatalog, 가상 상대가 쓴다)</summary>
+    MeetSpot NearestMeetSpot() => Nearest(true);
+
+    MeetSpot Nearest(bool meetSpotsOnly)
     {
         var spots = FindAnyObjectByType<KyungHeeSpots>();
         Vector3 me = PlayerPosition;
@@ -398,17 +403,17 @@ public class MatchScreen : MonoBehaviour
             foreach (KyungHeeSpot s in spots.Spots)
             {
                 if (s == null || s.Building == null) continue;
+                if (meetSpotsOnly && !MeetSpotCatalog.IsMeetSpot(s.Building.buildingId)) continue;
                 float d = (s.transform.position - me).sqrMagnitude;
                 if (d < bestD) { bestD = d; best = s; }
             }
         if (best == null)
-            return null;
-        var c = GachaRules.SpeciesOf(GachaRules.Grade.B);
+            return meetSpotsOnly ? Nearest(false) : null;
         return new MeetSpot
         {
             buildingId = best.Building.buildingId,
             name = best.Building.DisplayName,
-            species = c.Count > 0 ? c[Mathf.Abs(best.Building.buildingId.GetHashCode()) % c.Count] : null,
+            species = MeetSpotCatalog.SpeciesAt(best.Building.buildingId),
         };
     }
 

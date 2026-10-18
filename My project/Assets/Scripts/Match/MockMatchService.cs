@@ -15,13 +15,8 @@ public class MockMatchService : IMatchService
 
     static readonly string[] Nicknames = { "산책하는 다람쥐", "공강러 원숭이", "노을 보는 여우", "학식 탐험가", "느긋한 거북이" };
     static readonly string[] Looks = { "회색 맨투맨, 남색 백팩", "흰 셔츠, 검은 에코백", "베이지 코트, 운동화", "초록 후드티, 안경" };
-    // 스몰토크 예시 (A 의 예시 20개가 오면 바꾼다, A-V3)
-    static readonly string[] Topics =
-    {
-        "요즘 공강 시간에 주로 뭐 해요?", "학식 최애 메뉴가 있어요?", "캠퍼스에서 제일 좋아하는 장소는?",
-        "이번 학기 제일 재밌는 수업은?", "국제캠 사계절 중 언제가 제일 좋아요?", "산책할 때 듣는 노래 있어요?",
-        "시험 끝나면 꼭 하는 일은?", "캠퍼스 근처 맛집 추천해 줄래요?", "동아리 활동 하고 있어요?", "요즘 빠져 있는 취미는?",
-    };
+    // 스몰토크 예시 20개 (A-V3, MeetSpotCatalog). 처음 3개는 서로 다른 주제에서 하나씩
+    static string[] Topics => MeetSpotCatalog.SmallTalk;
 
     readonly Func<MeetSpot> nearestSpot;
     readonly MatchState state = new MatchState();
@@ -186,7 +181,8 @@ public class MockMatchService : IMatchService
                     state.status = MatchState.Matched;
                     state.partnerAccepted = true;
                     state.spot = nearestSpot?.Invoke() ?? new MeetSpot { name = "중앙도서관 앞" };
-                    state.smalltalk = new List<string> { Topics[0], Topics[1], Topics[2] };
+                    var rng2 = new System.Random(state.matchId.GetHashCode());
+                    state.smalltalk = new List<string> { Topics[rng2.Next(4)], Topics[4 + rng2.Next(4)], Topics[12 + rng2.Next(4)] };
                     matchedAt = now;
                 }
                 break;
@@ -216,7 +212,7 @@ public class MockMatchService : IMatchService
         state.myLook = state.partnerLook = null; // 인상착의는 끝나면 지운다
         state.message = "";
         state.waitSecondsLeft = state.decideSecondsLeft = state.noShowSecondsLeft = 0;
-        topic = 2;
+        topic = 15;
     }
 
     MatchState Copy() => JsonUtility.FromJson<MatchState>(JsonUtility.ToJson(state));
