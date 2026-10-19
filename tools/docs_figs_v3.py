@@ -7,7 +7,7 @@ from matplotlib.patches import FancyBboxPatch, FancyArrowPatch
 from PIL import Image, ImageFilter, ImageOps, ImageDraw, ImageChops
 
 SP=__import__('os').environ.get('KUCA_FONT_DIR','.')   # nanum.ttf 가 있는 폴더
-R='/home/user/KUCA'; OUT=R+'/docs/img/v3/'
+import os; R=os.path.dirname(os.path.dirname(os.path.abspath(__file__))); OUT=R+'/docs/img/v3/'
 fm.fontManager.addfont(SP+'/nanum.ttf')
 fam=fm.FontProperties(fname=SP+'/nanum.ttf').get_name()
 plt.rcParams.update({'font.family':fam,'font.size':11,'axes.edgecolor':'#c9c8c0','axes.labelcolor':'#52514e',
