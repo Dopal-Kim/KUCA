@@ -16,13 +16,11 @@ public partial class KhuMenus
     readonly Dictionary<CreatureAccessories.Slot, List<(string id, Button button)>> accessoryButtons =
         new Dictionary<CreatureAccessories.Slot, List<(string, Button)>>();
 
-    static readonly Color AccOn = new Color(0.96f, 0.58f, 0.10f);
-    static readonly Color AccOff = new Color(0.90f, 0.94f, 0.92f);
 
     void BuildAccessoryPopup()
     {
         accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(900f, 1180f), out RectTransform card);
-        accessoryTitle = T(card, "꾸미기", 52, TextAnchor.MiddleCenter, TealDeep, bold: true);
+        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
         TopBox(accessoryTitle.rectTransform, 40f, 90f);
 
         float top = 160f;
@@ -40,7 +38,7 @@ public partial class KhuMenus
                 CreatureAccessories.Accessory acc = options[i];
                 string id = acc?.id;
                 CreatureAccessories.Slot s = slot;
-                Button b = PillButton(card, acc == null ? "없음" : acc.shortName, AccOff, TealDeep, () => ChooseAccessory(s, id));
+                Button b = PillButton(card, acc == null ? "없음" : acc.shortName, KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => ChooseAccessory(s, id));
                 var rt = (RectTransform)b.transform;
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
@@ -104,8 +102,7 @@ public partial class KhuMenus
                 // 이 동물에 맞는 모델이 없거나 (예: 개구리 귀걸이) 아직 진화가 덜 됐으면 고를 수 없다 ("없음"은 늘 가능)
                 bool available = id == null || (stage >= need && CreatureAccessories.TryGetMesh(c.speciesId, id, out _));
                 b.interactable = available;
-                b.GetComponent<Image>().color = on ? AccOn : AccOff;
-                b.GetComponentInChildren<Text>().color = on ? Color.white : TealDeep;
+                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(), on);   // 켜짐 = 계절 강조색
             }
         }
         accessoryNote.text = locked ?? (c.uid == progress.partnerUid
