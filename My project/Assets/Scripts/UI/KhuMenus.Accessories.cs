@@ -90,21 +90,26 @@ public partial class KhuMenus
         GameProgress.Caught c = accessoryTarget;
         if (c == null)
             return;
+        int stage = progress.StageOf(c.speciesId);
+        string locked = null;
         foreach (var pair in accessoryButtons)
         {
             string worn = c.accessories.Find(a => CreatureAccessories.Get(a)?.slot == pair.Key);
+            int need = CreatureAccessories.UnlockStage(pair.Key);
+            if (stage < need && locked == null)
+                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 진화하면 열려요";
             foreach ((string id, Button b) in pair.Value)
             {
                 bool on = id == worn;
-                // 이 동물에 맞는 모델이 없으면 (예: 개구리 귀걸이) 고를 수 없다
-                bool available = id == null || CreatureAccessories.TryGetMesh(c.speciesId, id, out _);
+                // 이 동물에 맞는 모델이 없거나 (예: 개구리 귀걸이) 아직 진화가 덜 됐으면 고를 수 없다 ("없음"은 늘 가능)
+                bool available = id == null || (stage >= need && CreatureAccessories.TryGetMesh(c.speciesId, id, out _));
                 b.interactable = available;
                 b.GetComponent<Image>().color = on ? AccOn : AccOff;
                 b.GetComponentInChildren<Text>().color = on ? Color.white : TealDeep;
             }
         }
-        accessoryNote.text = c.uid == progress.partnerUid
+        accessoryNote.text = locked ?? (c.uid == progress.partnerUid
             ? "파트너에게 바로 씌워져요 · 지도와 프로필에서 확인하세요"
-            : "파트너로 지정하면 지도에서 함께 다녀요";
+            : "파트너로 지정하면 지도에서 함께 다녀요");
     }
 }
