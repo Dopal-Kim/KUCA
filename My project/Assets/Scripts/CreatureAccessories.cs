@@ -20,6 +20,12 @@ public static class CreatureAccessories
         public string shortName;
     }
 
+    /// <summary>
+    /// v2: 이 부위가 열리는 진화 단계. 아기(0) 머리띠·목걸이 → 1단계 선글라스 → 2단계 귀걸이.
+    /// 자랄수록 꾸밀 곳이 늘어 "다음 진화"를 기다리게 한다.
+    /// </summary>
+    public static int UnlockStage(Slot s) => s switch { Slot.Eyes => 1, Slot.Ears => 2, _ => 0 };
+
     /// <summary>부위 이름 (화면)</summary>
     public static string SlotName(Slot s) => s switch { Slot.Head => "머리띠", Slot.Neck => "목걸이", Slot.Eyes => "선글라스", _ => "귀걸이" };
 

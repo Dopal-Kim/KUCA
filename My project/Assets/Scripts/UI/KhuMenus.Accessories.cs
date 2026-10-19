@@ -16,13 +16,11 @@ public partial class KhuMenus
     readonly Dictionary<CreatureAccessories.Slot, List<(string id, Button button)>> accessoryButtons =
         new Dictionary<CreatureAccessories.Slot, List<(string, Button)>>();
 
-    static readonly Color AccOn = new Color(0.96f, 0.58f, 0.10f);
-    static readonly Color AccOff = new Color(0.90f, 0.94f, 0.92f);
 
     void BuildAccessoryPopup()
     {
         accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(900f, 1180f), out RectTransform card);
-        accessoryTitle = T(card, "꾸미기", 52, TextAnchor.MiddleCenter, TealDeep, bold: true);
+        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
         TopBox(accessoryTitle.rectTransform, 40f, 90f);
 
         float top = 160f;
@@ -40,7 +38,7 @@ public partial class KhuMenus
                 CreatureAccessories.Accessory acc = options[i];
                 string id = acc?.id;
                 CreatureAccessories.Slot s = slot;
-                Button b = PillButton(card, acc == null ? "없음" : acc.shortName, AccOff, TealDeep, () => ChooseAccessory(s, id));
+                Button b = PillButton(card, acc == null ? "없음" : acc.shortName, KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => ChooseAccessory(s, id));
                 var rt = (RectTransform)b.transform;
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
@@ -90,21 +88,25 @@ public partial class KhuMenus
         GameProgress.Caught c = accessoryTarget;
         if (c == null)
             return;
+        int stage = progress.StageOf(c.speciesId);
+        string locked = null;
         foreach (var pair in accessoryButtons)
         {
             string worn = c.accessories.Find(a => CreatureAccessories.Get(a)?.slot == pair.Key);
+            int need = CreatureAccessories.UnlockStage(pair.Key);
+            if (stage < need && locked == null)
+                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 진화하면 열려요";
             foreach ((string id, Button b) in pair.Value)
             {
                 bool on = id == worn;
-                // 이 동물에 맞는 모델이 없으면 (예: 개구리 귀걸이) 고를 수 없다
-                bool available = id == null || CreatureAccessories.TryGetMesh(c.speciesId, id, out _);
+                // 이 동물에 맞는 모델이 없거나 (예: 개구리 귀걸이) 아직 진화가 덜 됐으면 고를 수 없다 ("없음"은 늘 가능)
+                bool available = id == null || (stage >= need && CreatureAccessories.TryGetMesh(c.speciesId, id, out _));
                 b.interactable = available;
-                b.GetComponent<Image>().color = on ? AccOn : AccOff;
-                b.GetComponentInChildren<Text>().color = on ? Color.white : TealDeep;
+                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(), on);   // 켜짐 = 계절 강조색
             }
         }
-        accessoryNote.text = c.uid == progress.partnerUid
+        accessoryNote.text = locked ?? (c.uid == progress.partnerUid
             ? "파트너에게 바로 씌워져요 · 지도와 프로필에서 확인하세요"
-            : "파트너로 지정하면 지도에서 함께 다녀요";
+            : "파트너로 지정하면 지도에서 함께 다녀요");
     }
 }

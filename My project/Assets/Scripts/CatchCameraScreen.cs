@@ -30,7 +30,6 @@ public class CatchCameraScreen : MonoBehaviour
 
     const string ArPrefKey = "catch_ar_on";
     static readonly Vector3 StagePos = new Vector3(0f, -30000f, 0f);
-    static readonly Color Navy = new Color(0.10f, 0.22f, 0.52f);
 
     public static bool IsOpen { get; private set; }
 
@@ -201,7 +200,7 @@ public class CatchCameraScreen : MonoBehaviour
         }
         // 스위치 모양
         arLabel.text = on ? "AR 켬" : "AR 끔";
-        arTrack.color = on ? new Color(0.30f, 0.78f, 0.55f) : new Color(1f, 1f, 1f, 0.25f);
+        arTrack.color = on ? KucaTheme.Accent : new Color(1f, 1f, 1f, 0.25f);   // 켜짐 = 계절 강조색
         Place(arKnob.rectTransform, new Vector2(on ? 1f : 0f, 0.5f), new Vector2(on ? -6f : 6f, 0f));
         arKnob.rectTransform.pivot = new Vector2(on ? 1f : 0f, 0.5f);
     }
@@ -405,7 +404,7 @@ public class CatchCameraScreen : MonoBehaviour
         UIKit.Stretch(dim.rectTransform);
         resultCard = dim.gameObject;
 
-        Image card = UIKit.Image(dim.transform, "Card", new Color(0.98f, 0.99f, 1f));
+        Image card = UIKit.Image(dim.transform, "Card", KucaTheme.Card);
         card.sprite = HudIcons.Pill;
         card.type = Image.Type.Sliced;
         card.pixelsPerUnitMultiplier = 1.4f;
@@ -426,16 +425,16 @@ public class CatchCameraScreen : MonoBehaviour
         resultFitter = photo.GetComponent<AspectRatioFitter>();
         resultFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
 
-        resultTitle = UIKit.Text(card.transform, "", 50, TextAnchor.MiddleCenter, Navy);
+        resultTitle = UIKit.Text(card.transform, "", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink);
         resultTitle.fontStyle = FontStyle.Bold;
         TopBox(resultTitle.rectTransform, 930f, 80f);
-        resultSub = UIKit.Text(card.transform, "", 32, TextAnchor.MiddleCenter, new Color(0.4f, 0.45f, 0.5f));
+        resultSub = UIKit.Text(card.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         TopBox(resultSub.rectTransform, 1010f, 110f);
 
-        albumButton = PillButton(card.transform, "앨범에도 저장", new Color(0.88f, 0.92f, 0.96f), Navy, SaveToAlbum);
+        albumButton = PillButton(card.transform, "앨범에도 저장", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, SaveToAlbum);
         Place((RectTransform)albumButton.transform, new Vector2(0.5f, 0f), new Vector2(-190f, 50f));
         ((RectTransform)albumButton.transform).sizeDelta = new Vector2(360f, 116f);
-        Button ok = PillButton(card.transform, "확인", Navy, Color.white, Close);
+        Button ok = PillButton(card.transform, "확인", KucaTheme.Primary, Color.white, Close);
         Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(200f, 50f));
         ((RectTransform)ok.transform).sizeDelta = new Vector2(320f, 116f);
     }

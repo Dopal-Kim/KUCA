@@ -57,6 +57,9 @@ public class CollectController : MonoBehaviour
             catchScreen = gameObject.AddComponent<CatchCameraScreen>();
         // v2 (A-V4): 산책 완료 화면의 "파트너와 사진 찍기"
         WalkCompleteScreen.PartnerPhoto = () => catchScreen.OpenPartnerPhoto(Progress);
+        // v2 (A-V3): 만남 스팟 지붕 위 경희몬
+        if (!TryGetComponent(out MeetSpotFigures _))
+            gameObject.AddComponent<MeetSpotFigures>();
         if (hud != null)
             hud.ShowProgress(Progress, spawner != null ? spawner.types : null);
     }
