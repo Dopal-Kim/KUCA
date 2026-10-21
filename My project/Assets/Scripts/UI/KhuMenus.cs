@@ -681,7 +681,7 @@ public partial class KhuMenus : MonoBehaviour
             ("가지고 있는 수", $"{mine.Count}마리"),
             ("최고 쿠옹력", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
-            ("진화하려면", "파트너와 함께 걷기 (100m마다 +1)\n또는 뽑기에서 또 만나기"),
+            ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
         };
         return rows;
     }
