@@ -83,6 +83,7 @@ public class ModularCharacter : MonoBehaviour
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         animator.Rebind();
 
+        HidePlaceholder();
         bones.TryGetValue("Head", out head);
         bones.TryGetValue("Body", out body);
         bones.TryGetValue("Root", out root);
@@ -95,6 +96,16 @@ public class ModularCharacter : MonoBehaviour
         bodyWritten = new Vector3(float.NaN, 0, 0);
         ApplyToyLook();
         lastPos = Source.position;
+    }
+
+    /// <summary>
+    /// 캐릭터가 생기기 전 자리표시용 캡슐(Player 의 MeshRenderer, 건물 뒤 파란 실루엣 포함)을 숨긴다.
+    /// 그대로 두면 큰 머리 · 모자에 가려진 캡슐 부분이 캐릭터 위에 파랗게 겹쳐 보인다.
+    /// </summary>
+    void HidePlaceholder()
+    {
+        if (Source.TryGetComponent(out MeshRenderer placeholder))
+            placeholder.enabled = false;
     }
 
     /// <summary>FBX 재질을 같은 이름의 토이 재질로 바꾼다. 색은 파스텔로 (경희대 색 KHU_ 는 그대로).</summary>
