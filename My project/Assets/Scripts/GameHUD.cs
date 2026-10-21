@@ -34,8 +34,8 @@ public class GameHUD : MonoBehaviour
     [Tooltip("얼굴을 밝히는 보조광 세기 (밤 장면에서도 얼굴이 보이도록)")]
     public float portraitLightIntensity = 1.5f;
     [Tooltip("얼굴 카메라가 바라보는 높이 (캐릭터 로컬 단위, 키 약 1.7)")]
-    public float portraitLookHeight = 1.6f;
-    public float portraitDistance = 2.0f;
+    public float portraitLookHeight = 1.45f;
+    public float portraitDistance = 2.7f;
     public float portraitFov = 22f;
 
     static readonly Color Navy = new Color(0.11f, 0.16f, 0.39f, 1f);
@@ -91,6 +91,8 @@ public class GameHUD : MonoBehaviour
     Camera portraitCam;
     Light portraitLight;
     RenderTexture portraitTexture;
+    ModularCharacter portraitModel;          // 초상화 전용으로 멈춰 선 같은 모습의 캐릭터 (걸어도 얼굴이 흔들리지 않게)
+    CharacterAppearance portraitAppearance;
 
     KhuMenus menus;
     CameraFollow cameraFollow;
@@ -230,8 +232,11 @@ public class GameHUD : MonoBehaviour
     {
         if (portraitCam == null || !portraitCam.enabled || character == null)
             return;
-        // 캐릭터 정면에서 얼굴 높이를 바라본다 (캐릭터가 돌아도 늘 얼굴이 보인다).
-        Transform c = character.transform;
+        RefreshPortraitModel();
+        if (portraitModel == null)
+            return;
+        // 초상화용 캐릭터 정면에서 얼굴 높이를 바라본다.
+        Transform c = portraitModel.transform;
         Vector3 look = c.TransformPoint(0f, portraitLookHeight, 0f);
         Vector3 pos = c.TransformPoint(0f, portraitLookHeight + 0.1f, portraitDistance);
         portraitCam.transform.SetPositionAndRotation(pos, Quaternion.LookRotation(look - pos, Vector3.up));
@@ -648,6 +653,30 @@ public class GameHUD : MonoBehaviour
         Collectible c = nearbyBuffer[0];
         float d = CollectibleSpawner.HorizontalDistance(c.transform.position, collect.campusMap.player.position);
         Toast($"주변 {nearbyBuffer.Count}개 · 가장 가까운 {c.DisplayName} {d:F0}m");
+    }
+
+    /// <summary>
+    /// 플레이어와 같은 모습의 캐릭터를 지도 아래 멀리 하나 더 두고 대기 자세로 멈춰 초상화로 찍는다.
+    /// 꾸미기로 모습이 바뀌면 (Appearance 가 새로 만들어지면) 다시 만든다.
+    /// </summary>
+    void RefreshPortraitModel()
+    {
+        CharacterAppearance look = character.Appearance;
+        if (look == null || (portraitModel != null && look == portraitAppearance))
+            return;
+        if (portraitModel != null)
+            Destroy(portraitModel.gameObject);
+        portraitAppearance = look;
+        var go = new GameObject("HUDPortraitModel") { layer = character.gameObject.layer };   // 장면 최상위 (HUD 캔버스 크기에 안 묶이게)
+        go.transform.SetPositionAndRotation(new Vector3(0f, -30000f, 0f), Quaternion.identity);
+        go.transform.localScale = character.transform.lossyScale;
+        portraitModel = go.AddComponent<ModularCharacter>();
+        portraitModel.database = character.database;
+        portraitModel.headScale = character.headScale;
+        portraitModel.legScale = character.legScale;
+        portraitModel.armScale = character.armScale;
+        portraitModel.freezePose = true;
+        portraitModel.Build(look);
     }
 
     void BuildPortraitCamera()

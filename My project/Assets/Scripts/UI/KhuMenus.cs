@@ -681,7 +681,7 @@ public partial class KhuMenus : MonoBehaviour
             ("가지고 있는 수", $"{mine.Count}마리"),
             ("최고 쿠옹력", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
-            ("진화하려면", "파트너로 함께 걷거나 (100m 1), 뽑기에서 또 만나기"),
+            ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
         };
         return rows;
     }
@@ -843,6 +843,13 @@ public partial class KhuMenus : MonoBehaviour
             UIKit.Stretch(l.rectTransform);
             Text r = T(row, right, 38, TextAnchor.MiddleRight, ValueGreen, bold: true);
             UIKit.Stretch(r.rectTransform);
+            // 값은 이름 오른쪽 남은 칸에만. 길면 칸에 맞게 글자를 줄인다 (두 줄까지).
+            r.rectTransform.offsetMin = new Vector2(l.preferredWidth + 28f, 0f);
+            r.horizontalOverflow = HorizontalWrapMode.Wrap;
+            r.verticalOverflow = VerticalWrapMode.Truncate;
+            r.resizeTextForBestFit = true;
+            r.resizeTextMinSize = 24;
+            r.resizeTextMaxSize = 38;
             Image line = UIKit.Image(row, "Line", new Color(Gray.r, Gray.g, Gray.b, 0.15f));
             line.rectTransform.anchorMin = new Vector2(0f, 0f);
             line.rectTransform.anchorMax = new Vector2(1f, 0f);

@@ -22,6 +22,8 @@ public class ModularCharacter : MonoBehaviour
     public float legScale = 0.68f;
     [Tooltip("팔 길이 배율. 다리를 줄였을 때 손이 너무 내려오지 않게")]
     public float armScale = 0.85f;
+    [Tooltip("켜면 첫 자세에서 동작을 멈춘다 (HUD 초상화처럼 가만히 있어야 할 때)")]
+    public bool freezePose;
 
     public CharacterAppearance Appearance { get; private set; }
 
@@ -32,6 +34,7 @@ public class ModularCharacter : MonoBehaviour
     Transform head, body, root;
     readonly Transform[] upperLegs = new Transform[2], feet = new Transform[2], upperArms = new Transform[2];
     Vector3 bodyWritten;
+    int builtFrame;
     static Material toyBase;
     static readonly Dictionary<string, Material> toyMaterials = new Dictionary<string, Material>();
     Vector3 lastPos;
@@ -83,6 +86,7 @@ public class ModularCharacter : MonoBehaviour
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         animator.Rebind();
 
+        HidePlaceholder();
         bones.TryGetValue("Head", out head);
         bones.TryGetValue("Body", out body);
         bones.TryGetValue("Root", out root);
@@ -95,6 +99,17 @@ public class ModularCharacter : MonoBehaviour
         bodyWritten = new Vector3(float.NaN, 0, 0);
         ApplyToyLook();
         lastPos = Source.position;
+        builtFrame = Time.frameCount;
+    }
+
+    /// <summary>
+    /// 캐릭터가 생기기 전 자리표시용 캡슐(Player 의 MeshRenderer, 건물 뒤 파란 실루엣 포함)을 숨긴다.
+    /// 그대로 두면 큰 머리 · 모자에 가려진 캡슐 부분이 캐릭터 위에 파랗게 겹쳐 보인다.
+    /// </summary>
+    void HidePlaceholder()
+    {
+        if (Source.TryGetComponent(out MeshRenderer placeholder))
+            placeholder.enabled = false;
     }
 
     /// <summary>FBX 재질을 같은 이름의 토이 재질로 바꾼다. 색은 파스텔로 (경희대 색 KHU_ 는 그대로).</summary>
@@ -199,6 +214,9 @@ public class ModularCharacter : MonoBehaviour
             if (arm != null && armScale < 0.999f)
                 arm.localScale = Vector3.one * armScale;
         ShortenLegs();
+        // 대기 자세가 한 번 적용된 뒤 멈춘다 (뼈는 마지막 자세 그대로 남는다)
+        if (freezePose && animator != null && animator.enabled && Time.frameCount > builtFrame + 1)
+            animator.enabled = false;
         if (animator == null || Time.deltaTime <= 0f)
             return;
 
