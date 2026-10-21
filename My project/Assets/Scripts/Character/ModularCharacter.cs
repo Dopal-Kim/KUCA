@@ -22,6 +22,8 @@ public class ModularCharacter : MonoBehaviour
     public float legScale = 0.68f;
     [Tooltip("팔 길이 배율. 다리를 줄였을 때 손이 너무 내려오지 않게")]
     public float armScale = 0.85f;
+    [Tooltip("켜면 첫 자세에서 동작을 멈춘다 (HUD 초상화처럼 가만히 있어야 할 때)")]
+    public bool freezePose;
 
     public CharacterAppearance Appearance { get; private set; }
 
@@ -32,6 +34,7 @@ public class ModularCharacter : MonoBehaviour
     Transform head, body, root;
     readonly Transform[] upperLegs = new Transform[2], feet = new Transform[2], upperArms = new Transform[2];
     Vector3 bodyWritten;
+    int builtFrame;
     static Material toyBase;
     static readonly Dictionary<string, Material> toyMaterials = new Dictionary<string, Material>();
     Vector3 lastPos;
@@ -96,6 +99,7 @@ public class ModularCharacter : MonoBehaviour
         bodyWritten = new Vector3(float.NaN, 0, 0);
         ApplyToyLook();
         lastPos = Source.position;
+        builtFrame = Time.frameCount;
     }
 
     /// <summary>
@@ -210,6 +214,9 @@ public class ModularCharacter : MonoBehaviour
             if (arm != null && armScale < 0.999f)
                 arm.localScale = Vector3.one * armScale;
         ShortenLegs();
+        // 대기 자세가 한 번 적용된 뒤 멈춘다 (뼈는 마지막 자세 그대로 남는다)
+        if (freezePose && animator != null && animator.enabled && Time.frameCount > builtFrame + 1)
+            animator.enabled = false;
         if (animator == null || Time.deltaTime <= 0f)
             return;
 

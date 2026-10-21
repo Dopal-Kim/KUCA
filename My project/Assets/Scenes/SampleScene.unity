@@ -41319,8 +41319,8 @@ MonoBehaviour:
   defaultNickname: "\uACBD\uD76C \uD0D0\uD5D8\uAC00"
   nearbyRadius: 250
   portraitLightIntensity: 1.5
-  portraitLookHeight: 1.6
-  portraitDistance: 2
+  portraitLookHeight: 1.45
+  portraitDistance: 2.7
   portraitFov: 22
 --- !u!114 &1082617447
 MonoBehaviour:
