@@ -15,6 +15,13 @@ public class CharacterAppearance
     public string legs;
     public string feet;
     public string accessory;
+    [Tooltip("저장 형식 버전. CurrentVersion 보다 낮으면 기본 캐릭터(경희 모험가)로 바꾼다")]
+    public int version;
+
+    /// <summary>2 = 기본 캐릭터가 경희 모험가로 바뀐 뒤</summary>
+    public const int CurrentVersion = 2;
+    /// <summary>처음 시작할 때 입는 옷 (Characters/{Men,Women}/KHU_Adventurer)</summary>
+    public const string DefaultOutfit = "KHU_Adventurer";
 
     static string FilePath => Path.Combine(Application.persistentDataPath, "character.json");
 
@@ -62,6 +69,7 @@ public class CharacterAppearance
 
     public void Save()
     {
+        version = CurrentVersion;
         try
         {
             File.WriteAllText(FilePath, JsonUtility.ToJson(this));

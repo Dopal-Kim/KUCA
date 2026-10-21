@@ -54,6 +54,12 @@ public class CharacterCustomizer : MonoBehaviour
         BuildUI();
 
         CharacterAppearance saved = CharacterAppearance.Load();
+        if (saved != null && saved.version < CharacterAppearance.CurrentVersion)
+        {
+            // 기본 캐릭터가 경희 모험가로 바뀌기 전에 저장한 모습은 성별만 두고 새 기본 옷으로
+            saved = DefaultAppearance(saved.gender);
+            saved.Save();
+        }
         if (saved != null)
         {
             character.Build(saved);
@@ -61,7 +67,7 @@ public class CharacterCustomizer : MonoBehaviour
         }
         else
         {
-            character.Build(RandomAppearance());
+            character.Build(DefaultAppearance(AuthService.Current?.gender == "female" ? 1 : 0));
             SetOpen(true);
         }
     }
@@ -131,6 +137,22 @@ public class CharacterCustomizer : MonoBehaviour
         i = ((i + dir) % options.Count + options.Count) % options.Count;
         editing.Set(slot, options[i].id);
         Apply();
+    }
+
+    /// <summary>기본 캐릭터: 경희 모험가 한 벌 (없으면 첫 선택지)</summary>
+    CharacterAppearance DefaultAppearance(int gender)
+    {
+        var a = new CharacterAppearance { gender = Mathf.Clamp(gender, 0, Db.genders.Count - 1) };
+        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
+        foreach (var (slot, _) in SlotRows)
+        {
+            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
+            if (options.Count == 0)
+                continue;
+            var match = options.Find(o => o.id == CharacterAppearance.DefaultOutfit);
+            a.Set(slot, slot == CharacterSlot.Accessory ? options[0].id : (match ?? options[0]).id);
+        }
+        return a;
     }
 
     CharacterAppearance RandomAppearance()

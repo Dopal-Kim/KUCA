@@ -5,6 +5,7 @@ using UnityEngine;
 /// 선택한 부위 FBX들을 하나의 뼈대로 합쳐 캐릭터를 만든다.
 /// 상의(Body) 파트의 뼈대를 기준으로 쓰고, 나머지 파트의 SkinnedMeshRenderer 뼈를 이름으로 다시 연결한다.
 /// 이동 속도에 따라 Animator의 Speed 값을 넣어 Idle / Walk / Run 을 재생한다.
+/// 경희몬과 어울리게 머리를 키우고 (headScale), 재질을 파스텔 비닐 토이(KUCA/PlayerToy)로 바꾼다.
 /// </summary>
 public class ModularCharacter : MonoBehaviour
 {
@@ -15,6 +16,12 @@ public class ModularCharacter : MonoBehaviour
     public float metersPerUnit = 1f;
     [Tooltip("Speed 값을 부드럽게 바꾸는 시간 (초)")]
     public float speedDamping = 0.6f;
+    [Tooltip("머리 크기 배율. 1 = 원래 비율, 크면 귀여운 큰 머리")]
+    public float headScale = 1.8f;
+    [Tooltip("다리 길이 배율. 1 = 원래, 작으면 골반을 내리고 다리를 줄인다 (신발 크기는 그대로)")]
+    public float legScale = 0.68f;
+    [Tooltip("팔 길이 배율. 다리를 줄였을 때 손이 너무 내려오지 않게")]
+    public float armScale = 0.85f;
 
     public CharacterAppearance Appearance { get; private set; }
 
@@ -22,6 +29,11 @@ public class ModularCharacter : MonoBehaviour
 
     GameObject model;
     Animator animator;
+    Transform head, body, root;
+    readonly Transform[] upperLegs = new Transform[2], feet = new Transform[2], upperArms = new Transform[2];
+    Vector3 bodyWritten;
+    static Material toyBase;
+    static readonly Dictionary<string, Material> toyMaterials = new Dictionary<string, Material>();
     Vector3 lastPos;
     float speed;
 
@@ -71,7 +83,82 @@ public class ModularCharacter : MonoBehaviour
         animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
         animator.Rebind();
 
+        bones.TryGetValue("Head", out head);
+        bones.TryGetValue("Body", out body);
+        bones.TryGetValue("Root", out root);
+        bones.TryGetValue("UpperLeg.L", out upperLegs[0]);
+        bones.TryGetValue("UpperLeg.R", out upperLegs[1]);
+        bones.TryGetValue("Foot.L", out feet[0]);
+        bones.TryGetValue("Foot.R", out feet[1]);
+        bones.TryGetValue("UpperArm.L", out upperArms[0]);
+        bones.TryGetValue("UpperArm.R", out upperArms[1]);
+        bodyWritten = new Vector3(float.NaN, 0, 0);
+        ApplyToyLook();
         lastPos = Source.position;
+    }
+
+    /// <summary>FBX 재질을 같은 이름의 토이 재질로 바꾼다. 색은 파스텔로 (경희대 색 KHU_ 는 그대로).</summary>
+    void ApplyToyLook()
+    {
+        if (toyBase == null)
+            toyBase = Resources.Load<Material>("KUCA/PlayerToy");
+        if (toyBase == null)
+            return;
+        foreach (Renderer r in model.GetComponentsInChildren<Renderer>(true))
+        {
+            Material[] mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+                if (mats[i] != null)
+                    mats[i] = ToyMaterial(mats[i]);
+            r.sharedMaterials = mats;
+        }
+    }
+
+    /// <summary>
+    /// 다리를 legScale 배로 줄인다. 골반(Body 뼈)을 그만큼 내리고 넓적다리를 줄인 뒤,
+    /// 발(Root 아래라 다리와 따로 움직임)을 줄어든 다리 끝으로 옮겨 땅에 닿게 한다.
+    /// 애니메이터가 이번 프레임에 뼈를 다시 쓰지 않았으면 (일시정지 등) 두 번 내리지 않는다.
+    /// </summary>
+    void ShortenLegs()
+    {
+        if (legScale >= 0.999f || body == null || root == null || upperLegs[0] == null || upperLegs[1] == null)
+            return;
+        if (body.localPosition == bodyWritten)
+            return;
+        Vector3 up = root.up;
+        Vector3[] hip = { upperLegs[0].position, upperLegs[1].position };
+        Vector3[] foot = { feet[0] != null ? feet[0].position : hip[0], feet[1] != null ? feet[1].position : hip[1] };
+        float hipHeight = Vector3.Dot((hip[0] + hip[1]) * 0.5f - root.position, up);
+        Vector3 drop = up * ((1f - legScale) * hipHeight);
+        body.position -= drop;
+        bodyWritten = body.localPosition;
+        for (int i = 0; i < 2; i++)
+        {
+            upperLegs[i].localScale = Vector3.one * legScale;
+            if (feet[i] != null)
+                feet[i].position = hip[i] - drop + (foot[i] - hip[i]) * legScale;
+        }
+    }
+
+    static Material ToyMaterial(Material source)
+    {
+        string key = source.name.Replace(" (Instance)", "");
+        if (toyMaterials.TryGetValue(key, out Material m) && m != null)
+            return m;
+        Color c = source.HasProperty("_BaseColor") ? source.GetColor("_BaseColor") : source.color;
+        m = new Material(toyBase) { name = key + "_Toy" };
+        m.SetColor("_BaseColor", key.StartsWith("KHU_") || key.StartsWith("Skin") ? c : Pastel(c));
+        toyMaterials[key] = m;
+        return m;
+    }
+
+    /// <summary>어두운 색은 조금 밝게, 채도는 살짝 올려 비닐 장난감 느낌으로.</summary>
+    public static Color Pastel(Color c)
+    {
+        Color.RGBToHSV(c, out float h, out float s, out float v);
+        v = Mathf.Min(0.95f, v * 0.8f + 0.18f);
+        s = Mathf.Min(1f, s * 1.05f);
+        return Color.HSVToRGB(h, s, v);
     }
 
     /// <summary>파트를 복제해 메시만 기준 뼈대에 붙이고, 파트에 딸린 뼈대는 버린다.</summary>
@@ -105,6 +192,13 @@ public class ModularCharacter : MonoBehaviour
 
     void LateUpdate()
     {
+        // 애니메이터가 뼈를 움직인 뒤에 머리 크기를 덧씌운다 (머리카락 · 모자는 Head 뼈에 붙어 같이 커진다)
+        if (head != null)
+            head.localScale = Vector3.one * headScale;
+        foreach (Transform arm in upperArms)
+            if (arm != null && armScale < 0.999f)
+                arm.localScale = Vector3.one * armScale;
+        ShortenLegs();
         if (animator == null || Time.deltaTime <= 0f)
             return;
 
