@@ -78655,6 +78655,9 @@ MonoBehaviour:
   movementSource: {fileID: 1008019450}
   metersPerUnit: 1
   speedDamping: 0.25
+  headScale: 1.8
+  legScale: 0.68
+  armScale: 0.85
 --- !u!1 &2055327659
 GameObject:
   m_ObjectHideFlags: 0

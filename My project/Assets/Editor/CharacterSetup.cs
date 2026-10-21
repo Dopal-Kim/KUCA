@@ -20,10 +20,12 @@ public static class CharacterSetup
     static readonly Dictionary<string, string> OutfitNames = new Dictionary<string, string>
     {
         { "Adventurer", "모험가" }, { "Beach", "해변" }, { "Casual", "캐주얼" }, { "Casual_2", "캐주얼 2" },
-        { "Casual_Hoodie", "후드티" }, { "Farmer", "농부" }, { "Formal", "포멀" }, { "Horse", "말 머리" },
+        { "Casual_Hoodie", "후드티" }, { "KHU", "경희대 과잠" }, { "KHU_Adventurer", "경희 모험가" }, { "Farmer", "농부" }, { "Formal", "포멀" }, { "Horse", "말 머리" },
         { "King", "왕" }, { "Medieval", "중세" }, { "Punk", "펑크" }, { "SciFi", "SF" }, { "Soldier", "군인" },
         { "SpaceSuit", "우주복" }, { "Suit", "정장" }, { "Swat", "특수부대" }, { "Witch", "마녀" }, { "Worker", "작업자" },
     };
+
+    const float SmoothAngle = 60f;
 
     static readonly string[] LoopClips = { "Idle", "Walk", "Run" };
 
@@ -86,15 +88,19 @@ public static class CharacterSetup
     /// <summary>
     /// 파트 FBX는 메시와 뼈대만 쓰므로 애니메이션은 가져오지 않는다.
     /// Blender에서 내보낸 축 변환(루트 회전 -90°, 스케일 100)은 임포트 때 구워서 루트를 1배로 만든다.
+    /// 법선은 FBX 의 각진 법선 대신 다시 계산해 (60° 안쪽은 부드럽게) 비닐 토이처럼 매끈하게 보이게 한다.
     /// </summary>
     static void ConfigurePart(string path)
     {
         var importer = (ModelImporter)AssetImporter.GetAtPath(path);
-        if (importer.animationType == ModelImporterAnimationType.Generic && !importer.importAnimation && importer.bakeAxisConversion)
+        if (importer.animationType == ModelImporterAnimationType.Generic && !importer.importAnimation && importer.bakeAxisConversion
+            && importer.importNormals == ModelImporterNormals.Calculate && Mathf.Approximately(importer.normalSmoothingAngle, SmoothAngle))
             return;
         importer.animationType = ModelImporterAnimationType.Generic;
         importer.importAnimation = false;
         importer.bakeAxisConversion = true;
+        importer.importNormals = ModelImporterNormals.Calculate;
+        importer.normalSmoothingAngle = SmoothAngle;
         importer.SaveAndReimport();
     }
 

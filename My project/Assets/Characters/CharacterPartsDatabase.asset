@@ -35,6 +35,9 @@ MonoBehaviour:
     - id: Horse
       displayName: "\uB9D0 \uBA38\uB9AC"
       prefab: {fileID: 919132149155446097, guid: e4df6f2e352fe4672ad0a4fdc699fe03, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: bb45b51f598ef4a61894c2183b7847a9, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: 45f4d5daf0fd844ab945d93811989276, type: 3}
@@ -69,6 +72,12 @@ MonoBehaviour:
     - id: Farmer
       displayName: "\uB18D\uBD80"
       prefab: {fileID: 919132149155446097, guid: c22be11a9da394778aea4e71a21d817e, type: 3}
+    - id: KHU
+      displayName: "\uACBD\uD76C\uB300 \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: f9c0d6dc2981c4471858d149b0b3cbbf, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 4e932cafd19a1433c94804217b464f48, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: e9cbc6949bbb74e8cbc4c50caff1238c, type: 3}
@@ -103,6 +112,9 @@ MonoBehaviour:
     - id: Farmer
       displayName: "\uB18D\uBD80"
       prefab: {fileID: 919132149155446097, guid: 6bc2df8e6aad443eca4c6b9b33f9c609, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: faa9d24e7696240fb922d685b433fca1, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: 9d976aede455040278a65c19e3d0645b, type: 3}
@@ -137,6 +149,9 @@ MonoBehaviour:
     - id: Farmer
       displayName: "\uB18D\uBD80"
       prefab: {fileID: 919132149155446097, guid: 92305f47879274df697063469f109297, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 80526368c2dba4362ab3706307ad95ab, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: 9203593021d964c1ca778ee717fa53da, type: 3}
@@ -175,6 +190,9 @@ MonoBehaviour:
     - id: Formal
       displayName: "\uD3EC\uBA40"
       prefab: {fileID: 919132149155446097, guid: 1676afd3a6d144163a1477791e3e6863, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: b4662b73fa4af41febbbdcf15ec23bd6, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: d3d71af07d4df47bcbdaa7cfc5d49aae, type: 3}
@@ -206,6 +224,12 @@ MonoBehaviour:
     - id: Formal
       displayName: "\uD3EC\uBA40"
       prefab: {fileID: 919132149155446097, guid: b74c415df7ac34c4b8aea4bf79c4c792, type: 3}
+    - id: KHU
+      displayName: "\uACBD\uD76C\uB300 \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: f2b6a6f99aef54555a2156bb5c2851b7, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 4c55cd5a6104849359655cc3629fea27, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: ef2cf690015324671923f09630e0acdd, type: 3}
@@ -237,6 +261,9 @@ MonoBehaviour:
     - id: Formal
       displayName: "\uD3EC\uBA40"
       prefab: {fileID: 919132149155446097, guid: 0c9b5790204684726ac17b5730cbe8b9, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: 936f6cc53e73c4318987ddea3354d419, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: 05a9a99ca1cee4a518d1578c810b5080, type: 3}
@@ -268,6 +295,9 @@ MonoBehaviour:
     - id: Formal
       displayName: "\uD3EC\uBA40"
       prefab: {fileID: 919132149155446097, guid: c5cc610b01d9449989fbeb55c5b7e971, type: 3}
+    - id: KHU_Adventurer
+      displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
+      prefab: {fileID: 919132149155446097, guid: ddc8de6e2b749484e9c1709bd73fb0bd, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: 2d8ad0990e8e24a289ea104f19085962, type: 3}
