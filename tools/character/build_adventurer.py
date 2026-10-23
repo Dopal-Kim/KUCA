@@ -279,21 +279,24 @@ if not male:   # 단발: 옆 · 뒤로 어깨 위까지
 
 # 모자: 둥근 정수리 + 아래로 살짝 처진 챙 + 크림슨 띠.
 # 지도 카메라는 위에서 내려다보므로 모자를 뒤로 젖혀 써서 (HAT_TILT) 이마와 눈코입이 보이게 한다.
-HAT_TILT = math.radians(float(OPT.get('hat_tilt', 20)))
-BRIM_R = float(OPT.get('brim', 0.33))   # 챙 반지름 (넓으면 위에서 볼 때 얼굴을 가린다)
+HAT_TILT = math.radians(float(OPT.get('hat_tilt', 12)))
+BRIM_R = float(OPT.get('brim', 0.42))   # 챙 반지름
 hat_start = len(PARTS)
-hat_z = hc.z + 0.235
-crown = ellipsoid(Vector((0, hc.y + 0.01, hat_z + 0.0)), (0.272, 0.262, 0.175), 36, 22)
-delete_where(crown, lambda c: c.z < hat_z - 0.1)
+# 머리를 감싸게 푹 눌러쓴다: 정수리는 머리카락보다 크게, 챙은 앞머리 끝 바로 위 (앞머리 끝과 눈코입만 보이게)
+hat_z = hc.z + 0.2
+CROWN = (0.302, 0.292, 0.215)
+crown = ellipsoid(Vector((0, hc.y + 0.01, hat_z)), CROWN, 48, 28)
+delete_where(crown, lambda c: c.z < hat_z - 0.105)
 add(crown, 'KHU_Adv_Hat', 'Head', 'head')
-add(cylinder(Vector((0, hc.y + 0.01, hat_z - 0.055)), 0.276, 0.274, 0.055), 'KHU_Adv_Crimson', 'Head', 'head')
-brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.115)), BRIM_R, 0.272, 0.07, 48)
-for v in brim.verts:   # 챙 끝을 둥글게 두껍게
-    if (v.co.xy - Vector((0, hc.y + 0.01))).length > BRIM_R - 0.04:
-        v.co.z -= 0.01
+band_r = CROWN[0] * (1 - (0.06 / CROWN[2]) ** 2) ** 0.5 + 0.006
+add(cylinder(Vector((0, hc.y + 0.01, hat_z - 0.06)), band_r + 0.004, band_r, 0.05, 48), 'KHU_Adv_Crimson', 'Head', 'head')
+brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.118)), BRIM_R, 0.292, 0.065, 64)
+for v in brim.verts:   # 챙 끝을 둥글게 살짝 아래로 (버킷햇처럼)
+    if (v.co.xy - Vector((0, hc.y + 0.01))).length > BRIM_R - 0.05:
+        v.co.z -= 0.012
 add(brim, 'KHU_Adv_Hat', 'Head', 'head')
 # 뒤쪽 챙 끝을 축으로 앞을 들어 올린다 (x 축 회전, 앞 = -y)
-hat_pivot = Vector((0, hc.y + 0.25, hat_z - 0.12))
+hat_pivot = Vector((0, hc.y + 0.3, hat_z - 0.12))
 for bm_, *_ in PARTS[hat_start:]:
     for v in bm_.verts:
         d = v.co - hat_pivot

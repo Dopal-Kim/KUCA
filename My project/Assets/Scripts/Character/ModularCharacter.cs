@@ -29,6 +29,8 @@ public class ModularCharacter : MonoBehaviour
     [Tooltip("이만큼 (초) 서 있으면 돌아선다")]
     public float idleTurnDelay = 1.2f;
     public float idleTurnSpeed = 3f;
+    [Tooltip("카메라 쪽으로 돌아섰을 때 고개를 드는 각도 (위에서 내려다보는 지도 카메라에서 모자챙 아래 얼굴이 보이게)")]
+    public float lookUpDegrees = 22f;
 
     public CharacterAppearance Appearance { get; private set; }
 
@@ -41,6 +43,7 @@ public class ModularCharacter : MonoBehaviour
     Vector3 bodyWritten;
     int builtFrame;
     float idleTime;
+    float lookUp;   // 지금 고개를 든 정도 0~1
     static Material toyBase;
     static readonly Dictionary<string, Material> toyMaterials = new Dictionary<string, Material>();
     Vector3 lastPos;
@@ -255,6 +258,12 @@ public class ModularCharacter : MonoBehaviour
             if (toCam.sqrMagnitude > 0.01f)
                 goal = Quaternion.Inverse(transform.parent.rotation) * Quaternion.LookRotation(toCam.normalized, Vector3.up);
         }
-        transform.localRotation = Quaternion.Slerp(transform.localRotation, goal, 1f - Mathf.Exp(-idleTurnSpeed * Time.deltaTime));
+        float k = 1f - Mathf.Exp(-idleTurnSpeed * Time.deltaTime);
+        transform.localRotation = Quaternion.Slerp(transform.localRotation, goal, k);
+        // 돌아선 만큼 고개를 들어 카메라를 올려다본다 (애니메이터가 머리를 움직인 뒤에 덧씌움)
+        bool facing = goal != Quaternion.identity;
+        lookUp = Mathf.Lerp(lookUp, facing ? 1f : 0f, k);
+        if (head != null && lookUp > 0.001f)
+            head.rotation = Quaternion.AngleAxis(-lookUpDegrees * lookUp, transform.right) * head.rotation;
     }
 }
