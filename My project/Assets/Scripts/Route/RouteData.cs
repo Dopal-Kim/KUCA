@@ -4,7 +4,8 @@ using System.Collections;
 using UnityEngine;
 
 // 산책 추천 · 장소 공지 (B-4). docs/api.md 의 "산책 추천", "장소 공지" 와 같은 모양 (JsonUtility 로 그대로 읽는다).
-// v2 칸 (B-V2) 은 docs/api_v2_추천_초안.md. v1 서버는 새 칸을 무시하고, 응답에 없으면 앱이 RouteMath 로 채운다.
+// v2 칸 (B-V2) 은 docs/api.md "POST /api/recommendations (v2)". 응답에 없으면 (기기 추천) 앱이 RouteMath 로 채운다.
+// 시간대 · 계절 · 날씨는 서버가 정하고, 칼로리는 다루지 않는다 (10/23 결정).
 
 /// <summary>POST /api/recommendations 본문</summary>
 [Serializable]
@@ -24,12 +25,8 @@ public class RouteRequest
     // ---------- v2 ----------
     /// <summary>걷는 속도 "slow" · "normal" · "fast" (취향 체크리스트)</summary>
     public string pace = "normal";
-    /// <summary>식후 걷기 모드</summary>
+    /// <summary>식후 걷기 버튼으로 요청함 (가까운 곳 위주, 응답에 healthNote)</summary>
     public bool afterMeal;
-    /// <summary>칼로리 계산용 체중 (0 이면 60kg)</summary>
-    public float weightKg;
-    /// <summary>기기의 지금 시각 (ISO 8601, 예: 2026-10-18T12:40:00+09:00)</summary>
-    public string localTime;
 }
 
 [Serializable]
@@ -42,8 +39,20 @@ public class RouteStop
     /// <summary>앞 장소(첫 곳은 지금 위치)에서 걸어서 몇 분</summary>
     public int walkMinutes;
     public double lat, lon;
-    /// <summary>v2: 앞 장소(첫 곳은 지금 위치)에서 여기까지 (m)</summary>
-    public int distanceMeters;
+    /// <summary>v2: 앞 장소(첫 곳은 지금 위치)에서 여기까지 걷는 거리 (m)</summary>
+    public int distanceM;
+}
+
+/// <summary>서버가 추천에 쓴 상황 (시간대 · 계절 · 날씨)</summary>
+[Serializable]
+public class RouteContext
+{
+    /// <summary>morning · day · evening · night</summary>
+    public string timeOfDay;
+    /// <summary>spring · summer · autumn · winter</summary>
+    public string season;
+    /// <summary>clear · cloudy · rain · snow (모르면 빈 값)</summary>
+    public string weather;
 }
 
 [Serializable]
@@ -55,11 +64,14 @@ public class RouteResult
     public string source;
 
     // ---------- v2 ----------
-    public int totalMeters;
+    /// <summary>추천 ID. 이 코스로 산책을 시작할 때 POST /api/walks 에 넣는다 (기기 추천은 빈 값)</summary>
+    public string id;
+    public RouteContext context;
+    /// <summary>코스 전체 걷는 거리 (m) · 시간 (분)</summary>
+    public int totalDistanceM;
     public int totalMinutes;
-    public int kcal;
-    /// <summary>이유에 쓴 날씨 한 줄 (없으면 빈 값)</summary>
-    public string weather;
+    /// <summary>식후 걷기 안내 (afterMeal 일 때만, 의료 조언 아님 문구 포함)</summary>
+    public string healthNote;
 }
 
 /// <summary>학교 공지 중 특정 장소와 관련된 것 (GET /api/notices)</summary>

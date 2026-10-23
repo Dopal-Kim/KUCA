@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 실시간 산책 매칭 화면 (B-V3). 지도 오른쪽 위 산책메이트 버튼으로 연다.
-/// 흐름: 조건 (30/60분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
+/// 흐름: 조건 (15/30/60분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
 ///      → 상대 수락 기다림 → 만남 스팟 → 인상착의 → 스몰토크 → 산책 시작 → 산책 중 (끝내기).
 /// 어느 단계든 신고 · 차단 · 취소를 할 수 있고, 만나기로 한 뒤 10분 안에 시작하지 않으면 노쇼로 취소된다 (서버 판정).
 /// 화면을 닫아도 매칭은 계속되고 (상태를 계속 물어봄), 상대가 나타나면 화면이 다시 열린다.
@@ -136,10 +136,10 @@ public class MatchScreen : MonoBehaviour
         {
             // 산책 기록 (B-V4): 시작하면 걸은 거리를 재기 시작하고, 끝나면 완료 화면으로
             if (s.status == MatchState.Walking)
-                WalkSession.BeginMate(s.matchId, s.partner?.nickname);
+                WalkSession.BeginMate(s.matchId, s.partner?.nickname, s.walkId);
             else if (s.status == MatchState.Ended && WalkSession.Active && WalkSession.Kind == WalkSession.Mate)
             {
-                WalkCompleteScreen.Show(WalkSession.Finish(0));
+                WalkCompleteScreen.Show(WalkSession.Finish(null));
                 Again();
                 Show(false);
                 return;
@@ -247,8 +247,9 @@ public class MatchScreen : MonoBehaviour
 
     void RefreshChips()
     {
-        SetChip(minuteChips[0], minutes == 30);
-        SetChip(minuteChips[1], minutes == 60);
+        SetChip(minuteChips[0], minutes == 15);
+        SetChip(minuteChips[1], minutes == 30);
+        SetChip(minuteChips[2], minutes == 60);
         SetChip(genderChips[0], sameGender);
         SetChip(genderChips[1], !sameGender);
     }
@@ -339,7 +340,17 @@ public class MatchScreen : MonoBehaviour
         })));
     }
 
-    void StartWalk() { if (!busy) Call(service.StartWalk(state.matchId, Apply)); }
+    void StartWalk()
+    {
+        if (busy) return;
+        Call(service.StartWalk(state.matchId, (s, e) =>
+        {
+            Apply(s, e);
+            // 서버 매칭: 나만 도착했으면 상대를 기다린다고 알려 준다
+            if (s != null && s.status == MatchState.Matched && !string.IsNullOrEmpty(s.message))
+                Toast(s.message);
+        }));
+    }
     void EndWalk() { if (!busy) Call(service.End(state.matchId, Apply)); }
 
     void CancelMatch()
@@ -506,8 +517,9 @@ public class MatchScreen : MonoBehaviour
         Label(p, "얼마나 걸을까요?", 220f);
         minuteChips = new[]
         {
-            ChipAt(p, "30분", () => { minutes = 30; RefreshChips(); }, 60f, 300f, 300f),
-            ChipAt(p, "1시간", () => { minutes = 60; RefreshChips(); }, 380f, 300f, 300f),
+            ChipAt(p, "15분", () => { minutes = 15; RefreshChips(); }, 60f, 300f, 196f),
+            ChipAt(p, "30분", () => { minutes = 30; RefreshChips(); }, 272f, 300f, 196f),
+            ChipAt(p, "1시간", () => { minutes = 60; RefreshChips(); }, 484f, 300f, 196f),
         };
         Label(p, "같이 걸을 상대는요?", 440f);
         genderChips = new[]

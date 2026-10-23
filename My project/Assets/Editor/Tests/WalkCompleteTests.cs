@@ -1,7 +1,7 @@
 using System.Collections;
 using NUnit.Framework;
 
-/// <summary>B-V4 완료 판정 · 보상 테스트 (docs/api_v2_완료_초안.md "기기 계산")</summary>
+/// <summary>B-V4 완료 판정 · 보상 테스트 (기기 계산은 docs/api.md "산책 · 완료" 의 서버 기준과 같다)</summary>
 public class WalkCompleteTests
 {
     static void Run(IEnumerator work)
@@ -24,12 +24,33 @@ public class WalkCompleteTests
     }
 
     [Test]
-    public void 산책메이트는_500m_또는_10분이면_완료()
+    public void 산책메이트와_자유_산책은_500m면_완료()
     {
         var r = new WalkCompleteRequest { kind = WalkSession.Mate };
         r.meters = 500; Assert.IsTrue(LocalWalkService.Judge(r, out _));
-        r.meters = 100; r.minutes = 10; Assert.IsTrue(LocalWalkService.Judge(r, out _));
-        r.minutes = 9; Assert.IsFalse(LocalWalkService.Judge(r, out _));
+        r.meters = 499; r.minutes = 30; Assert.IsFalse(LocalWalkService.Judge(r, out _));
+        var free = new WalkCompleteRequest { kind = WalkSession.Course, meters = 600 };
+        Assert.IsTrue(LocalWalkService.Judge(free, out _));
+    }
+
+    [Test]
+    public void 서버_완료_응답에서_걸은_거리_경험치는_빼고_더한다()
+    {
+        // 걸은 거리 경험치는 걸을 때 앱이 이미 더했다. 완료 30 + 함께 60 만 더하고, 티켓은 서버 값
+        const string json = "{\"completed\":true,\"distanceM\":1620,\"reward\":{\"tickets\":1,\"xp\":106," +
+            "\"breakdown\":[{\"kind\":\"distance\",\"xp\":16},{\"kind\":\"walk\",\"xp\":30},{\"kind\":\"together\",\"xp\":60}]}}";
+        var req = new WalkCompleteRequest { kind = WalkSession.Mate, walkId = "w_1", meters = 1620 };
+        WalkCompleteResult r = HttpWalkService.ParseFinish(req, json, 0);
+        Assert.IsTrue(r.completed);
+        Assert.AreEqual(90, r.xp);
+        Assert.AreEqual(1, r.tickets);
+        Assert.AreEqual(LocalWalkService.CompleteGrowth, r.growth);
+        Assert.AreEqual("w_1", r.walkId);
+
+        WalkCompleteResult fail = HttpWalkService.ParseFinish(req, "{\"completed\":false,\"reward\":{\"tickets\":0,\"xp\":3,\"breakdown\":[{\"kind\":\"distance\",\"xp\":3}]}}", 0);
+        Assert.IsFalse(fail.completed);
+        Assert.AreEqual(0, fail.xp);
+        Assert.AreEqual(0, fail.growth);
     }
 
     [Test]
@@ -57,7 +78,7 @@ public class WalkCompleteTests
         string error = null;
         Run(local.Review("local_1", new WalkReviewRequest(), (r, e) => error = e));
         Assert.IsNotNull(error);
-        Run(local.Review("local_1", new WalkReviewRequest { courseStars = 4 }, (r, _) => ok = r));
+        Run(local.Review("local_1", new WalkReviewRequest { courseRating = 4 }, (r, _) => ok = r));
         Assert.AreEqual(LocalWalkService.ReviewXp, ok.xp);
     }
 }

@@ -2,7 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-// 실시간 산책 매칭 (B-V3). docs/api_v2_매칭_초안.md 의 MatchState 와 같은 모양 (JsonUtility 로 그대로 읽는다).
+// 실시간 산책 매칭 (B-V3). 앱 안에서 쓰는 모양이다.
+// 서버 모양(docs/api.md "매칭")은 HttpMatchService 가 이 모양으로 옮겨 담고, 기기 안 가상 상대(MockMatchService)도 같은 모양을 쓴다.
 
 [Serializable]
 public class MatchQueueRequest
@@ -54,6 +55,10 @@ public class MatchState
     public int noShowSecondsLeft;
     public int minutes;
     public string message;
+    /// <summary>둘 다 만남 스팟에 도착해 산책이 시작되면 생기는 서버 산책 ID (산책 완료 API 에 씀)</summary>
+    public string walkId;
+    /// <summary>만남 스팟 도착 여부 (서버)</summary>
+    public bool meArrived, partnerArrived;
 
     /// <summary>대기 · 제안 · 만남 · 산책 중 (화면을 닫아도 계속 지켜볼 상태)</summary>
     public bool Active => status == Waiting || status == Proposed || status == Accepted || status == Matched || status == Walking;
