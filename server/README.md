@@ -101,7 +101,11 @@ az webapp config appsettings set --name kuca-memo --resource-group <리소스 �
 ## 산책 추천 AI (챗쿠) 키 넣기
 
 `POST /api/recommendations` 는 챗쿠 AI 로 코스를 짭니다.
-- 키가 없으면 가까운 경희스팟부터 고르는 규칙 추천(`source: "fallback"`)으로 동작합니다.
+- **추천 v2 (C-V2):** 서버가 시간대·계절·날씨(기상청)를 보고 경희스팟마다 점수(취향 × 3 + 계절·시간 × 2 + 가까움 × 1)를 매깁니다.
+  - AI 는 점수 상위 10곳 안에서만 고릅니다.
+  - 이유가 소개글(`Data/spots.json` 의 `intro`)과 상관없으면 규칙 문구로 바꿉니다.
+  - 숫자는 모두 `Services/RouteRecommender.cs` 의 `RecommendRules` 에 있습니다.
+- 키가 없으면 같은 점수로 고르는 규칙 추천(`source: "fallback"`)으로 동작합니다.
 - **키는 저장소(appsettings.json)에 넣지 않습니다.**
 
 | 설정 | 뜻 |

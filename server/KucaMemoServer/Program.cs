@@ -36,8 +36,12 @@ builder.Services.AddHttpClient();
 builder.Services.AddSingleton<KmaWeatherService>();
 // 산책 추천: 챗쿠 AI (설정 Recommend:Endpoint / Recommend:ApiKey 가 없으면 규칙 기반으로만 추천)
 builder.Services.AddHttpClient<IRouteAi, ChatKuClient>(c => c.Timeout = TimeSpan.FromSeconds(25));
+// 추천 v2: 지금 날씨(기상청), 내준 추천 기록(완료 판정·집계용), 시각(테스트에서 바꿔 끼움)
+builder.Services.AddSingleton<ICampusWeather, KmaCampusWeather>();
+builder.Services.AddSingleton<RecommendationStore>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<RouteRecommender>();
-// 장소 공지 (C-4): 경희스팟 목록, 공지 저장소, AI 공지 판별 (내용 검사와 같은 게이트웨이·키)
+// 경희스팟 목록 (공지·추천·매칭이 같이 씀), 장소 공지 (C-4): 공지 저장소, AI 공지 판별 (내용 검사와 같은 게이트웨이·키)
 builder.Services.AddSingleton<SpotStore>();
 builder.Services.AddSingleton<NoticeStore>();
 builder.Services.AddHttpClient<INoticeClassifier, AiNoticeClassifier>();

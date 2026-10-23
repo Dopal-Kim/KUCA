@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using KucaMemoServer.Services;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -27,18 +28,38 @@ public class RecommendApiTests : IDisposable
         }
     }
 
+    sealed class FakeWeather(string? condition) : ICampusWeather
+    {
+        public Task<string?> NowAsync(CancellationToken ct) => Task.FromResult(condition);
+    }
+
+    sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    /// <summary>기본 시각: 가을 밤 (2026-11-02 21:00 한국 시각)</summary>
+    static readonly DateTimeOffset AutumnNight = new(2026, 11, 2, 21, 0, 0, TimeSpan.FromHours(9));
+
     readonly List<IDisposable> owned = [];
 
-    HttpClient Client(IRouteAi? ai = null)
+    WebApplicationFactory<Program> Server(IRouteAi? ai = null, string? weather = null, DateTimeOffset? now = null)
     {
         var server = new TestServer();
         owned.Add(server);
-        if (ai == null)
-            return server.CreateClient();
-        var withAi = server.WithWebHostBuilder(b => b.ConfigureTestServices(s => s.AddSingleton(ai)));
-        owned.Add(withAi);
-        return withAi.CreateClient();
+        var configured = server.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            if (ai != null)
+                s.AddSingleton(ai);
+            s.AddSingleton<ICampusWeather>(new FakeWeather(weather));
+            s.AddSingleton<TimeProvider>(new FixedClock(now ?? AutumnNight));
+        }));
+        owned.Add(configured);
+        return configured;
     }
+
+    HttpClient Client(IRouteAi? ai = null, string? weather = null, DateTimeOffset? now = null) =>
+        Server(ai, weather, now).CreateClient();
 
     public void Dispose()
     {
@@ -121,5 +142,207 @@ public class RecommendApiTests : IDisposable
         JsonElement r = await Ok(await Client(new FakeAi(answer)).PostAsJsonAsync("/api/recommendations", Body(30)));
         Assert.Equal("fallback", r.GetProperty("source").GetString());
         Assert.True(r.GetProperty("stops").GetArrayLength() > 0);
+    }
+
+    // ───── 추천 v2 ─────
+
+    const string Library = "way-474085534", Amphitheater = "way-474531805", Observatory = "way-474521125", Sports = "way-455726113";
+
+    /// <summary>두 건물의 가운데 (어느 쪽도 가깝지 않게)</summary>
+    static async Task<(double Lat, double Lon)> Midpoint(HttpClient client, string a, string b)
+    {
+        JsonElement x = await client.GetFromJsonAsync<JsonElement>($"/api/buildings/{a}");
+        JsonElement y = await client.GetFromJsonAsync<JsonElement>($"/api/buildings/{b}");
+        return ((x.GetProperty("lat").GetDouble() + y.GetProperty("lat").GetDouble()) / 2,
+                (x.GetProperty("lon").GetDouble() + y.GetProperty("lon").GetDouble()) / 2);
+    }
+
+    static object Between((double Lat, double Lon) at, string[] candidates, int minutes = 60, string? pace = null,
+                          bool afterMeal = false, string[]? tastes = null) => new
+    {
+        minutes, tastes = tastes ?? Array.Empty<string>(), lat = at.Lat, lon = at.Lon,
+        visitedBuildingIds = Array.Empty<string>(), candidateBuildingIds = candidates, pace, afterMeal,
+    };
+
+    [Fact]
+    public async Task 응답에_추천ID_상황_거리_합계가_있고_기록된다()
+    {
+        WebApplicationFactory<Program> server = Server(weather: "cloudy");
+        JsonElement r = await Ok(await server.CreateClient().PostAsJsonAsync("/api/recommendations", Body(30)));
+
+        string id = r.GetProperty("id").GetString()!;
+        Assert.StartsWith("rec_", id);
+        JsonElement context = r.GetProperty("context");
+        Assert.Equal("night", context.GetProperty("timeOfDay").GetString());
+        Assert.Equal("autumn", context.GetProperty("season").GetString());
+        Assert.Equal("cloudy", context.GetProperty("weather").GetString());
+        JsonElement[] stops = r.GetProperty("stops").EnumerateArray().ToArray();
+        Assert.All(stops, s => Assert.True(s.GetProperty("distanceM").GetInt32() > 0));
+        Assert.Equal(stops.Sum(s => s.GetProperty("distanceM").GetInt32()), r.GetProperty("totalDistanceM").GetInt32());
+        Assert.Equal(stops.Sum(s => s.GetProperty("walkMinutes").GetInt32()), r.GetProperty("totalMinutes").GetInt32());
+        Assert.Equal(JsonValueKind.Null, r.GetProperty("healthNote").ValueKind);
+        Assert.False(r.TryGetProperty("kcal", out _)); // 칼로리는 내지 않는다
+
+        RecommendationStore.Saved? saved = server.Services.GetRequiredService<RecommendationStore>().Find(id);
+        Assert.NotNull(saved);
+        Assert.Equal("fallback", saved.Source);
+        Assert.Equal(r.GetProperty("totalDistanceM").GetInt32(), saved.PlannedDistanceM);
+        Assert.Equal(stops.Select(s => s.GetProperty("buildingId").GetString()!), saved.StopIds);
+    }
+
+    [Fact]
+    public async Task 후보를_안_보내면_경희스팟_안에서_고른다()
+    {
+        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations",
+            new { minutes = 60, lat = Lat, lon = Lon }));
+        string[] spotIds = System.Text.Json.JsonDocument.Parse(File.ReadAllText(SpotsJsonPath())).RootElement
+            .EnumerateArray().Select(s => s.GetProperty("id").GetString()!).ToArray();
+        Assert.NotEmpty(r.GetProperty("stops").EnumerateArray());
+        Assert.All(r.GetProperty("stops").EnumerateArray(), s => Assert.Contains(s.GetProperty("buildingId").GetString(), spotIds));
+    }
+
+    static string SpotsJsonPath()
+    {
+        string dir = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(dir, "KucaMemoServer", "Data", "spots.json")))
+            dir = Path.GetDirectoryName(dir)!;
+        return Path.Combine(dir, "KucaMemoServer", "Data", "spots.json");
+    }
+
+    [Theory]
+    [InlineData(15)]
+    [InlineData(30)]
+    [InlineData(60)]
+    public async Task 걷는_시간이_고른_시간을_넘지_않는다(int minutes)
+    {
+        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations",
+            new { minutes, tastes = new[] { "unvisited" }, lat = Lat, lon = Lon }));
+        Assert.InRange(r.GetProperty("totalMinutes").GetInt32(), 1, (int)(minutes * RecommendRules.WalkTimeRatio));
+        Assert.InRange(r.GetProperty("stops").GetArrayLength(), 1, RecommendRules.MaxStops(minutes));
+    }
+
+    [Fact]
+    public async Task 지금_계절과_시간대에_맞는_곳이_먼저다()
+    {
+        string[] both = [Observatory, Sports];
+        // 천문대: 가을·겨울 밤 / 체육대학관: 봄·여름·가을 아침·낮
+        HttpClient night = Client(now: AutumnNight);
+        var at = await Midpoint(night, Observatory, Sports);
+        JsonElement r1 = await Ok(await night.PostAsJsonAsync("/api/recommendations", Between(at, both)));
+        Assert.Equal(Observatory, r1.GetProperty("stops")[0].GetProperty("buildingId").GetString());
+
+        var springMorning = new DateTimeOffset(2026, 5, 6, 9, 0, 0, TimeSpan.FromHours(9));
+        JsonElement r2 = await Ok(await Client(now: springMorning).PostAsJsonAsync("/api/recommendations", Between(at, both)));
+        Assert.Equal(Sports, r2.GetProperty("stops")[0].GetProperty("buildingId").GetString());
+        Assert.Equal("spring", r2.GetProperty("context").GetProperty("season").GetString());
+        Assert.Equal("morning", r2.GetProperty("context").GetProperty("timeOfDay").GetString());
+    }
+
+    [Fact]
+    public async Task 비가_오면_실내_스팟이_먼저고_이유도_날씨다()
+    {
+        // 가을 저녁엔 노천극장(실외)과 중앙도서관(실내) 모두 계절·시간이 맞는다 → 비가 오면 실내가 앞선다
+        var autumnEvening = new DateTimeOffset(2026, 10, 20, 18, 0, 0, TimeSpan.FromHours(9));
+        HttpClient client = Client(weather: "rain", now: autumnEvening);
+        var at = await Midpoint(client, Library, Amphitheater);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Amphitheater, Library])));
+        JsonElement first = r.GetProperty("stops")[0];
+        Assert.Equal(Library, first.GetProperty("buildingId").GetString());
+        Assert.Equal("비가 와도 실내라 들르기 좋아요", first.GetProperty("reason").GetString());
+        Assert.Equal("rain", r.GetProperty("context").GetProperty("weather").GetString());
+    }
+
+    [Fact]
+    public async Task 규칙_이유는_소개글에서_가져오고_확인필요_표시는_뺀다()
+    {
+        HttpClient client = Client();
+        var at = await Midpoint(client, Observatory, Observatory);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Observatory])));
+        string reason = r.GetProperty("stops")[0].GetProperty("reason").GetString()!;
+        Assert.Contains("별 보기", reason);
+        Assert.DoesNotContain("확인 필요", reason);
+    }
+
+    [Fact]
+    public async Task AI_이유가_소개글과_상관없으면_규칙_이유로_바꾼다()
+    {
+        var ai = new FakeAi("""
+            {"title":"가을 산책","stops":[
+              {"buildingId":"way-474531805","reason":"저녁 노을에 계단에 앉아 쉬어 보세요"},
+              {"buildingId":"way-474085534","reason":"맛있는 빵집이 숨어 있어요"}]}
+            """);
+        HttpClient client = Client(ai);
+        var at = await Midpoint(client, Library, Amphitheater);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Amphitheater, Library])));
+        Assert.Equal("ai", r.GetProperty("source").GetString());
+        JsonElement[] stops = r.GetProperty("stops").EnumerateArray().ToArray();
+        Assert.Equal("저녁 노을에 계단에 앉아 쉬어 보세요", stops[0].GetProperty("reason").GetString());
+        Assert.DoesNotContain("빵집", stops[1].GetProperty("reason").GetString());
+        Assert.Contains("가을", ai.LastPrompt);   // AI 에게 지금 상황과 소개글을 준다
+        Assert.Contains("열람실", ai.LastPrompt);
+        Assert.DoesNotContain("확인 필요", ai.LastPrompt);
+    }
+
+    [Fact]
+    public async Task AI_가_먼_곳을_이어도_시간_안에서_자른다()
+    {
+        var ai = new FakeAi("""
+            {"title":"먼 길","stops":[
+              {"buildingId":"way-474521125","reason":"별"},{"buildingId":"way-473963422","reason":"정문"},
+              {"buildingId":"relation-8269760","reason":"기숙사"},{"buildingId":"way-455726113","reason":"체육"}]}
+            """);
+        JsonElement r = await Ok(await Client(ai).PostAsJsonAsync("/api/recommendations",
+            new { minutes = 15, lat = Lat, lon = Lon, candidateBuildingIds = new[] { Observatory, "way-473963422", "relation-8269760", Sports } }));
+        Assert.InRange(r.GetProperty("stops").GetArrayLength(), 1, 2);
+        if (r.GetProperty("stops").GetArrayLength() > 1)
+            Assert.True(r.GetProperty("totalMinutes").GetInt32() <= 15 * RecommendRules.WalkTimeRatio);
+    }
+
+    [Fact]
+    public async Task 식후_걷기는_안내_문구와_제목이_붙는다()
+    {
+        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations",
+            new { minutes = 15, lat = Lat, lon = Lon, afterMeal = true }));
+        Assert.StartsWith("식후", r.GetProperty("title").GetString());
+        Assert.EndsWith("일반 건강 정보이며 의료 조언이 아닙니다.", r.GetProperty("healthNote").GetString());
+    }
+
+    [Fact]
+    public async Task 느리게_걸으면_같은_거리도_더_오래_걸린다_계정_취향도_쓴다()
+    {
+        HttpClient client = Client();
+        var gate = await Midpoint(client, "way-473963422", "way-473963422");
+        async Task<int> MinutesTo(string? pace, string? token = null)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Post, "/api/recommendations")
+            {
+                Content = JsonContent.Create(Between(gate, [Observatory], pace: pace)),
+            };
+            if (token != null)
+                req.Headers.Authorization = new("Bearer", token);
+            JsonElement r = await Ok(await client.SendAsync(req));
+            return r.GetProperty("stops")[0].GetProperty("walkMinutes").GetInt32();
+        }
+
+        int slow = await MinutesTo("slow"), normal = await MinutesTo(null), fast = await MinutesTo("fast");
+        Assert.True(slow > normal && normal > fast, $"slow {slow} · normal {normal} · fast {fast}");
+
+        // 로그인한 계정 취향이 느긋하면 pace 를 안 보내도 느리게 계산
+        JsonElement login = await Ok(await client.PostAsync("/api/auth/guest", null));
+        string token = login.GetProperty("token").GetString()!;
+        var prefs = new HttpRequestMessage(HttpMethod.Put, "/api/me/preferences") { Content = JsonContent.Create(new { pace = "slow" }) };
+        prefs.Headers.Authorization = new("Bearer", token);
+        Assert.Equal(HttpStatusCode.OK, (await client.SendAsync(prefs)).StatusCode);
+        Assert.Equal(slow, await MinutesTo(null, token));
+    }
+
+    [Fact]
+    public async Task v2_취향_코드도_받고_잘못된_속도는_400()
+    {
+        HttpClient client = Client();
+        await Ok(await client.PostAsJsonAsync("/api/recommendations", Body(30, ["partner", "exercise"])));
+        var res = await client.PostAsJsonAsync("/api/recommendations",
+            new { minutes = 30, lat = Lat, lon = Lon, pace = "run" });
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
     }
 }
