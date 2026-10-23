@@ -23,7 +23,6 @@ public class HttpWalkService : IWalkService
     [Serializable] class Reward { public int tickets; public int xp; public List<RewardPart> breakdown = new List<RewardPart>(); }
     [Serializable] class FinishResult { public bool completed; public int distanceM; public Reward reward; }
     [Serializable] class ReviewResult { public Reward reward; }
-    [Serializable] class SoloReview { public int courseRating; public string text; }
 
     public HttpWalkService(string baseUrl, LocalWalkService fallback)
     {
@@ -156,11 +155,7 @@ public class HttpWalkService : IWalkService
             yield return fallback.Review(walkId, request, onDone);
             yield break;
         }
-        // 혼자 걷기는 상대 별점을 보내지 않는다 (0 을 보내면 서버가 1~5 가 아니라고 거절)
-        string json = request.partnerRating > 0
-            ? JsonUtility.ToJson(request)
-            : JsonUtility.ToJson(new SoloReview { courseRating = request.courseRating, text = request.text });
-        using var req = Post($"/api/walks/{Uri.EscapeDataString(walkId)}/review", json);
+        using var req = Post($"/api/walks/{Uri.EscapeDataString(walkId)}/review", JsonUtility.ToJson(request));
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success) { onDone(null, ErrorOf(req)); yield break; }
         ReviewResult r = null;

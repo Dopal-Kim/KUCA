@@ -34,10 +34,8 @@ public class WalkCompleteResult
 [Serializable]
 public class WalkReviewRequest
 {
-    /// <summary>코스 별점 1~5 (필수)</summary>
+    /// <summary>코스 별점 1~5 (필수). 리뷰는 코스만 평가한다 (10/24 결정, 상대 별점 없음)</summary>
     public int courseRating;
-    /// <summary>산책메이트 별점 1~5 (혼자 걷기면 0, 서버가 무시). 상대에게 보이지 않고 매칭 품질에만</summary>
-    public int partnerRating;
     /// <summary>한 줄 0~100자 (내용 검사)</summary>
     public string text = "";
     public const int MaxText = 100;

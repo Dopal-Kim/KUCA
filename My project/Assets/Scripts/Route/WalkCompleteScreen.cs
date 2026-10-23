@@ -99,7 +99,7 @@ public class WalkCompleteScreen : MonoBehaviour
         statMinutes.text = $"{walk.minutes}분";
         statStops.text = mate ? "함께" : $"{walk.stopsDone}/{walk.stopsTotal}곳";
         reason.text = "확인하는 중…";
-        partnerRow.SetActive(mate);
+        partnerRow.SetActive(false);   // 리뷰는 코스만 평가 (10/24 결정, 상대 별점 없음)
         rewardText.text = "";
         levelText.text = "";
         RefreshStars();
@@ -205,20 +205,19 @@ public class WalkCompleteScreen : MonoBehaviour
     void SendReview()
     {
         if (busy || reviewSent || result == null) return;
-        bool mate = walk.kind == WalkSession.Mate;
-        if (courseStars == 0 || (mate && partnerStars == 0))
+        if (courseStars == 0)
         {
-            reviewNote.text = mate ? "산책메이트와 코스 별점을 골라 주세요" : "코스 별점을 골라 주세요";
+            reviewNote.text = "코스 별점을 골라 주세요";
             return;
         }
-        var req = new WalkReviewRequest { partnerRating = mate ? partnerStars : 0, courseRating = courseStars, text = comment.text.Trim() };
+        var req = new WalkReviewRequest { courseRating = courseStars, text = comment.text.Trim() };
         busy = true;
         StartCoroutine(service.Review(result.walkId, req, (r, error) =>
         {
             busy = false;
             if (r == null) { reviewNote.text = error ?? "리뷰를 보내지 못했어요"; return; }
             reviewSent = true;
-            reviewNote.text = mate ? "고마워요! 산책메이트 별점은 상대에게 보이지 않아요" : "고마워요! 다음 추천에 반영할게요";
+            reviewNote.text = "고마워요! 다음 추천에 반영할게요";
             ApplyReward(r.xp, 0, 0, "리뷰 경험치");
             GameProgress p = Progress;
             if (p != null)
