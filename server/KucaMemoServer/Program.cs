@@ -41,6 +41,10 @@ builder.Services.AddSingleton<ICampusWeather, KmaCampusWeather>();
 builder.Services.AddSingleton<RecommendationStore>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<RouteRecommender>();
+// 실시간 산책 매칭 (C-V3): 대기열·진행 중인 매칭은 메모리, 기록·차단·신고는 SQLite. 시연용 가상 상대는 Match:DemoPartner=true
+builder.Services.AddSingleton<MatchStore>();
+builder.Services.AddSingleton<MatchService>();
+builder.Services.AddTransient<ISmalltalkGenerator, SmalltalkGenerator>();
 // 경희스팟 목록 (공지·추천·매칭이 같이 씀), 장소 공지 (C-4): 공지 저장소, AI 공지 판별 (내용 검사와 같은 게이트웨이·키)
 builder.Services.AddSingleton<SpotStore>();
 builder.Services.AddSingleton<NoticeStore>();
@@ -73,6 +77,7 @@ app.MapMemoEndpoints();
 app.MapWeatherEndpoints();
 app.MapReactionEndpoints();
 app.MapRecommendEndpoints();
+app.MapMatchEndpoints();
 app.MapNoticeEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();

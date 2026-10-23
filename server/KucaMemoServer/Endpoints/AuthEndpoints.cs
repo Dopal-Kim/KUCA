@@ -96,11 +96,12 @@ public static partial class AuthEndpoints
             return Results.Ok(store.Find(user.Id));
         });
 
-        // 회원 탈퇴: 계정 · 로그인 토큰 · 인증번호를 지운다.
-        me.MapDelete("/", (HttpRequest req, AccountStore store) =>
+        // 회원 탈퇴: 계정 · 로그인 토큰 · 인증번호, 매칭 기록 · 차단 · 신고를 지운다.
+        me.MapDelete("/", (HttpRequest req, AccountStore store, MatchService matches) =>
         {
             if (Current(req, store) is not { } user)
                 return Unauthorized();
+            matches.ForgetAccount(user.Id);
             store.DeleteAccount(user.Id);
             return Results.NoContent();
         });
