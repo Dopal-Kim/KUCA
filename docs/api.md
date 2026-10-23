@@ -527,7 +527,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 
 | 필드 | 설명 |
 | --- | --- |
-| `minutes` | 30 · 60 |
+| `minutes` | 15 · 30 · 60 (추천과 같음, 10/24 결정) |
 | `matchGender` | `same`(동성만) · `any`(상관없음). 없으면 계정 취향의 값, 그것도 없으면 `any` |
 | `buildingId` | 지금 가장 가까운 **건물 ID**. GPS 좌표는 보내지 않고, 서버도 건물 단위로만 저장합니다 |
 
@@ -541,7 +541,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 2. **시간**: `minutes` 가 같은 사람
 3. **취향 점수**: 계정 취향(`preferencesJson`)의 `tastes`·`walkTimes`·`talkStyle` 겹침
 4. **성별 조건**: 한쪽이라도 `same` 이면 성별이 같아야 함
-5. **제외**: 서로 차단한 사람, 신고를 3번 이상 받은 사람 `[가정]`, 1시간 안에 서로 거절한 사람 `[가정]`. 별점이 낮은 사람 빼기는 리뷰가 생기는 C-V4 에서 붙입니다
+5. **제외**: 서로 차단한 사람, 신고를 3번 이상 받은 사람 `[가정]`, 1시간 안에 서로 거절한 사람 `[가정]`. 상대 별점은 없으므로 별점으로 빼지 않습니다
 - 실제 순서: 위 조건(2·4·5)을 통과한 사람 중 **건물 거리 − 공통 취향 수 × 100m** `[가정]` 가 가장 작은 사람. 먼저 기다린 사람부터 짝을 찾습니다
 
 ### DELETE /api/match/queue (대기 취소)
@@ -709,14 +709,13 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 #### POST /api/walks/{walkId}/review (리뷰)
 
 ```json
-{ "courseRating": 5, "partnerRating": 4, "text": "벤치 쉬는 곳이 좋았어요" }
+{ "courseRating": 5, "text": "벤치 쉬는 곳이 좋았어요" }
 ```
 
-- `courseRating` 1~5 (필수), `partnerRating` 1~5 (매칭 산책만, 혼자 걷기면 무시), `text` 0~100자 (내용 검사, 거절은 `422`)
-- `partnerRating` 은 상대에게 보이지 않고 **매칭 품질(짝 찾기 제외 기준)에만** 씁니다.
+- `courseRating` 1~5 (필수), `text` 0~100자 (내용 검사, 거절은 `422`)
+- **리뷰는 코스만 평가합니다.** 매칭 산책이어도 상대 별점은 받지 않습니다 (10/24 결정). 예전 앱이 `partnerRating` 을 보내도 무시합니다.
 - 산책을 끝낸 뒤에만, 한 번만, 끝난 뒤 24시간 안에만 됩니다 `[가정]`. 아니면 `409`.
 - 리뷰 글은 검토 대기 없이, 애매해도 `422` 로 거절합니다.
-- 상대 별점 평균이 2.0 보다 낮은 사람(받은 별점 3개 이상)은 짝 찾기에서 빠집니다 `[가정]`.
 - `201 { "reward": { "xp": 10 }, "progress": { … } }`
 
 #### GET /api/me/progress
@@ -735,7 +734,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 | 매칭 기록 (두 계정·스팟·시각·끝난 이유) | 신고·차단, 성사율 집계 | 30일 `[가정]` |
 | 신고 | 안전 | 90일 `[가정]` |
 | 차단 | 다시 짝이 되지 않게 | 탈퇴할 때까지 |
-| 산책·리뷰·경험치 | 보상, 완주율 집계 | 탈퇴할 때까지. 리뷰 글은 상대에게 보이지 않음 |
+| 산책·리뷰(코스 별점)·경험치 | 보상, 완주율 · 코스 만족도 집계 | 탈퇴할 때까지. 리뷰는 다른 사람에게 보이지 않음 |
 | 체험 계정 | 시연 | 7일 (지금 `AccountStore.GuestLifetime`) |
 
 - 탈퇴(`DELETE /api/me`)하면 위 기록을 모두 지웁니다. 집계 숫자(성사율 등)에는 개인을 알 수 없는 개수만 남깁니다.
@@ -745,9 +744,11 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 서버가 아래 순간을 스스로 기록합니다.
 - 추천: 표시(`POST /api/recommendations`) → 시작(`POST /api/walks` 의 `recommendationId`) → 완료
 - 매칭: 요청 → 성사(`meeting`) → 완료
-- 리뷰 작성
+- 리뷰 작성 (코스 별점)
+- AI 를 썼는지, 규칙으로 대신했는지 (추천 · 스몰토크 · 내용 검사)
 
-관리자 집계 API 에서 AI 추천과 규칙 추천의 수락률·완주율, 매칭 성사율을 봅니다. 모양은 V6 에 정합니다.
+**누가 했는지는 남기지 않습니다** (계정 · 위치 없이 종류와 시각만). 관리자 집계는 아래 "관리자 API › 지표" 에서 봅니다.
+시연용 가상 상대와의 매칭은 성사율에 넣지 않습니다 (요청 수에는 들어감).
 
 ## 관리자 API (검토 대기 처리, 앱과 무관)
 
@@ -787,6 +788,58 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 - `200`: `{"saved": false, "reason": "no_place", "source": "ai"}` — 어느 경희스팟과도 관련이 없어 저장하지 않음
 - `source`: `ai` 또는 `fallback`(AI 실패 시 제목·본문에 경희스팟 이름이 나오는지로 판단하고, 요약은 본문 앞부분)
 - `400` 필드 규칙 위반, `409` 같은 `url` 의 공지가 이미 있음
+
+### 지표 (C-V6)
+
+`GET /api/admin/stats?days=7` (헤더 `X-Admin-Key`, `days` 1~90, 기본 7)
+
+```json
+{
+  "from": "2026-10-13T03:00:00Z", "to": "2026-10-20T03:00:00Z", "days": 7,
+  "recommendations": {
+    "ai":       { "shown": 40, "started": 22, "finished": 20, "completed": 17, "acceptRate": 0.55, "completionRate": 0.773, "reviews": 9, "avgCourseRating": 4.3 },
+    "fallback": { "shown": 12, "started": 4, "finished": 4, "completed": 2, "acceptRate": 0.333, "completionRate": 0.5, "reviews": 1, "avgCourseRating": 3.0 }
+  },
+  "walks": {
+    "ai": { "started": 22, "finished": 20, "completed": 17, "completionRate": 0.773, "reviews": 9, "avgCourseRating": 4.3 },
+    "fallback": { … }, "free": { … }, "match": { … }
+  },
+  "matching": {
+    "requests": 30, "proposed": 14, "met": 11, "walking": 9, "completed": 8,
+    "successRate": 0.367, "completionRate": 0.727,
+    "endReasons": { "completed": 8, "no_partner": 9, "declined": 3, "noshow": 1 }
+  },
+  "ai": {
+    "recommend":  { "ai": 40, "fallback": 12, "fallbackRate": 0.231 },
+    "smalltalk":  { "ai": 20, "fallback": 2, "fallbackRate": 0.091 },
+    "moderation": { "ai": 85, "fallback": 3, "fallbackRate": 0.034 }
+  }
+}
+```
+
+| 값 | 계산 |
+| --- | --- |
+| `acceptRate` (추천 수락률) | 그 추천으로 산책을 시작한 수 ÷ 추천을 보여 준 수 |
+| `completionRate` (완주율) | 완료한 산책 ÷ 시작한 산책 |
+| `avgCourseRating` | 리뷰 코스 별점 평균 |
+| `successRate` (매칭 성사율) | 둘 다 수락(`meeting`)한 수 ÷ 대기열 요청 수 |
+| `matching.completionRate` | 함께 산책을 끝낸 매칭 ÷ 성사된 매칭 |
+| `fallbackRate` | AI 대신 규칙 · 예시 · 금지어로 처리한 비율. 높으면 AI 키 · 게이트웨이를 확인 |
+
+- 분모가 0 이면 비율은 `null` 입니다.
+- `walks` 의 종류: `ai` · `fallback` (추천 코스), `free` (추천 없이), `match` (매칭 산책)
+
+### 운영 점검 (C-V6)
+
+`GET /api/admin/health` (헤더 `X-Admin-Key`)
+
+```json
+{ "aiKey": true, "weatherKey": true, "kakaoAppId": true, "email": true, "demoPartner": false, "devLoginOff": true,
+  "aiLast24h": { "recommend": { "ai": 5, "fallback": 0, "fallbackRate": 0.0 }, "smalltalk": { … }, "moderation": { … } } }
+```
+
+- 키는 **들어 있는지만** 보여 주고 값은 내보내지 않습니다.
+- `devLoginOff` 가 `false` 면 Azure 에 개발용 설정(`Auth:DevLogin`, `Email:DevEcho`)이 켜진 것이니 끕니다.
 
 ## 웹 페이지 (앱과 무관, 브라우저용)
 

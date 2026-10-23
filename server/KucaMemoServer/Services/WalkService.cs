@@ -54,7 +54,7 @@ public class WalkException(int status, string error, string? reason = null) : Ex
 /// 산책 시작 · 끝(완료 판정 · 보상) · 리뷰 · 내 진행도. 경험치는 서버만 계산하고 앱은 받은 값을 보여 준다 (D9).
 /// 매칭 산책은 MatchService 가 둘 다 도착할 때 만들고, 두 사람이 모두 끝내면 매칭이 completed 로 끝난다.
 /// </summary>
-public class WalkService(WalkStore store, RecommendationStore recommendations, MatchService matches, TimeProvider clock)
+public class WalkService(WalkStore store, RecommendationStore recommendations, MatchService matches, MetricsStore metrics, TimeProvider clock)
 {
     public WalkStarted Start(string userId, WalkStartRequest? body)
     {
@@ -70,6 +70,7 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         DateTimeOffset now = clock.GetUtcNow();
         string[] stops = rec?.StopIds ?? [];
         store.Start(id, userId, "solo", recId, minutes, rec?.PlannedDistanceM, stops, null, now);
+        metrics.Record(MetricsStore.WalkStarted, rec?.Source ?? "free");
         return new WalkStarted(id, Iso(now), rec?.PlannedDistanceM, stops.ToList());
     }
 
@@ -101,6 +102,7 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
 
         if (walk.Kind == "match")
             matches.WalkFinished(userId, walkId);
+        metrics.Record(MetricsStore.WalkFinished, SourceOf(walk), completed ? 1 : 0);
 
         var reward = new WalkReward(completed ? WalkRules.CompleteTickets : 0, items.Sum(i => i.Xp), items);
         return new WalkFinished(completed, distance, reward, ProgressOf(userId));
@@ -110,8 +112,6 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
     {
         if (body == null || body.CourseRating is < 1 or > 5)
             throw new WalkException(400, "courseRating 은 1~5 입니다.");
-        if (body.PartnerRating is < 1 or > 5)
-            throw new WalkException(400, "partnerRating 은 1~5 입니다.");
         WalkStore.Walk walk = Own(userId, walkId);
         if (walk.FinishedAt == null)
             throw new WalkException(409, "산책을 끝낸 뒤에 리뷰를 쓸 수 있어요.");
@@ -121,9 +121,9 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         if (now - walk.FinishedAt.Value > WalkRules.ReviewWindow)
             throw new WalkException(409, "리뷰는 산책을 끝내고 24시간 안에만 쓸 수 있어요.");
 
-        // 상대 별점은 매칭 산책만 (혼자 걷기면 무시). 상대에게 보이지 않고 매칭 품질에만 쓴다
-        int? partnerRating = walk.Kind == "match" ? body.PartnerRating : null;
-        store.AddReview(walkId, userId, body.CourseRating, partnerRating == null ? null : walk.PartnerId, partnerRating, text, now);
+        // 코스 별점만 받는다. 매칭 산책이어도 상대를 평가하지 않는다
+        store.AddReview(walkId, userId, body.CourseRating, text, now);
+        metrics.Record(MetricsStore.Review, SourceOf(walk), body.CourseRating);
         store.AddXp(userId, walkId, "review", WalkRules.ReviewXp, now);
         var items = new List<XpItem> { new("review", WalkRules.ReviewXp) };
         return new ReviewSaved(new WalkReward(0, WalkRules.ReviewXp, items), ProgressOf(userId));
@@ -139,6 +139,12 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         (int walks, int distance, int together) = store.Totals(userId);
         return new Progress(level, xp, WalkRules.LevelStartXp(level), WalkRules.LevelStartXp(level + 1), walks, distance, together);
     }
+
+    /// <summary>지표용 산책 종류: 매칭 · 추천(ai/fallback) · 자유</summary>
+    string SourceOf(WalkStore.Walk walk) =>
+        walk.Kind == "match" ? "match"
+        : walk.RecommendationId != null && recommendations.Find(walk.RecommendationId) is { } rec ? rec.Source
+        : "free";
 
     WalkStore.Walk Own(string userId, string walkId)
     {

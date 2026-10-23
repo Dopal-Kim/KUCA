@@ -75,7 +75,7 @@ public static class RecommendRules
 /// </summary>
 public partial class RouteRecommender(
     BuildingStore buildings, SpotStore spots, IRouteAi ai, ICampusWeather weather,
-    RecommendationStore saved, TimeProvider clock, ILogger<RouteRecommender> log)
+    RecommendationStore saved, MetricsStore metrics, TimeProvider clock, ILogger<RouteRecommender> log)
 {
     const string MainGate = "way-473963422"; // 캠퍼스 밖에 있으면 정문에서 출발하는 것으로 본다
 
@@ -140,6 +140,8 @@ public partial class RouteRecommender(
             r.AfterMeal ? RecommendRules.AfterMealNote : null);
         saved.Add(new RecommendationStore.Saved(result.Id, source, r.Minutes,
             stops.Select(s => s.BuildingId).ToArray(), result.TotalDistanceM, now));
+        metrics.Record(MetricsStore.RecShown, source);
+        metrics.Record(MetricsStore.AiCall, "recommend", source == "ai" ? 1 : 0);
         return result;
     }
 

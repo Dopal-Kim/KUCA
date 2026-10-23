@@ -10,7 +10,7 @@ namespace KucaMemoServer.Services;
 /// </summary>
 public static class MatchRules
 {
-    public static readonly int[] AllowedMinutes = [30, 60];
+    public static readonly int[] AllowedMinutes = [15, 30, 60];
     public static readonly string[] ReportReasons = ["noshow", "rude", "unsafe", "fake", "other"];
     public static readonly string[] CancelReasons = ["late", "changed_mind", "other"];
 
@@ -27,9 +27,6 @@ public static class MatchRules
 
     /// <summary>[가정] 공통 취향 하나 = 건물 거리 100m 만큼 더 가깝게 친다</summary>
     public const double MetersPerCommonPreference = 100;
-    /// <summary>[가정] 받은 상대 별점 평균이 이보다 낮으면(리뷰 3개 이상일 때) 짝 찾기에서 뺀다</summary>
-    public const double MinPartnerRating = 2.0;
-    public const int MinRatingsToJudge = 3;
     /// <summary>[가정] 신고를 이만큼 받은 사람은 짝 찾기에서 뺀다 (신고 보관 90일 동안)</summary>
     public const int ReportsToExclude = 3;
     /// <summary>[가정] 거절한 두 사람은 이 시간 동안 다시 짝지어 주지 않는다</summary>
@@ -65,7 +62,7 @@ public class MatchException(int status, string error, string? reason = null) : E
 /// 매칭 기록 · 차단 · 신고만 MatchStore(SQLite)에 남긴다.
 /// </summary>
 public class MatchService(
-    MatchStore store, WalkStore walks, BuildingStore buildings, SpotStore spots, ICampusWeather weather,
+    MatchStore store, WalkStore walks, MetricsStore metrics, BuildingStore buildings, SpotStore spots, ICampusWeather weather,
     TimeProvider clock, IConfiguration config)
 {
     sealed record Prefs(HashSet<string> Tastes, HashSet<string> WalkTimes, string? TalkStyle, string? MatchGender);
@@ -123,7 +120,7 @@ public class MatchService(
     public MatchState Join(Account user, MatchJoinRequest? body)
     {
         if (body == null || !MatchRules.AllowedMinutes.Contains(body.Minutes))
-            throw new MatchException(400, "minutes 는 30 또는 60 이어야 합니다.");
+            throw new MatchException(400, "minutes 는 15, 30, 60 중 하나여야 합니다.");
         Prefs prefs = ParsePrefs(user.PreferencesJson);
         string matchGender = body.MatchGender ?? prefs.MatchGender ?? "any";
         if (matchGender is not ("same" or "any"))
@@ -145,6 +142,7 @@ public class MatchService(
                 MatchGender = matchGender, BuildingId = body.BuildingId, Minutes = body.Minutes, Prefs = prefs,
                 Since = now, Until = now + MatchRules.WaitLimit,
             };
+            metrics.Record(MetricsStore.MatchRequest, body.Minutes.ToString(CultureInfo.InvariantCulture));
             Tick(now);
             return View(user.Id);
         }
@@ -201,6 +199,7 @@ public class MatchService(
             declined[PairKey(m.A.UserId, m.B.UserId)] = now;
             Remove(m);
             store.EndRecord(m.Id, "declined", now);
+            Count(m, MetricsStore.MatchEnded, "declined");
             ended[userId] = new Ended(m.Id, "declined", userId, now);
             Side other = m.Other(userId);
             if (!other.IsDemo)
@@ -286,7 +285,11 @@ public class MatchService(
                 m.WalkUntil = now + MatchRules.WalkingLimit(m.Minutes);
                 // 두 사람 각자의 산책 기록 (같은 walkId). 끝내기 · 리뷰는 산책 API 로
                 foreach (Side s in m.Sides.Where(s => !s.IsDemo))
+                {
                     walks.Start(m.WalkId, s.UserId, "match", null, m.Minutes, null, [], m.Other(s.UserId).UserId, now);
+                    metrics.Record(MetricsStore.WalkStarted, "match");
+                }
+                Count(m, MetricsStore.MatchWalking);
             }
             return View(userId);
         }
@@ -390,6 +393,7 @@ public class MatchService(
         {
             waiting.Remove(w.UserId);
             ended[w.UserId] = new Ended(null, "no_partner", null, now);
+            metrics.Record(MetricsStore.MatchEnded, "no_partner");
         }
 
         foreach (Match m in matches.Values.ToList())
@@ -399,6 +403,7 @@ public class MatchService(
                 // 응답 없음: 수락한 쪽은 다시 대기, 답하지 않은 쪽은 끝
                 Remove(m);
                 store.EndRecord(m.Id, "timeout", now);
+                Count(m, MetricsStore.MatchEnded, "timeout");
                 foreach (Side s in m.Sides.Where(s => !s.IsDemo))
                     if (s.Accepted) Requeue(s, m.Minutes, now);
                     else ended[s.UserId] = new Ended(m.Id, "timeout", null, now);
@@ -437,14 +442,8 @@ public class MatchService(
         return Trusted(a.UserId) && Trusted(b.UserId);
     }
 
-    /// <summary>신고가 쌓였거나 상대 별점이 낮은 사람은 짝 찾기에서 뺀다</summary>
-    bool Trusted(string userId)
-    {
-        if (store.CountReports(userId) >= MatchRules.ReportsToExclude)
-            return false;
-        (double average, int count) = walks.PartnerRating(userId);
-        return count < MatchRules.MinRatingsToJudge || average >= MatchRules.MinPartnerRating;
-    }
+    /// <summary>신고가 쌓인 사람은 짝 찾기에서 뺀다 (상대 별점은 받지 않는다)</summary>
+    bool Trusted(string userId) => store.CountReports(userId) < MatchRules.ReportsToExclude;
 
     /// <summary>건물 거리(m) − 공통 취향 × 100m. 작을수록 좋은 짝</summary>
     double Cost(Waiting a, Waiting b)
@@ -471,6 +470,14 @@ public class MatchService(
             current[s.UserId] = m.Id;
         }
         store.AddRecord(m.Id, a.UserId, b.UserId, now);
+        Count(m, MetricsStore.MatchProposed);
+    }
+
+    /// <summary>지표 기록. 시연용 가상 상대와의 매칭은 성사율을 부풀리지 않게 세지 않는다</summary>
+    void Count(Match m, string kind, string? source = null)
+    {
+        if (!m.Sides.Any(s => s.IsDemo))
+            metrics.Record(kind, source);
     }
 
     void StartMeeting(Match m, ISmalltalkGenerator smalltalk)
@@ -485,6 +492,7 @@ public class MatchService(
         foreach (Side s in m.Sides.Where(s => s.IsDemo))
             (s.Appearance, s.Arrived) = (MatchRules.DemoAppearance, true);
         store.SetSpot(m.Id, m.Spot.Id);
+        Count(m, MetricsStore.MatchMet);
     }
 
     /// <summary>둘 다 수락한 직후 AI 주제를 받아, 그사이 다른 주제로 바뀌지 않았으면 바꿔 넣는다</summary>
@@ -535,6 +543,7 @@ public class MatchService(
     {
         Remove(m);
         store.EndRecord(m.Id, reason, now);
+        Count(m, MetricsStore.MatchEnded, reason);
         foreach (Side s in m.Sides.Where(s => !s.IsDemo))
             ended[s.UserId] = new Ended(m.Id, reason, byUser, now);
         // 인상착의 · 위치는 메모리에만 있었으므로 매칭과 함께 사라진다

@@ -156,7 +156,39 @@ az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Match__DemoP
 
 - 완료 판정 · 경험치 · 레벨은 **서버만** 계산합니다. 숫자는 `Services/WalkService.cs` 의 `WalkRules` 에 있습니다 (Q6 제안값).
 - 매칭 산책은 둘 다 도착하면 서버가 만들고, 두 사람이 모두 끝내면 매칭이 `completed` 가 됩니다.
-- 상대 별점은 보여 주지 않고, 평균이 낮은 사람을 짝 찾기에서 빼는 데만 씁니다.
+- 리뷰는 코스 별점 · 한 줄만 받습니다. 상대 별점은 받지 않습니다.
+
+## 지표 · 운영 점검 (C-V6)
+
+- 서버가 추천 표시 · 산책 시작/완료 · 리뷰 · 매칭 단계 · AI 사용 여부를 **누가 했는지 없이** 셉니다 (`metric_events` 표).
+- 관리자 집계 · 점검 (명세는 `docs/api.md` 의 "지표", "운영 점검"):
+
+```bash
+curl -H "X-Admin-Key: <관리자 키>" "https://kuca-memo.azurewebsites.net/api/admin/stats?days=7"
+curl -H "X-Admin-Key: <관리자 키>" https://kuca-memo.azurewebsites.net/api/admin/health
+```
+
+### 시연 · 실사용 기간 체크리스트 (Azure)
+
+1. **항상 켜기.** F1(무료)은 20분쯤 요청이 없으면 앱을 내립니다.
+   - 첫 요청이 느리고, **진행 중인 매칭(메모리)이 사라집니다.**
+   - 시연 · 실사용 기간에는 B1 으로 올리고 Always On 을 켭니다. 크레딧이 차감되니 끝나면 F1 으로 돌립니다.
+
+   ```bash
+   az appservice plan update -g kuca-rg -n <요금제 이름> --sku B1
+   az webapp config set -g kuca-rg -n kuca-memo --always-on true
+   # 끝나면
+   az webapp config set -g kuca-rg -n kuca-memo --always-on false
+   az appservice plan update -g kuca-rg -n <요금제 이름> --sku F1
+   ```
+
+   요금제 이름은 `az webapp show -g kuca-rg -n kuca-memo --query appServicePlanId -o tsv` 의 마지막 부분입니다.
+2. **키 확인.** `/api/admin/health` 에서 `aiKey` · `weatherKey` · `kakaoAppId` · `email` 이 모두 `true`, `devLoginOff` 가 `true` 인지 봅니다.
+3. **AI 장애 대비.** `aiLast24h` 의 `fallbackRate` 가 갑자기 높으면 AI 가 안 되는 것입니다.
+   - 앱은 계속 동작합니다 (추천은 규칙, 스몰토크는 예시, 내용 검사는 금지어).
+   - 키 · 크레딧 · 게이트웨이 상태를 확인합니다.
+4. **시연하는 날만** `Match__DemoPartner=true`, 끝나면 `false`.
+5. **한 대만.** 매칭 상태가 메모리에 있으므로 인스턴스를 2개 이상으로 늘리지 않습니다 (scale out 금지).
 
 ## 테스트
 

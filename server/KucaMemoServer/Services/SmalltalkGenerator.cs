@@ -31,12 +31,14 @@ public class SmalltalkGenerator : ISmalltalkGenerator
     record Example(string Topic, string Text);
 
     readonly IRouteAi ai;
+    readonly MetricsStore metrics;
     readonly ILogger<SmalltalkGenerator> log;
     readonly List<Example> examples;
 
-    public SmalltalkGenerator(IRouteAi ai, IWebHostEnvironment env, ILogger<SmalltalkGenerator> log)
+    public SmalltalkGenerator(IRouteAi ai, MetricsStore metrics, IWebHostEnvironment env, ILogger<SmalltalkGenerator> log)
     {
         this.ai = ai;
+        this.metrics = metrics;
         this.log = log;
         string path = Path.Combine(env.ContentRootPath, "Data", "smalltalk.json");
         examples = JsonSerializer.Deserialize<List<Example>>(File.ReadAllText(path), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
@@ -72,6 +74,13 @@ public class SmalltalkGenerator : ISmalltalkGenerator
     };
 
     public async Task<(List<string> Topics, string Source)> GenerateAsync(SmalltalkInput input, CancellationToken ct)
+    {
+        var result = await GenerateCoreAsync(input, ct);
+        metrics.Record(MetricsStore.AiCall, "smalltalk", result.Source == "ai" ? 1 : 0);
+        return result;
+    }
+
+    async Task<(List<string> Topics, string Source)> GenerateCoreAsync(SmalltalkInput input, CancellationToken ct)
     {
         if (!ai.IsConfigured)
             return (Fallback(input.Already), "fallback");
