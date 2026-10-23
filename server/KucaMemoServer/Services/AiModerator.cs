@@ -43,9 +43,12 @@ public class AiModerator : IContentModerator
     readonly string model;
     readonly TimeSpan timeout;
 
-    public AiModerator(HttpClient http, IConfiguration config, ILogger<AiModerator> logger)
+    readonly MetricsStore? metrics;
+
+    public AiModerator(HttpClient http, IConfiguration config, ILogger<AiModerator> logger, MetricsStore? metrics = null)
     {
         this.http = http;
+        this.metrics = metrics;
         this.logger = logger;
         // 산책 추천(ChatKuClient)과 같은 게이트웨이·키를 쓰므로, Ai:* 가 없으면 Recommend:* 를 그대로 쓴다.
         endpoint = FirstSet(config["Ai:Endpoint"], config["Recommend:Endpoint"]) ?? DefaultEndpoint;
@@ -57,6 +60,13 @@ public class AiModerator : IContentModerator
     static string? FirstSet(params string?[] values) => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
     public async Task<ModerationResult> CheckAsync(string text, ModerationImage? image, CancellationToken cancellationToken = default)
+    {
+        ModerationResult result = await CheckCoreAsync(text, image, cancellationToken);
+        metrics?.Record(MetricsStore.AiCall, "moderation", result.UsedFallback ? 0 : 1);   // 지표: AI 대신 금지어 검사로 판단한 비율
+        return result;
+    }
+
+    async Task<ModerationResult> CheckCoreAsync(string text, ModerationImage? image, CancellationToken cancellationToken)
     {
         if (apiKey is null)
             return KeywordModerator.Check(text);
