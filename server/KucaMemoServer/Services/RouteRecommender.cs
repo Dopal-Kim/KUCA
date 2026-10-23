@@ -313,15 +313,17 @@ public partial class RouteRecommender(
         if (plan.Tastes.Contains("unvisited") && !c.Visited)
             return "아직 가 보지 않은 곳이에요";
         string intro = CleanIntro(c.Spot?.Intro);
-        if (intro.Length > 0)
-        {
-            // 소개의 마지막 문장이 보통 "~하기 좋다" 같은 추천 문장이다
-            string[] sentences = intro.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            string last = sentences[^1];
-            return last.EndsWith("좋다") ? last[..^1] + "아요" : last; // 화면 말투(존댓말)에 맞춤
-        }
+        // 소개에서 "~하기 좋다" 같은 추천 문장을 고른다. "출입 제한" 같은 주의 문장은 이유로 쓰지 않는다
+        string? pick = intro.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(sentence => !CautionWords.Any(sentence.Contains))
+            .FirstOrDefault(sentence => sentence.Contains("좋"));
+        if (pick != null)
+            return pick.EndsWith("좋다") ? pick[..^1] + "아요" : pick; // 화면 말투(존댓말)에 맞춤
         return "가는 길에 들르기 좋아요";
     }
+
+    /// <summary>이유로 쓰면 안 되는 주의 문장의 말</summary>
+    static readonly string[] CautionWords = ["제한", "피하기", "주의", "들어갈 수는 없", "어두우니"];
 
     /// <summary>
     /// [가정] AI 이유가 근거 있는지 보는 간단한 검사: 이유의 한글 두 글자 조각 중 하나라도
