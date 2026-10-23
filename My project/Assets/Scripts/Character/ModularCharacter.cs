@@ -24,6 +24,11 @@ public class ModularCharacter : MonoBehaviour
     public float armScale = 0.85f;
     [Tooltip("켜면 첫 자세에서 동작을 멈춘다 (HUD 초상화처럼 가만히 있어야 할 때)")]
     public bool freezePose;
+    [Tooltip("서 있으면 카메라 쪽으로 돌아서 얼굴을 보여 준다 (걸으면 다시 걷는 방향)")]
+    public bool faceCameraWhenIdle = true;
+    [Tooltip("이만큼 (초) 서 있으면 돌아선다")]
+    public float idleTurnDelay = 1.2f;
+    public float idleTurnSpeed = 3f;
 
     public CharacterAppearance Appearance { get; private set; }
 
@@ -35,6 +40,7 @@ public class ModularCharacter : MonoBehaviour
     readonly Transform[] upperLegs = new Transform[2], feet = new Transform[2], upperArms = new Transform[2];
     Vector3 bodyWritten;
     int builtFrame;
+    float idleTime;
     static Material toyBase;
     static readonly Dictionary<string, Material> toyMaterials = new Dictionary<string, Material>();
     Vector3 lastPos;
@@ -228,5 +234,27 @@ public class ModularCharacter : MonoBehaviour
         float target = d.magnitude * metersPerUnit / Time.deltaTime;
         speed = Mathf.Lerp(speed, target, 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.01f, speedDamping)));
         animator.SetFloat(SpeedId, speed);
+        FaceCameraWhenIdle();
+    }
+
+    /// <summary>
+    /// 지도 카메라는 보통 걷는 쪽 뒤에 있어서 뒤통수만 보인다. 잠시 서 있으면 몸(이 오브젝트)만 카메라 쪽으로 돌리고,
+    /// 다시 걸으면 부모(Player, 걷는 방향)를 따른다. Player 의 방향은 바꾸지 않는다.
+    /// </summary>
+    void FaceCameraWhenIdle()
+    {
+        if (!faceCameraWhenIdle || freezePose || movementSource == null || transform.parent == null)
+            return;
+        idleTime = speed < 0.15f ? idleTime + Time.deltaTime : 0f;
+        Quaternion goal = Quaternion.identity;
+        Camera cam = Camera.main;
+        if (idleTime > idleTurnDelay && cam != null)
+        {
+            Vector3 toCam = cam.transform.position - transform.position;
+            toCam.y = 0f;
+            if (toCam.sqrMagnitude > 0.01f)
+                goal = Quaternion.Inverse(transform.parent.rotation) * Quaternion.LookRotation(toCam.normalized, Vector3.up);
+        }
+        transform.localRotation = Quaternion.Slerp(transform.localRotation, goal, 1f - Mathf.Exp(-idleTurnSpeed * Time.deltaTime));
     }
 }

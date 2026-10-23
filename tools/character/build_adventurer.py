@@ -263,17 +263,28 @@ if not male:   # 단발: 옆 · 뒤로 어깨 위까지
             v.co = bob_c + (v.co - bob_c) * (1 - 0.25 * top)
     add(bob, 'KHU_Adv_Hair', 'Head', 'head')
 
-# 모자: 둥근 정수리 + 아래로 살짝 처진 챙 + 크림슨 띠
+# 모자: 둥근 정수리 + 아래로 살짝 처진 챙 + 크림슨 띠.
+# 지도 카메라는 위에서 내려다보므로 모자를 뒤로 젖혀 써서 (HAT_TILT) 이마와 눈코입이 보이게 한다.
+HAT_TILT = math.radians(float(OPT.get('hat_tilt', 34)))
+BRIM_R = float(OPT.get('brim', 0.33))   # 챙 반지름 (넓으면 위에서 볼 때 얼굴을 가린다)
+hat_start = len(PARTS)
 hat_z = hc.z + 0.215
 crown = ellipsoid(Vector((0, hc.y + 0.01, hat_z + 0.0)), (0.272, 0.262, 0.175), 36, 22)
 delete_where(crown, lambda c: c.z < hat_z - 0.1)
 add(crown, 'KHU_Adv_Hat', 'Head', 'head')
 add(cylinder(Vector((0, hc.y + 0.01, hat_z - 0.055)), 0.276, 0.274, 0.055), 'KHU_Adv_Crimson', 'Head', 'head')
-brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.115)), 0.37, 0.272, 0.07, 48)
+brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.115)), BRIM_R, 0.272, 0.07, 48)
 for v in brim.verts:   # 챙 끝을 둥글게 두껍게
-    if (v.co.xy - Vector((0, hc.y + 0.01))).length > 0.33:
+    if (v.co.xy - Vector((0, hc.y + 0.01))).length > BRIM_R - 0.04:
         v.co.z -= 0.01
 add(brim, 'KHU_Adv_Hat', 'Head', 'head')
+# 뒤쪽 챙 끝을 축으로 앞을 들어 올린다 (x 축 회전, 앞 = -y)
+hat_pivot = Vector((0, hc.y + 0.25, hat_z - 0.12))
+for bm_, *_ in PARTS[hat_start:]:
+    for v in bm_.verts:
+        d = v.co - hat_pivot
+        v.co = hat_pivot + Vector((d.x, d.y * math.cos(HAT_TILT) + d.z * math.sin(HAT_TILT),
+                                   -d.y * math.sin(HAT_TILT) + d.z * math.cos(HAT_TILT)))
 
 # 몸통: 크림슨 티 + 앞이 열린 크림 셔츠 (반팔)
 body_top = HEAD.z - 0.02
