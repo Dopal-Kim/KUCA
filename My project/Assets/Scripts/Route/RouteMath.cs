@@ -3,28 +3,22 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// 추천 v2 (B-V2) 계산: 걷는 속도 · 시간 · 칼로리 · 식후 걷기 시간대.
-/// 식은 docs/api_v2_추천_초안.md 와 같다. 서버가 값을 주면 그 값을 쓰고, 없으면 (v1 서버 · 기기 추천) 여기서 채운다.
+/// 추천 v2 (B-V2) 계산: 걷는 속도 · 시간 · 식후 걷기 시간대 · 날씨 이름.
+/// 서버(docs/api.md 추천 v2)가 값을 주면 그 값을 쓰고, 없으면 (기기 추천) 여기서 같은 식으로 채운다.
 /// </summary>
 public static class RouteMath
 {
-    /// <summary>체중을 받지 않았을 때 쓰는 값 (kg)</summary>
-    public const float DefaultWeightKg = 60f;
-
-    public static float SpeedKmh(string pace) => pace switch { "slow" => 3.2f, "fast" => 5.6f, _ => 4.5f };
-
-    public static float Met(string pace) => pace switch { "slow" => 2.8f, "fast" => 4.3f, _ => 3.5f };
+    /// <summary>걷는 속도 (m/분). 서버와 같은 값: slow 60 · normal 75 · fast 90</summary>
+    public static float MetersPerMinute(string pace) => pace switch { "slow" => 60f, "fast" => 90f, _ => 75f };
 
     public static int MinutesFor(float meters, string pace) =>
-        meters <= 0f ? 0 : Mathf.Max(1, Mathf.RoundToInt(meters / 1000f / SpeedKmh(pace) * 60f));
+        meters <= 0f ? 0 : Mathf.Max(1, Mathf.RoundToInt(meters / MetersPerMinute(pace)));
 
-    /// <summary>kcal = MET × 체중(kg) × 걸린 시간(h)</summary>
-    public static int Kcal(float meters, string pace, float weightKg)
+    /// <summary>서버 날씨 코드 → 화면 글자 (모르면 null)</summary>
+    public static string WeatherName(string code) => code switch
     {
-        float kg = weightKg > 0f ? weightKg : DefaultWeightKg;
-        float hours = meters / 1000f / SpeedKmh(pace);
-        return Mathf.RoundToInt(Met(pace) * kg * hours);
-    }
+        "clear" => "맑음", "cloudy" => "흐림", "rain" => "비", "snow" => "눈", _ => null,
+    };
 
     /// <summary>식후 걷기를 권하는 시간대: 점심 11:30~14:00, 저녁 17:30~20:00. 아니면 null</summary>
     public static string MealOf(DateTime now)
@@ -40,10 +34,10 @@ public static class RouteMath
     public static string Distance(float meters) => meters >= 1000f ? $"{meters / 1000f:0.0}km" : $"{meters:0}m";
 
     /// <summary>
-    /// 응답에 v2 칸 (거리 · 시간 · 칼로리) 이 없으면 채운다.
+    /// 응답에 v2 칸 (거리 · 시간) 이 없으면 채운다.
     /// points: [0] 지금 위치, 나머지는 stops 와 같은 순서의 지도 위치 (월드 단위 = m)
     /// </summary>
-    public static void Fill(RouteResult r, IList<Vector3> points, string pace, float weightKg)
+    public static void Fill(RouteResult r, IList<Vector3> points, string pace)
     {
         if (r == null || r.stops == null)
             return;
@@ -53,15 +47,13 @@ public static class RouteMath
             RouteStop s = r.stops[i];
             Vector3 a = points[i], b = points[i + 1];
             float d = new Vector2(a.x - b.x, a.z - b.z).magnitude;
-            if (s.distanceMeters <= 0)
-                s.distanceMeters = Mathf.RoundToInt(d);
-            total += s.distanceMeters;
+            if (s.distanceM <= 0)
+                s.distanceM = Mathf.RoundToInt(d);
+            total += s.distanceM;
         }
-        if (r.totalMeters <= 0)
-            r.totalMeters = Mathf.RoundToInt(total);
+        if (r.totalDistanceM <= 0)
+            r.totalDistanceM = Mathf.RoundToInt(total);
         if (r.totalMinutes <= 0)
-            r.totalMinutes = MinutesFor(r.totalMeters, pace);
-        if (r.kcal <= 0)
-            r.kcal = Kcal(r.totalMeters, pace, weightKg);
+            r.totalMinutes = MinutesFor(r.totalDistanceM, pace);
     }
 }

@@ -32,7 +32,7 @@ public class WalkCompleteScreen : MonoBehaviour
     int partnerStars, courseStars;
 
     GameObject root, partnerRow, reviewCard, rewardCard;
-    Text title, sub, statMeters, statMinutes, statKcal, reason, rewardText, levelText, reviewNote;
+    Text title, sub, statMeters, statMinutes, statStops, reason, rewardText, levelText, reviewNote;
     RectTransform levelFill;
     Image[] partnerStarImages, courseStarImages;
     InputField comment;
@@ -51,13 +51,28 @@ public class WalkCompleteScreen : MonoBehaviour
 
     void EnsureService()
     {
-        var board = FindAnyObjectByType<MemoBoard>();
-        string url = board != null ? board.ServerUrl : "";
+        string url = ServerUrl;
         if (service != null && url == serviceUrl)
             return;
         serviceUrl = url;
+        service = CreateService();
+    }
+
+    static string ServerUrl
+    {
+        get
+        {
+            var board = FindAnyObjectByType<MemoBoard>();
+            return board != null ? board.ServerUrl : "";
+        }
+    }
+
+    /// <summary>산책 서버 (메모 서버 주소가 없으면 기기 계산). RoutePlanner 가 산책 시작을 알릴 때도 쓴다</summary>
+    public static IWalkService CreateService()
+    {
+        string url = ServerUrl;
         var local = new LocalWalkService();
-        service = url.Length == 0 ? local : new HttpWalkService(url, local);
+        return url.Length == 0 ? local : new HttpWalkService(url, local);
     }
 
     static GameProgress Progress
@@ -82,7 +97,7 @@ public class WalkCompleteScreen : MonoBehaviour
         sub.text = WalkSession.Title ?? "";
         statMeters.text = RouteMath.Distance(walk.meters);
         statMinutes.text = $"{walk.minutes}분";
-        statKcal.text = $"{walk.kcal}kcal";
+        statStops.text = mate ? "함께" : $"{walk.stopsDone}/{walk.stopsTotal}곳";
         reason.text = "확인하는 중…";
         partnerRow.SetActive(mate);
         rewardText.text = "";
@@ -196,7 +211,7 @@ public class WalkCompleteScreen : MonoBehaviour
             reviewNote.text = mate ? "산책메이트와 코스 별점을 골라 주세요" : "코스 별점을 골라 주세요";
             return;
         }
-        var req = new WalkReviewRequest { partnerStars = mate ? partnerStars : 0, courseStars = courseStars, comment = comment.text.Trim() };
+        var req = new WalkReviewRequest { partnerRating = mate ? partnerStars : 0, courseRating = courseStars, text = comment.text.Trim() };
         busy = true;
         StartCoroutine(service.Review(result.walkId, req, (r, error) =>
         {
@@ -264,7 +279,7 @@ public class WalkCompleteScreen : MonoBehaviour
         h.childForceExpandWidth = true;
         statMeters = Stat(stats, "걸은 거리");
         statMinutes = Stat(stats, "시간");
-        statKcal = Stat(stats, "칼로리");
+        statStops = Stat(stats, "들른 곳");
         Line(list, RouteMath.HealthNote, 24, InkQuiet, 36f).alignment = TextAnchor.MiddleCenter;
         reason = Line(list, "", 32, InkQuiet, 50f, true);
         reason.alignment = TextAnchor.MiddleCenter;
@@ -301,7 +316,7 @@ public class WalkCompleteScreen : MonoBehaviour
         partnerStarImages = Stars(partnerRow.transform, n => SetStars(true, n));
         Line(vc, "코스", 28, InkQuiet, 40f);
         courseStarImages = Stars(vc, n => SetStars(false, n));
-        comment = UIKit.Input(vc, "한 줄 남기기 (선택, 60자)", 32, false, 60);
+        comment = UIKit.Input(vc, $"한 줄 남기기 (선택, {WalkReviewRequest.MaxText}자)", 32, false, WalkReviewRequest.MaxText);
         Image cb = comment.GetComponent<Image>();
         cb.color = Field;
         cb.sprite = HudIcons.Rounded;

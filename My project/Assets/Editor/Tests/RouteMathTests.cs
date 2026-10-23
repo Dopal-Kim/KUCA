@@ -3,24 +3,17 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
 
-/// <summary>B-V2 추천 계산 테스트 (docs/api_v2_추천_초안.md 의 식)</summary>
+/// <summary>B-V2 추천 계산 테스트 (docs/api.md 추천 v2 와 같은 식)</summary>
 public class RouteMathTests
 {
     [Test]
-    public void 칼로리는_MET_체중_시간()
+    public void 걸리는_시간은_서버와_같은_속도로()
     {
-        // 보통 속도 4.5km/h 로 4.5km = 1시간 → 3.5 × 60kg × 1h = 210
-        Assert.AreEqual(210, RouteMath.Kcal(4500f, "normal", 0f));
-        Assert.AreEqual(245, RouteMath.Kcal(4500f, "normal", 70f));
-        Assert.AreEqual(0, RouteMath.Kcal(0f, "normal", 0f));
-    }
-
-    [Test]
-    public void 걸리는_시간은_속도로()
-    {
-        Assert.AreEqual(60, RouteMath.MinutesFor(4500f, "normal"));
+        // 보통 75m/분, 느림 60, 빠름 90
+        Assert.AreEqual(20, RouteMath.MinutesFor(1500f, "normal"));
+        Assert.AreEqual(25, RouteMath.MinutesFor(1500f, "slow"));
         Assert.AreEqual(1, RouteMath.MinutesFor(10f, "normal"));
-        Assert.Greater(RouteMath.MinutesFor(2000f, "slow"), RouteMath.MinutesFor(2000f, "fast"));
+        Assert.AreEqual(0, RouteMath.MinutesFor(0f, "normal"));
     }
 
     [Test]
@@ -33,22 +26,36 @@ public class RouteMathTests
     }
 
     [Test]
-    public void 서버가_안_준_거리_시간_칼로리를_채우고_준_값은_그대로()
+    public void 서버가_안_준_거리_시간을_채우고_준_값은_그대로()
     {
         var r = new RouteResult
         {
-            stops = new List<RouteStop> { new RouteStop(), new RouteStop { distanceMeters = 999 } },
+            stops = new List<RouteStop> { new RouteStop(), new RouteStop { distanceM = 999 } },
         };
         var points = new List<Vector3> { Vector3.zero, new Vector3(300f, 0f, 400f), new Vector3(300f, 0f, 1400f) };
-        RouteMath.Fill(r, points, "normal", 0f);
-        Assert.AreEqual(500, r.stops[0].distanceMeters);   // 3-4-5 삼각형
-        Assert.AreEqual(999, r.stops[1].distanceMeters);   // 서버 값 유지
-        Assert.AreEqual(1499, r.totalMeters);
+        RouteMath.Fill(r, points, "normal");
+        Assert.AreEqual(500, r.stops[0].distanceM);   // 3-4-5 삼각형
+        Assert.AreEqual(999, r.stops[1].distanceM);   // 서버 값 유지
+        Assert.AreEqual(1499, r.totalDistanceM);
         Assert.AreEqual(RouteMath.MinutesFor(1499, "normal"), r.totalMinutes);
-        Assert.AreEqual(RouteMath.Kcal(1499, "normal", 0f), r.kcal);
 
-        var server = new RouteResult { stops = new List<RouteStop>(), totalMeters = 10, totalMinutes = 20, kcal = 30 };
-        RouteMath.Fill(server, points, "normal", 0f);
-        Assert.AreEqual(30, server.kcal);
+        var server = new RouteResult { stops = new List<RouteStop>(), totalDistanceM = 10, totalMinutes = 20 };
+        RouteMath.Fill(server, points, "normal");
+        Assert.AreEqual(10, server.totalDistanceM);
+        Assert.AreEqual(20, server.totalMinutes);
+    }
+
+    [Test]
+    public void 서버_추천_응답을_그대로_읽는다()
+    {
+        const string json = "{\"id\":\"rec_1\",\"title\":\"노을 코스\",\"source\":\"ai\",\"context\":{\"timeOfDay\":\"evening\",\"season\":\"autumn\",\"weather\":\"rain\"}," +
+            "\"stops\":[{\"buildingId\":\"way-1\",\"name\":\"도서관\",\"reason\":\"창가\",\"walkMinutes\":6,\"distanceM\":420,\"lat\":37.2,\"lon\":127.0}]," +
+            "\"totalDistanceM\":1850,\"totalMinutes\":18,\"healthNote\":null}";
+        RouteResult r = JsonUtility.FromJson<RouteResult>(json);
+        Assert.AreEqual("rec_1", r.id);
+        Assert.AreEqual(420, r.stops[0].distanceM);
+        Assert.AreEqual(1850, r.totalDistanceM);
+        Assert.AreEqual("비", RouteMath.WeatherName(r.context.weather));
+        Assert.IsNull(RouteMath.WeatherName(null));
     }
 }

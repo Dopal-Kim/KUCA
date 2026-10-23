@@ -136,10 +136,10 @@ public class MatchScreen : MonoBehaviour
         {
             // 산책 기록 (B-V4): 시작하면 걸은 거리를 재기 시작하고, 끝나면 완료 화면으로
             if (s.status == MatchState.Walking)
-                WalkSession.BeginMate(s.matchId, s.partner?.nickname);
+                WalkSession.BeginMate(s.matchId, s.partner?.nickname, s.walkId);
             else if (s.status == MatchState.Ended && WalkSession.Active && WalkSession.Kind == WalkSession.Mate)
             {
-                WalkCompleteScreen.Show(WalkSession.Finish(0));
+                WalkCompleteScreen.Show(WalkSession.Finish(null));
                 Again();
                 Show(false);
                 return;
@@ -339,7 +339,17 @@ public class MatchScreen : MonoBehaviour
         })));
     }
 
-    void StartWalk() { if (!busy) Call(service.StartWalk(state.matchId, Apply)); }
+    void StartWalk()
+    {
+        if (busy) return;
+        Call(service.StartWalk(state.matchId, (s, e) =>
+        {
+            Apply(s, e);
+            // 서버 매칭: 나만 도착했으면 상대를 기다린다고 알려 준다
+            if (s != null && s.status == MatchState.Matched && !string.IsNullOrEmpty(s.message))
+                Toast(s.message);
+        }));
+    }
     void EndWalk() { if (!busy) Call(service.End(state.matchId, Apply)); }
 
     void CancelMatch()

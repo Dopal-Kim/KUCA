@@ -170,8 +170,6 @@ public class RoutePlanner : MonoBehaviour
             tastes = new List<string>(tastes),
             pace = Pace,
             afterMeal = afterMeal,
-            weightKg = 0f, // 체중 입력은 V0 결정 Q5 를 따름 (지금은 60kg 로 계산)
-            localTime = System.DateTimeOffset.Now.ToString("yyyy-MM-dd'T'HH:mm:sszzz"),
         };
         if (collect != null && collect.campusMap != null)
         {
@@ -262,15 +260,19 @@ public class RoutePlanner : MonoBehaviour
         }
         for (int i = 0; i < kept.Count; i++)
             done.Add(false);
-        RouteMath.Fill(route, points, Pace, 0f); // v1 서버 · 기기 추천은 거리 · 시간 · 칼로리를 여기서 채운다
+        RouteMath.Fill(route, points, Pace); // 기기 추천은 거리 · 시간을 여기서 채운다
         string source = result.source == "ai" ? "AI 추천" : "기본 추천";
-        string weather = string.IsNullOrEmpty(result.weather) ? "" : $"  ·  {Escape(result.weather)}";
+        string weatherName = RouteMath.WeatherName(result.context?.weather);
+        string weather = weatherName == null ? "" : $"  ·  {weatherName}";
+        string note = !string.IsNullOrEmpty(result.healthNote) ? result.healthNote : afterMeal ? RouteMath.HealthNote : "";
         routeTitle.text = $"<b>{Escape(result.title)}</b>  <size=26><color=#8C8C91>{source}</color></size>\n"
-            + $"<size=28>{RouteMath.Distance(route.totalMeters)}  ·  약 {route.totalMinutes}분  ·  {route.kcal}kcal{weather}</size>\n"
-            + $"<size=22><color=#8C8C91>{RouteMath.HealthNote}</color></size>";
+            + $"<size=28>{RouteMath.Distance(route.totalDistanceM)}  ·  약 {route.totalMinutes}분{weather}</size>"
+            + (note.Length > 0 ? $"\n<size=22><color=#8C8C91>{Escape(note)}</color></size>" : "");
         BuildCards();
         routeUi.SetActive(true);
-        WalkSession.BeginCourse(result.title, route.totalMeters, kept.Count);
+        WalkSession.BeginCourse(result.title, route.totalDistanceM, kept.Count);
+        // 서버에 산책 시작을 알린다 (추천 ID 로 AI · 기본 추천의 수락률을 셈). 실패하면 완료는 기기에서 판정
+        StartCoroutine(WalkCompleteScreen.CreateService().Begin(result.id, minutes, WalkSession.WalkIdSetter()));
     }
 
     /// <summary>코스 지우기 (X). 코스의 80% 이상 걸었으면 완료 화면을 띄운다 (B-V4)</summary>
@@ -278,9 +280,11 @@ public class RoutePlanner : MonoBehaviour
     {
         if (route != null && WalkSession.Active && WalkSession.Kind == WalkSession.Course)
         {
-            int doneCount = done.FindAll(x => x).Count;
-            if (WalkSession.WalkedMeters >= route.totalMeters * LocalWalkService.CourseRatio || doneCount > 0)
-                WalkCompleteScreen.Show(WalkSession.Finish(doneCount));
+            var visited = new List<string>();
+            for (int i = 0; i < done.Count && i < route.stops.Count; i++)
+                if (done[i]) visited.Add(route.stops[i].buildingId);
+            if (WalkSession.WalkedMeters >= route.totalDistanceM * LocalWalkService.CourseRatio || visited.Count > 0)
+                WalkCompleteScreen.Show(WalkSession.Finish(visited));
             else
                 WalkSession.Abandon();
         }
@@ -355,7 +359,7 @@ public class RoutePlanner : MonoBehaviour
             {
                 Quests.Report("course_done");
                 if (WalkSession.Active && WalkSession.Kind == WalkSession.Course)
-                    WalkCompleteScreen.Show(WalkSession.Finish(done.Count));
+                    WalkCompleteScreen.Show(WalkSession.Finish(route.stops.ConvertAll(x => x.buildingId)));
                 ClearRoute();
                 return;
             }
@@ -401,7 +405,7 @@ public class RoutePlanner : MonoBehaviour
             name.fontStyle = FontStyle.Bold;
             Box(name.rectTransform, 108f, 28f, 30f, 64f);
             int count = NoticesOf(s.buildingId).Count;
-            string dist = s.distanceMeters > 0 ? $"  ·  {RouteMath.Distance(s.distanceMeters)}" : "";
+            string dist = s.distanceM > 0 ? $"  ·  {RouteMath.Distance(s.distanceM)}" : "";
             string meta = $"도보 {s.walkMinutes}분{dist}" + (count > 0 ? $"  ·  <color=#D23A4A>공지 {count}</color>" : "");
             Text info = UIKit.Text(card.transform, meta, 27, TextAnchor.MiddleLeft, InkQuiet);
             Box(info.rectTransform, 30f, 104f, 30f, 40f);
