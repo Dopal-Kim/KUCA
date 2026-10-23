@@ -259,8 +259,20 @@ public class RecommendApiTests : IDisposable
         var at = await Midpoint(client, Observatory, Observatory);
         JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Observatory])));
         string reason = r.GetProperty("stops")[0].GetProperty("reason").GetString()!;
-        Assert.Contains("별 보기", reason);
+        Assert.Equal("가는 길에 들르기 좋아요", reason);   // 천문대 소개의 "좋" 문장은 "어두우니" 주의가 섞여 있어 쓰지 않음
         Assert.DoesNotContain("확인 필요", reason);
+    }
+
+    [Theory]
+    [InlineData("relation-8269760", "저녁·밤 산책 코스의 끝으로 좋아요")]                       // 우정원: 마지막 문장이 "출입 제한" 주의
+    [InlineData("way-474085534", "공강에 잠깐 들러 쉬거나 시험 기간 밤 산책 끝에 들르기 좋아요")]  // 중앙도서관
+    [InlineData("relation-6739958", "가는 길에 들르기 좋아요")]                                 // 기숙사: 추천 문장 없음
+    public async Task 규칙_이유는_추천_문장을_고르고_주의_문장은_쓰지_않는다(string spot, string expected)
+    {
+        HttpClient client = Client();
+        var at = await Midpoint(client, spot, spot);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [spot])));
+        Assert.Equal(expected, r.GetProperty("stops")[0].GetProperty("reason").GetString());
     }
 
     [Fact]
