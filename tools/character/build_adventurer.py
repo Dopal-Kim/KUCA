@@ -236,20 +236,34 @@ for i in range(len(pts) - 1):
     seg = capsule(pts[i] + Vector((0, face_y + 0.012, hc.z - 0.115)), pts[i + 1] + Vector((0, face_y + 0.012, hc.z - 0.115)), 0.006, None, 8, 6)
     add(seg, 'KHU_Adv_Mouth', 'Head', 'head')
 
-# 머리카락: 머리보다 살짝 큰 껍질에서 얼굴 쪽을 비우고, 앞머리 몇 갈래
-hair = ellipsoid(hc + Vector((0, 0.012, 0.012)), (0.262, 0.25, 0.258), 64, 40)
-fringe_z = hc.z + 0.045
+# 머리카락: 머리보다 살짝 큰 껍질 하나. 얼굴 쪽은 앞머리 끝선(fringe_at) 아래만 머리 안으로 밀어 넣는다.
+# (공 여러 개를 붙이지 않아 모동숲 캐릭터처럼 한 덩어리로 매끈하다)
+hair = ellipsoid(hc + Vector((0, 0.01, 0.014)), (0.27, 0.258, 0.266), 112, 72)
+if male:
+    # 뾰족한 앞머리 네 갈래: 끝은 눈썹 바로 위, 사이는 조금 위로
+    LOCKS = (-0.15, -0.055, 0.04, 0.135)
+    def fringe_at(x):
+        tip = max(max(0.0, 1 - abs(x - lx) / 0.06) for lx in LOCKS)
+        return hc.z + 0.09 - 0.04 * tip + max(0.0, abs(x) - 0.17) * 0.6
+else:
+    # 일자 앞머리: 가운데는 눈썹 위, 옆으로 갈수록 살짝 올라가 얼굴을 감싼다
+    def fringe_at(x):
+        return hc.z + 0.055 + 0.9 * x * x
 def hair_cut(c):
     d = (c - hc).normalized()
-    face = smoothstep(-0.38, -0.52, d.y) * smoothstep(fringe_z + 0.05, fringe_z + 0.01, c.z)   # 얼굴 쪽
-    edge = hc.z - 0.17 + max(0.0, -d.y) * 0.2                                                     # 뒤는 목덜미, 옆 · 앞은 비스듬히 위로
+    f = fringe_at(c.x)
+    face = smoothstep(-0.36, -0.5, d.y) * smoothstep(f + 0.018, f - 0.018, c.z)   # 얼굴 쪽, 끝선 아래
+    edge = hc.z - 0.17 + max(0.0, -d.y) * 0.2                                       # 뒤는 목덜미, 옆 · 앞은 비스듬히 위로
     below = smoothstep(edge + 0.02, edge - 0.02, c.z)
     return max(face, below)
 tuck(hair, hc, hair_cut)
+for v in hair.verts:   # 앞머리 끝 쪽을 살짝 도톰하게 (이마 위에 얹힌 앞머리처럼)
+    d = (v.co - hc).normalized()
+    f = fringe_at(v.co.x)
+    lip = smoothstep(-0.3, -0.5, d.y) * smoothstep(f + 0.09, f + 0.02, v.co.z) * smoothstep(f - 0.005, f + 0.015, v.co.z)
+    if lip > 0:
+        v.co = hc + (v.co - hc) * (1 + 0.035 * lip)
 add(hair, 'KHU_Adv_Hair', 'Head', 'head')
-bangs = [(-0.15, 0.02), (-0.07, -0.01), (0.02, -0.025), (0.11, 0.0), (0.18, 0.03)]
-for x, dz in bangs:
-    add(ellipsoid(Vector((x, hc.y - 0.205 + abs(x) * 0.3, fringe_z + dz * 0.6)), (0.058, 0.045, 0.055), 16, 12), 'KHU_Adv_Hair', 'Head', 'head')
 if not male:   # 단발: 옆 · 뒤로 어깨 위까지
     bob_c = hc + Vector((0, 0.03, -0.11))
     bob = ellipsoid(bob_c, (0.29, 0.26, 0.2), 48, 30)
@@ -263,17 +277,31 @@ if not male:   # 단발: 옆 · 뒤로 어깨 위까지
             v.co = bob_c + (v.co - bob_c) * (1 - 0.25 * top)
     add(bob, 'KHU_Adv_Hair', 'Head', 'head')
 
-# 모자: 둥근 정수리 + 아래로 살짝 처진 챙 + 크림슨 띠
-hat_z = hc.z + 0.215
-crown = ellipsoid(Vector((0, hc.y + 0.01, hat_z + 0.0)), (0.272, 0.262, 0.175), 36, 22)
-delete_where(crown, lambda c: c.z < hat_z - 0.1)
+# 모자: 둥근 정수리 + 아래로 살짝 처진 챙 + 크림슨 띠.
+# 지도 카메라는 위에서 내려다보므로 모자를 뒤로 젖혀 써서 (HAT_TILT) 이마와 눈코입이 보이게 한다.
+HAT_TILT = math.radians(float(OPT.get('hat_tilt', 12)))
+BRIM_R = float(OPT.get('brim', 0.42))   # 챙 반지름
+hat_start = len(PARTS)
+# 머리를 감싸게 푹 눌러쓴다: 정수리는 머리카락보다 크게, 챙은 앞머리 끝 바로 위 (앞머리 끝과 눈코입만 보이게)
+hat_z = hc.z + 0.2
+CROWN = (0.302, 0.292, 0.215)
+crown = ellipsoid(Vector((0, hc.y + 0.01, hat_z)), CROWN, 48, 28)
+delete_where(crown, lambda c: c.z < hat_z - 0.105)
 add(crown, 'KHU_Adv_Hat', 'Head', 'head')
-add(cylinder(Vector((0, hc.y + 0.01, hat_z - 0.055)), 0.276, 0.274, 0.055), 'KHU_Adv_Crimson', 'Head', 'head')
-brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.115)), 0.37, 0.272, 0.07, 48)
-for v in brim.verts:   # 챙 끝을 둥글게 두껍게
-    if (v.co.xy - Vector((0, hc.y + 0.01))).length > 0.33:
-        v.co.z -= 0.01
+band_r = CROWN[0] * (1 - (0.06 / CROWN[2]) ** 2) ** 0.5 + 0.006
+add(cylinder(Vector((0, hc.y + 0.01, hat_z - 0.06)), band_r + 0.004, band_r, 0.05, 48), 'KHU_Adv_Crimson', 'Head', 'head')
+brim = cylinder(Vector((0, hc.y + 0.01, hat_z - 0.118)), BRIM_R, 0.292, 0.065, 64)
+for v in brim.verts:   # 챙 끝을 둥글게 살짝 아래로 (버킷햇처럼)
+    if (v.co.xy - Vector((0, hc.y + 0.01))).length > BRIM_R - 0.05:
+        v.co.z -= 0.012
 add(brim, 'KHU_Adv_Hat', 'Head', 'head')
+# 뒤쪽 챙 끝을 축으로 앞을 들어 올린다 (x 축 회전, 앞 = -y)
+hat_pivot = Vector((0, hc.y + 0.3, hat_z - 0.12))
+for bm_, *_ in PARTS[hat_start:]:
+    for v in bm_.verts:
+        d = v.co - hat_pivot
+        v.co = hat_pivot + Vector((d.x, d.y * math.cos(HAT_TILT) + d.z * math.sin(HAT_TILT),
+                                   -d.y * math.sin(HAT_TILT) + d.z * math.cos(HAT_TILT)))
 
 # 몸통: 크림슨 티 + 앞이 열린 크림 셔츠 (반팔)
 body_top = HEAD.z - 0.02
