@@ -10,7 +10,7 @@ namespace KucaMemoServer.Services;
 /// </summary>
 public static class MatchRules
 {
-    public static readonly int[] AllowedMinutes = [30, 60];
+    public static readonly int[] AllowedMinutes = [15, 30, 60];
     public static readonly string[] ReportReasons = ["noshow", "rude", "unsafe", "fake", "other"];
     public static readonly string[] CancelReasons = ["late", "changed_mind", "other"];
 
@@ -27,9 +27,6 @@ public static class MatchRules
 
     /// <summary>[가정] 공통 취향 하나 = 건물 거리 100m 만큼 더 가깝게 친다</summary>
     public const double MetersPerCommonPreference = 100;
-    /// <summary>[가정] 받은 상대 별점 평균이 이보다 낮으면(리뷰 3개 이상일 때) 짝 찾기에서 뺀다</summary>
-    public const double MinPartnerRating = 2.0;
-    public const int MinRatingsToJudge = 3;
     /// <summary>[가정] 신고를 이만큼 받은 사람은 짝 찾기에서 뺀다 (신고 보관 90일 동안)</summary>
     public const int ReportsToExclude = 3;
     /// <summary>[가정] 거절한 두 사람은 이 시간 동안 다시 짝지어 주지 않는다</summary>
@@ -123,7 +120,7 @@ public class MatchService(
     public MatchState Join(Account user, MatchJoinRequest? body)
     {
         if (body == null || !MatchRules.AllowedMinutes.Contains(body.Minutes))
-            throw new MatchException(400, "minutes 는 30 또는 60 이어야 합니다.");
+            throw new MatchException(400, "minutes 는 15, 30, 60 중 하나여야 합니다.");
         Prefs prefs = ParsePrefs(user.PreferencesJson);
         string matchGender = body.MatchGender ?? prefs.MatchGender ?? "any";
         if (matchGender is not ("same" or "any"))
@@ -437,14 +434,8 @@ public class MatchService(
         return Trusted(a.UserId) && Trusted(b.UserId);
     }
 
-    /// <summary>신고가 쌓였거나 상대 별점이 낮은 사람은 짝 찾기에서 뺀다</summary>
-    bool Trusted(string userId)
-    {
-        if (store.CountReports(userId) >= MatchRules.ReportsToExclude)
-            return false;
-        (double average, int count) = walks.PartnerRating(userId);
-        return count < MatchRules.MinRatingsToJudge || average >= MatchRules.MinPartnerRating;
-    }
+    /// <summary>신고가 쌓인 사람은 짝 찾기에서 뺀다 (상대 별점은 받지 않는다)</summary>
+    bool Trusted(string userId) => store.CountReports(userId) < MatchRules.ReportsToExclude;
 
     /// <summary>건물 거리(m) − 공통 취향 × 100m. 작을수록 좋은 짝</summary>
     double Cost(Waiting a, Waiting b)

@@ -6,7 +6,8 @@ public record WalkStartRequest(string? RecommendationId, int? Minutes);
 public record WalkStarted(string Id, string StartedAt, int? PlannedDistanceM, List<string> Stops);
 
 public record WalkFinishRequest(int DistanceM, int DurationSec, List<string>? VisitedBuildingIds);
-public record WalkReviewRequest(int CourseRating, int? PartnerRating, string? Text);
+/// <summary>리뷰는 코스 별점 · 한 줄만 받는다 (상대 별점은 받지 않음, 10/24 결정)</summary>
+public record WalkReviewRequest(int CourseRating, string? Text);
 
 /// <param name="Kind">distance · walk · together · review</param>
 public record XpItem(string Kind, int Xp);

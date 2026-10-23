@@ -186,7 +186,7 @@ public class WalkApiTests : IDisposable
         Assert.Equal("personal_info", S(blocked, "reason"));
 
         JsonElement ok = await Send(HttpMethod.Post, $"/api/walks/{walkId}/review", me,
-            new { courseRating = 5, partnerRating = 1, text = "벤치 쉬는 곳이 좋았어요" }, HttpStatusCode.Created);
+            new { courseRating = 5, text = "벤치 쉬는 곳이 좋았어요" }, HttpStatusCode.Created);
         Assert.Equal(WalkRules.ReviewXp, I(ok.GetProperty("reward"), "xp"));
         await Send(HttpMethod.Post, $"/api/walks/{walkId}/review", me, new { courseRating = 4 }, HttpStatusCode.Conflict);
 
@@ -228,23 +228,18 @@ public class WalkApiTests : IDisposable
     }
 
     [Fact]
-    public async Task 상대_별점이_낮게_쌓인_사람은_짝_찾기에서_빠진다()
+    public async Task 매칭_산책_리뷰도_코스_별점만_받는다()
     {
         (string a, string b, string walkId) = await MatchWalk();
         await Finish(a, walkId, 1000);
+        await Send(HttpMethod.Post, $"/api/walks/{walkId}/review", a, new { courseRating = 1, partnerRating = 1 }, HttpStatusCode.Created);
+
+        // 별점을 낮게 줘도 상대는 계속 짝을 찾을 수 있다 (상대 평가 없음)
         await Finish(b, walkId, 1000);
-        await Send(HttpMethod.Post, $"/api/walks/{walkId}/review", a, new { courseRating = 4, partnerRating = 1 }, HttpStatusCode.Created);
-
-        string bId = server.Services.GetRequiredService<AccountStore>().FindBySession(b)!.Id;
-        WalkStore store = server.Services.GetRequiredService<WalkStore>();
-        Assert.Equal((1.0, 1), store.PartnerRating(bId));
-        store.AddReview("w_x1", "u1", 3, bId, 1, null, clock.Now);
-        store.AddReview("w_x2", "u2", 3, bId, 2, null, clock.Now);   // 평균 1.33, 3개
-
         string c = await User("다");
-        await Send(HttpMethod.Post, "/api/match/queue", b, new { minutes = 30, buildingId = StudentHall }, HttpStatusCode.OK);
-        JsonElement s = await Send(HttpMethod.Post, "/api/match/queue", c, new { minutes = 30, buildingId = StudentHall }, HttpStatusCode.OK);
-        Assert.Equal("waiting", S(s, "state"));
+        await Send(HttpMethod.Post, "/api/match/queue", b, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.OK);
+        JsonElement s = await Send(HttpMethod.Post, "/api/match/queue", c, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.OK);
+        Assert.Equal("proposed", S(s, "state"));
     }
 
     [Fact]
