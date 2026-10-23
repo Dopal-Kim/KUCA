@@ -134,6 +134,22 @@ az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__A
 - 실측: `gpt-5.4-mini` 는 약 3초, `gemini-3.5-flash` 는 약 11초 걸렸습니다.
 - 사용량은 키를 만든 BAZE 계정에 청구됩니다.
 
+## 실시간 산책 매칭 (C-V3)
+
+`/api/match/...` · `/api/reports` · `/api/blocks` (명세는 `docs/api.md` 의 "매칭").
+
+- 대기열 · 진행 중인 매칭 · 인상착의는 **메모리에만** 둡니다. 매칭 기록(30일) · 차단 · 신고(90일)만 SQLite 에 남깁니다.
+  - 서버가 재시작되면 진행 중인 매칭은 사라지고, 앱은 `idle` 을 받습니다.
+- 타이머가 없습니다. 앱이 3초마다 부르는 `GET /api/match` 때 만료 · 노쇼를 처리하고 짝을 찾습니다.
+- 스몰토크 AI 는 산책 추천과 같은 `Recommend:*` 설정(챗쿠)을 씁니다. 키가 없으면 `Data/smalltalk.json` 예시에서 고릅니다.
+- 숫자는 모두 `Services/MatchService.cs` 의 `MatchRules` 에 있습니다. 운영 시간은 없습니다 (24시간).
+- **시연용 가상 상대:** 시연 기간에만 켭니다.
+
+```bash
+az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Match__DemoPartner=true
+# 시연이 끝나면 false 로
+```
+
 ## 테스트
 
 ```bash
