@@ -384,7 +384,7 @@
 
 ## v2 · 추천 v2 · 산책 매칭 · 산책 완료 (C-V0 초안)
 
-> **상태:** 서버는 **추천 v2 (C-V2) · 매칭 (C-V3)** 까지 구현됐습니다. 산책 완료 · 리뷰 · 보상(C-V4)은 아직 없습니다.
+> **상태:** 서버는 **추천 v2 (C-V2) · 매칭 (C-V3) · 산책 완료 · 리뷰 · 보상 (C-V4)** 까지 구현됐습니다. 지표 집계(C-V6)는 아직 없습니다.
 > - B 는 이 모양으로 가짜 구현(로컬)을 먼저 만들고, 서버가 나오면 HTTP 구현으로 바꿉니다.
 > - 바꿀 곳이 보이면 이 절을 고치는 PR 이나 V0 회의에서 맞춥니다.
 > - `[가정]` 은 아직 정하지 않은 값의 제안입니다. `Q6` 같은 번호는 `docs/산책추천_v2_라운드.md` 3장의 결정 항목입니다.
@@ -592,7 +592,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   - `noshow`: `meetBy` 까지 한쪽이 안 옴
   - `reported`: 신고로 끝남
   - `blocked`: 차단으로 끝남
-  - `completed`: 산책 완료 (C-V4 전까지는 산책 시작 뒤 고른 시간 + 30분이 지나면 저절로 `completed` `[가정]`)
+  - `completed`: 두 사람 모두 산책 끝(`POST /api/walks/{walkId}/finish`). 아무도 안 눌러도 산책 시작 뒤 고른 시간 + 30분이 지나면 매칭은 `completed` 로 끝납니다 `[가정]` (산책 기록은 남아서 나중에 끝낼 수 있음)
 - `proposed` 에서 상대가 거절하거나 응답하지 않으면, 수락한 쪽은 자동으로 `waiting` 으로 돌아가 다시 찾습니다.
 - **상대 정보는 닉네임·공통 취향·인상착의만** 보입니다. 성별·계정 ID·건물은 보이지 않습니다.
 - `partner.appearance` 는 상대가 입력하기 전에는 `null` 입니다.
@@ -664,9 +664,10 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 { "recommendationId": "rec_8c1f…", "minutes": 30 }
 ```
 
-- 추천 코스로 혼자 걸을 때 부릅니다. `recommendationId` 는 선택이며, 없으면 자유 산책입니다.
-  - 매칭 산책은 둘 다 도착하는 순간 서버가 만듭니다 (`MatchState.walkId`).
+- 추천 코스로 혼자 걸을 때 부릅니다. 본문의 두 필드 모두 선택이고, `recommendationId` 가 없으면 자유 산책입니다 (`plannedDistanceM: null`, `stops: []`).
+  - 매칭 산책은 둘 다 도착하는 순간 서버가 두 사람 각각에게 만듭니다 (`MatchState.walkId`, 두 사람이 같은 ID).
 - `201 { "id": "w_91d0…", "startedAt": "…", "plannedDistanceM": 1850, "stops": ["way-…"] }`
+- `401` 로그인 없음, `404` 없는 추천 ID, `400` `minutes` 가 15 · 30 · 60 이 아님
 
 #### POST /api/walks/{walkId}/finish (산책 끝)
 
@@ -674,8 +675,8 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 { "distanceM": 1620, "durationSec": 1560, "visitedBuildingIds": ["way-474085534", "way-474085535"] }
 ```
 
-- **완료 판정 (서버):** 마지막 스팟 도착 또는 계획 거리의 80% 이상
-  - 자유 산책은 500m 이상이면 완료 `[가정]`
+- **완료 판정 (서버):** 추천 코스면 마지막 스팟 도착(`visitedBuildingIds` 에 있음) 또는 계획 거리의 80% 이상
+  - 자유 산책 · 매칭 산책은 500m 이상이면 완료 `[가정]`
 - 걸은 거리가 시간에 비해 너무 길면(초속 2.5m 초과) 거리를 깎습니다 `[가정]`. 탈것으로 이동한 경우를 막기 위해서입니다.
 - 매칭 산책은 한 사람이 `finish` 하면 그 사람 산책이 끝납니다. 두 사람 모두 끝나면 매칭이 `ended` (`completed`) 가 됩니다.
 
@@ -684,6 +685,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 ```json
 {
   "completed": true,
+  "distanceM": 1620,
   "reward": {
     "tickets": 1,
     "xp": 106,
@@ -693,14 +695,16 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
       { "kind": "together", "xp": 60 }
     ]
   },
-  "progress": { "level": 3, "xp": 240, "levelXp": 200, "nextLevelXp": 300 }
+  "progress": { "level": 2, "xp": 240, "levelXp": 100, "nextLevelXp": 300, "totalWalks": 3, "totalDistanceM": 4100, "togetherWalks": 1 }
 }
 ```
 
 - **경험치 표 (Q6 제안):** 1km 10 (100m 단위 버림) · 산책 완료 30 · 함께 걸음 60 · 리뷰 10. 위 예시는 1.62km 를 함께 걸은 경우입니다. 완료가 아니면(`completed: false`) 거리 경험치만 줍니다.
 - **보상 티켓:** 완료 1장 `[가정]`. 걸은 거리 티켓(1km = 1장)은 V1 처럼 **앱이 계속 셉니다.** 서버는 완료 보너스만 줍니다 (B 와 맞출 것).
-- **레벨:** 다음 레벨까지 100 × 레벨 `[가정]` (1→2 100, 2→3 200 …). 앱은 받은 값만 표시합니다 (D9).
-- 이미 끝낸 산책을 또 `finish` 하면 `409` 입니다.
+- `distanceM`: 서버가 인정한 거리 (깎였으면 깎인 값)
+- **레벨:** 다음 레벨까지 100 × 레벨 `[가정]` (1→2 100, 2→3 200 …). 레벨 2 는 100, 3 은 300, 4 는 600 부터입니다. 앱은 받은 값만 표시합니다 (D9).
+  - `levelXp` 는 지금 레벨이 시작된 경험치, `nextLevelXp` 는 다음 레벨이 되는 경험치. 진행 막대 = (`xp` − `levelXp`) / (`nextLevelXp` − `levelXp`)
+- 이미 끝낸 산책을 또 `finish` 하면 `409`, 남의 산책이면 `403 reason: "not_yours"`, 없으면 `404` 입니다.
 
 #### POST /api/walks/{walkId}/review (리뷰)
 
@@ -710,12 +714,15 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 
 - `courseRating` 1~5 (필수), `partnerRating` 1~5 (매칭 산책만, 혼자 걷기면 무시), `text` 0~100자 (내용 검사, 거절은 `422`)
 - `partnerRating` 은 상대에게 보이지 않고 **매칭 품질(짝 찾기 제외 기준)에만** 씁니다.
-- 산책 하나에 한 번만 됩니다 (`409`). 끝난 뒤 24시간 안에만 됩니다 `[가정]`.
+- 산책을 끝낸 뒤에만, 한 번만, 끝난 뒤 24시간 안에만 됩니다 `[가정]`. 아니면 `409`.
+- 리뷰 글은 검토 대기 없이, 애매해도 `422` 로 거절합니다.
+- 상대 별점 평균이 2.0 보다 낮은 사람(받은 별점 3개 이상)은 짝 찾기에서 빠집니다 `[가정]`.
 - `201 { "reward": { "xp": 10 }, "progress": { … } }`
 
 #### GET /api/me/progress
 
-- `200 { "level": 3, "xp": 240, "levelXp": 200, "nextLevelXp": 300, "totalWalks": 7, "totalDistanceM": 12400, "togetherWalks": 2 }`
+- `200 { "level": 2, "xp": 240, "levelXp": 100, "nextLevelXp": 300, "totalWalks": 7, "totalDistanceM": 12400, "togetherWalks": 2 }`
+- `totalWalks` 는 완료한 산책 수, `totalDistanceM` 은 끝낸 산책의 인정 거리 합
 - 앱 시작과 산책 완료 화면에서 부릅니다.
 
 ### 개인정보 보관 기간 (Q8 제안)

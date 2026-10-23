@@ -22,11 +22,14 @@ public static class MatchRules
     public static readonly TimeSpan NoShowLimit = TimeSpan.FromMinutes(10);
     /// <summary>끝난 매칭을 "ended" 로 보여 주는 시간 (그 뒤 idle)</summary>
     public static readonly TimeSpan EndedVisibleFor = TimeSpan.FromHours(1);
-    /// <summary>[가정] 산책 중 상태는 고른 시간 + 30분이 지나면 저절로 끝 (C-V4 의 산책 완료가 생기기 전 임시)</summary>
+    /// <summary>[가정] 두 사람이 산책 끝(POST /api/walks/{id}/finish)을 안 눌러도 고른 시간 + 30분이 지나면 매칭은 끝 (산책 기록은 남음)</summary>
     public static TimeSpan WalkingLimit(int minutes) => TimeSpan.FromMinutes(minutes + 30);
 
     /// <summary>[가정] 공통 취향 하나 = 건물 거리 100m 만큼 더 가깝게 친다</summary>
     public const double MetersPerCommonPreference = 100;
+    /// <summary>[가정] 받은 상대 별점 평균이 이보다 낮으면(리뷰 3개 이상일 때) 짝 찾기에서 뺀다</summary>
+    public const double MinPartnerRating = 2.0;
+    public const int MinRatingsToJudge = 3;
     /// <summary>[가정] 신고를 이만큼 받은 사람은 짝 찾기에서 뺀다 (신고 보관 90일 동안)</summary>
     public const int ReportsToExclude = 3;
     /// <summary>[가정] 거절한 두 사람은 이 시간 동안 다시 짝지어 주지 않는다</summary>
@@ -62,7 +65,7 @@ public class MatchException(int status, string error, string? reason = null) : E
 /// 매칭 기록 · 차단 · 신고만 MatchStore(SQLite)에 남긴다.
 /// </summary>
 public class MatchService(
-    MatchStore store, BuildingStore buildings, SpotStore spots, ICampusWeather weather,
+    MatchStore store, WalkStore walks, BuildingStore buildings, SpotStore spots, ICampusWeather weather,
     TimeProvider clock, IConfiguration config)
 {
     sealed record Prefs(HashSet<string> Tastes, HashSet<string> WalkTimes, string? TalkStyle, string? MatchGender);
@@ -79,7 +82,7 @@ public class MatchService(
     {
         public required string UserId, Nickname, Gender, MatchGender, BuildingId;
         public required Prefs Prefs;
-        public bool Accepted, Arrived;
+        public bool Accepted, Arrived, Finished;
         public string? Appearance;
         public bool IsDemo => UserId == MatchRules.DemoUserId;
     }
@@ -281,8 +284,24 @@ public class MatchService(
                 m.State = "walking";
                 m.WalkId = "w_" + Guid.NewGuid().ToString("N");
                 m.WalkUntil = now + MatchRules.WalkingLimit(m.Minutes);
+                // 두 사람 각자의 산책 기록 (같은 walkId). 끝내기 · 리뷰는 산책 API 로
+                foreach (Side s in m.Sides.Where(s => !s.IsDemo))
+                    walks.Start(m.WalkId, s.UserId, "match", null, m.Minutes, null, [], m.Other(s.UserId).UserId, now);
             }
             return View(userId);
+        }
+    }
+
+    /// <summary>산책 API 가 매칭 산책을 끝냈을 때 부른다. 두 사람 모두 끝내면(가상 상대는 끝낸 것으로 봄) 매칭이 completed</summary>
+    public void WalkFinished(string userId, string walkId)
+    {
+        lock (gate)
+        {
+            if (!current.TryGetValue(userId, out string? id) || !matches.TryGetValue(id, out Match? m) || m.WalkId != walkId)
+                return;
+            m.Me(userId).Finished = true;
+            if (m.Sides.All(s => s.Finished || s.IsDemo))
+                End(m, "completed", null, Now);
         }
     }
 
@@ -415,8 +434,16 @@ public class MatchService(
             return false;
         if (store.EitherBlocked(a.UserId, b.UserId))
             return false;
-        return store.CountReports(a.UserId) < MatchRules.ReportsToExclude && store.CountReports(b.UserId) < MatchRules.ReportsToExclude;
-        // 별점이 낮은 사람 빼기는 리뷰가 생기는 C-V4 에서 붙인다
+        return Trusted(a.UserId) && Trusted(b.UserId);
+    }
+
+    /// <summary>신고가 쌓였거나 상대 별점이 낮은 사람은 짝 찾기에서 뺀다</summary>
+    bool Trusted(string userId)
+    {
+        if (store.CountReports(userId) >= MatchRules.ReportsToExclude)
+            return false;
+        (double average, int count) = walks.PartnerRating(userId);
+        return count < MatchRules.MinRatingsToJudge || average >= MatchRules.MinPartnerRating;
     }
 
     /// <summary>건물 거리(m) − 공통 취향 × 100m. 작을수록 좋은 짝</summary>
