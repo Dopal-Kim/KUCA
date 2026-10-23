@@ -45,6 +45,9 @@ builder.Services.AddScoped<RouteRecommender>();
 builder.Services.AddSingleton<MatchStore>();
 builder.Services.AddSingleton<MatchService>();
 builder.Services.AddTransient<ISmalltalkGenerator, SmalltalkGenerator>();
+// 지표 (C-V6): 누가 했는지 없이 이벤트 수만 센다. 관리자 집계 /api/admin/stats · /api/admin/health
+builder.Services.AddSingleton<MetricsStore>();
+builder.Services.AddSingleton<StatsService>();
 // 산책 완료 · 리뷰 · 보상 (C-V4): 경험치 · 레벨은 서버가 계산
 builder.Services.AddSingleton<WalkStore>();
 builder.Services.AddSingleton<WalkService>();

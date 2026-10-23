@@ -52,6 +52,13 @@ public static class AdminEndpoints
 
         // 장소 공지 넣기·지우기 (C-4)
         admin.MapNoticeAdmin();
+
+        // 지표 (C-V6): AI 추천 vs 규칙 추천 수락률 · 완주율, 매칭 성사율, AI 대체 비율. ?days=1~90 (기본 7)
+        admin.MapGet("/stats", (int? days, StatsService stats) =>
+            Results.Ok(stats.Get(Math.Clamp(days ?? 7, 1, StatsService.MaxDays))));
+
+        // 운영 점검: 키가 들어 있는지(값은 안 보여 줌) · 시연 설정 · 최근 24시간 AI 대체 비율
+        admin.MapGet("/health", (StatsService stats) => Results.Ok(stats.Health()));
     }
 
     static IResult CommentNotFound(string id) => Error(StatusCodes.Status404NotFound, $"댓글을 찾을 수 없습니다: {id}");
