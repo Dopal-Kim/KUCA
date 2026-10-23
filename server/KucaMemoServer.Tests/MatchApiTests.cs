@@ -185,9 +185,20 @@ public class MatchApiTests : IDisposable
     [Fact]
     public async Task 시간이_다르면_짝이_되지_않는다()
     {
-        string a = await User("가"), b = await User("나");
+        string a = await User("가"), b = await User("나"), c = await User("다");
         await Join(a, minutes: 30);
         Assert.Equal("waiting", S(await Join(b, minutes: 60), "state"));
+        Assert.Equal("waiting", S(await Join(c, minutes: 15), "state"));
+    }
+
+    [Fact]
+    public async Task 십오분끼리도_짝이_된다()
+    {
+        string a = await User("가"), b = await User("나");
+        await Join(a, minutes: 15);
+        JsonElement p = await Join(b, minutes: 15);
+        Assert.Equal("proposed", S(p, "state"));
+        Assert.Equal(15, p.GetProperty("minutes").GetInt32());
     }
 
     /// <summary>B 와 C 가 서로 거절해서 둘 다 기다리는 상태를 만든다 (거절한 둘은 1시간 동안 다시 안 묶임)</summary>
@@ -350,7 +361,7 @@ public class MatchApiTests : IDisposable
     public async Task 잘못된_요청과_중복_대기()
     {
         string a = await User("가");
-        await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.BadRequest);
+        await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 20, buildingId = StudentHall }, HttpStatusCode.BadRequest);
         await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 30, buildingId = "way-0" }, HttpStatusCode.BadRequest);
         await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 30, buildingId = StudentHall, matchGender = "male" }, HttpStatusCode.BadRequest);
         await Join(a);

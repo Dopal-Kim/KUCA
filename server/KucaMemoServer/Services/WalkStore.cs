@@ -6,7 +6,7 @@ namespace KucaMemoServer.Services;
 /// 산책 · 경험치 · 리뷰를 메모와 같은 SQLite 파일에 저장한다 (탈퇴할 때까지).
 ///   walks       계정마다 한 줄. 매칭 산책은 두 사람이 같은 id 를 쓰고 user_id 로 나뉜다
 ///   xp_events   받은 경험치 (산책 · 리뷰마다)
-///   reviews     코스 별점 · 상대 별점 · 한 줄 (상대 별점은 매칭 품질에만 쓰고 보여 주지 않는다)
+///   reviews     코스 별점 · 한 줄 (상대 별점은 받지 않는다)
 /// </summary>
 public class WalkStore
 {
@@ -50,13 +50,10 @@ public class WalkStore
                 walk_id        TEXT NOT NULL,
                 user_id        TEXT NOT NULL,
                 course_rating  INTEGER NOT NULL,
-                partner_id     TEXT,
-                partner_rating INTEGER,
                 text           TEXT,
                 created_at     INTEGER NOT NULL,
                 PRIMARY KEY (walk_id, user_id)
             );
-            CREATE INDEX IF NOT EXISTS reviews_partner ON reviews (partner_id);
             """);
     }
 
@@ -133,15 +130,14 @@ public class WalkStore
         Exec("INSERT INTO xp_events (user_id, walk_id, kind, xp, created_at) VALUES ($u, $w, $k, $x, $at)",
              ("$u", userId), ("$w", walkId), ("$k", kind), ("$x", xp), ("$at", at.ToUnixTimeSeconds()));
 
-    public void AddReview(string walkId, string userId, int courseRating, string? partnerId, int? partnerRating, string? text, DateTimeOffset at)
+    public void AddReview(string walkId, string userId, int courseRating, string? text, DateTimeOffset at)
     {
         Exec("""
-            INSERT INTO reviews (walk_id, user_id, course_rating, partner_id, partner_rating, text, created_at)
-            VALUES ($w, $u, $c, $p, $pr, $t, $at);
+            INSERT INTO reviews (walk_id, user_id, course_rating, text, created_at)
+            VALUES ($w, $u, $c, $t, $at);
             UPDATE walks SET reviewed = 1 WHERE id = $w AND user_id = $u;
             """,
-            ("$w", walkId), ("$u", userId), ("$c", courseRating), ("$p", partnerId), ("$pr", partnerRating),
-            ("$t", text), ("$at", at.ToUnixTimeSeconds()));
+            ("$w", walkId), ("$u", userId), ("$c", courseRating), ("$t", text), ("$at", at.ToUnixTimeSeconds()));
     }
 
     public int TotalXp(string userId) => Scalar<int>("SELECT COALESCE(SUM(xp), 0) FROM xp_events WHERE user_id = $u", ("$u", userId));
@@ -160,24 +156,11 @@ public class WalkStore
         return (r.GetInt32(0), r.GetInt32(1), r.GetInt32(2));
     }
 
-    /// <summary>받은 상대 별점 평균 · 개수 (매칭에서 뺄지 볼 때)</summary>
-    public (double Average, int Count) PartnerRating(string userId)
-    {
-        using var conn = Open();
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT COALESCE(AVG(partner_rating), 0), COUNT(partner_rating) FROM reviews WHERE partner_id = $u AND partner_rating IS NOT NULL";
-        cmd.Parameters.AddWithValue("$u", userId);
-        using var r = cmd.ExecuteReader();
-        r.Read();
-        return (r.GetDouble(0), r.GetInt32(1));
-    }
-
-    /// <summary>탈퇴: 그 계정의 산책 · 경험치 · 쓴 리뷰와, 그 계정이 받은 상대 별점을 지운다</summary>
+    /// <summary>탈퇴: 그 계정의 산책 · 경험치 · 리뷰를 지운다</summary>
     public void Forget(string userId) =>
         Exec("""
             DELETE FROM walks WHERE user_id = $u;
             DELETE FROM xp_events WHERE user_id = $u;
             DELETE FROM reviews WHERE user_id = $u;
-            UPDATE reviews SET partner_id = NULL, partner_rating = NULL WHERE partner_id = $u;
             """, ("$u", userId));
 }

@@ -156,7 +156,7 @@ az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Match__DemoP
 
 - 완료 판정 · 경험치 · 레벨은 **서버만** 계산합니다. 숫자는 `Services/WalkService.cs` 의 `WalkRules` 에 있습니다 (Q6 제안값).
 - 매칭 산책은 둘 다 도착하면 서버가 만들고, 두 사람이 모두 끝내면 매칭이 `completed` 가 됩니다.
-- 상대 별점은 보여 주지 않고, 평균이 낮은 사람을 짝 찾기에서 빼는 데만 씁니다.
+- 리뷰는 코스 별점 · 한 줄만 받습니다. 상대 별점은 받지 않습니다.
 
 ## 테스트
 
