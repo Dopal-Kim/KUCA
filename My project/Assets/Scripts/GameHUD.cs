@@ -802,7 +802,7 @@ public class GameHUD : MonoBehaviour
         Clear(noticeList);
         if (notices.notices.Count == 0)
         {
-            UIKit.Size(UIKit.Text(noticeList, "새 공지가 없어요.", 40, TextAnchor.MiddleCenter, UIKit.Quiet), 200f);
+            UIKit.Size(UIKit.Text(noticeList, "새 공지가 없어요.", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted), 200f);
             return;
         }
         foreach (var nt in notices.notices)
@@ -810,10 +810,10 @@ public class GameHUD : MonoBehaviour
             bool isNew = !readNotices.Contains(nt.id);
             Image card = Card(noticeList, nt.id);
             UIKit.Vertical(card, 14f, new RectOffset(40, 40, 32, 36));
-            UIKit.Text(card.transform, (isNew ? "<color=#FF6B70>NEW</color>  " : "") + nt.date, 30, TextAnchor.MiddleLeft, UIKit.Quiet);
-            Text title = UIKit.Text(card.transform, nt.title, 44, TextAnchor.MiddleLeft);
+            UIKit.Text(card.transform, (isNew ? "<color=#A6192E><b>NEW</b></color>  " : "") + nt.date, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+            Text title = UIKit.Text(card.transform, nt.title, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink);
             title.fontStyle = FontStyle.Bold;
-            UIKit.Text(card.transform, nt.body, 36, TextAnchor.UpperLeft, new Color(1f, 1f, 1f, 0.85f));
+            UIKit.Text(card.transform, nt.body, KucaTheme.Body, TextAnchor.UpperLeft, KucaTheme.Ink);
         }
     }
 
@@ -853,67 +853,90 @@ public class GameHUD : MonoBehaviour
 
     void CloseSettings() => SetScreen(settingsScreen, false, null);
 
+    /// <summary>
+    /// 설정: 밝은 그룹 목록 (iOS 설정 · Material 목록). 항목은 한 줄 + 오른쪽 화살표, 위험한 일(탈퇴)은 맨 아래 따로 크림슨.
+    /// 메모 서버는 개발 · 시연용이라 "고급" 묶음 맨 끝으로.
+    /// </summary>
     void BuildSettings()
     {
-        Image nickCard = Card(settingsList, "NicknameCard");
-        UIKit.Vertical(nickCard, 18f, new RectOffset(40, 40, 32, 36));
-        UIKit.Text(nickCard.transform, "닉네임", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
-        RectTransform row = UIKit.Rect(nickCard.transform, "Row");
+        RectTransform profileGroup = UIKit.ListGroup(settingsList, "프로필");
+        RectTransform nick = Padded(profileGroup, "Nickname");
+        UIKit.Text(nick, "닉네임", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        RectTransform row = UIKit.Rect(nick, "Row");
         UIKit.Size(row, 110f);
         var h = UIKit.Horizontal(row, 20f);
         h.childForceExpandWidth = false;
-        nicknameInput = UIKit.Input(row, defaultNickname, 40, false, 12);
+        nicknameInput = UIKit.Input(row, defaultNickname, KucaTheme.Body, false, 12);
         UIKit.Size(nicknameInput, 110f, -1f, 1f);
-        Button save = UIKit.Button(row, "저장", SaveNickname, UIKit.Accent, 40);
-        UIKit.Size(save, 110f, 200f);
-        UIKit.Text(nickCard.transform, "메모를 남길 때도 이 이름이 쓰여요.", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
+        Button save = UIKit.Button(row, "저장", SaveNickname, KucaTheme.Primary, KucaTheme.Body);
+        UIKit.Size(save, 110f, 180f);
+        UIKit.Text(nick, "메모를 남길 때도 이 이름이 쓰여요.", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        UIKit.ListRow(profileGroup, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); });
 
-        // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버)
-        Image serverCard = Card(settingsList, "ServerCard");
-        UIKit.Vertical(serverCard, 18f, new RectOffset(40, 40, 32, 36));
-        UIKit.Text(serverCard.transform, "메모 서버", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
-        RectTransform srow = UIKit.Rect(serverCard.transform, "Row");
-        UIKit.Size(srow, 110f);
-        var sh = UIKit.Horizontal(srow, 20f);
-        sh.childForceExpandWidth = false;
-        serverInput = UIKit.Input(srow, "비우면 기본 서버", 36, false, 80);
-        serverInput.keyboardType = TouchScreenKeyboardType.URL;
-        UIKit.Size(serverInput, 110f, -1f, 1f);
-        Button check = UIKit.Button(srow, "연결", SaveServer, UIKit.Accent, 38);
-        UIKit.Size(check, 110f, 200f);
-        serverStatus = UIKit.Text(serverCard.transform, "", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
-
-        Image optCard = Card(settingsList, "OptionsCard");
-        UIKit.Vertical(optCard, 18f, new RectOffset(40, 40, 32, 36));
-        Button custom = UIKit.Button(optCard.transform, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(custom, 110f);
-        Button north = UIKit.Button(optCard.transform, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(north, 110f);
-        Button prefs = UIKit.Button(optCard.transform, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(prefs, 110f);
-        Button privacy = UIKit.Button(optCard.transform, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(privacy, 110f);
-        // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        RectTransform walkGroup = UIKit.ListGroup(settingsList, "지도 · 산책");
+        UIKit.ListRow(walkGroup, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); });
+        UIKit.ListRow(walkGroup, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); });
         // 체험 계정만: 캠퍼스 밖에서도 정문부터 가상으로 걸어 보기 (공모전 심사 설명용)
-        virtualWalkButton = UIKit.Button(optCard.transform, "가상 산책 켜기 (체험 계정)", () =>
+        virtualWalkButton = UIKit.ListRow(walkGroup, "가상 산책 켜기 (체험 계정)", () =>
         {
             CloseSettings();
             var v = VirtualWalk.Instance;
             if (v == null) return;
             if (v.On) v.Stop(); else v.Begin();
-        }, UIKit.ButtonGray, 38);
-        UIKit.Size(virtualWalkButton, 110f);
-        logoutButton = UIKit.Button(optCard.transform, "로그아웃", () =>
+        });
+
+        // 화면: 강조색 계절 (자동 → 봄 → 여름 → 가을 → 겨울 → 자동)
+        RectTransform screenGroup = UIKit.ListGroup(settingsList, "화면");
+        Button season = null;
+        season = UIKit.ListRow(screenGroup, SeasonLabel(), () =>
+        {
+            KucaTheme.Season? o = KucaTheme.Override;
+            KucaTheme.Override = o == null ? KucaTheme.Season.Spring
+                : (int)o.Value == KucaTheme.Seasons.Length - 1 ? (KucaTheme.Season?)null : (KucaTheme.Season)((int)o.Value + 1);
+            UIKit.SetLabel(season, SeasonLabel());
+        });
+
+        RectTransform accountGroup = UIKit.ListGroup(settingsList, "계정");
+        UIKit.ListRow(accountGroup, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); });
+        // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        logoutButton = UIKit.ListRow(accountGroup, "로그아웃", () =>
         {
             CloseSettings();
             StartCoroutine(AuthService.Logout(LoginScreen.Begin));
-        }, UIKit.ButtonGray, 38);
-        UIKit.Size(logoutButton, 110f);
-        deleteAccountButton = UIKit.Button(optCard.transform, "회원 탈퇴", DeleteAccount, UIKit.ButtonGray, 38);
-        deleteAccountButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);
-        UIKit.Size(deleteAccountButton, 110f);
+        });
 
-        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
+        // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버)
+        RectTransform advanced = UIKit.ListGroup(settingsList, "고급");
+        RectTransform server = Padded(advanced, "Server");
+        UIKit.Text(server, "메모 서버", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        RectTransform srow = UIKit.Rect(server, "Row");
+        UIKit.Size(srow, 110f);
+        var sh = UIKit.Horizontal(srow, 20f);
+        sh.childForceExpandWidth = false;
+        serverInput = UIKit.Input(srow, "비우면 기본 서버", KucaTheme.Label, false, 80);
+        serverInput.keyboardType = TouchScreenKeyboardType.URL;
+        UIKit.Size(serverInput, 110f, -1f, 1f);
+        Button check = UIKit.Button(srow, "연결", SaveServer, KucaTheme.PrimarySoft, KucaTheme.Body);
+        check.GetComponentInChildren<Text>().color = KucaTheme.PrimaryDeep;
+        UIKit.Size(check, 110f, 180f);
+        serverStatus = UIKit.Text(server, "", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+
+        RectTransform danger = UIKit.ListGroup(settingsList, null);
+        deleteAccountButton = UIKit.ListRow(danger, "회원 탈퇴", DeleteAccount, danger: true);
+
+        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft), 100f);
+    }
+
+    static string SeasonLabel() => KucaTheme.Override.HasValue
+        ? $"강조색: {KucaTheme.Set.name}"
+        : $"강조색: 자동 (지금 {KucaTheme.Set.name})";
+
+    /// <summary>목록 카드 안의 여백 있는 칸 (입력칸 같은 내용용)</summary>
+    static RectTransform Padded(RectTransform group, string name)
+    {
+        RectTransform box = UIKit.Rect(group, name);
+        UIKit.Vertical(box, 14f, new RectOffset(40, 40, 28, 28));
+        return box;
     }
 
     string DefaultMemoServer
@@ -930,7 +953,7 @@ public class GameHUD : MonoBehaviour
         bool custom = PlayerPrefs.HasKey(MemoBoard.ServerUrlKey);
         string url = custom ? PlayerPrefs.GetString(MemoBoard.ServerUrlKey) : DefaultMemoServer;
         serverInput.text = custom ? url : "";
-        serverStatus.color = UIKit.Quiet;
+        serverStatus.color = KucaTheme.InkMuted;
         serverStatus.text = custom
             ? $"지금 쓰는 서버: {url}  (비우고 연결을 누르면 기본 서버로)"
             : $"기본 서버를 쓰고 있어요: {url}";
@@ -948,20 +971,20 @@ public class GameHUD : MonoBehaviour
             Toast("기본 메모 서버를 써요");
             return;
         }
-        serverStatus.color = UIKit.Quiet;
+        serverStatus.color = KucaTheme.InkMuted;
         serverStatus.text = "연결 확인 중…";
         StartCoroutine(HttpMemoService.Check(url, (ok, error) =>
         {
             if (!ok)
             {
-                serverStatus.color = new Color(1f, 0.55f, 0.55f);
+                serverStatus.color = KucaTheme.Crimson;
                 serverStatus.text = error;
                 return;
             }
             PlayerPrefs.SetString(MemoBoard.ServerUrlKey, url);
             PlayerPrefs.Save();
             RefreshServerStatus();
-            serverStatus.color = new Color(0.55f, 0.9f, 0.65f);
+            serverStatus.color = KucaTheme.Primary;
             serverStatus.text = $"연결됐어요: {url}";
             Toast("메모 서버에 연결했어요");
         }));
@@ -986,10 +1009,10 @@ public class GameHUD : MonoBehaviour
         fill?.Invoke();
     }
 
-    /// <summary>제목·요약·닫기 버튼과 스크롤 목록이 있는 전체 화면</summary>
+    /// <summary>제목 · 요약 · 왼쪽 위 닫기(×)와 스크롤 목록이 있는 밝은 전체 화면 (공지 · 설정)</summary>
     GameObject BuildScreen(string name, string titleText, UnityEngine.Events.UnityAction onClose, out Text summary, out RectTransform list)
     {
-        Image root = UIKit.Image(canvas.transform, name, new Color(0.05f, 0.07f, 0.13f, 0.97f), raycast: true);
+        Image root = UIKit.Image(canvas.transform, name, KucaTheme.Surface, raycast: true);
         UIKit.Stretch(root.rectTransform);
         RectTransform inner = UIKit.Rect(root.transform, "Inner");
         inner.anchorMin = safe.anchorMin;
@@ -1001,43 +1024,38 @@ public class GameHUD : MonoBehaviour
         head.anchorMax = new Vector2(1f, 1f);
         head.pivot = new Vector2(0.5f, 1f);
         head.offsetMin = head.offsetMax = Vector2.zero;
-        head.sizeDelta = new Vector2(0f, 250f);
+        head.sizeDelta = new Vector2(0f, 200f);
 
-        Text title = UIKit.Text(head, titleText, 64, TextAnchor.MiddleLeft);
+        Image close = UIKit.Image(head, "Close", new Color(1f, 1f, 1f, 0f), raycast: true);
+        Place(close.rectTransform, new Vector2(0f, 1f), new Vector2(30f, -36f));
+        close.rectTransform.pivot = new Vector2(0f, 1f);
+        close.rectTransform.sizeDelta = new Vector2(KucaTheme.TouchMin, KucaTheme.TouchMin);
+        close.gameObject.AddComponent<Button>().onClick.AddListener(onClose);
+        Image x = UIKit.Image(close.transform, "Icon", KucaTheme.Ink);
+        x.sprite = HudIcons.Close;
+        Place(x.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        x.rectTransform.sizeDelta = new Vector2(44f, 44f);
+
+        Text title = UIKit.Text(head, titleText, KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink);
         title.fontStyle = FontStyle.Bold;
         RectTransform tr = title.rectTransform;
-        tr.anchorMin = Vector2.zero;
-        tr.anchorMax = Vector2.one;
-        tr.offsetMin = new Vector2(50f, 90f);
-        tr.offsetMax = new Vector2(-260f, -40f);
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(140f, -132f);
+        tr.offsetMax = new Vector2(-50f, -36f);
 
-        summary = UIKit.Text(head, "", 32, TextAnchor.UpperLeft, new Color(0.8f, 0.9f, 1f, 0.75f));
+        summary = UIKit.Text(head, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
         RectTransform smr = summary.rectTransform;
         smr.anchorMin = new Vector2(0f, 0f);
         smr.anchorMax = new Vector2(1f, 0f);
         smr.pivot = new Vector2(0.5f, 0f);
-        smr.offsetMin = new Vector2(50f, 30f);
-        smr.offsetMax = new Vector2(-50f, 84f);
-
-        Image line = UIKit.Image(head, "Line", GlassEdge);
-        RectTransform lr = line.rectTransform;
-        lr.anchorMin = new Vector2(0f, 0f);
-        lr.anchorMax = new Vector2(1f, 0f);
-        lr.offsetMin = new Vector2(36f, 0f);
-        lr.offsetMax = new Vector2(-36f, 3f);
-
-        Button close = UIKit.Button(head, "닫기", onClose, new Color(1f, 1f, 1f, 0.14f), 38);
-        RectTransform cr = (RectTransform)close.transform;
-        Place(cr, new Vector2(1f, 1f), new Vector2(-40f, -50f));
-        cr.sizeDelta = new Vector2(170f, 92f);
-        var ci = close.GetComponent<Image>();
-        ci.sprite = HudIcons.Pill;
-        ci.type = Image.Type.Sliced;
-        ci.pixelsPerUnitMultiplier = 120f / 92f;
+        smr.offsetMin = new Vector2(140f, 16f);
+        smr.offsetMax = new Vector2(-50f, 64f);
 
         RectTransform area = UIKit.Rect(inner, "List");
-        UIKit.StretchBetween(area, 0f, 250f);
-        list = UIKit.ScrollList(area, 24f, new RectOffset(36, 36, 36, 60));
+        UIKit.StretchBetween(area, 0f, 200f);
+        list = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset(36, 36, 8, 60));
 
         root.gameObject.SetActive(false);
         return root.gameObject;
@@ -1061,10 +1079,10 @@ public class GameHUD : MonoBehaviour
 
     static Image Card(Transform parent, string name)
     {
-        Image card = UIKit.Image(parent, name, new Color(0.12f, 0.16f, 0.27f, 1f));
-        card.sprite = HudIcons.Pill;
+        Image card = UIKit.Image(parent, name, KucaTheme.Card);
+        card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 2f;
+        card.pixelsPerUnitMultiplier = 0.6f;
         return card;
     }
 

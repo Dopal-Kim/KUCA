@@ -11,11 +11,9 @@ using UnityEngine.InputSystem.UI;
 /// </summary>
 public static class UIKit
 {
-    public static readonly Color Background = new Color(0.08f, 0.09f, 0.12f, 1f);
-    public static readonly Color Card = new Color(0.15f, 0.17f, 0.21f, 1f);
+    // 어두운 화면(카메라 촬영 등)용 옛 기본색. 밝은 화면은 KucaTheme 을 쓴다.
     public static readonly Color ButtonGray = new Color(0.25f, 0.27f, 0.33f, 1f);
-    public static readonly Color Accent = new Color(0.15f, 0.45f, 1f, 1f);
-    public static readonly Color Danger = new Color(0.85f, 0.3f, 0.3f, 1f);
+    public static readonly Color Accent = KucaTheme.Primary;
     public static readonly Color Quiet = new Color(1f, 1f, 1f, 0.6f);
 
     static Font font;
@@ -96,17 +94,19 @@ public static class UIKit
 
     public static void SetLabel(Button button, string label) => button.GetComponentInChildren<Text>().text = label;
 
-    /// <summary>한 줄 또는 여러 줄 입력칸</summary>
+    /// <summary>한 줄 또는 여러 줄 입력칸 (밝은 화면 기본: 옅은 초록 둥근 칸 + 진한 글자)</summary>
     public static InputField Input(Transform parent, string placeholder, int fontSize, bool multiLine, int characterLimit)
     {
-        Image bg = Image(parent, "Input", new Color(1f, 1f, 1f, 0.08f), raycast: true);
+        Image bg = Image(parent, "Input", KucaTheme.PrimarySoft, raycast: true);
+        bg.sprite = HudIcons.Rounded;
+        bg.type = UnityEngine.UI.Image.Type.Sliced;
+        bg.pixelsPerUnitMultiplier = 0.8f;
         var field = bg.gameObject.AddComponent<InputField>();
 
-        Text text = Text(bg.transform, "", fontSize, multiLine ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft);
+        Text text = Text(bg.transform, "", fontSize, multiLine ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft, KucaTheme.Ink);
         text.supportRichText = false;
         Stretch(text.rectTransform, 24f, 18f);
-        Text hint = Text(bg.transform, placeholder, fontSize, multiLine ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft, Quiet);
-        hint.fontStyle = FontStyle.Italic;
+        Text hint = Text(bg.transform, placeholder, fontSize, multiLine ? TextAnchor.UpperLeft : TextAnchor.MiddleLeft, KucaTheme.InkSoft);
         Stretch(hint.rectTransform, 24f, 18f);
 
         field.textComponent = text;
@@ -114,6 +114,59 @@ public static class UIKit
         field.lineType = multiLine ? InputField.LineType.MultiLineNewline : InputField.LineType.SingleLine;
         field.characterLimit = characterLimit;
         return field;
+    }
+
+    /// <summary>설정형 목록 묶음: 회색 소제목 + 흰 둥근 카드. 반환값(카드)에 ListRow · 내용을 넣는다 (iOS 그룹 목록 · Material 목록)</summary>
+    public static RectTransform ListGroup(Transform parent, string title)
+    {
+        if (!string.IsNullOrEmpty(title))
+        {
+            RectTransform head = Rect(parent, "Header");
+            Size(head, 72f);
+            Text h = Text(head, title, KucaTheme.Label, TextAnchor.LowerLeft, KucaTheme.InkMuted);
+            h.fontStyle = FontStyle.Bold;
+            Stretch(h.rectTransform, KucaTheme.Space3, 10f);
+        }
+        Image card = Image(parent, "Group", KucaTheme.Card);
+        card.sprite = HudIcons.Rounded;
+        card.type = UnityEngine.UI.Image.Type.Sliced;
+        card.pixelsPerUnitMultiplier = 0.6f;
+        Vertical(card, 0f, new RectOffset(0, 0, 4, 4));
+        return card.rectTransform;
+    }
+
+    /// <summary>목록 한 줄: 왼쪽 이름 + 오른쪽 화살표, 위에 옅은 구분선. danger 면 크림슨 글자 · 화살표 없음 (탈퇴 등)</summary>
+    public static Button ListRow(Transform group, string label, UnityAction onClick, bool danger = false)
+    {
+        bool first = group.childCount == 0;
+        Image row = Image(group, label, new Color(1f, 1f, 1f, 0f), raycast: true);
+        Size(row, KucaTheme.TouchMin + 16f);
+        var b = row.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        Text t = Text(row.transform, label, KucaTheme.Body, TextAnchor.MiddleLeft, danger ? KucaTheme.Crimson : KucaTheme.Ink);
+        Stretch(t.rectTransform, 40f, 0f);
+        t.rectTransform.offsetMax = new Vector2(-100f, 0f);
+        if (!danger)
+        {
+            Image chev = Image(row.transform, "Chevron", KucaTheme.InkSoft);
+            chev.sprite = HudIcons.Chevron;
+            RectTransform cr = chev.rectTransform;
+            cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 0.5f);
+            cr.anchoredPosition = new Vector2(-36f, 0f);
+            cr.sizeDelta = new Vector2(40f, 40f);
+        }
+        if (!first)
+        {
+            Image line = Image(row.transform, "Line", KucaTheme.Line);
+            RectTransform lr = line.rectTransform;
+            lr.anchorMin = new Vector2(0f, 1f);
+            lr.anchorMax = Vector2.one;
+            lr.pivot = new Vector2(0.5f, 1f);
+            lr.offsetMin = new Vector2(40f, -2f);
+            lr.offsetMax = Vector2.zero;
+        }
+        return b;
     }
 
     public static void Stretch(RectTransform rt, float padX = 0f, float padY = 0f)
