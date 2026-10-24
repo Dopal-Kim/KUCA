@@ -2,9 +2,16 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>RoutePlanner 의 화면: 조건 시트 · 장소 고르기 · 기다리기 · 코스 고르기 · 걷는 중 판 · 장소 팝업 · 위에서 본 지도</summary>
+/// <summary>
+/// RoutePlanner 의 화면: 조건 시트 · 장소 고르기 · 기다리기 · 코스 고르기 · 걷는 중 판 · 장소 팝업 · 위에서 본 지도.
+/// v4 (docs/디자인_v4.md): 카카오맵 · Apple 지도 장소 시트 — 지도 위 아래 시트, 큰 제목, 숫자 줄, 번호 목록, 아래 꽉 찬 버튼.
+/// </summary>
 public partial class RoutePlanner
 {
+    const float WalkPanelHeight = 430f;
+    static readonly string SoftHex = ColorUtility.ToHtmlStringRGB(KucaTheme.InkSoft);
+    static readonly string PrimaryHex = ColorUtility.ToHtmlStringRGB(KucaTheme.Primary);
+
     GameObject sheet, picker, loading, chooser, walkPanel, placePopup;
     Image[] timeChips, tasteChips;
     Image mealChip;
@@ -66,108 +73,70 @@ public partial class RoutePlanner
         SetChip(mealChip, afterMeal);
         UIKit.SetLabel(mealChip.GetComponent<Button>(), meal != null ? $"식후 걷기  ·  지금 {meal}시간" : "식후 걷기");
         mealNote.text = afterMeal ? $"가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : "";
-        startValue.text = $"{Escape(StartLabel)}  ›";
-        destValue.text = roundTrip ? "출발지로 돌아오기 (한 바퀴)  ›"
-            : destSpot != null ? $"{Escape(destSpot.Building.buildingName)}  ›" : "정하지 않음 (추천대로)  ›";
+        startValue.text = Escape(StartLabel);
+        destValue.text = roundTrip ? "출발지로 돌아오기"
+            : destSpot != null ? Escape(destSpot.Building.buildingName) : "추천대로";
     }
 
-    static void SetChip(Image chip, bool on)
+    /// <summary>v4 칩 (UIKit.Chip) 켜짐 / 꺼짐: 초록 + 흰 굵은 글자 / 흰 바탕 + 회색 테 + 진한 글자</summary>
+    static void SetChip(Image chip, bool on, Color? onColor = null)
     {
-        chip.color = on ? RouteBlue : ChipOff;
-        chip.GetComponentInChildren<Text>().color = on ? Color.white : Ink;
+        chip.color = on ? onColor ?? RouteBlue : KucaTheme.Card;
+        Text t = chip.GetComponentInChildren<Text>();
+        t.color = on ? Color.white : Ink;
+        t.font = on && UIKit.BoldFont != null ? UIKit.BoldFont : UIKit.Font;
+        Outline o = chip.GetComponent<Outline>();
+        if (o != null) o.enabled = !on;
     }
 
     void BuildSheet()
     {
-        sheet = UIKit.Image(canvasRect, "RouteSheet", Dim, raycast: true).gameObject;
-        BackButton.Attach(sheet, HideSheet);
-        UIKit.Stretch((RectTransform)sheet.transform);
-        sheet.AddComponent<Button>().onClick.AddListener(HideSheet); // 바깥을 누르면 닫힘
+        sheet = Sheet("RouteSheet", "어디로 걸을까요?", HideSheet, 0.9f, 2, out RectTransform c, out RectTransform b, out _);
 
-        Image panel = Card(sheet.transform, "Panel");
-        RectTransform pr = panel.rectTransform;
-        pr.anchorMin = new Vector2(0f, 0f);
-        pr.anchorMax = new Vector2(1f, 0f);
-        pr.pivot = new Vector2(0.5f, 0f);
-        pr.sizeDelta = new Vector2(0f, 1560f);
-        pr.anchoredPosition = new Vector2(0f, -40f); // 아래 둥근 모서리는 화면 밖으로
-        Swallow(panel.gameObject);
+        RectTransform places = UIKit.ListGroup(c, null);
+        places.GetComponent<Image>().color = KucaTheme.Fill;   // 흰 시트 위라 회색 묶음
+        startValue = PlaceRow(places, "출발", () => ShowPicker(true));
+        destValue = PlaceRow(places, "도착", () => ShowPicker(false));
 
-        Text title = UIKit.Text(pr, "산책 길잡이", 46, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(title);
-        Box(title.rectTransform, 50f, 46f, 150f, 70f);
-        CloseButton(pr, HideSheet);
-
-        RectTransform rp = UIKit.Rect(pr, "Recommend");
-        UIKit.StretchBetween(rp, 40f, 150f);
-
-        Heading(rp, "어디서 어디로 걸을까요?", 0f);
-        startValue = PlaceRow(rp, "출발", 70f, () => ShowPicker(true));
-        destValue = PlaceRow(rp, "도착", 186f, () => ShowPicker(false));
-
-        Heading(rp, "얼마나 걸을까요?", 320f);
+        Question(c, "얼마나 걸을까요?");
+        RectTransform timeRow = ChipRow(c);
         timeChips = new Image[TimeChoices.Length];
         for (int i = 0; i < TimeChoices.Length; i++)
         {
             int m = TimeChoices[i].minutes;
-            Image c = Chip(rp, TimeChoices[i].label, () => { minutes = m; RefreshChips(); }, 32);
-            Place(c.rectTransform, new Vector2(0f, 1f), new Vector2(50f + i * 230f, -390f));
-            c.rectTransform.sizeDelta = new Vector2(210f, 92f);
-            timeChips[i] = c;
+            timeChips[i] = Chip(timeRow, TimeChoices[i].label, () => { minutes = m; RefreshChips(); });
         }
 
-        Heading(rp, "무엇을 하고 싶어요?  <size=28><color=#8C8C91>여러 개 고를 수 있어요</color></size>", 520f);
+        Question(c, "무엇을 하고 싶어요?");
+        UIKit.Text(c, "여러 개 고를 수 있어요", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         tasteChips = new Image[TasteChoices.Length];
+        RectTransform row = null;
         for (int i = 0; i < TasteChoices.Length; i++)
         {
+            if (i % 2 == 0) row = ChipRow(c);
             string id = TasteChoices[i].id;
-            Image c = Chip(rp, TasteChoices[i].label, () =>
+            tasteChips[i] = Chip(row, TasteChoices[i].label, () =>
             {
                 if (!tastes.Remove(id)) tastes.Add(id);
                 RefreshChips();
-            }, 32);
-            Place(c.rectTransform, new Vector2(0f, 1f), new Vector2(50f + (i % 2) * 330f, -600f - (i / 2) * 114f));
-            c.rectTransform.sizeDelta = new Vector2(310f, 92f);
-            tasteChips[i] = c;
+            });
         }
-        mealChip = Chip(rp, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); }, 32);
-        Place(mealChip.rectTransform, new Vector2(0f, 1f), new Vector2(50f, -846f));
-        mealChip.rectTransform.sizeDelta = new Vector2(500f, 92f);
-        mealNote = UIKit.Text(rp, "", 26, TextAnchor.UpperLeft, InkQuiet);
-        Box(mealNote.rectTransform, 50f, 952f, 50f, 70f);
+        mealChip = Chip(ChipRow(c), "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
+        mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
 
-        Button go = Pill(rp, "코스 3개 추천 받기", RouteBlue, Color.white, RequestRoutes, 40);
-        Bottom((RectTransform)go.transform, 194f, 124f);
-        Button free = Pill(rp, "코스 없이 자유 산책 시작", ChipOff, Ink, () => { HideSheet(); FreeWalk.Begin(); }, 34);
-        Bottom((RectTransform)free.transform, 60f, 110f);
-
-        sheet.SetActive(false);
+        UIKit.PrimaryButton(b, "코스 3개 추천 받기", RequestRoutes);
+        UIKit.SecondaryButton(b, "코스 없이 자유 산책 시작", () => { HideSheet(); FreeWalk.Begin(); });
     }
 
-    void Heading(RectTransform parent, string text, float top)
+    /// <summary>"출발 · 내 위치 ›" 처럼 이름표와 값이 있는 목록 한 줄. 값 글자를 돌려준다</summary>
+    static Text PlaceRow(RectTransform group, string label, UnityEngine.Events.UnityAction onClick)
     {
-        Text t = UIKit.Text(parent, text, 36, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(t);
-        Box(t.rectTransform, 50f, top, 50f, 60f);
-    }
-
-    /// <summary>"출발  내 위치 ›" 처럼 이름표와 값이 있는 한 줄 버튼. 값 글자를 돌려준다</summary>
-    Text PlaceRow(RectTransform parent, string label, float top, UnityEngine.Events.UnityAction onClick)
-    {
-        Image row = UIKit.Image(parent, label, ChipOff, raycast: true);
-        row.sprite = HudIcons.Rounded;
-        row.type = Image.Type.Sliced;
-        row.pixelsPerUnitMultiplier = 0.7f;
-        Box(row.rectTransform, 50f, top, 50f, 100f);
-        var b = row.gameObject.AddComponent<Button>();
-        b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(onClick);
-        row.gameObject.AddComponent<PressScale>();
-        Text l = UIKit.Text(row.transform, label, 32, TextAnchor.MiddleLeft, RouteBlue);
-        UIKit.Bold(l);
-        Box(l.rectTransform, 34f, 0f, 0f, 100f);
-        Text v = UIKit.Text(row.transform, "", 34, TextAnchor.MiddleRight, Ink);
-        Box(v.rectTransform, 150f, 0f, 34f, 100f);
+        Button r = UIKit.ListRow(group, label, onClick);
+        r.GetComponentInChildren<Text>().color = InkQuiet;
+        Text v = UIKit.Bold(UIKit.Text(r.transform, "", KucaTheme.Body, TextAnchor.MiddleRight, Ink));
+        UIKit.Stretch(v.rectTransform);
+        v.rectTransform.offsetMin = new Vector2(180f, 0f);
+        v.rectTransform.offsetMax = new Vector2(-96f, 0f);
         return v;
     }
 
@@ -211,40 +180,28 @@ public partial class RoutePlanner
 
     void PickerRow(string name, string sub, bool on, System.Action pick)
     {
-        Image row = UIKit.Image(pickerList, "Row", on ? new Color(0.9f, 0.94f, 1f) : Color.white, raycast: true);
+        Image row = UIKit.Image(pickerList, "Row", on ? KucaTheme.PrimarySoft : KucaTheme.Fill, raycast: true);
         row.sprite = HudIcons.Rounded;
         row.type = Image.Type.Sliced;
-        row.pixelsPerUnitMultiplier = 0.8f;
-        UIKit.Size(row, 120f);
+        row.pixelsPerUnitMultiplier = 0.4f;
+        UIKit.Vertical(row, KucaTheme.Space1, new RectOffset(48, 48, 32, 32));
         var b = row.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => { pick(); picker.SetActive(false); RefreshChips(); UIInputBlocker.SetModal(this, sheet.activeSelf); });
-        Text t = UIKit.Text(row.transform, (on ? "<color=#2A6BF2>✓</color>  " : "") + Escape(name), 36, TextAnchor.UpperLeft, Ink);
-        UIKit.Bold(t);
-        Box(t.rectTransform, 34f, 16f, 34f, 50f);
-        Text s = UIKit.Text(row.transform, sub, 26, TextAnchor.UpperLeft, InkQuiet);
-        Box(s.rectTransform, 34f, 70f, 34f, 40f);
+        b.onClick.AddListener(() => { pick(); ClosePicker(); RefreshChips(); });
+        row.gameObject.AddComponent<PressScale>();
+        UIKit.Bold(UIKit.Text(row.transform, (on ? $"<color=#{PrimaryHex}>✓</color>  " : "") + Escape(name), KucaTheme.Body, TextAnchor.UpperLeft, Ink));
+        UIKit.Text(row.transform, sub, KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+    }
+
+    void ClosePicker()
+    {
+        picker.SetActive(false);
+        UIInputBlocker.SetModal(this, sheet.activeSelf);
     }
 
     void BuildPicker()
     {
-        picker = UIKit.Image(canvasRect, "RoutePicker", Dim, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)picker.transform);
-        picker.AddComponent<Button>().onClick.AddListener(() => { picker.SetActive(false); UIInputBlocker.SetModal(this, sheet.activeSelf); });
-        Image card = Card(picker.transform, "Card");
-        RectTransform cr = card.rectTransform;
-        cr.anchorMin = new Vector2(0.04f, 0.08f);
-        cr.anchorMax = new Vector2(0.96f, 0.92f);
-        cr.offsetMin = cr.offsetMax = Vector2.zero;
-        Swallow(card.gameObject);
-        pickerTitle = UIKit.Text(cr, "", 42, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(pickerTitle);
-        Box(pickerTitle.rectTransform, 50f, 40f, 150f, 70f);
-        CloseButton(cr, () => { picker.SetActive(false); UIInputBlocker.SetModal(this, sheet.activeSelf); });
-        RectTransform area = UIKit.Rect(cr, "List");
-        UIKit.StretchBetween(area, 30f, 140f);
-        pickerList = UIKit.ScrollList(area, 12f, new RectOffset(40, 40, 0, 20));
-        picker.SetActive(false);
+        picker = Sheet("RoutePicker", "", ClosePicker, 0.9f, 0, out pickerList, out _, out pickerTitle);
     }
 
     // ---------- 기다리기 ----------
@@ -276,30 +233,25 @@ public partial class RoutePlanner
     {
         loading = UIKit.Image(canvasRect, "RouteLoading", Dim, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)loading.transform);
-        Image card = Card(loading.transform, "Card");
-        Place(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        card.rectTransform.sizeDelta = new Vector2(760f, 640f);
+        RectTransform card = UIKit.CardBox(loading.transform, "Card", KucaTheme.Space2);
+        card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
+        card.sizeDelta = new Vector2(880f, 0f);
+        card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        RectTransform holder = UIKit.Rect(card, "PartnerHolder");
+        UIKit.Size(holder, 340f);
         var go = new GameObject("Partner", typeof(RectTransform), typeof(RawImage));
-        go.transform.SetParent(card.transform, false);
+        go.transform.SetParent(holder, false);
         loadingPartner = go.GetComponent<RawImage>();
         loadingPartner.raycastTarget = false;
-        Place(loadingPartner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f));
-        loadingPartner.rectTransform.sizeDelta = new Vector2(280f, 280f);
-        Text t = UIKit.Text(card.transform, "코스 3개를 짜고 있어요…", 40, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(t);
-        Place(t.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 190f));
-        t.rectTransform.sizeDelta = new Vector2(700f, 60f);
-        Text sub = UIKit.Text(card.transform, "파트너가 길을 찾고 있어요", 30, TextAnchor.MiddleCenter, InkQuiet);
-        Place(sub.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 140f));
-        sub.rectTransform.sizeDelta = new Vector2(700f, 44f);
-        Button cancel = UIKit.Button(card.transform, "취소", () => { request++; ShowLoading(false); ShowSheet(); }, new Color(0f, 0f, 0f, 0f), 32);
-        cancel.GetComponentInChildren<Text>().color = InkQuiet;
-        Place((RectTransform)cancel.transform, new Vector2(0.5f, 0f), new Vector2(0f, 30f));
-        ((RectTransform)cancel.transform).sizeDelta = new Vector2(200f, 84f);
+        Place(loadingPartner.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        loadingPartner.rectTransform.sizeDelta = new Vector2(300f, 300f);
+        UIKit.Size(UIKit.Bold(UIKit.Text(card, "코스 3개를 짜고 있어요", KucaTheme.Heading, TextAnchor.MiddleCenter, Ink)), 80f);
+        UIKit.Size(UIKit.Text(card, "파트너가 길을 찾고 있어요", KucaTheme.Label, TextAnchor.MiddleCenter, InkQuiet), 56f);
+        UIKit.SecondaryButton(card, "취소", () => { request++; ShowLoading(false); ShowSheet(); });
         loading.SetActive(false);
     }
 
-    // ---------- 코스 고르기 (지도 + 카드 3장) ----------
+    // ---------- 코스 고르기 (위 지도 + 아래 시트) ----------
 
     void ShowChooser(int pick)
     {
@@ -307,9 +259,9 @@ public partial class RoutePlanner
         chooser.SetActive(true);
         chooser.transform.SetAsLastSibling();
         UIInputBlocker.SetModal(this, true);
+        BuildOptionCards();
         Canvas.ForceUpdateCanvases();
         DrawChooserMap();
-        BuildOptionCards();
         UIKit.SetLabel(chooserGo, $"{options[chosen].variant.label}로 걷기");
         chooserGo.GetComponent<Image>().color = options[chosen].variant.color;
     }
@@ -353,100 +305,99 @@ public partial class RoutePlanner
         TopMap.Marker(chooserOverlay, cam, size, StartPosition, Ink, o2.returns ? "출발\n도착" : "출발", 74f);
     }
 
+    /// <summary>시트 내용: 코스 3개 칩 → 고른 코스의 큰 이름 · 숫자 줄 · 들를 곳 번호 목록 (카카오맵 장소 시트)</summary>
     void BuildOptionCards()
     {
         Clear(chooserCards);
+        RectTransform tabs = ChipRow(chooserCards);
         for (int i = 0; i < options.Count; i++)
         {
             int index = i;
-            Option o = options[i];
-            bool sel = i == chosen;
-            Image card = UIKit.Image(chooserCards, "Option", sel ? Color.white : new Color(0.97f, 0.97f, 0.98f), raycast: true);
-            card.sprite = HudIcons.Rounded;
-            card.type = Image.Type.Sliced;
-            card.pixelsPerUnitMultiplier = 0.7f;
-            var v = UIKit.Vertical(card, 6f, new RectOffset(44, 34, 24, 24));
-            card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var b = card.gameObject.AddComponent<Button>();
-            b.transition = Selectable.Transition.None;
-            b.onClick.AddListener(() => ShowChooser(index));
-            if (sel)
-            {
-                Outline ol = card.gameObject.AddComponent<Outline>();
-                ol.effectColor = o.variant.color;
-                ol.effectDistance = new Vector2(4f, -4f);
-            }
-            // 왼쪽 색 띠
-            Image bar = UIKit.Image(card.transform, "Bar", o.variant.color);
-            bar.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
-            bar.rectTransform.anchorMin = new Vector2(0f, 0f);
-            bar.rectTransform.anchorMax = new Vector2(0f, 1f);
-            bar.rectTransform.pivot = new Vector2(0f, 0.5f);
-            bar.rectTransform.sizeDelta = new Vector2(14f, -30f);
-            bar.rectTransform.anchoredPosition = new Vector2(14f, 0f);
-
-            string hex = ColorUtility.ToHtmlStringRGB(o.variant.color);
-            string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
-            Text head = UIKit.Text(card.transform, $"<color=#{hex}>{o.variant.label}</color>   <size=26><color=#8C8C91>{source}</color></size>", 36, TextAnchor.UpperLeft, Ink);
-            UIKit.Bold(head);
-            int visits = o.result.stops.Count - (o.returns ? 1 : 0);
-            UIKit.Text(card.transform, $"{RouteMath.Distance(o.meters)}  ·  약 {o.walkMinutes}분  ·  {visits}곳" + (o.returns ? "  ·  한 바퀴" : ""), 30, TextAnchor.UpperLeft, Ink);
-            var names = o.result.stops.ConvertAll(s => Escape(s.name));
-            Text route = UIKit.Text(card.transform, $"{Escape(StartLabel)} → " + string.Join(" → ", names), 27, TextAnchor.UpperLeft, InkQuiet);
-            route.horizontalOverflow = HorizontalWrapMode.Wrap;
-            if (sel)
-            {
-                // 고른 코스는 장소마다 이유까지
-                for (int s = 0; s < o.result.stops.Count; s++)
-                {
-                    RouteStop st = o.result.stops[s];
-                    string dist = st.distanceM > 0 ? $"  <color=#8C8C91>· {RouteMath.Distance(st.distanceM)} · {st.walkMinutes}분</color>" : "";
-                    Text line = UIKit.Text(card.transform, $"<b><color=#{hex}>{s + 1}</color>  {Escape(st.name)}</b>{dist}\n<size=26>{Escape(st.reason)}</size>", 30, TextAnchor.UpperLeft, Ink);
-                    line.horizontalOverflow = HorizontalWrapMode.Wrap;
-                    line.lineSpacing = 1.05f;
-                }
-                if (!string.IsNullOrEmpty(o.result.healthNote))
-                    UIKit.Text(card.transform, Escape(o.result.healthNote), 24, TextAnchor.UpperLeft, InkQuiet).horizontalOverflow = HorizontalWrapMode.Wrap;
-            }
+            Image chip = Chip(tabs, options[i].variant.label.Replace(" 코스", ""), () => ShowChooser(index));
+            SetChip(chip, i == chosen, options[i].variant.color);
         }
+
+        Option o = options[chosen];
+        string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
+        UIKit.Bold(UIKit.Text(chooserCards, o.variant.label, KucaTheme.Title, TextAnchor.UpperLeft, Ink));
+        UIKit.Text(chooserCards, source + (o.returns ? "  ·  출발지로 돌아오는 한 바퀴" : ""), KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        int visits = o.result.stops.Count - (o.returns ? 1 : 0);
+        UIKit.StatRow(chooserCards, (RouteMath.Distance(o.meters), "거리"), ($"{o.walkMinutes}분", "걸리는 시간"), ($"{visits}곳", "들를 곳"));
+
+        UIKit.SectionTitle(chooserCards, "들를 곳");
+        for (int s = 0; s < o.result.stops.Count; s++)
+        {
+            RouteStop st = o.result.stops[s];
+            string dist = st.distanceM > 0 ? $"  <size={KucaTheme.Label}><color=#{SoftHex}>{RouteMath.Distance(st.distanceM)} · {st.walkMinutes}분</color></size>" : "";
+            StopRow(chooserCards, (s + 1).ToString(), o.variant.color, Escape(st.name) + dist, Escape(st.reason));
+        }
+        if (!string.IsNullOrEmpty(o.result.healthNote))
+            UIKit.Text(chooserCards, Escape(o.result.healthNote), KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+    }
+
+    /// <summary>들를 곳 한 줄: 번호 원 + 굵은 이름 (+ 거리) + 이유</summary>
+    static void StopRow(RectTransform parent, string number, Color color, string name, string reason)
+    {
+        RectTransform row = UIKit.Rect(parent, "Stop");
+        var h = UIKit.Horizontal(row, KucaTheme.Space3);
+        h.childForceExpandWidth = h.childForceExpandHeight = false;
+        h.childAlignment = TextAnchor.UpperLeft;
+        RectTransform holder = UIKit.Rect(row, "Number");
+        UIKit.Size(holder, 80f, 80f);
+        Image c = Circle(holder, color, 72f, number);
+        c.rectTransform.anchorMin = c.rectTransform.anchorMax = c.rectTransform.pivot = new Vector2(0.5f, 1f);
+        c.rectTransform.anchoredPosition = Vector2.zero;
+        RectTransform col = UIKit.Rect(row, "Text");
+        UIKit.Vertical(col, 4f);
+        UIKit.Size(col, -1f, -1f, 1f);
+        UIKit.Bold(UIKit.Text(col, name, KucaTheme.Body, TextAnchor.UpperLeft, Ink));
+        if (!string.IsNullOrEmpty(reason))
+            UIKit.Text(col, reason, KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
     }
 
     void BuildChooser()
     {
-        chooser = UIKit.Image(canvasRect, "RouteChooser", Dim, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)chooser.transform);
-        Image card = Card(chooser.transform, "Card");
-        RectTransform cr = card.rectTransform;
-        cr.anchorMin = Vector2.zero;
-        cr.anchorMax = Vector2.one;
-        cr.offsetMin = new Vector2(24f, 30f);
-        cr.offsetMax = new Vector2(-24f, -110f);
-        Swallow(card.gameObject);
-        Text title = UIKit.Text(cr, "코스를 골라요", 44, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(title);
-        Box(title.rectTransform, 46f, 30f, 150f, 70f);
-        CloseButton(cr, () => { HideChooser(); ShowSheet(); });
+        Image bg = UIKit.Image(canvasRect, "RouteChooser", KucaTheme.Surface, raycast: true);
+        UIKit.Stretch(bg.rectTransform);
+        chooser = bg.gameObject;
+        UnityEngine.Events.UnityAction back = () => { HideChooser(); ShowSheet(); };
+        BackButton.Attach(chooser, back);
 
-        Image frame = UIKit.Image(cr, "Map", new Color(0.55f, 0.72f, 0.42f));
-        frame.sprite = HudIcons.Rounded;
-        frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 1f;
-        Box(frame.rectTransform, 30f, 120f, 30f, 760f);
-        frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-        var mm = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
-        mm.transform.SetParent(frame.transform, false);
-        chooserMap = mm.GetComponent<RawImage>();
-        chooserMap.raycastTarget = false;
-        UIKit.Stretch(chooserMap.rectTransform);
-        chooserOverlay = UIKit.Rect(frame.transform, "Routes");
-        UIKit.Stretch(chooserOverlay);
+        // 위 45%: 코스 3개가 그려진 지도
+        Image frame = TopMap.Frame(bg.transform, "Map", out chooserMap, out chooserOverlay);
+        frame.pixelsPerUnitMultiplier = 100f;   // 화면 끝까지 꽉 (둥근 모서리 없음)
+        RectTransform fr = frame.rectTransform;
+        fr.anchorMin = new Vector2(0f, 0.55f);
+        fr.anchorMax = Vector2.one;
+        fr.offsetMin = new Vector2(0f, -60f);
+        fr.offsetMax = Vector2.zero;
+        Button backButton = UIKit.IconButton(bg.transform, HudIcons.Chevron, back, Ink, Vector2.zero, flip: true);
+        Image backDisc = UIKit.Image(backButton.transform, "Disc", KucaTheme.Card);   // 지도 위에서 보이게 흰 원
+        backDisc.sprite = HudIcons.Circle;
+        backDisc.rectTransform.sizeDelta = new Vector2(112f, 112f);
+        backDisc.transform.SetAsFirstSibling();
+        RectTransform br = (RectTransform)backButton.transform;
+        Rect sa = Screen.safeArea;
+        br.anchoredPosition = new Vector2(24f, -24f - (Screen.height - sa.yMax) / Mathf.Max(1, Screen.height) * 1920f);
 
-        RectTransform area = UIKit.Rect(cr, "Options");
-        UIKit.StretchBetween(area, 190f, 900f);
-        chooserCards = UIKit.ScrollList(area, 18f, new RectOffset(30, 30, 0, 20));
-
-        chooserGo = Pill(cr, "이 코스로 걷기", RouteBlue, Color.white, () => StartWalk(options[chosen]), 40);
-        Bottom((RectTransform)chooserGo.transform, 40f, 124f);
+        // 아래 시트: 코스 정보 + "이 코스로 걷기"
+        Image panel = UIKit.Image(bg.transform, "Sheet", KucaTheme.Card, raycast: true);
+        panel.sprite = HudIcons.Rounded;
+        panel.type = Image.Type.Sliced;
+        panel.pixelsPerUnitMultiplier = 0.34f;
+        RectTransform pr = panel.rectTransform;
+        pr.anchorMin = Vector2.zero;
+        pr.anchorMax = new Vector2(1f, 0.55f);
+        pr.offsetMin = new Vector2(0f, -60f);   // 아래 둥근 모서리는 화면 밖으로
+        pr.offsetMax = Vector2.zero;
+        Grip(pr);
+        float bottomH = KucaTheme.ButtonHeight + 2 * KucaTheme.Space4 + 60f + sa.yMin / Mathf.Max(1, Screen.height) * 1920f;
+        RectTransform bottom = Bottom(pr, bottomH);
+        RectTransform area = UIKit.Rect(pr, "Options");
+        UIKit.StretchBetween(area, bottomH, 48f);
+        int g = (int)KucaTheme.Gutter;
+        chooserCards = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset(g, g, 16, (int)KucaTheme.Space6));
+        chooserGo = UIKit.PrimaryButton(bottom, "이 코스로 걷기", () => StartWalk(options[chosen]));
         chooser.SetActive(false);
     }
 
@@ -458,7 +409,7 @@ public partial class RoutePlanner
             return;
         Option o = active;
         walkDot.color = o.variant.color;
-        walkTitle.text = $"{o.variant.label}  <size=28><color=#8C8C91>{RouteMath.Distance(o.meters)} · 약 {o.walkMinutes}분</color></size>";
+        walkTitle.text = $"{o.variant.label}  <size={KucaTheme.Label}><color=#{SoftHex}>{RouteMath.Distance(o.meters)} · 약 {o.walkMinutes}분</color></size>";
         int next = done.FindIndex(x => !x);
         int count = done.FindAll(x => x).Count;
         if (next >= 0)
@@ -466,57 +417,62 @@ public partial class RoutePlanner
             RouteStop s = o.result.stops[next];
             float left = Flat(PlayerPosition, o.stops[next]);
             bool last = next == o.result.stops.Count - 1;
-            walkNext.text = $"<color=#{ColorUtility.ToHtmlStringRGB(o.variant.color)}>{(last ? "마지막" : "다음")} {next + 1}</color>  {Escape(s.name)}  <size=30><color=#8C8C91>· {RouteMath.Distance(left)}</color></size>";
+            walkNext.text = $"<color=#{ColorUtility.ToHtmlStringRGB(o.variant.color)}>{(last ? "마지막" : "다음")} {next + 1}</color>  {Escape(s.name)}  <size={KucaTheme.Label}><color=#{SoftHex}>· {RouteMath.Distance(left)}</color></size>";
             walkReason.text = Escape(s.reason);
         }
         walkProgress.text = $"{count}/{o.result.stops.Count}곳 들렀어요";
-        pathToggle.color = showPath ? o.variant.color : ChipOff;
+        pathToggle.color = showPath ? o.variant.color : KucaTheme.Fill;
         pathToggleText.color = showPath ? Color.white : Ink;
         pathToggleText.text = showPath ? "경로 켜짐" : "경로 꺼짐";
     }
 
+    /// <summary>걷는 중 지도 아래 떠 있는 흰 카드: 코스 이름 · 다음 장소(크게) · 이유 · 진행</summary>
     void BuildWalkPanel()
     {
-        walkPanel = Card(canvasRect, "WalkPanel").gameObject;
-        RectTransform pr = (RectTransform)walkPanel.transform;
+        Image card = UIKit.Image(canvasRect, "WalkPanel", KucaTheme.Card, raycast: true);
+        card.sprite = HudIcons.Rounded;
+        card.type = Image.Type.Sliced;
+        card.pixelsPerUnitMultiplier = 0.34f;
+        card.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.12f);
+        walkPanel = card.gameObject;
+        RectTransform pr = card.rectTransform;
         pr.anchorMin = new Vector2(0f, 0f);
         pr.anchorMax = new Vector2(1f, 0f);
         pr.pivot = new Vector2(0.5f, 0f);
-        pr.sizeDelta = new Vector2(-48f, 360f);
+        pr.sizeDelta = new Vector2(-48f, WalkPanelHeight);
         pr.anchoredPosition = new Vector2(0f, 320f);
         UIInputBlocker.Register(pr);
 
         walkDot = UIKit.Image(pr, "Dot", RouteBlue);
         walkDot.sprite = HudIcons.Circle;
-        Place(walkDot.rectTransform, new Vector2(0f, 1f), new Vector2(40f, -42f));
-        walkDot.rectTransform.sizeDelta = new Vector2(28f, 28f);
-        walkTitle = UIKit.Text(pr, "", 32, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(walkTitle);
-        Box(walkTitle.rectTransform, 84f, 26f, 380f, 60f);
+        Place(walkDot.rectTransform, new Vector2(0f, 1f), new Vector2(44f, -52f));
+        walkDot.rectTransform.sizeDelta = new Vector2(32f, 32f);
+        walkTitle = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
+        Box(walkTitle.rectTransform, 92f, 30f, 430f, 76f);
 
-        Button toggle = Pill(pr, "경로 켜짐", RouteBlue, Color.white, () => { showPath = !showPath; RefreshWalkPanel(); }, 26);
+        Button toggle = UIKit.Button(pr, "경로 켜짐", () => { showPath = !showPath; RefreshWalkPanel(); }, RouteBlue, KucaTheme.Caption);
         pathToggle = toggle.GetComponent<Image>();
         pathToggleText = toggle.GetComponentInChildren<Text>();
-        Place((RectTransform)toggle.transform, new Vector2(1f, 1f), new Vector2(-200f, -24f));
-        ((RectTransform)toggle.transform).sizeDelta = new Vector2(170f, 64f);
-        Button end = Pill(pr, "끝내기", ChipOff, Ink, () => EndRoute(true), 26);
+        Place((RectTransform)toggle.transform, new Vector2(1f, 1f), new Vector2(-224f, -24f));
+        ((RectTransform)toggle.transform).sizeDelta = new Vector2(200f, 92f);
+        Button end = UIKit.Button(pr, "끝내기", () => EndRoute(true), KucaTheme.Fill, KucaTheme.Caption);
+        end.GetComponentInChildren<Text>().color = Ink;
         Place((RectTransform)end.transform, new Vector2(1f, 1f), new Vector2(-24f, -24f));
-        ((RectTransform)end.transform).sizeDelta = new Vector2(160f, 64f);
+        ((RectTransform)end.transform).sizeDelta = new Vector2(184f, 92f);
 
         // 다음 장소 (누르면 장소 팝업)
-        Image next = UIKit.Image(pr, "Next", new Color(0f, 0f, 0f, 0f), raycast: true);
-        Box(next.rectTransform, 30f, 100f, 30f, 200f);
+        Image next = UIKit.Image(pr, "Next", new Color(1f, 1f, 1f, 0f), raycast: true);
+        Box(next.rectTransform, 32f, 128f, 32f, WalkPanelHeight - 152f);
         var nb = next.gameObject.AddComponent<Button>();
         nb.transition = Selectable.Transition.None;
         nb.onClick.AddListener(() => { int i = done.FindIndex(x => !x); OpenPlace(i < 0 ? 0 : i); });
-        walkNext = UIKit.Text(next.transform, "", 40, TextAnchor.UpperLeft, Ink);
-        UIKit.Bold(walkNext);
-        Box(walkNext.rectTransform, 10f, 0f, 10f, 60f);
-        walkReason = UIKit.Text(next.transform, "", 28, TextAnchor.UpperLeft, InkQuiet);
+        walkNext = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Heading, TextAnchor.UpperLeft, Ink));
+        Box(walkNext.rectTransform, 12f, 0f, 12f, 72f);
+        walkReason = UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         walkReason.verticalOverflow = VerticalWrapMode.Truncate;
-        Box(walkReason.rectTransform, 10f, 66f, 10f, 84f);
-        walkProgress = UIKit.Text(next.transform, "", 26, TextAnchor.UpperLeft, RouteBlue);
-        Box(walkProgress.rectTransform, 10f, 156f, 10f, 40f);
+        Box(walkReason.rectTransform, 12f, 80f, 12f, 96f);
+        walkProgress = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
+        Box(walkProgress.rectTransform, 12f, 184f, 12f, 52f);
         walkPanel.SetActive(false);
     }
 
@@ -533,7 +489,7 @@ public partial class RoutePlanner
         Clear(popupNotices);
         List<PlaceNotice> list = NoticesOf(s.buildingId);
         if (list.Count == 0)
-            UIKit.Size(UIKit.Text(popupNotices, "이 장소의 공지는 아직 없어요", 30, TextAnchor.MiddleCenter, InkQuiet), 90f);
+            UIKit.Size(UIKit.Text(popupNotices, "이 장소의 공지는 아직 없어요", KucaTheme.Body, TextAnchor.MiddleLeft, InkQuiet), 90f);
         foreach (PlaceNotice n in list)
             NoticeRow(popupNotices, n, false);
         KyungHeeSpot spot = SpotOf(s.buildingId);
@@ -578,71 +534,36 @@ public partial class RoutePlanner
 
     void BuildPlacePopup()
     {
-        placePopup = UIKit.Image(canvasRect, "PlacePopup", Dim, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)placePopup.transform);
-        placePopup.AddComponent<Button>().onClick.AddListener(ClosePlace);
-        Image card = Card(placePopup.transform, "Card");
-        RectTransform cr = card.rectTransform;
-        cr.anchorMin = new Vector2(0.05f, 0.5f);
-        cr.anchorMax = new Vector2(0.95f, 0.5f);
-        cr.pivot = new Vector2(0.5f, 0.5f);
-        cr.sizeDelta = new Vector2(0f, 1560f);
-        Swallow(card.gameObject);
-        popupName = UIKit.Text(cr, "", 44, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(popupName);
-        Box(popupName.rectTransform, 50f, 46f, 140f, 64f);
-        CloseButton(cr, ClosePlace);
-        popupReason = UIKit.Text(cr, "", 30, TextAnchor.UpperLeft, InkQuiet);
-        Box(popupReason.rectTransform, 50f, 116f, 50f, 50f);
-
-        Image frame = UIKit.Image(cr, "MiniMap", new Color(0.55f, 0.72f, 0.42f));
-        frame.sprite = HudIcons.Rounded;
-        frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 1f;
-        Box(frame.rectTransform, 50f, 186f, 50f, 680f);
-        frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
-        var mm = new GameObject("Map", typeof(RectTransform), typeof(RawImage));
-        mm.transform.SetParent(frame.transform, false);
-        miniMap = mm.GetComponent<RawImage>();
-        miniMap.raycastTarget = false;
-        UIKit.Stretch(miniMap.rectTransform);
-        miniOverlay = UIKit.Rect(frame.transform, "Route");
-        UIKit.Stretch(miniOverlay);
-
-        Text head = UIKit.Text(cr, "장소 공지", 32, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(head);
-        Box(head.rectTransform, 50f, 896f, 50f, 50f);
-        RectTransform area = UIKit.Rect(cr, "List");
-        UIKit.StretchBetween(area, 190f, 960f);
-        popupNotices = UIKit.ScrollList(area, 16f, new RectOffset(50, 50, 0, 20));
-        popupBoardButton = Pill(cr, "이 장소 쪽지판 열기", Ink, Color.white, () => { }, 34);
-        Bottom((RectTransform)popupBoardButton.transform, 50f, 110f);
-        placePopup.SetActive(false);
+        placePopup = Sheet("PlacePopup", "", ClosePlace, 0.88f, 1, out RectTransform c, out RectTransform b, out popupName);
+        popupReason = UIKit.Text(c, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        Image frame = TopMap.Frame(c, "MiniMap", out miniMap, out miniOverlay);
+        frame.pixelsPerUnitMultiplier = 0.34f;
+        UIKit.Size(frame, 640f);
+        UIKit.SectionTitle(c, "장소 공지");
+        popupNotices = UIKit.Rect(c, "Notices");
+        UIKit.Vertical(popupNotices, KucaTheme.Space2);
+        popupBoardButton = UIKit.PrimaryButton(b, "이 장소 쪽지판 열기", () => { });
     }
 
     /// <summary>공지 한 줄: (장소) 제목 · 요약 · 날짜 · 원문 보기. 누르면 원문을 연다 (메모판 공지 탭도 씀)</summary>
     internal static void NoticeRow(RectTransform parent, PlaceNotice n, bool withPlace)
     {
-        Image row = UIKit.Image(parent, "Notice", ChipOff, raycast: true);
+        Image row = UIKit.Image(parent, "Notice", KucaTheme.Fill, raycast: true);
         row.sprite = HudIcons.Rounded;
         row.type = Image.Type.Sliced;
-        row.pixelsPerUnitMultiplier = 0.8f;
-        UIKit.Vertical(row, 8f, new RectOffset(32, 32, 26, 26));
+        row.pixelsPerUnitMultiplier = 0.4f;
+        UIKit.Vertical(row, KucaTheme.Space1, new RectOffset(40, 40, 32, 32));
         row.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         var b = row.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
         string url = n.url;
         b.onClick.AddListener(() => { if (!string.IsNullOrEmpty(url)) Application.OpenURL(url); });
         if (withPlace)
-        {
-            Text place = UIKit.Text(row.transform, n.buildingName, 26, TextAnchor.UpperLeft, RouteBlue);
-            UIKit.Bold(place);
-        }
-        Text title = UIKit.Text(row.transform, n.title, 32, TextAnchor.UpperLeft, Ink);
-        UIKit.Bold(title);
+            UIKit.Bold(UIKit.Text(row.transform, n.buildingName, KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
+        UIKit.Bold(UIKit.Text(row.transform, n.title, KucaTheme.Body, TextAnchor.UpperLeft, Ink));
         if (!string.IsNullOrEmpty(n.summary))
-            UIKit.Text(row.transform, n.summary, 27, TextAnchor.UpperLeft, InkQuiet);
-        UIKit.Text(row.transform, $"{n.postedAt}   <color=#2A6BF2>원문 보기 ›</color>", 26, TextAnchor.UpperLeft, InkQuiet);
+            UIKit.Text(row.transform, n.summary, KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        UIKit.Text(row.transform, $"{n.postedAt}   <color=#{PrimaryHex}>원문 보기 ›</color>", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
     }
 
     // ---------- 위에서 본 지도 ----------
@@ -658,54 +579,94 @@ public partial class RoutePlanner
 
     // ---------- 작은 도우미 ----------
 
+    /// <summary>
+    /// 지도 위 아래 시트 (카카오맵 · Apple 지도): 어둡게 덮고 아래에서 올라온 흰 시트 — 손잡이 · 큰 제목 · ×, 스크롤 내용,
+    /// 아래 고정 버튼 칸 (buttons 개). 바깥을 누르거나 뒤로 가기로 닫힌다.
+    /// </summary>
+    GameObject Sheet(string name, string title, UnityEngine.Events.UnityAction onClose, float heightFrac, int buttons,
+        out RectTransform content, out RectTransform bottom, out Text titleText)
+    {
+        Image dim = UIKit.Image(canvasRect, name, Dim, raycast: true);
+        UIKit.Stretch(dim.rectTransform);
+        dim.gameObject.AddComponent<Button>().onClick.AddListener(onClose); // 바깥을 누르면 닫힘
+        BackButton.Attach(dim.gameObject, onClose);
+
+        Image panel = UIKit.Image(dim.transform, "Panel", KucaTheme.Card, raycast: true);
+        panel.sprite = HudIcons.Rounded;
+        panel.type = Image.Type.Sliced;
+        panel.pixelsPerUnitMultiplier = 0.34f;
+        RectTransform pr = panel.rectTransform;
+        pr.anchorMin = Vector2.zero;
+        pr.anchorMax = new Vector2(1f, heightFrac);
+        pr.offsetMin = new Vector2(0f, -60f);   // 아래 둥근 모서리는 화면 밖으로
+        pr.offsetMax = Vector2.zero;
+        Swallow(panel.gameObject);
+        Grip(pr);
+
+        titleText = UIKit.Bold(UIKit.Text(pr, title, KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
+        Box(titleText.rectTransform, KucaTheme.Gutter, 56f, 180f, 100f);
+        var x = (RectTransform)UIKit.IconButton(pr, HudIcons.Close, onClose, Ink, Vector2.zero).transform;
+        x.anchorMin = x.anchorMax = x.pivot = Vector2.one;
+        x.anchoredPosition = new Vector2(-24f, -40f);
+
+        float safeBottom = Screen.safeArea.yMin / Mathf.Max(1, Screen.height) * 1920f;
+        float bottomH = (buttons > 0 ? buttons * KucaTheme.ButtonHeight + (buttons - 1) * KucaTheme.Space2 + 2 * KucaTheme.Space4 : 0f) + 60f + safeBottom;
+        bottom = Bottom(pr, bottomH);
+        RectTransform area = UIKit.Rect(pr, "Area");
+        UIKit.StretchBetween(area, bottomH, 176f);
+        int g = (int)KucaTheme.Gutter;
+        content = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset(g, g, 8, (int)KucaTheme.Space6));
+        dim.gameObject.SetActive(false);
+        return dim.gameObject;
+    }
+
+    /// <summary>시트 위 가운데 회색 손잡이</summary>
+    static void Grip(RectTransform panel)
+    {
+        Image grip = UIKit.Image(panel, "Grip", KucaTheme.Line);
+        grip.sprite = HudIcons.Pill;
+        grip.type = Image.Type.Sliced;
+        grip.pixelsPerUnitMultiplier = 10f;
+        Place(grip.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -20f));
+        grip.rectTransform.sizeDelta = new Vector2(120f, 12f);
+    }
+
+    /// <summary>시트 아래 고정 버튼 칸 (아래 60 은 화면 밖으로 내린 둥근 모서리 + 홈 표시줄 몫)</summary>
+    static RectTransform Bottom(RectTransform panel, float height)
+    {
+        RectTransform b = UIKit.Rect(panel, "Bottom");
+        b.anchorMin = Vector2.zero;
+        b.anchorMax = new Vector2(1f, 0f);
+        b.pivot = new Vector2(0.5f, 0f);
+        b.offsetMin = Vector2.zero;
+        b.offsetMax = new Vector2(0f, height);
+        int g = (int)KucaTheme.Gutter, s4 = (int)KucaTheme.Space4;
+        UIKit.Vertical(b, KucaTheme.Space2, new RectOffset(g, g, s4, 0)).childAlignment = TextAnchor.UpperCenter;   // 버튼은 위부터, 남는 아래는 비움
+        return b;
+    }
+
+    static void Question(RectTransform parent, string text) =>
+        UIKit.Size(UIKit.Bold(UIKit.Text(parent, text, KucaTheme.Heading, TextAnchor.LowerLeft, Ink)), 96f);
+
+    static RectTransform ChipRow(RectTransform parent)
+    {
+        RectTransform row = UIKit.Rect(parent, "Chips");
+        UIKit.Size(row, 104f);
+        UIKit.Horizontal(row, KucaTheme.Space2);
+        return row;
+    }
+
+    static Image Chip(RectTransform row, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = UIKit.Chip(row, label, false, onClick);
+        b.gameObject.AddComponent<PressScale>();
+        return b.GetComponent<Image>();
+    }
+
     static void Clear(RectTransform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--)
             Destroy(parent.GetChild(i).gameObject);
-    }
-
-    static Image Card(Transform parent, string name)
-    {
-        Image card = UIKit.Image(parent, name, Color.white, raycast: true);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
-        return card;
-    }
-
-    static void CloseButton(RectTransform parent, UnityEngine.Events.UnityAction onClick)
-    {
-        Image close = UIKit.Image(parent, "Close", new Color(0f, 0f, 0f, 0f), raycast: true);
-        Place(close.rectTransform, new Vector2(1f, 1f), new Vector2(-30f, -36f));
-        close.rectTransform.sizeDelta = new Vector2(84f, 84f);
-        close.gameObject.AddComponent<Button>().onClick.AddListener(onClick);
-        Image ci = UIKit.Image(close.transform, "Icon", Ink);
-        ci.sprite = HudIcons.Close;
-        Place(ci.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        ci.rectTransform.sizeDelta = new Vector2(40f, 40f);
-    }
-
-    static Button Pill(Transform parent, string label, Color color, Color textColor, UnityEngine.Events.UnityAction onClick, int fontSize)
-    {
-        Button b = UIKit.Button(parent, label, onClick, color, fontSize);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 1f;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = textColor;
-        UIKit.Bold(t);
-        b.gameObject.AddComponent<PressScale>();
-        return b;
-    }
-
-    static void Bottom(RectTransform rt, float bottom, float height)
-    {
-        rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(1f, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.sizeDelta = new Vector2(-100f, height);
-        rt.anchoredPosition = new Vector2(0f, bottom);
     }
 
     static Image Circle(Transform parent, Color color, float size, string label)
@@ -714,22 +675,9 @@ public partial class RoutePlanner
         c.sprite = HudIcons.Circle;
         c.rectTransform.anchorMin = c.rectTransform.anchorMax = c.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         c.rectTransform.sizeDelta = new Vector2(size, size);
-        Text t = UIKit.Text(c.transform, label, Mathf.RoundToInt(size * 0.48f), TextAnchor.MiddleCenter, Color.white);
-        UIKit.Bold(t);
+        Text t = UIKit.Bold(UIKit.Text(c.transform, label, Mathf.RoundToInt(size * 0.48f), TextAnchor.MiddleCenter, Color.white));
         UIKit.Stretch(t.rectTransform);
         return c;
-    }
-
-    static Image Chip(Transform parent, string label, UnityEngine.Events.UnityAction onClick, int fontSize)
-    {
-        Button b = UIKit.Button(parent, label, onClick, ChipOff, fontSize);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 92f;
-        b.GetComponentInChildren<Text>().color = Ink;
-        b.gameObject.AddComponent<PressScale>();
-        return img;
     }
 
     static void Swallow(GameObject go) => go.AddComponent<Button>().transition = Selectable.Transition.None;

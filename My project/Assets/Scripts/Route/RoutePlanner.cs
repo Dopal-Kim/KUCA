@@ -515,12 +515,12 @@ public partial class RoutePlanner : MonoBehaviour
         if (walkPanel.activeSelf != showPanel)
             walkPanel.SetActive(showPanel);
         if (showPanel)
-            VirtualWalk.PlacePanel((RectTransform)walkPanel.transform, 360f);
+            VirtualWalk.PlacePanel((RectTransform)walkPanel.transform, WalkPanelHeight);
         if (guide != null)
             guide.SetVisible(active != null && showPath);
 
         if (loading.activeSelf && loadingPartner != null)
-            loadingPartner.rectTransform.anchoredPosition = new Vector2(0f, 70f + Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) * 36f);
+            loadingPartner.rectTransform.anchoredPosition = new Vector2(0f, Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) * 36f);
         if (active == null)
             return;
 

@@ -4,16 +4,10 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 산책 기록 (메뉴 › 산책 기록). 끝난 산책을 최근 것부터 보여 주고, 누르면 걸은 길을 지도에서 다시 본다.
-/// 기록은 기기 안 (WalkHistory) 에 있다.
+/// 기록은 기기 안 (WalkHistory) 에 있다. v4: 스트라바 활동 목록 — 카드마다 날짜 · 코스 이름 · 큰 숫자 줄 (docs/디자인_v4.md).
 /// </summary>
 public class WalkHistoryScreen : MonoBehaviour
 {
-    static readonly Color Ink = KucaTheme.Ink;
-    static readonly Color InkQuiet = KucaTheme.InkMuted;
-    static readonly Color Page = KucaTheme.Surface;
-    static readonly Color Dim = KucaTheme.Scrim;
-    static readonly Color Green = KucaTheme.Primary;
-
     GameObject root, detail;
     RectTransform list;
     Text summary, detailTitle, detailStats;
@@ -41,9 +35,10 @@ public class WalkHistoryScreen : MonoBehaviour
         int weekCount = 0, weekMeters = 0;
         foreach (WalkHistory.Entry e in all)
             if (e.EndedAt >= monday) { weekCount++; weekMeters += e.meters; }
-        summary.text = all.Count == 0 ? "" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요";
+        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요";
         if (all.Count == 0)
-            UIKit.Size(UIKit.Text(list, "아직 기록이 없어요.\n코스를 걷거나 자유 산책을 끝내면 여기에 남아요.", 32, TextAnchor.MiddleCenter, InkQuiet), 260f);
+            UIKit.EmptyState(list, "첫 산책을 시작해 보세요", "코스를 걷거나 자유 산책을 끝내면\n여기에 기록이 남아요.", "산책 코스 고르기",
+                () => { Close(); RoutePlanner.Open(); });
         foreach (WalkHistory.Entry e in all)
             Row(e);
         detail.SetActive(false);
@@ -80,44 +75,41 @@ public class WalkHistoryScreen : MonoBehaviour
         return s;
     }
 
+    /// <summary>스트라바 활동 카드: 날짜 · 굵은 코스 이름 · 큰 숫자 줄. 왼쪽 색 띠 = 산책 종류 (지도 선 색과 같음)</summary>
     void Row(WalkHistory.Entry e)
     {
-        Image row = UIKit.Image(list, "Walk", Color.white, raycast: true);
-        row.sprite = HudIcons.Rounded;
-        row.type = Image.Type.Sliced;
-        row.pixelsPerUnitMultiplier = 0.6f;
-        UIKit.Size(row, 190f);
-        var b = row.gameObject.AddComponent<Button>();
+        RectTransform card = UIKit.CardBox(list, "Walk", KucaTheme.Space1);
+        var b = card.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
         WalkHistory.Entry entry = e;
         b.onClick.AddListener(() => OpenDetail(entry));
-        row.gameObject.AddComponent<PressScale>();
+        card.gameObject.AddComponent<PressScale>();
 
-        Color c = WalkCompleteScreen.LineColor(e.kind, e.stopsTotal, 0);
-        Image bar = UIKit.Image(row.transform, "Bar", c);
-        bar.rectTransform.anchorMin = new Vector2(0f, 0f);
-        bar.rectTransform.anchorMax = new Vector2(0f, 1f);
-        bar.rectTransform.pivot = new Vector2(0f, 0.5f);
-        bar.rectTransform.sizeDelta = new Vector2(14f, -40f);
-        bar.rectTransform.anchoredPosition = new Vector2(20f, 0f);
+        Image bar = UIKit.Image(card, "Bar", WalkCompleteScreen.LineColor(e.kind, e.stopsTotal, 0));
+        bar.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+        bar.sprite = HudIcons.Pill;
+        bar.type = Image.Type.Sliced;
+        RectTransform br = bar.rectTransform;
+        br.anchorMin = Vector2.zero;
+        br.anchorMax = new Vector2(0f, 1f);
+        br.pivot = new Vector2(0f, 0.5f);
+        br.offsetMin = new Vector2(18f, 48f);
+        br.offsetMax = new Vector2(30f, -48f);
 
-        Text when = UIKit.Text(row.transform, When(e.EndedAt), 26, TextAnchor.UpperLeft, InkQuiet);
-        Box(when.rectTransform, 60f, 24f, 200f, 40f);
-        Text name = UIKit.Text(row.transform, e.title, 36, TextAnchor.UpperLeft, Ink);
-        UIKit.Bold(name);
-        Box(name.rectTransform, 60f, 66f, 200f, 52f);
-        Text stats = UIKit.Text(row.transform, Stats(e), 30, TextAnchor.UpperLeft, Ink);
-        Box(stats.rectTransform, 60f, 124f, 200f, 44f);
-        Text done = UIKit.Text(row.transform, e.completed ? "" : "중간에 끝냄", 28, TextAnchor.MiddleRight, InkQuiet);   // 완료가 기본: 다른 것만 표시
-        UIKit.Bold(done);
-        Box(done.rectTransform, 0f, 0f, 44f, 190f);
-        done.rectTransform.anchorMin = new Vector2(0.7f, 1f);
+        string when = When(e.EndedAt) + (e.completed ? "" : "  ·  중간에 끝냄");   // 완료가 기본: 다른 것만 표시
+        UIKit.Size(UIKit.Text(card, when, KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted), 48f);
+        Text name = UIKit.Bold(UIKit.Text(card, e.title, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        UIKit.Size(name, 72f);
+        if (e.stopsTotal > 0)
+            UIKit.StatRow(card, (RouteMath.Distance(e.meters), "거리"), ($"{e.minutes}분", "시간"), ($"{e.stopsDone}/{e.stopsTotal}", "들른 곳"));
+        else
+            UIKit.StatRow(card, (RouteMath.Distance(e.meters), "거리"), ($"{e.minutes}분", "시간"));
     }
 
     void OpenDetail(WalkHistory.Entry e)
     {
         detailTitle.text = e.title;
-        detailStats.text = $"{When(e.EndedAt)}\n{Stats(e)}" + (e.completed ? "  ·  <color=#2E9E5C>완료</color>" : "");
+        detailStats.text = $"{When(e.EndedAt)}\n{Stats(e)}" + (e.completed ? "  ·  완료" : "  ·  중간에 끝냄");
         detail.SetActive(true);
         detail.transform.SetAsLastSibling();
         Canvas.ForceUpdateCanvases();
@@ -128,7 +120,7 @@ public class WalkHistoryScreen : MonoBehaviour
         else
         {
             detailMap.texture = null;
-            Text t = UIKit.Text(detailOverlay, "걸은 길 기록이 없어요", 32, TextAnchor.MiddleCenter, Color.white);
+            Text t = UIKit.Text(detailOverlay, "걸은 길 기록이 없어요", KucaTheme.Body, TextAnchor.MiddleCenter, Color.white);
             UIKit.Stretch(t.rectTransform);
         }
     }
@@ -136,64 +128,37 @@ public class WalkHistoryScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkHistoryCanvas", 50);
-        root = UIKit.Image(canvas.transform, "WalkHistory", Page, raycast: true).gameObject;
-        BackButton.Attach(root, Close);
-        UIKit.Stretch((RectTransform)root.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = UIKit.Rect(root.transform, "Safe");
-        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
-        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
-        safe.offsetMin = safe.offsetMax = Vector2.zero;
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " ");
+        root = page.root;
+        summary = page.subtitle;
+        list = page.content;
 
-        Text title = UIKit.Text(safe, "산책 기록", 52, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(title);
-        Box(title.rectTransform, 140f, 40f, 60f, 80f);
-        CloseButton(safe, Close, left: true);   // 전체 화면은 왼쪽 위 × (함께 걷기 · 사진첩 · 장소 메모와 같게)
-        summary = UIKit.Text(safe, "", 30, TextAnchor.MiddleLeft, InkQuiet);
-        Box(summary.rectTransform, 140f, 124f, 60f, 50f);
-
-        RectTransform area = UIKit.Rect(safe, "List");
-        UIKit.StretchBetween(area, 0f, 190f);
-        list = UIKit.ScrollList(area, 20f, new RectOffset(48, 48, 10, 60));
-
-        // 기록 하나 자세히 (지도)
-        detail = UIKit.Image(canvas.transform, "Detail", Dim, raycast: true).gameObject;
+        // 기록 하나 자세히 (지도): 어둡게 덮고 흰 카드
+        detail = UIKit.Image(canvas.transform, "Detail", KucaTheme.Scrim, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)detail.transform);
         detail.AddComponent<Button>().onClick.AddListener(() => detail.SetActive(false));
-        Image card = UIKit.Image(detail.transform, "Card", Color.white, raycast: true);
+        BackButton.Attach(detail, () => detail.SetActive(false));
+        Image card = UIKit.Image(detail.transform, "Card", KucaTheme.Card, raycast: true);
         card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
+        card.pixelsPerUnitMultiplier = 0.34f;
         card.gameObject.AddComponent<Button>().transition = Selectable.Transition.None;   // 카드 안을 눌러도 닫히지 않게
         RectTransform cr = card.rectTransform;
-        cr.anchorMin = new Vector2(0.04f, 0.5f);
-        cr.anchorMax = new Vector2(0.96f, 0.5f);
+        cr.anchorMin = new Vector2(0f, 0.5f);
+        cr.anchorMax = new Vector2(1f, 0.5f);
         cr.pivot = new Vector2(0.5f, 0.5f);
-        cr.sizeDelta = new Vector2(0f, 1300f);
-        detailTitle = UIKit.Text(cr, "", 42, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(detailTitle);
-        Box(detailTitle.rectTransform, 50f, 40f, 140f, 64f);
-        CloseButton(cr, () => detail.SetActive(false));
-        detailStats = UIKit.Text(cr, "", 30, TextAnchor.UpperLeft, InkQuiet);
-        detailStats.lineSpacing = 1.15f;
-        Box(detailStats.rectTransform, 50f, 110f, 50f, 90f);
+        cr.offsetMin = new Vector2(KucaTheme.Space4, -720f);
+        cr.offsetMax = new Vector2(-KucaTheme.Space4, 720f);
+        detailTitle = UIKit.Bold(UIKit.Text(cr, "", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        Box(detailTitle.rectTransform, 56f, 48f, 170f, 80f);
+        var x = (RectTransform)UIKit.IconButton(cr, HudIcons.Close, () => detail.SetActive(false), KucaTheme.Ink, Vector2.zero).transform;
+        x.anchorMin = x.anchorMax = x.pivot = Vector2.one;   // 카드 오른쪽 위 × (팝업 카드 규칙)
+        x.anchoredPosition = new Vector2(-24f, -24f);
+        detailStats = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+        Box(detailStats.rectTransform, 56f, 140f, 56f, 110f);
         Image frame = TopMap.Frame(cr, "Map", out detailMap, out detailOverlay);
-        Box(frame.rectTransform, 40f, 220f, 40f, 1040f);
+        Box(frame.rectTransform, 40f, 270f, 40f, 1130f);
         detail.SetActive(false);
-        root.SetActive(false);
-    }
-
-    static void CloseButton(RectTransform parent, UnityEngine.Events.UnityAction onClick, bool left = false)
-    {
-        Image close = UIKit.Image(parent, "Close", new Color(0f, 0f, 0f, 0f), raycast: true);
-        close.rectTransform.anchorMin = close.rectTransform.anchorMax = close.rectTransform.pivot = new Vector2(left ? 0f : 1f, 1f);
-        close.rectTransform.anchoredPosition = new Vector2(left ? 30f : -30f, -36f);
-        close.rectTransform.sizeDelta = new Vector2(96f, 96f);
-        close.gameObject.AddComponent<Button>().onClick.AddListener(onClick);
-        Image ci = UIKit.Image(close.transform, "Icon", Ink);
-        ci.sprite = HudIcons.Close;
-        ci.rectTransform.anchorMin = ci.rectTransform.anchorMax = ci.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        ci.rectTransform.sizeDelta = new Vector2(44f, 44f);
     }
 
     static void Box(RectTransform rt, float left, float top, float right, float height)
