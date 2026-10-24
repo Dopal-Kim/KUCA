@@ -25,7 +25,6 @@ public partial class RoutePlanner
     RawImage miniMap;
     RectTransform miniOverlay;
 
-    Camera miniCam;
     RenderTexture miniTexture, chooserTexture;
 
     // ---------- 조건 시트 ----------
@@ -339,8 +338,8 @@ public partial class RoutePlanner
                 Color c = options[i].variant.color;
                 if (!sel) c.a = 0.8f;
                 float w = sel ? 14f : 9f;
-                Polyline(chooserOverlay, cam, size, options[i].path, w + 7f, new Color(1f, 1f, 1f, sel ? 0.95f : 0.7f));   // 흰 테두리
-                Polyline(chooserOverlay, cam, size, options[i].path, w, c, sel);
+                TopMap.Polyline(chooserOverlay, cam, size, options[i].path, w + 7f, new Color(1f, 1f, 1f, sel ? 0.95f : 0.7f));   // 흰 테두리
+                TopMap.Polyline(chooserOverlay, cam, size, options[i].path, w, c, sel);
             }
         Option o2 = options[chosen];
         for (int s = 0; s < o2.stops.Count; s++)
@@ -348,9 +347,9 @@ public partial class RoutePlanner
             if (o2.returns && s == o2.stops.Count - 1)
                 continue; // 돌아오는 곳은 출발 표시와 같은 자리
             bool last = s == o2.stops.Count - 1 && destSpot != null;
-            Marker(chooserOverlay, cam, size, o2.stops[s], o2.variant.color, last ? "도착" : (s + 1).ToString(), last ? 74f : 58f);
+            TopMap.Marker(chooserOverlay, cam, size, o2.stops[s], o2.variant.color, last ? "도착" : (s + 1).ToString(), last ? 74f : 58f);
         }
-        Marker(chooserOverlay, cam, size, StartPosition, Ink, o2.returns ? "출발\n도착" : "출발", 74f);
+        TopMap.Marker(chooserOverlay, cam, size, StartPosition, Ink, o2.returns ? "출발\n도착" : "출발", 74f);
     }
 
     void BuildOptionCards()
@@ -566,14 +565,14 @@ public partial class RoutePlanner
         if (cam == null)
             return;
         Vector2 size = miniOverlay.rect.size;
-        Polyline(miniOverlay, cam, size, active.path, 19f, new Color(1f, 1f, 1f, 0.95f));
-        Polyline(miniOverlay, cam, size, active.path, 12f, active.variant.color, true);
+        TopMap.Polyline(miniOverlay, cam, size, active.path, 19f, new Color(1f, 1f, 1f, 0.95f));
+        TopMap.Polyline(miniOverlay, cam, size, active.path, 12f, active.variant.color, true);
         for (int i = 0; i < active.stops.Count; i++)
         {
             bool arrived = i < done.Count && done[i];
-            Marker(miniOverlay, cam, size, active.stops[i], arrived ? DoneGreen : active.variant.color, arrived ? "✓" : (i + 1).ToString(), i == focus ? 84f : 58f);
+            TopMap.Marker(miniOverlay, cam, size, active.stops[i], arrived ? DoneGreen : active.variant.color, arrived ? "✓" : (i + 1).ToString(), i == focus ? 84f : 58f);
         }
-        Marker(miniOverlay, cam, size, PlayerPosition, Ink, "나", 58f);
+        TopMap.Marker(miniOverlay, cam, size, PlayerPosition, Ink, "나", 58f);
     }
 
     void BuildPlacePopup()
@@ -647,156 +646,13 @@ public partial class RoutePlanner
 
     // ---------- 위에서 본 지도 ----------
 
-    /// <summary>
-    /// points 가 모두 들어오게 지도를 위에서 한 장 찍어 target 에 띄운다 (방향은 지금 화면과 같게). 찍은 카메라를 돌려준다
-    /// (선 · 표시를 같은 자리에 그리려고). 카메라는 찍고 나면 꺼 둔다.
-    /// </summary>
+    /// <summary>위에서 본 지도를 찍는다. 본 지도의 코스 선은 찍히지 않게 잠깐 숨긴다 (위에 다시 그린다)</summary>
     Camera RenderTop(RawImage target, ref RenderTexture texture, List<Vector3> points)
     {
-        Camera main = Camera.main;
-        if (main == null || points.Count == 0)
-            return null;
-        Vector2 size = ((RectTransform)target.transform).rect.size;
-        float aspect = size.x / Mathf.Max(1f, size.y);
-        Quaternion rot = Quaternion.Euler(90f, main.transform.eulerAngles.y, 0f);
-        Vector3 right = rot * Vector3.right, up = rot * Vector3.up;
-        float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
-        foreach (Vector3 p in points)
-        {
-            float x = Vector3.Dot(p, right), y = Vector3.Dot(p, up);
-            minX = Mathf.Min(minX, x); maxX = Mathf.Max(maxX, x);
-            minY = Mathf.Min(minY, y); maxY = Mathf.Max(maxY, y);
-        }
-        Vector3 center = right * ((minX + maxX) * 0.5f) + up * ((minY + maxY) * 0.5f);
-        center.y = 0f;
-        float half = Mathf.Max((maxY - minY) * 0.5f, (maxX - minX) * 0.5f / aspect) * 1.18f + 40f;
-
-        if (miniCam == null)
-        {
-            miniCam = new GameObject("RouteMapCamera").AddComponent<Camera>();
-            miniCam.transform.SetParent(transform, false);
-            miniCam.enabled = false;
-            miniCam.orthographic = true;
-            miniCam.clearFlags = CameraClearFlags.SolidColor;
-            miniCam.backgroundColor = new Color(0.55f, 0.72f, 0.42f);
-        }
-        int w = 1024, h = Mathf.Max(64, Mathf.RoundToInt(w / aspect));
-        if (texture == null || texture.width != w || texture.height != h)
-        {
-            if (texture != null) texture.Release();
-            texture = new RenderTexture(w, h, 24) { name = "RouteMap", antiAliasing = 2 };
-        }
-        miniCam.cullingMask = main.cullingMask;
-        miniCam.orthographicSize = half;
-        miniCam.aspect = aspect;
-        miniCam.transform.SetPositionAndRotation(center + Vector3.up * 800f, rot);
-        miniCam.nearClipPlane = 1f;
-        miniCam.farClipPlane = 2000f;
-        if (guide != null) guide.SetVisible(false);   // 본 지도의 코스 선은 찍히지 않게 (위에 다시 그린다)
-        miniCam.targetTexture = texture;
-        miniCam.Render();
-        miniCam.targetTexture = null;
+        if (guide != null) guide.SetVisible(false);
+        Camera cam = TopMap.Render(target, ref texture, points);
         if (guide != null) guide.SetVisible(active != null && showPath);
-        target.texture = texture;
-        return miniCam;
-    }
-
-    static Vector2 ToOverlay(Camera cam, Vector2 size, Vector3 world)
-    {
-        Vector3 vp = cam.WorldToViewportPoint(world);
-        return new Vector2((vp.x - 0.5f) * size.x, (vp.y - 0.5f) * size.y);
-    }
-
-    const float ArrowGap = 120f;   // 미니맵 방향 화살표 간격 (px)
-
-    /// <summary>길을 따라 선을 긋는다. arrows 면 선 위에 진행 방향 화살표를 일정 간격으로 얹는다</summary>
-    static void Polyline(RectTransform overlay, Camera cam, Vector2 size, List<Vector3> path, float width, Color color, bool arrows = false)
-    {
-        if (path.Count < 2)
-            return;
-        var marks = new List<(Vector2 pos, float angle)>();
-        float walked = ArrowGap * 0.5f;
-        Vector2 prev = ToOverlay(cam, size, path[0]);
-        for (int i = 1; i < path.Count; i++)
-        {
-            Vector2 p = ToOverlay(cam, size, path[i]);
-            if ((p - prev).sqrMagnitude < 9f && i < path.Count - 1)
-                continue; // 너무 짧은 조각은 건너뛴다 (선 개수 줄이기)
-            Line(overlay, prev, p, width, color);
-            if (arrows)
-            {
-                // 이 조각 위에 놓일 화살표 자리
-                float len = (p - prev).magnitude, angle = Mathf.Atan2(p.y - prev.y, p.x - prev.x) * Mathf.Rad2Deg;
-                for (float d = walked; d < len; d += ArrowGap)
-                    marks.Add((Vector2.Lerp(prev, p, d / len), angle));
-                walked = Mathf.Repeat(walked - len, ArrowGap);
-            }
-            Image joint = UIKit.Image(overlay, "Joint", color);   // 꺾이는 곳을 둥글게
-            joint.sprite = HudIcons.Circle;
-            joint.rectTransform.anchorMin = joint.rectTransform.anchorMax = joint.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            joint.rectTransform.sizeDelta = new Vector2(width, width);
-            joint.rectTransform.anchoredPosition = p;
-            prev = p;
-        }
-        foreach ((Vector2 pos, float angle) in marks)   // 선을 다 그은 뒤 위에
-        {
-            Image a = UIKit.Image(overlay, "Arrow", Color.white);
-            a.sprite = ChevronSprite;
-            a.rectTransform.anchorMin = a.rectTransform.anchorMax = a.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            a.rectTransform.sizeDelta = new Vector2(width * 2.1f, width * 2.1f);
-            a.rectTransform.anchoredPosition = pos;
-            a.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
-        }
-    }
-
-    static Sprite chevron;
-
-    /// <summary>오른쪽을 가리키는 흰 '>' (미니맵 화살표)</summary>
-    static Sprite ChevronSprite
-    {
-        get
-        {
-            if (chevron != null)
-                return chevron;
-            const int n = 64;
-            var tex = new Texture2D(n, n, TextureFormat.RGBA32, false) { name = "Chevron", wrapMode = TextureWrapMode.Clamp };
-            var px = new Color32[n * n];
-            for (int y = 0; y < n; y++)
-                for (int x = 0; x < n; x++)
-                {
-                    float u = (x + 0.5f) / n, v = Mathf.Abs((y + 0.5f) / n - 0.5f) * 2f;   // v: 가운데 0 → 위아래 1
-                    float edge = 0.78f - v * 0.42f;                                        // '>' 의 바깥 변
-                    float d = Mathf.Min(edge - u, u - (edge - 0.3f));                      // 두께 0.3 안쪽이면 양수
-                    float alpha = v < 0.9f ? Mathf.Clamp01(d * n * 0.5f + 0.5f) : 0f;
-                    px[y * n + x] = new Color32(255, 255, 255, (byte)(alpha * 255));
-                }
-            tex.SetPixels32(px);
-            tex.Apply();
-            chevron = Sprite.Create(tex, new Rect(0, 0, n, n), new Vector2(0.5f, 0.5f), 100f);
-            return chevron;
-        }
-    }
-
-    static void Marker(RectTransform overlay, Camera cam, Vector2 size, Vector3 world, Color color, string label, float diameter)
-    {
-        Image c = Circle(overlay, color, diameter, label);
-        c.rectTransform.anchoredPosition = ToOverlay(cam, size, world);
-        if (label.Length > 1)
-            c.GetComponentInChildren<Text>().fontSize = Mathf.RoundToInt(diameter * 0.32f);
-        Outline o = c.gameObject.AddComponent<Outline>();
-        o.effectColor = Color.white;
-        o.effectDistance = new Vector2(3f, -3f);
-    }
-
-    static void Line(RectTransform parent, Vector2 a, Vector2 b, float width, Color color)
-    {
-        Image seg = UIKit.Image(parent, "Line", color);
-        RectTransform r = seg.rectTransform;
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0.5f);
-        Vector2 d = b - a;
-        r.anchoredPosition = (a + b) * 0.5f;
-        r.sizeDelta = new Vector2(d.magnitude, width);
-        r.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
+        return cam;
     }
 
     // ---------- 작은 도우미 ----------

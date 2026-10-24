@@ -473,6 +473,8 @@ public partial class RoutePlanner : MonoBehaviour
         bool showPanel = active != null && !otherOpen && !chooser.activeSelf;
         if (walkPanel.activeSelf != showPanel)
             walkPanel.SetActive(showPanel);
+        if (showPanel)
+            VirtualWalk.PlacePanel((RectTransform)walkPanel.transform, 360f);
         if (guide != null)
             guide.SetVisible(active != null && showPath);
 
