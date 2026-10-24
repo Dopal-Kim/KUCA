@@ -221,7 +221,7 @@ public partial class KhuMenus : MonoBehaviour
                 float speed = d / Mathf.Max(0.05f, Time.unscaledTime - anchorTime);
                 float accuracy = collect.campusMap.CurrentAccuracy;
                 // 가상 산책 (체험 계정) 은 "빠르게" 로 걸어도 센다
-                float maxSpeed = collect.campusMap.VirtualWalk ? VirtualWalk.FastSpeed + 1f : MaxWalkSpeed;
+                float maxSpeed = collect.campusMap.VirtualWalk ? VirtualWalk.TopSpeed + 1f : MaxWalkSpeed;
                 if (speed <= maxSpeed && (accuracy <= 0f || accuracy <= MaxGpsAccuracy))
                     OnWalked(d);
                 anchorPos = p;
