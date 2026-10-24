@@ -13,7 +13,7 @@
 | 수출 규정 (암호화) | `ITSAppUsesNonExemptEncryption = false` 를 빌드 때 넣음 (`Assets/Editor/IosBuildSettings.cs`) |
 | 카메라 · 위치 권한 문구 | 있음 (Player Settings) |
 | 앱 아이콘 | 1024×1024, 투명 없음 (`Assets/Art/AppIcon/AppIcon.png`) |
-| 개인정보 처리방침 URL | `https://github.com/mungim5556-ui/KUCA/blob/main/docs/개인정보처리방침.md` (문의 메일 칸 채울 것) |
+| 개인정보 처리방침 URL | `https://github.com/mungim5556-ui/KUCA/blob/main/docs/개인정보처리방침.md` (문의: kuca6497@gmail.com) |
 | 서명 팀 | 지금은 무료 개인 팀 `HAYUF8Y8PV` → 멤버십이 켜지면 유료 팀 ID 로 바꿔야 함 |
 
 ## 순서
@@ -48,6 +48,6 @@
 > 로그인 없이 체험할 수 있습니다: 첫 화면의 "로그인 없이 둘러보기"를 누르면 체험 계정이 만들어지고 모든 기능을 쓸 수 있습니다. 위치 권한을 허용하면 지도에 위치가 표시되며, 캠퍼스(경기도 용인시 경희대학교 국제캠퍼스) 밖에서는 설정 › 가상 산책으로 걸어 볼 수 있습니다. 경희대 메일 로그인은 재학생용이라 체험 계정으로 확인해 주세요.
 
 - 로그인 필요 여부: 필요 없음 (체험 계정으로 모든 기능 사용 가능)
-- 연락처: 이름 · 전화 · 이메일 (팀 대표)
-- 피드백 이메일: (팀 대표 메일)
+- 연락처: 이름 · 전화 (팀 대표) · 이메일 kuca6497@gmail.com
+- 피드백 이메일: kuca6497@gmail.com
 - 개인정보 처리방침 URL: 위 "준비 상태" 표의 주소
