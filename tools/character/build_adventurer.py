@@ -34,7 +34,7 @@ COLORS = {
     'Skin_Adv': '#F4C7A8', 'KHU_Adv_Hair': '#5A3A2A', 'KHU_Adv_Hat': '#C9B48A', 'KHU_Adv_Crimson': '#A6192E',
     'KHU_Adv_Cream': '#F3EBD8', 'KHU_Adv_Olive': '#7C8C5A', 'KHU_Adv_Boot': '#B77A43', 'KHU_Adv_Sole': '#7A4A28',
     'KHU_Adv_Leather': '#8E5A35', 'KHU_Adv_Eye': '#3A2620', 'KHU_Adv_White': '#FFFFFF', 'KHU_Adv_Blush': '#F29C93',
-    'KHU_Adv_Mouth': '#B5524A', 'KHU_Adv_Paper': '#EADBB8',
+    'KHU_Adv_Mouth': '#B5524A', 'KHU_Adv_Paper': '#EADBB8', 'KHU_Adv_Tongue': '#E98A86', 'KHU_Adv_Freckle': '#C98B6B',
 }
 
 
@@ -221,20 +221,95 @@ add(ellipsoid(hc, (0.25, 0.235, 0.245)), 'Skin_Adv', 'Head', 'head')
 for s in (1, -1):
     add(ellipsoid(hc + Vector((0.245 * s, 0.01, -0.03)), (0.045, 0.03, 0.06)), 'Skin_Adv', 'Head', 'head')       # 귀
 face_y = hc.y - 0.228
+
+
+def face_y_at(x, z):
+    """머리 타원 앞면의 y (앞 = -y). 얼굴 부위를 곡면에 맞춰 붙인다."""
+    k = 1 - (x / 0.25) ** 2 - ((z - hc.z) / 0.245) ** 2
+    return hc.y - 0.235 * max(0.0, k) ** 0.5
+
+
+def arc(cx, cz, rx, rz, a0, a1, r, n=10, lift=-0.001):
+    """얼굴 곡면 위의 호 (각도 a0 → a1, z 위). 선 같은 눈 · 입 · 눈썹에 쓴다."""
+    pts = [Vector((cx + math.cos(a) * rx, 0, cz + math.sin(a) * rz)) for a in [a0 + (a1 - a0) * i / n for i in range(n + 1)]]
+    for p in pts:
+        p.y = face_y_at(p.x, p.z) + lift
+    return tube(pts, r, 8)
+
+
+# 얼굴 부위는 고를 수 있게 갈래마다 따로 만든다 (Face_<부위>_<번호>, 꾸미기 화면에서 하나만 켠다).
+# 0 번이 시트의 기본 얼굴. 없음은 Unity 에서 모두 끈다. 눈 · 눈썹에는 크기 · 간격 · 높이 셰이프 키가 붙는다 (eye_keys).
+EYE = {s: Vector((0.085 * s, face_y + 0.012, hc.z - 0.035)) for s in (1, -1)}
 for s in (1, -1):
-    eye = Vector((0.085 * s, face_y + 0.012, hc.z - 0.035))
-    add(ellipsoid(eye, (0.03, 0.014, 0.042), 16, 12), 'KHU_Adv_Eye', 'Head', 'head')
-    add(ellipsoid(eye + Vector((0.009 * s, -0.012, 0.016)), (0.009, 0.005, 0.01), 10, 8), 'KHU_Adv_White', 'Head', 'head')
-    add(capsule(eye + Vector((-0.025, 0.0, 0.07)), eye + Vector((0.028, 0.004, 0.075)), 0.008), 'KHU_Adv_Hair', 'Head', 'head')  # 눈썹
-    add(ellipsoid(Vector((0.135 * s, face_y + 0.035, hc.z - 0.09)), (0.04, 0.01, 0.025), 14, 10), 'KHU_Adv_Blush', 'Head', 'head')
-add(ellipsoid(Vector((0, face_y - 0.004, hc.z - 0.075)), (0.014, 0.01, 0.016), 12, 10), 'Skin_Adv', 'Head', 'head')  # 코
-mouth = bmesh.new()
-bmesh.ops.create_circle(mouth, cap_ends=False, segments=24, radius=1)
+    e = EYE[s]
+    # 0 기본: 세로로 긴 눈 + 하이라이트
+    add(ellipsoid(e, (0.03, 0.014, 0.042), 16, 12), 'KHU_Adv_Eye', 'Face_Eyes_0', 'head')
+    add(ellipsoid(e + Vector((0.009 * s, -0.012, 0.016)), (0.009, 0.005, 0.01), 10, 8), 'KHU_Adv_White', 'Face_Eyes_0', 'head')
+    # 1 동글: 크고 둥근 눈 + 하이라이트 두 개
+    add(ellipsoid(e, (0.037, 0.015, 0.039), 18, 12), 'KHU_Adv_Eye', 'Face_Eyes_1', 'head')
+    add(ellipsoid(e + Vector((0.011 * s, -0.013, 0.014)), (0.012, 0.005, 0.012), 10, 8), 'KHU_Adv_White', 'Face_Eyes_1', 'head')
+    add(ellipsoid(e + Vector((-0.012 * s, -0.012, -0.016)), (0.005, 0.004, 0.005), 8, 6), 'KHU_Adv_White', 'Face_Eyes_1', 'head')
+    # 2 웃는 눈: 위로 볼록한 호 (^ ^)
+    add(arc(e.x, e.z - 0.012, 0.03, 0.026, math.radians(20), math.radians(160), 0.0075), 'KHU_Adv_Eye', 'Face_Eyes_2', 'head')
+    # 3 또렷: 기본 눈 + 바깥 위 속눈썹
+    add(ellipsoid(e, (0.03, 0.014, 0.042), 16, 12), 'KHU_Adv_Eye', 'Face_Eyes_3', 'head')
+    add(ellipsoid(e + Vector((0.009 * s, -0.012, 0.016)), (0.009, 0.005, 0.01), 10, 8), 'KHU_Adv_White', 'Face_Eyes_3', 'head')
+    lash = [e + Vector((0.02 * s, 0, 0.034)), e + Vector((0.034 * s, 0, 0.042)), e + Vector((0.045 * s, 0, 0.056))]
+    for p in lash:
+        p.y = face_y_at(p.x, p.z) - 0.001
+    add(tube(lash, 0.0055, 8), 'KHU_Adv_Eye', 'Face_Eyes_3', 'head')
+    # 눈썹 0 기본 · 1 둥근 아치 · 2 짙은 일자 (머리 색)
+    add(capsule(e + Vector((-0.025, 0.0, 0.07)), e + Vector((0.028, 0.004, 0.075)), 0.008), 'KHU_Adv_Hair', 'Face_Brows_0', 'head')
+    add(arc(e.x, e.z + 0.058, 0.03, 0.016, math.radians(25), math.radians(155), 0.0068), 'KHU_Adv_Hair', 'Face_Brows_1', 'head')
+    add(capsule(e + Vector((-0.02 * s, 0.0, 0.066)), e + Vector((0.022 * s, 0.003, 0.068)), 0.0115), 'KHU_Adv_Hair', 'Face_Brows_2', 'head')
+    # 볼 0 볼터치 · 1 동그란 볼 · 2 주근깨
+    add(ellipsoid(Vector((0.135 * s, face_y + 0.035, hc.z - 0.09)), (0.04, 0.01, 0.025), 14, 10), 'KHU_Adv_Blush', 'Face_Cheeks_0', 'head')
+    add(ellipsoid(Vector((0.13 * s, face_y_at(0.13, hc.z - 0.088) - 0.004, hc.z - 0.088)), (0.042, 0.011, 0.036), 16, 10), 'KHU_Adv_Blush', 'Face_Cheeks_1', 'head')
+    for dx, dz in ((0.0, 0.0), (0.022, 0.008), (0.012, -0.016), (0.034, -0.006)):
+        x, z = (0.115 + dx) * s, hc.z - 0.08 + dz
+        add(ellipsoid(Vector((x, face_y_at(x, z) + 0.0015, z)), (0.0055, 0.004, 0.0055), 8, 6), 'KHU_Adv_Freckle', 'Face_Cheeks_2', 'head')
+# 코 0 동글 · 1 작게 (없음은 Unity 에서)
+add(ellipsoid(Vector((0, face_y - 0.004, hc.z - 0.075)), (0.014, 0.01, 0.016), 12, 10), 'Skin_Adv', 'Face_Nose_0', 'head')
+add(ellipsoid(Vector((0, face_y - 0.0, hc.z - 0.075)), (0.009, 0.007, 0.009), 10, 8), 'Skin_Adv', 'Face_Nose_1', 'head')
+# 입 0 미소 · 1 활짝 · 2 고양이 입 · 3 작은 o
+MOUTH_Z = hc.z - 0.115
 pts = [Vector((math.cos(a) * 0.04, 0, -math.sin(a) * 0.022)) for a in [math.pi * (0.15 + 0.7 * i / 10) for i in range(11)]]
-bmesh.ops.delete(mouth, geom=mouth.verts[:], context='VERTS')
 for i in range(len(pts) - 1):
-    seg = capsule(pts[i] + Vector((0, face_y + 0.012, hc.z - 0.115)), pts[i + 1] + Vector((0, face_y + 0.012, hc.z - 0.115)), 0.006, None, 8, 6)
-    add(seg, 'KHU_Adv_Mouth', 'Head', 'head')
+    seg = capsule(pts[i] + Vector((0, face_y + 0.012, MOUTH_Z)), pts[i + 1] + Vector((0, face_y + 0.012, MOUTH_Z)), 0.006, None, 8, 6)
+    add(seg, 'KHU_Adv_Mouth', 'Face_Mouth_0', 'head')
+grin_c = Vector((0, face_y_at(0, MOUTH_Z + 0.004) - 0.003, MOUTH_Z + 0.004))
+grin = ellipsoid(grin_c, (0.038, 0.012, 0.03), 24, 14)
+bmesh.ops.delete(grin, geom=[v for v in grin.verts if v.co.z > grin_c.z + 0.0005], context='VERTS')
+bmesh.ops.contextual_create(grin, geom=[e for e in grin.edges if e.is_boundary])   # 위를 평평하게 막는다
+add(grin, 'KHU_Adv_Mouth', 'Face_Mouth_1', 'head')
+add(ellipsoid(grin_c + Vector((0, -0.006, -0.017)), (0.018, 0.008, 0.009), 12, 8), 'KHU_Adv_Tongue', 'Face_Mouth_1', 'head')
+for s in (1, -1):
+    add(arc(0.016 * s, MOUTH_Z + 0.006, 0.016, 0.014, math.radians(200), math.radians(340), 0.0055, 8, -0.006), 'KHU_Adv_Mouth', 'Face_Mouth_2', 'head')
+o_c = Vector((0, face_y_at(0, MOUTH_Z - 0.004) + 0.002, MOUTH_Z - 0.004))
+add(ellipsoid(o_c, (0.013, 0.008, 0.016), 14, 10), 'KHU_Adv_Mouth', 'Face_Mouth_3', 'head')
+
+
+def eye_keys(p):
+    """눈 · 눈썹 점 p (보이는 모습) 가 슬라이더 끝에서 갈 자리. {셰이프 키 이름: 새 위치}"""
+    s = 1 if p.x > 0 else -1
+    e = EYE[s]
+    def onface(q, d):
+        q = q.copy()
+        q.y += face_y_at(q.x, q.z) - face_y_at(q.x - d.x, q.z - d.z)
+        return q
+    keys = {}
+    for name, scale in (('Eye_Big', 1.25), ('Eye_Small', 0.8)):
+        q = e + (p - e) * scale
+        q.y = p.y + (face_y_at(q.x, q.z) - face_y_at(p.x, p.z))
+        keys[name] = q
+    for name, dx in (('Eye_Wide', 0.016), ('Eye_Narrow', -0.014)):
+        d = Vector((dx * s, 0, 0))
+        keys[name] = onface(p + d, d)
+    for name, dz in (('Eye_Up', 0.016), ('Eye_Down', -0.016)):
+        d = Vector((0, 0, dz))
+        keys[name] = onface(p + d, d)
+    return keys
+
 
 # 머리카락: 머리보다 살짝 큰 껍질 하나. 얼굴 쪽은 앞머리 끝선(fringe_at) 아래만 머리 안으로 밀어 넣는다.
 # (공 여러 개를 붙이지 않아 모동숲 캐릭터처럼 한 덩어리로 매끈하다)
@@ -525,10 +600,11 @@ def kind_of(kind, p):
 def build_objects(rest):
     """부위마다 메시 하나 (재질 여러 개). rest=True 면 원래 뼈대 크기로 바꾸고 가중치를 넣는다."""
     objs = {}
-    for part in ('Head', 'Body', 'Legs', 'Feet'):
+    for part in dict.fromkeys(it[2] for it in PARTS):
         items = [it for it in PARTS if it[2] == part]
-        mesh = bpy.data.meshes.new(f'KHU_Adventurer_{part}')
-        obj = bpy.data.objects.new(f'KHU_Adventurer_{part}', mesh)
+        name = part if part.startswith('Face_') else f'KHU_Adventurer_{part}'   # Unity 가 Face_ 이름으로 갈래를 찾는다
+        mesh = bpy.data.meshes.new(name)
+        obj = bpy.data.objects.new(name, mesh)
         bpy.context.scene.collection.objects.link(obj)
         mats = []
         big = bmesh.new()
@@ -564,6 +640,14 @@ def build_objects(rest):
         big.free()
         for poly in mesh.polygons:
             poly.use_smooth = True
+        if part.startswith(('Face_Eyes', 'Face_Brows')):
+            # 꾸미기 슬라이더: 눈 크기 · 간격 · 높이 (눈썹도 눈을 따라 움직인다)
+            obj.shape_key_add(name='Basis')
+            moved = [eye_keys(p) for p in shown_pos]
+            for name in moved[0]:
+                key = obj.shape_key_add(name=name, from_mix=False)
+                for i, m in enumerate(moved):
+                    key.data[i].co = to_rest(m[name], 'head', '') if rest else m[name]
         if rest:
             groups = {}
             for i, (p, kind) in enumerate(zip(shown_pos, vkinds)):
@@ -581,10 +665,26 @@ def build_objects(rest):
 
 
 def preview(out):
+    """--face=눈,눈썹,입,코,볼 (번호, -1 은 없음) · --tint=skin:#hex,hair:#hex,eye:#hex · --keys=Eye_Big:1 · --view=face (얼굴 가까이)"""
     objs = build_objects(rest=False)
+    face = dict(zip(('Eyes', 'Brows', 'Mouth', 'Nose', 'Cheeks'), map(int, OPT.get('face', '0,0,0,0,0').split(','))))
+    for part in [p for p in objs if p.startswith('Face_')]:
+        _, cat, n = part.split('_')
+        if face[cat] != int(n):
+            bpy.data.objects.remove(objs.pop(part))
+    for item in filter(None, OPT.get('tint', '').split(',')):
+        k, hexstr = item.split(':')
+        mat = {'skin': 'Skin_Adv', 'hair': 'KHU_Adv_Hair', 'eye': 'KHU_Adv_Eye'}[k]
+        bpy.data.materials[mat].node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*srgb(hexstr), 1)
+    for item in filter(None, OPT.get('keys', '').split(',')):
+        k, v = item.split(':')
+        for o in objs.values():
+            if o.data.shape_keys and k in o.data.shape_keys.key_blocks:
+                o.data.shape_keys.key_blocks[k].value = float(v)
     RIG.hide_render = True
     sc = bpy.context.scene
-    views = [0, 90, 180]   # 앞 · 오른쪽 옆 · 뒤
+    close = OPT.get('view') == 'face'
+    views = [0] if close else [0, 90, 180]   # 앞 · 오른쪽 옆 · 뒤
     holders = []
     for i, yaw in enumerate(views):
         h = bpy.data.objects.new(f'view{i}', None)
@@ -601,8 +701,8 @@ def preview(out):
     cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam'))
     sc.collection.objects.link(cam)
     cam.data.type = 'ORTHO'
-    cam.data.ortho_scale = 3.7
-    cam.location = (1.2, -8, 0.95)
+    cam.data.ortho_scale = 0.75 if close else 3.7
+    cam.location = (0, -8, HEAD.z + 0.2) if close else (1.2, -8, 0.95)
     cam.rotation_euler = (math.radians(90), 0, 0)
     sc.camera = cam
     sun = bpy.data.objects.new('sun', bpy.data.lights.new('sun', 'SUN'))
@@ -617,7 +717,7 @@ def preview(out):
     sc.render.engine = 'CYCLES'
     sc.cycles.samples = 48
     sc.view_settings.view_transform = 'Standard'
-    sc.render.resolution_x, sc.render.resolution_y = 1500, 800
+    sc.render.resolution_x, sc.render.resolution_y = (700, 700) if close else (1500, 800)
     sc.render.filepath = out
     bpy.ops.render.render(write_still=True)
 
@@ -626,9 +726,15 @@ def export():
     objs = build_objects(rest=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     for part, o in objs.items():
+        if part.startswith('Face_'):
+            continue   # 얼굴 갈래는 머리 FBX 에 같이 넣는다
         bpy.ops.object.select_all(action='DESELECT')
         RIG.select_set(True)
         o.select_set(True)
+        if part == 'Head':
+            for p, f in objs.items():
+                if p.startswith('Face_'):
+                    f.select_set(True)
         bpy.context.view_layer.objects.active = RIG
         path = os.path.join(OUT_DIR, f'KHU_Adventurer_{part}.fbx')
         bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={'ARMATURE', 'MESH'},
