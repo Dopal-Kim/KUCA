@@ -20,7 +20,7 @@ using UnityEngine.UI;
 /// </summary>
 public static class UiCapture
 {
-    const int W = 1080, H = 1920, UiLayer = 5;
+    const int W = 1080, H = 1920;
     const double Timeout = 900;
     static readonly string OutDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "UiShots"));
 
@@ -143,20 +143,20 @@ public static class UiCapture
 
     static IEnumerator Script()
     {
-        Shot("개인정보_안내");
+        yield return Shot("개인정보_안내");
         Click("확인하고 시작");   // 저장 폴더를 지우고 시작하므로 동의 화면이 먼저 뜬다
         yield return 1.5f;
-        Shot("로그인");
+        yield return Shot("로그인");
         Click("에디터: 로그인 건너뛰기");
         yield return 4f;
-        Shot("첫_꾸미기");   // 처음 깐 앱은 로그인 뒤 꾸미기가 먼저 뜬다
+        yield return Shot("첫_꾸미기");   // 처음 깐 앱은 로그인 뒤 꾸미기가 먼저 뜬다
         yield return CloseAll();
         // 첫 파트너 고르기는 다른 화면이 다 닫힌 뒤 뜬다 → 기다렸다 찍고 비둘기를 고른다
         yield return 1.5f;
         if (StarterShown())
-            Shot("첫_파트너");
+            yield return Shot("첫_파트너");
         yield return CloseAll();
-        Shot("지도");
+        yield return Shot("지도");
 
         object customizer = Find("CharacterCustomizer");
         if (Call(customizer, "SetOpen", true))
@@ -167,7 +167,7 @@ public static class UiCapture
                 if (tab != null)
                     Call(customizer, "SetTab", Enum.Parse(tab, t));
                 yield return 1.5f;
-                Shot("꾸미기_" + t);
+                yield return Shot("꾸미기_" + t);
             }
             Call(customizer, "SetOpen", false);
             yield return 0.5f;
@@ -177,28 +177,28 @@ public static class UiCapture
         object progress = Get(Find("CollectController"), "Progress");
         if (progress != null)
             Set(progress, "tickets", 12);   // 뽑기 화면 · 결과를 보이게
-        if (Call(menus, "OpenMainMenu")) { yield return 1f; Shot("경희몬_메뉴"); }
+        if (Call(menus, "OpenMainMenu")) { yield return 1f; yield return Shot("경희몬_메뉴"); }
         Type menuTab = menus?.GetType().GetNestedType("Tab");
         foreach (string t in new[] { "Monsters", "Dex" })   // 도구(가방) 탭은 v2 에서 숨김 (결정 D4)
-            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; Shot("경희몬_" + t); }
-        if (Call(menus, "OpenGacha")) { yield return 1f; Shot("뽑기"); }
+            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희몬_" + t); }
+        if (Call(menus, "OpenGacha")) { yield return 1f; yield return Shot("뽑기"); }
         if (Click("1장 뽑기"))
         {
             yield return 1.0f;
-            Shot("뽑기_결과_1");
+            yield return Shot("뽑기_결과_1");
             Set(Find("HatchScreen"), "skip", true);   // 화면 누르기와 같음: 흔들림을 건너뛰고 연다
             yield return 1.5f;
-            Shot("뽑기_결과_2");
+            yield return Shot("뽑기_결과_2");
         }
         yield return CloseAll();
-        if (Call(menus, "OpenProfile")) { yield return 1f; Shot("프로필"); }
+        if (Call(menus, "OpenProfile")) { yield return 1f; yield return Shot("프로필"); yield return ShotBottom("프로필_아래"); }
         yield return CloseAll();
 
-        if (CallStatic("RoutePlanner", "Open")) { yield return 2f; Shot("산책_추천"); }
+        if (CallStatic("RoutePlanner", "Open")) { yield return 2f; yield return Shot("산책_추천"); }
         yield return CloseAll();
-        if (CallStatic("MatchScreen", "Open")) { yield return 2f; Shot("함께_걷기"); }
+        if (CallStatic("MatchScreen", "Open")) { yield return 2f; yield return Shot("함께_걷기"); }
         yield return CloseAll();
-        if (CallStatic("WalkHistoryScreen", "Show")) { yield return 1.5f; Shot("산책_기록"); }
+        if (CallStatic("WalkHistoryScreen", "Show")) { yield return 1.5f; yield return Shot("산책_기록"); }
         yield return CloseAll();
 
         object done = New("WalkCompleteRequest");
@@ -210,35 +210,35 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
-            if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; Shot("산책_완료"); }
+            if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
         }
 
         if (CallStatic("EvolutionScreen", "Show", "library_owl", 0, 1) || CallStatic("EvolutionScreen", "Show", "pigeon", 0, 1))
         {
             yield return 1f;
-            Shot("진화_1");
+            yield return Shot("진화_1");
             yield return 4.8f;   // 5.6 초 연출이 앞을 보고 멈추고 확인 버튼이 나온 뒤
-            Shot("진화_2");
+            yield return Shot("진화_2");
         }
         yield return CloseAll();
 
         object hud = Find("GameHUD");
-        if (Call(hud, "OpenSettings")) { yield return 1f; Shot("설정"); }
+        if (Call(hud, "OpenSettings")) { yield return 1f; yield return Shot("설정"); }
         yield return CloseAll();
-        if (Call(hud, "OpenAlbum")) { yield return 1.5f; Shot("기록_앨범"); }
+        if (Call(hud, "OpenAlbum")) { yield return 1.5f; yield return Shot("기록_앨범"); }
         yield return CloseAll();
 
         object spots = Get(Find("KyungHeeSpots"), "Spots");
-        if (spots is IList list && list.Count > 0 && Call(Find("MemoBoard"), "OpenSpot", list[0])) { yield return 2f; Shot("장소_메모"); }
+        if (spots is IList list && list.Count > 0 && Call(Find("MemoBoard"), "OpenSpot", list[0])) { yield return 2f; yield return Shot("장소_메모"); yield return ShotBottom("장소_메모_아래"); }
         yield return CloseAll();
 
-        if (progress != null && Call(Find("CatchCameraScreen"), "OpenPartnerPhoto", progress)) { yield return 2f; Shot("파트너_사진"); }
+        if (progress != null && Call(Find("CatchCameraScreen"), "OpenPartnerPhoto", progress)) { yield return 2f; yield return Shot("파트너_사진"); }
         yield return CloseAll();
 
-        if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; Shot("취향_설문"); }
+        if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; yield return Shot("취향_설문"); }
         yield return CloseAll();
-        Shot("지도_끝");
+        yield return Shot("지도_끝");
     }
 
     // ---------- 구조물 사방 ----------
@@ -256,10 +256,14 @@ public static class UiCapture
             yield break;
         // 플레이 모드에서만 바꾸므로 끝나면 저절로 되돌아간다:
         // 건물 위 위치 표지(배지 + 막대)는 건물 앞을 가려 끄고, 한낮 · 봄으로 고정해 웹 미리보기(tools/keyart/preview)와 같은 조건으로 찍는다
-        Type spotType = TypeOf("KyungHeeSpot");
-        if (spotType != null)
-            foreach (Component s in UnityEngine.Object.FindObjectsByType(spotType, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>())
-                s.gameObject.SetActive(false);
+        // 플레이어 · 파트너 · 야생 경희몬도 끈다 (체육대학관 옆에 건물 3층 높이 캐릭터가 찍혔음, MAP_REVIEW M5)
+        foreach (string hide in new[] { "KyungHeeSpot", "ModularCharacter", "PartnerBuddy", "Collectible" })
+        {
+            Type ht = TypeOf(hide);
+            if (ht != null)
+                foreach (Component s in UnityEngine.Object.FindObjectsByType(ht, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>())
+                    s.gameObject.SetActive(false);
+        }
         object look = Find("KeyArtLook");
         Type lookType = look?.GetType();
         if (lookType != null)
@@ -283,6 +287,9 @@ public static class UiCapture
             {
                 // 북쪽(+z)에서 남쪽을 바라보면 yaw 180
                 Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
+                // 옆 건물에 막히면 (원자로센터 E·S, 도예관 S 등) 더 내려다보는 각도로
+                if (Physics.Raycast(target, -(rot * Vector3.forward), out RaycastHit hit, dist) && hit.collider.GetComponentInParent(infoType) != info)
+                    rot = Quaternion.Euler(Mathf.Max(pitch, 58f), yaw, 0f);
                 ShotFrom(cam, target - rot * Vector3.forward * dist, rot, $"{Safe(name)}_{tag}");
             }
             yield return 0.05f;
@@ -431,67 +438,28 @@ public static class UiCapture
 
     static void Set(object target, string field, object value) => target?.GetType().GetField(field, Any)?.SetValue(target, value);
 
-    /// <summary>지도 카메라 위에 화면 캔버스를 겹쳐 1080×1920 으로 찍는다</summary>
-    static void Shot(string name)
+    /// <summary>
+    /// Game 화면을 그대로 1080×1920 PNG 로 저장한다. 프레임 끝에 저장되므로 파일이 생길 때까지 기다린다 (그 사이 다음 단계가 화면을 바꾸지 않게).
+    /// RenderTexture 에 카메라를 따로 그리던 방식은 URP 에서 장면이 안 그려져 지도가 남색으로 찍혔음 (UI_REVIEW_v5).
+    /// </summary>
+    static IEnumerator Shot(string name)
     {
-        Camera cam = Camera.main != null ? Camera.main : UnityEngine.Object.FindAnyObjectByType<Camera>();
-        if (cam == null)
-        {
-            Debug.LogWarning("[UiCapture] 카메라 없음");
-            return;
-        }
-        // 멀티샘플 없이: 4x 에서는 UI 사각형 두 삼각형의 대각선 이음매가 옅은 줄로 찍혔음 (기기 Overlay 캔버스에는 없음)
-        var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 1 };
-        var uiCam = new GameObject("UiCaptureCamera").AddComponent<Camera>();
-        uiCam.cullingMask = 1 << UiLayer;
-        // 카메라 스택 대신 같은 RT 에 따로 한 번 더 그린다 (수동 Render 에선 스택 Overlay 가 안 그려짐)
-        uiCam.clearFlags = CameraClearFlags.Nothing;
-        uiCam.targetTexture = rt;   // 캔버스가 1080×1920 기준으로 배치되게
-
-        var switched = new List<(Canvas canvas, int layer)>();
-        foreach (Canvas c in UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-        {
-            if (!c.isRootCanvas || c.renderMode != RenderMode.ScreenSpaceOverlay)
-                continue;
-            switched.Add((c, c.gameObject.layer));
-            c.renderMode = RenderMode.ScreenSpaceCamera;
-            c.worldCamera = uiCam;
-            c.planeDistance = 1f;
-            foreach (Transform t in c.GetComponentsInChildren<Transform>(true))
-                t.gameObject.layer = UiLayer;
-        }
-        Canvas.ForceUpdateCanvases();
-
-        RenderTexture oldTarget = cam.targetTexture;
-        cam.targetTexture = rt;
-        cam.Render();
-        cam.targetTexture = oldTarget;
-        uiCam.Render();
-
-        RenderTexture.active = rt;
-        var tex = new Texture2D(W, H, TextureFormat.RGB24, false);
-        tex.ReadPixels(new Rect(0, 0, W, H), 0, 0);
-        tex.Apply();
-        RenderTexture.active = null;
         shotIndex++;
-        File.WriteAllBytes(Path.Combine(outDir, $"{shotIndex:00}_{name}.png"), tex.EncodeToPNG());
-
-        foreach (var (canvas, _) in switched)
-        {
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            canvas.worldCamera = null;
-        }
-        uiCam.targetTexture = null;
-        UnityEngine.Object.DestroyImmediate(uiCam.gameObject);
-        UnityEngine.Object.DestroyImmediate(tex);
-        rt.Release();
-        UnityEngine.Object.DestroyImmediate(rt);
+        string path = Path.Combine(outDir, $"{shotIndex:00}_{name}.png");
+        ScreenCapture.CaptureScreenshot(path);
         Debug.Log($"[UiCapture] {shotIndex:00}_{name}");
-        if (name.StartsWith("지도"))
-        {
-            // 첫 실행 지도가 남색 한 색으로 찍힘: 캡처 방식 탓인지 실제 화면인지 가리려고 Game 화면도 그대로 저장하고 카메라 상태를 남긴다
-            ScreenCapture.CaptureScreenshot(Path.Combine(outDir, $"{shotIndex:00}_{name}_게임화면.png"));
-            Debug.Log($"[UiCapture] 카메라 {cam.name} pos={cam.transform.position} rot={cam.transform.eulerAngles} far={cam.farClipPlane} clear={cam.clearFlags} bg={cam.backgroundColor} mask={cam.cullingMask}");
-        }
+        double until = EditorApplication.timeSinceStartup + 5;
+        while (!File.Exists(path) && EditorApplication.timeSinceStartup < until)
+            yield return 0.1f;
+        yield return 0.2f;
+    }
+
+    /// <summary>열린 스크롤 목록을 모두 맨 아래로 내리고 한 장 더 (화면 밖 카드 확인용)</summary>
+    static IEnumerator ShotBottom(string name)
+    {
+        foreach (ScrollRect s in UnityEngine.Object.FindObjectsByType<ScrollRect>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            s.verticalNormalizedPosition = 0f;
+        yield return 0.6f;
+        yield return Shot(name);
     }
 }

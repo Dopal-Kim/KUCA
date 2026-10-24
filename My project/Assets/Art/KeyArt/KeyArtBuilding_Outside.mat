@@ -27,7 +27,7 @@ Material:
     m_Floats:
     - _Arch: 0
     - _Brick: 0
-    - _FloorHeight: 3.8999999
+    - _FloorHeight: 3.9
     - _PilasterEvery: 0
     - _WindowHeight: 0.36
     - _WindowSpacing: 4.2

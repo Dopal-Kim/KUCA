@@ -147,6 +147,8 @@ Shader "KUCA/StylizedBuilding"
                 if (_Arch > 0.5 && qq.y > hb.y - hb.x) d = length(qq - float2(0.0, hb.y - hb.x)) - hb.x;
                 else d = SdRoundBox(qq, hb, min(hb.x, hb.y) * (_Arch > 0.5 ? 0.2 : 0.42));
 
+                // 화면 미분은 분기 밖에서 (분기 안 fwidth 는 픽셀 묶음마다 값이 틀어질 수 있음)
+                float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 res = c * ao;
                 if (qq.y < -hb.y && qq.y > -hb.y - 0.24 && abs(qq.x) < hb.x + 0.22) res = _TrimColor.rgb * ao;   // 창턱
                 else if (d < 0.0)
@@ -154,7 +156,8 @@ Shader "KUCA/StylizedBuilding"
                     float t = saturate((qq.y + hb.y) / (2.0 * hb.y));
                     float h = frac(sin(dot(float2(colI, fl), float2(12.9898, 78.233))) * 43758.5453);
                     half3 glass = lerp(_WindowColor.rgb * 0.72, lerp(_WindowColor.rgb, half3(0.88, 0.95, 1.0), 0.55), t);
-                    glass = lerp(glass, half3(0.97, 0.99, 1.0), 0.4 * step(0.86, frac((qq.x * 0.7 + qq.y) * 0.45 + h)));
+                    // 유리 반사 줄무늬는 창보다 잘아서 먼저 없앤다 (M6: 생명과학대 · 우정원 넓은 벽 잔여 얼룩)
+                    glass = lerp(glass, half3(0.97, 0.99, 1.0), 0.4 * step(0.86, frac((qq.x * 0.7 + qq.y) * 0.45 + h)) * (1.0 - saturate((px - 0.02) / 0.05)));
                     if (h > 0.8 && t > 0.5) glass = lerp(glass, half3(1.0, 0.93, 0.84), 0.55);   // 커튼
                     if (_WindowWidth > 0.8 && abs(qq.x) < 0.06) glass = _TrimColor.rgb * 0.95;    // 넓은 창 멀리언
                     glass *= lerp(1.0, 0.45, _KucaNight);
@@ -164,10 +167,10 @@ Shader "KUCA/StylizedBuilding"
                 else if (d < 0.16) res = _TrimColor.rgb;   // 창틀
 
                 // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
-                float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
                 // 창틀(0.16 m)이 한 픽셀보다 가늘어질 때부터 서서히 (예전 0.2 m/px 부터는 늦어 960×720 캡처에서 긴 면이 지글거렸음)
-                float fade = saturate((px - 0.07) / 0.2);
+                // M6: 0.07 → 0.05 시작, 폭 0.2 → 0.15 (Unity 캡처에 남은 얼룩무늬)
+                float fade = saturate((px - 0.05) / 0.15);
                 emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7), fade);
                 return lerp(res, avg, fade);
             }

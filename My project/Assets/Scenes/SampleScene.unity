@@ -30317,6 +30317,8 @@ MonoBehaviour:
   - {fileID: 2100000, guid: fbc2a98fe0a8b40d2b9afde29be6430a, type: 2}
   - {fileID: 2100000, guid: 9b4f1cd856a7a42888f98ef60521d1ca, type: 2}
   - {fileID: 2100000, guid: 5ddd271084ea442019f9f1831bf12730, type: 2}
+  - {fileID: 2100000, guid: d4bea777e9434dcdb37294ac7dd7231f, type: 2}
+  - {fileID: 2100000, guid: e771a15364024df0b9e59327ccd7435e, type: 2}
   shellStyles:
   - Default
   - Classical
@@ -30324,6 +30326,8 @@ MonoBehaviour:
   - Glass
   - Brick
   - Outside
+  - Stone
+  - Granite
   terrainMaterial: {fileID: 2100000, guid: 15613de91837946089452b4f39ba00f3, type: 2}
   castShadows: 1
 --- !u!4 &803024976
