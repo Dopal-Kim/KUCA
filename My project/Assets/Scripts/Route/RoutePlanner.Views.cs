@@ -80,6 +80,7 @@ public partial class RoutePlanner
     void BuildSheet()
     {
         sheet = UIKit.Image(canvasRect, "RouteSheet", Dim, raycast: true).gameObject;
+        BackButton.Attach(sheet, HideSheet);
         UIKit.Stretch((RectTransform)sheet.transform);
         sheet.AddComponent<Button>().onClick.AddListener(HideSheet); // 바깥을 누르면 닫힘
 

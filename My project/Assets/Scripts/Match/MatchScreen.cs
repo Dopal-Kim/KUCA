@@ -466,6 +466,7 @@ public class MatchScreen : MonoBehaviour
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "MatchCanvas", 50);
         root = UIKit.Image(canvas.transform, "Match", Paper, raycast: true).gameObject;
+        BackButton.Attach(root, Hide);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         RectTransform safe = UIKit.Rect(root.transform, "Safe");

@@ -280,10 +280,11 @@ public class EvolutionScreen : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "EvolutionCanvas", 56);
         var bg = new GameObject("Evolution", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         bg.transform.SetParent(canvas.transform, false);
-        bg.texture = HudIcons.Gradient(new Color(0.22f, 0.16f, 0.42f), new Color(0.06f, 0.05f, 0.16f));
+        bg.texture = HudIcons.Gradient(Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.25f), Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.8f));   // 밤 숲 무대
         bg.raycastTarget = true;
         UIKit.Stretch(bg.rectTransform);
         root = bg.gameObject;
+        BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다 (연출 중이면 건너뛰기)
         RectTransform r = bg.rectTransform;
 
         glow = UIKit.Image(r, "Glow", new Color(1f, 0.85f, 0.45f, 0.3f));

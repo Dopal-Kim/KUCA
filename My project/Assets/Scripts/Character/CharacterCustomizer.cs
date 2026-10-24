@@ -24,8 +24,8 @@ public class CharacterCustomizer : MonoBehaviour
     [Tooltip("미리보기 카메라가 바라보는 높이 (캐릭터 로컬 단위) — 옷 탭")]
     public float previewLookHeight = 0.9f;
     [Tooltip("얼굴 · 색 탭에서 얼굴 가까이 갈 때의 거리와 높이")]
-    public float faceDistance = 2.1f;
-    public float faceLookHeight = 1.3f;
+    public float faceDistance = 2.6f;
+    public float faceLookHeight = 1.55f;
     public float previewFov = 30f;
     public float previewRotateSpeed = 0.4f;
 
@@ -556,7 +556,7 @@ public class CharacterCustomizer : MonoBehaviour
         lightGo.transform.SetParent(transform, false);
         previewLight = lightGo.GetComponent<Light>();
         previewLight.type = LightType.Directional;
-        previewLight.intensity = 0.8f;
+        previewLight.intensity = 1.4f;   // 미리보기에서 얼굴이 어둡게 보이지 않게
         previewLight.shadows = LightShadows.None;
         previewLight.cullingMask = 1 << character.gameObject.layer;
         previewLight.enabled = false;
@@ -660,6 +660,7 @@ public class CharacterCustomizer : MonoBehaviour
             le = go.AddComponent<LayoutElement>();
         le.preferredHeight = height;
         le.minHeight = height;
+        le.flexibleHeight = 0f;   // 안의 가로 레이아웃이 늘어나는 줄로 보고하지 않게 (탭 · 버튼 줄이 커지던 문제)
     }
 
     static void SetWidth(GameObject go, float width, float flexible)

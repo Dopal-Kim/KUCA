@@ -298,7 +298,8 @@ public class WalkCompleteScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkCompleteCanvas", 52);
-        root = UIKit.Image(canvas.transform, "WalkComplete", new Color(0.98f, 0.98f, 1f), raycast: true).gameObject;
+        root = UIKit.Image(canvas.transform, "WalkComplete", KucaTheme.Surface, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         RectTransform safe = UIKit.Rect(root.transform, "Safe");
@@ -332,7 +333,7 @@ public class WalkCompleteScreen : MonoBehaviour
         reason = Line(list, "", 32, InkQuiet, 50f, true);
         reason.alignment = TextAnchor.MiddleCenter;
 
-        Button photo = Pill(list, "파트너와 사진 찍기", Ink, Color.white, TakePhoto);
+        Button photo = Pill(list, "파트너와 사진 찍기", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, TakePhoto);
         UIKit.Size(photo, 116f);
 
         // 보상
@@ -373,11 +374,11 @@ public class WalkCompleteScreen : MonoBehaviour
         comment.textComponent.color = Ink;
         ((Text)comment.placeholder).color = InkQuiet;
         UIKit.Size(comment, 100f);
-        sendButton = Pill(vc, "리뷰 보내기", Accent, Color.white, SendReview);
+        sendButton = Pill(vc, "리뷰 보내기", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, SendReview);   // 강조 버튼은 아래 "확인" 하나
         UIKit.Size(sendButton, 104f);
         reviewNote = Line(vc, "", 26, InkQuiet, 40f);
 
-        Button close = Pill(safe, "확인", Ink, Color.white, Close);
+        Button close = Pill(safe, "확인", KucaTheme.Primary, Color.white, Close);
         RectTransform cr = (RectTransform)close.transform;
         cr.anchorMin = new Vector2(0f, 0f);
         cr.anchorMax = new Vector2(1f, 0f);

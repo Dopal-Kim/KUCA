@@ -137,6 +137,7 @@ public class WalkHistoryScreen : MonoBehaviour
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkHistoryCanvas", 50);
         root = UIKit.Image(canvas.transform, "WalkHistory", Page, raycast: true).gameObject;
+        BackButton.Attach(root, Close);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         RectTransform safe = UIKit.Rect(root.transform, "Safe");

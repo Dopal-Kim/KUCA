@@ -298,14 +298,14 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildMainMenu()
     {
-        mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
+        mainMenu = FullScreen("MainMenu", KucaTheme.PrimarySoft, KucaTheme.Primary, out RectTransform inner);
         // 위 줄 경희몬 · 뽑기, 아래 줄 도감 · 산책 기록. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
         MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
         MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 600f), OpenGacha);
         MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
         MenuButton(inner, "산책 기록", HudIcons.Footprints, new Vector2(160f, 270f), () => { Show(mainMenu, false); WalkHistoryScreen.Show(); });
         // 뽑기 버튼의 빨간 원: 가진 티켓 수
-        gachaMenuBadge = Circle(menuButtons[1], "Badge", new Color(0.93f, 0.25f, 0.33f), 56f);
+        gachaMenuBadge = Circle(menuButtons[1], "Badge", KucaTheme.Crimson, 56f);
         Place(gachaMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-14f, 176f));
         gachaMenuBadgeText = T(gachaMenuBadge.transform, "", 30, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(gachaMenuBadgeText.rectTransform);
@@ -354,7 +354,7 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildCollection()
     {
-        collection = FullScreen("Collection", new Color(0.96f, 0.99f, 0.97f), new Color(0.85f, 0.95f, 0.90f), out RectTransform inner);
+        collection = FullScreen("Collection", KucaTheme.Surface, KucaTheme.PrimarySoft, out RectTransform inner);
         Frame(collection.transform, new Color(0.56f, 0.86f, 0.56f));
 
         // 탭
@@ -733,7 +733,7 @@ public partial class KhuMenus : MonoBehaviour
         Button dress = PillButton(card, "꾸미기", Orange, Color.white, () => OpenAccessories(detailTarget));
         Place((RectTransform)dress.transform, new Vector2(0.5f, 0f), new Vector2(0f, 196f));
         ((RectTransform)dress.transform).sizeDelta = new Vector2(700f, 104f);
-        Button close = PillButton(card, "닫기", new Color(0.88f, 0.92f, 0.9f), Gray, () => SetActive(detail, false));
+        Button close = PillButton(card, "닫기", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => SetActive(detail, false));
         BackButton.Attach(detail, () => SetActive(detail, false));
         Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(210f, 60f));
         ((RectTransform)close.transform).sizeDelta = new Vector2(300f, 116f);
@@ -1004,9 +1004,9 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildProfile()
     {
-        profile = FullScreen("Profile", new Color(0.62f, 0.13f, 0.22f), new Color(0.24f, 0.02f, 0.08f), out RectTransform inner);
+        profile = FullScreen("Profile", KucaTheme.PrimaryDeep, Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.7f), out RectTransform inner);
         BackButton.Attach(profile, CloseProfile);
-        Frame(profile.transform, new Color(0.40f, 0.05f, 0.12f));
+        Frame(profile.transform, Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.35f));
 
         // 탭: 나 / 프렌드 / 소셜
         RectTransform tabs = UIKit.Rect(inner, "Tabs");

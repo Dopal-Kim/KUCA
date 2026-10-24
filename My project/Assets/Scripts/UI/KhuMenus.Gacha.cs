@@ -111,7 +111,8 @@ public partial class KhuMenus
 
     void BuildGacha()
     {
-        gachaScreen = FullScreen("Gacha", new Color(0.93f, 0.90f, 1f), new Color(0.78f, 0.70f, 0.98f), out RectTransform inner);
+        gachaScreen = FullScreen("Gacha", KucaTheme.Surface, KucaTheme.PrimarySoft, out RectTransform inner);
+        BackButton.Attach(gachaScreen, () => Show(gachaScreen, false));
         Frame(gachaScreen.transform, new Color(0.62f, 0.52f, 0.95f));
 
         Text title = T(inner, "뽑기", 64, TextAnchor.MiddleCenter, GachaInk, bold: true);
@@ -148,11 +149,11 @@ public partial class KhuMenus
         oddsText.rectTransform.anchorMax = Vector2.one;
         oddsText.rectTransform.offsetMin = new Vector2(70f, 200f);
         oddsText.rectTransform.offsetMax = new Vector2(-60f, -150f);
-        Button oc = PillButton(card, "닫기", new Color(0.90f, 0.88f, 0.98f), GachaInk, () => SetActive(oddsPanel, false));
+        Button oc = PillButton(card, "닫기", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => SetActive(oddsPanel, false));
         Place((RectTransform)oc.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
         ((RectTransform)oc.transform).sizeDelta = new Vector2(400f, 116f);
 
-        CloseFab(inner, () => Show(gachaScreen, false), filled: true, new Color(0.45f, 0.30f, 0.85f));
+        CloseFab(inner, () => Show(gachaScreen, false), filled: true, KucaTheme.Primary);
     }
 
     /// <summary>흰 카드 버튼: 왼쪽 색 띠 + 제목 + 설명 + 오른쪽 "티켓 n장"</summary>
@@ -258,7 +259,7 @@ public partial class KhuMenus
 
     void BuildStarter()
     {
-        starterScreen = FullScreen("Starter", new Color(0.93f, 0.90f, 1f), new Color(0.80f, 0.92f, 0.86f), out RectTransform inner);
+        starterScreen = FullScreen("Starter", KucaTheme.Surface, KucaTheme.PrimarySoft, out RectTransform inner);
         Text title = T(inner, "첫 파트너를 골라 주세요", 60, TextAnchor.MiddleCenter, GachaInk, bold: true);
         TopBox(title.rectTransform, 220f, 90f);
         Text sub = T(inner, "골라 준 경희몬이 늘 옆에서 같이 걸어요.\n함께 걸을수록 진화해요.", 34, TextAnchor.MiddleCenter, GachaQuiet);

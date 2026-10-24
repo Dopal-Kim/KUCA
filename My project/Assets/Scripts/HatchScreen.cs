@@ -113,7 +113,8 @@ public class HatchScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "HatchCanvas", 40);
-        root = UIKit.Image(canvas.transform, "Hatch", new Color(0f, 0f, 0f, 0.55f), raycast: true).gameObject;
+        root = UIKit.Image(canvas.transform, "Hatch", KucaTheme.Scrim, raycast: true).gameObject;
+        BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다
         UIKit.Stretch((RectTransform)root.transform);
 
         Image card = UIKit.Image(root.transform, "Card", Color.white, raycast: true);
@@ -154,7 +155,7 @@ public class HatchScreen : MonoBehaviour
         info = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
         Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -754f), new Vector2(760f, 96f));
 
-        ok = UIKit.Button(cr, "확인", Close, Ink, 38);
+        ok = UIKit.Button(cr, "확인", Close, KucaTheme.Primary, KucaTheme.Body);
         Image oi = ok.GetComponent<Image>();
         oi.sprite = HudIcons.Pill;
         oi.type = Image.Type.Sliced;
