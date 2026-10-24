@@ -311,14 +311,14 @@ public class EvolutionScreen : MonoBehaviour
 
         captionGroup = Group(r, "Caption", out RectTransform cr);
         Place(cr, new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(1000f, 100f));
-        caption = UIKit.Text(cr, "", 50, TextAnchor.MiddleCenter, Color.white);
+        caption = UIKit.Text(cr, "", KucaTheme.Title, TextAnchor.MiddleCenter, Color.white);
         UIKit.Bold(caption);
         UIKit.Stretch(caption.rectTransform);
         Shade(caption);
 
         namesGroup = Group(r, "Names", out RectTransform nr);
-        Place(nr, new Vector2(0.5f, 0f), new Vector2(0f, 560f), new Vector2(1060f, 180f));
-        names = UIKit.Text(nr, "", 46, TextAnchor.UpperCenter, Color.white);
+        Place(nr, new Vector2(0.5f, 0f), new Vector2(0f, 420f), new Vector2(1060f, 180f));
+        names = UIKit.Text(nr, "", KucaTheme.Heading, TextAnchor.UpperCenter, Color.white);
         names.supportRichText = true;
         UIKit.Stretch(names.rectTransform);
         Shade(names);   // 노란 빛줄기 위에서도 읽히게
@@ -330,15 +330,14 @@ public class EvolutionScreen : MonoBehaviour
             Place(dots[i].rectTransform, new Vector2(0.5f, 0f), new Vector2((i - 1) * 64f, 20f), new Vector2(40f, 40f));
         }
 
-        ok = UIKit.Button(r, "멋져요!", Close, new Color(1f, 0.72f, 0.2f), 42);
-        Image oi = ok.GetComponent<Image>();
-        oi.sprite = HudIcons.Pill;
-        oi.type = Image.Type.Sliced;
-        oi.pixelsPerUnitMultiplier = 120f / 120f;
-        Text ot = ok.GetComponentInChildren<Text>();
-        ot.color = new Color(0.2f, 0.12f, 0.02f);
-        UIKit.Bold(ot);
-        Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0f, 300f), new Vector2(600f, 120f));
+        // v4: 아래 꽉 찬 주요 버튼 하나 (금색 바탕 + 진한 글자: 어두운 무대 위에서 가장 눈에 띄게)
+        ok = UIKit.BigButton(r, "멋져요!", Close, KucaTheme.Gold, KucaTheme.Ink);
+        RectTransform okr = (RectTransform)ok.transform;
+        okr.anchorMin = Vector2.zero;
+        okr.anchorMax = new Vector2(1f, 0f);
+        okr.pivot = new Vector2(0.5f, 0f);
+        okr.offsetMin = new Vector2(KucaTheme.Gutter, 160f);
+        okr.offsetMax = new Vector2(-KucaTheme.Gutter, 160f + KucaTheme.ButtonHeight);
         ok.gameObject.AddComponent<PressScale>();
 
         flash = UIKit.Image(r, "Flash", new Color(1f, 1f, 1f, 0f));

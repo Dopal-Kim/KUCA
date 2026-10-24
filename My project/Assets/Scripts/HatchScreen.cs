@@ -5,6 +5,7 @@ using UnityEngine.UI;
 /// <summary>
 /// 뽑기 결과 연출 (B-V1, 예전 알 부화 화면을 고쳐 씀). 티켓이 흔들리다 번쩍 열리고, 나온 경희몬 · 등급 · 진화 경험치를 보여 준다.
 /// 메모판·산책 길잡이 위에서도 보이도록 자기 캔버스(순서 40)를 쓴다.
+/// 디자인 v4 (참조: 포켓몬 슬립 보상 · 듀오링고 보상): 흰 카드 가운데 큰 캐릭터 + 등급 알약 + 큰 이름, 아래 꽉 찬 "확인" 하나.
 /// </summary>
 public class HatchScreen : MonoBehaviour
 {
@@ -18,6 +19,7 @@ public class HatchScreen : MonoBehaviour
     RawImage creatureImage;
     Image flash;
     Text title, nameText, tierText, info;
+    Image tierChip;
     Button ok;
     bool skip;   // 흔들리는 중에 화면을 누르면 바로 연다
     System.Action onClose;
@@ -46,7 +48,7 @@ public class HatchScreen : MonoBehaviour
         egg.GetComponent<Image>().color = premium ? TicketGold : TicketPaper;
         nameText.text = CreatureLibrary.NameOf(r.species);
         tierText.text = $"{GachaRules.Label(r.grade)} 등급";
-        tierText.color = GachaRules.ColorOf(r.grade);
+        tierChip.color = GachaRules.ColorOf(r.grade);
         string what = r.isNew ? "새 경희몬!  도감에 등록됐어요"
             : r.evolved ? $"진화 경험치 +{r.growthAdded}\n{KhuMenus.EvolvedMessage(r.species, r.stage)}"
             : $"이미 있는 경희몬  ·  진화 경험치 +{r.growthAdded}";
@@ -62,6 +64,7 @@ public class HatchScreen : MonoBehaviour
         creature.gameObject.SetActive(false);
         rays.gameObject.SetActive(false);
         foreach (Text t in new[] { nameText, tierText, info }) t.enabled = false;
+        tierChip.enabled = false;
         ok.gameObject.SetActive(false);
         skip = false;
         flash.color = new Color(1f, 1f, 1f, 0f);
@@ -80,6 +83,7 @@ public class HatchScreen : MonoBehaviour
         rays.gameObject.SetActive(true);
         title.text = "뽑았어요!";
         foreach (Text t in new[] { nameText, tierText, info }) t.enabled = true;
+        tierChip.enabled = true;
         ok.gameObject.SetActive(true);
         for (float t = 0f; t < 0.45f; t += Time.unscaledDeltaTime)
         {
@@ -122,51 +126,54 @@ public class HatchScreen : MonoBehaviour
         tapAnywhere.onClick.AddListener(() => skip = true);
         UIKit.Stretch((RectTransform)root.transform);
 
-        Image card = UIKit.Image(root.transform, "Card", Color.white, raycast: true);
+        Image card = UIKit.Image(root.transform, "Card", KucaTheme.Card, raycast: true);
         card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
+        card.pixelsPerUnitMultiplier = 0.34f;
         RectTransform cr = card.rectTransform;
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0.5f);
-        cr.sizeDelta = new Vector2(820f, 1060f);
+        cr.sizeDelta = new Vector2(940f, 1320f);
 
-        title = UIKit.Text(cr, "", 44, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(title);
-        Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(760f, 70f));
+        title = UIKit.Bold(UIKit.Text(cr, "", KucaTheme.Heading, TextAnchor.MiddleCenter, InkQuiet));
+        Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(860f, 72f));
 
-        rays = UIKit.Image(cr, "Rays", new Color(1f, 0.8f, 0.3f, 0.8f)).rectTransform;
+        rays = UIKit.Image(cr, "Rays", new Color(KucaTheme.Gold.r, KucaTheme.Gold.g, KucaTheme.Gold.b, 0.55f)).rectTransform;
         rays.GetComponent<Image>().sprite = HudIcons.Rays;
-        Center(rays, -370f, 640f);
+        Center(rays, -420f, 700f);
 
         egg = UIKit.Image(cr, "Ticket", TicketPaper).rectTransform; // 흔들리다 열리는 티켓
         egg.GetComponent<Image>().sprite = HudIcons.Ticket;
         egg.gameObject.AddComponent<Outline>().effectColor = new Color(0.85f, 0.6f, 0.3f);
         egg.GetComponent<Outline>().effectDistance = new Vector2(4f, -4f);
-        Center(egg, -370f, 340f);
+        Center(egg, -420f, 360f);
 
         var go = new GameObject("Creature", typeof(RectTransform), typeof(RawImage));
         go.transform.SetParent(cr, false);
         creatureImage = go.GetComponent<RawImage>();
         creatureImage.raycastTarget = false;
         creature = creatureImage.rectTransform;
-        Center(creature, -370f, 440f);
+        Center(creature, -420f, 500f);
 
-        nameText = UIKit.Text(cr, "", 54, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(nameText);
-        Place(nameText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -610f), new Vector2(760f, 76f));
-        tierText = UIKit.Text(cr, "", 34, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(tierText);
-        Place(tierText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -692f), new Vector2(760f, 50f));
-        info = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
-        Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -754f), new Vector2(760f, 96f));
+        // 등급 알약 (색 = 등급) + 큰 이름 + 설명
+        tierChip = UIKit.Image(cr, "Tier", KucaTheme.Primary);
+        tierChip.sprite = HudIcons.Pill;
+        tierChip.type = Image.Type.Sliced;
+        tierChip.pixelsPerUnitMultiplier = 1.6f;
+        Place(tierChip.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -700f), new Vector2(200f, 72f));
+        tierText = UIKit.Bold(UIKit.Text(tierChip.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter, Color.white));
+        UIKit.Stretch(tierText.rectTransform);
+        nameText = UIKit.Bold(UIKit.Text(cr, "", KucaTheme.Title, TextAnchor.MiddleCenter, Ink));
+        Place(nameText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -792f), new Vector2(860f, 96f));
+        info = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.UpperCenter, InkQuiet);
+        Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -900f), new Vector2(860f, 150f));
 
-        ok = UIKit.Button(cr, "확인", Close, KucaTheme.Primary, KucaTheme.Body);
-        Image oi = ok.GetComponent<Image>();
-        oi.sprite = HudIcons.Pill;
-        oi.type = Image.Type.Sliced;
-        oi.pixelsPerUnitMultiplier = 120f / 110f;
-        UIKit.Bold(ok.GetComponentInChildren<Text>());
-        Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(720f, 110f));
+        ok = UIKit.PrimaryButton(cr, "확인", Close);
+        RectTransform okr = (RectTransform)ok.transform;
+        okr.anchorMin = Vector2.zero;
+        okr.anchorMax = new Vector2(1f, 0f);
+        okr.pivot = new Vector2(0.5f, 0f);
+        okr.offsetMin = new Vector2(48f, 48f);
+        okr.offsetMax = new Vector2(-48f, 48f + KucaTheme.ButtonHeight);
 
         flash = UIKit.Image(root.transform, "Flash", new Color(1f, 1f, 1f, 0f));
         UIKit.Stretch(flash.rectTransform);

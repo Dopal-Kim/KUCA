@@ -19,14 +19,15 @@ public partial class KhuMenus
 
     void BuildAccessoryPopup()
     {
-        accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(900f, 1180f), out RectTransform card);
-        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
-        TopBox(accessoryTitle.rectTransform, 40f, 90f);
+        accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(940f, 1320f), out RectTransform card);
+        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
+        TopBox(accessoryTitle.rectTransform, 48f, 96f);
+        accessoryTitle.rectTransform.offsetMin = new Vector2(56f, accessoryTitle.rectTransform.offsetMin.y);
 
         float top = 160f;
         foreach (CreatureAccessories.Slot slot in System.Enum.GetValues(typeof(CreatureAccessories.Slot)))
         {
-            Text label = T(card, CreatureAccessories.SlotName(slot), 38, TextAnchor.MiddleLeft, Gray, bold: true);
+            Text label = T(card, CreatureAccessories.SlotName(slot), KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted, bold: true);
             TopBox(label.rectTransform, top, 60f);
             label.rectTransform.offsetMin = new Vector2(60f, label.rectTransform.offsetMin.y);
 
@@ -39,6 +40,7 @@ public partial class KhuMenus
                 string id = acc?.id;
                 CreatureAccessories.Slot s = slot;
                 Button b = PillButton(card, acc == null ? "없음" : acc.shortName, KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => ChooseAccessory(s, id));
+                b.GetComponentInChildren<Text>(true).fontSize = KucaTheme.Label;
                 var rt = (RectTransform)b.transform;
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
@@ -50,12 +52,12 @@ public partial class KhuMenus
             top += 195f;
         }
 
-        accessoryNote = T(card, "", 30, TextAnchor.MiddleCenter, Gray);
+        accessoryNote = T(card, "", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         TopBox(accessoryNote.rectTransform, top + 10f, 60f);
 
-        Button close = PillButton(card, "완료", Teal, Color.white, () => SetActive(accessoryPopup, false));
-        Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
-        ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
+        Button close = UIKit.PrimaryButton(card, "완료", () => SetActive(accessoryPopup, false));
+        Dock((RectTransform)close.transform, 48f, KucaTheme.ButtonHeight);
+        BackButton.Attach(accessoryPopup, () => SetActive(accessoryPopup, false));
     }
 
     void OpenAccessories(GameProgress.Caught c)
@@ -102,7 +104,7 @@ public partial class KhuMenus
                 // 이 동물에 맞는 모델이 없거나 (예: 개구리 귀걸이) 아직 진화가 덜 됐으면 고를 수 없다 ("없음"은 늘 가능)
                 bool available = id == null || (stage >= need && CreatureAccessories.TryGetMesh(c.speciesId, id, out _));
                 b.interactable = available;
-                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(), on);   // 켜짐 = 계절 강조색
+                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(true), on);   // 켜짐 = 계절 강조색
             }
         }
         accessoryNote.text = locked ?? (c.uid == progress.partnerUid
