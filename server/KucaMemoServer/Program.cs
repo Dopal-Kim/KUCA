@@ -55,6 +55,8 @@ builder.Services.AddSingleton<WalkService>();
 builder.Services.AddSingleton<SpotStore>();
 builder.Services.AddSingleton<NoticeStore>();
 builder.Services.AddHttpClient<INoticeClassifier, AiNoticeClassifier>();
+builder.Services.AddHttpClient<INoticePageFetcher, HttpNoticePageFetcher>(c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<NoticeCollector>();
 
 // 메모 작성 본문 크기 제한: 사진 10MB + 글자 여유분
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);

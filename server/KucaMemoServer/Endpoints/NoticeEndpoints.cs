@@ -12,16 +12,22 @@ public static class NoticeEndpoints
 {
     public const int DefaultLimit = 20;
     public const int MaxLimit = 50;
+    /// <summary>이 날 수보다 오래된 공지는 앱에 보내지 않는다 (게시일 기준, 설정 Notices:ShowDays, 0 이면 모두)</summary>
+    public const int DefaultShowDays = 45;
     public const int MaxTitleLength = 200;
     public const int MaxBodyLength = 5000;
 
     /// <summary>앱용: 장소별 공지, 최신순. ?buildingId= 로 그 장소만, ?limit=1~50 (기본 20).</summary>
     public static void MapNoticeEndpoints(this WebApplication app)
     {
-        app.MapGet("/api/notices", (string? buildingId, int? limit, NoticeStore notices, SpotStore spots) =>
+        int showDays = int.TryParse(app.Configuration["Notices:ShowDays"], out int d) && d >= 0 ? d : DefaultShowDays;
+        app.MapGet("/api/notices", (string? buildingId, int? limit, NoticeStore notices, SpotStore spots, NoticeCollector collector,
+                                    TimeProvider clock) =>
         {
+            collector.TriggerIfStale();   // 오래됐으면 뒤에서 단과대 게시판을 새로 읽는다 (이번 응답은 기다리지 않음)
             int take = Math.Clamp(limit ?? DefaultLimit, 1, MaxLimit);
-            var rows = notices.List(string.IsNullOrWhiteSpace(buildingId) ? null : buildingId.Trim(), take)
+            string? since = showDays > 0 ? clock.GetUtcNow().AddHours(9).AddDays(-showDays).ToString("yyyy-MM-dd") : null;
+            var rows = notices.List(string.IsNullOrWhiteSpace(buildingId) ? null : buildingId.Trim(), take, since)
                 .Select(r => new PlaceNotice(r.Id, r.BuildingId, spots.Find(r.BuildingId)?.Name ?? r.BuildingId,
                                              r.Title, r.Summary, r.Url, r.PostedAt));
             return Results.Ok(rows);
@@ -74,6 +80,14 @@ public static class NoticeEndpoints
             return Results.Created($"/api/notices?buildingId={Uri.EscapeDataString(result.BuildingIds[0])}",
                 new { id, buildingIds = result.BuildingIds, summary = result.Summary, source = result.Source });
         });
+
+        // 단과대 게시판에서 지금 모으기 (결과: 게시판마다 읽은 글 · 새로 넣은 수 · 오류). 이미 모으는 중이면 409
+        admin.MapPost("/notices/collect", async (NoticeCollector collector, CancellationToken ct) =>
+            await collector.CollectAsync(ct) is { } report
+                ? Results.Ok(report)
+                : Error(StatusCodes.Status409Conflict, "이미 공지를 모으는 중입니다"));
+        admin.MapGet("/notices/collect", (NoticeCollector collector) =>
+            Results.Ok(new { sources = collector.Sources.Select(s => new { s.Id, s.Name, s.ListUrl, s.BuildingIds }), last = collector.LastReport }));
 
         admin.MapDelete("/notices/{noticeId}", (string noticeId, NoticeStore notices) =>
             notices.Delete(noticeId)
