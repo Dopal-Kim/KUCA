@@ -1,98 +1,141 @@
 ﻿
 C:\Users\admin\KUCA-check\map.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
 C:\Users\admin\KUCA-check\map.log:53:UiCapture.RunMap
-C:\Users\admin\KUCA-check\map.log:184:			LogAssemblyErrors (4ms)
-C:\Users\admin\KUCA-check\map.log:307:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:327:			LogAssemblyErrors (5ms)
-C:\Users\admin\KUCA-check\map.log:436:[UiCapture] 버튼 없음: 확인하고 시작
-C:\Users\admin\KUCA-check\map.log:443:UiCapture:Click (string) (at Assets/Editor/UiCapture.cs:319)
-C:\Users\admin\KUCA-check\map.log:444:UiCapture/<MapScript>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:230)
-C:\Users\admin\KUCA-check\map.log:445:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
-C:\Users\admin\KUCA-check\map.log:448:(Filename: Assets/Editor/UiCapture.cs Line: 319)
-C:\Users\admin\KUCA-check\map.log:487:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:488:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:489:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:490:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:491:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:492:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:493:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:494:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:495:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:500:Project ID request failed, Reason: The requested URL returned error: 403 (403).
-C:\Users\admin\KUCA-check\map.log:501:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
-ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
-HTTP error code 403
-C:\Users\admin\KUCA-check\map.log:506:Project ID request failed, Reason: The requested URL returned error: 403 (403).
-C:\Users\admin\KUCA-check\map.log:507:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
-ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
-HTTP error code 403
-C:\Users\admin\KUCA-check\map.log:509:Project ID request failed, Reason: The requested URL returned error: 403 (403).
-C:\Users\admin\KUCA-check\map.log:510:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
-ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
-HTTP error code 403
-C:\Users\admin\KUCA-check\map.log:512:[UiCapture] 끝 (380장) → C:\Users\admin\KUCA-check\Builds\MapShots
-C:\Users\admin\KUCA-check\map.log:519:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:118)
-C:\Users\admin\KUCA-check\map.log:520:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:102)
-C:\Users\admin\KUCA-check\map.log:523:(Filename: Assets/Editor/UiCapture.cs Line: 118)
-C:\Users\admin\KUCA-check\map.log:552:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:553:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:554:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:555:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:556:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:557:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:558:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:559:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:560:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:561:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:562:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:563:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:564:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:565:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:566:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:567:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:568:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:569:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:570:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:571:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:572:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:573:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:574:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:575:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
-C:\Users\admin\KUCA-check\map.log:577:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
-itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:1445:Assets\Editor\UiCapture.cs(258,112): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:1447:Assets\Editor\UiCapture.cs(258,36): warning CS0618: 'Object.FindObjectsByType(Ty
+pe, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has b
+een deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:1449:Assets\Editor\UiCapture.cs(343,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:1451:Assets\Editor\UiCapture.cs(343,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:1453:Assets\Editor\UiCapture.cs(438,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:1455:Assets\Editor\UiCapture.cs(438,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:1457:Assets\Editor\UiCapture.cs(357,9): warning UAC0005: AppDomain.GetAssemblies() in
+ Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAs
+semblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map.log:2913:Assets\Editor\UiCapture.cs(258,112): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:2914:Assets\Editor\UiCapture.cs(258,36): warning CS0618: 'Object.FindObjectsByType(Ty
+pe, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has b
+een deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:2915:Assets\Editor\UiCapture.cs(343,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:2916:Assets\Editor\UiCapture.cs(343,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:2917:Assets\Editor\UiCapture.cs(438,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:2918:Assets\Editor\UiCapture.cs(438,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:2919:Assets\Editor\UiCapture.cs(357,9): warning UAC0005: AppDomain.GetAssemblies() in
+ Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAs
+semblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map.log:2933:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:2953:			LogAssemblyErrors (7ms)
+C:\Users\admin\KUCA-check\map.log:4204:Assets\Editor\UiCapture.cs(258,112): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:4206:Assets\Editor\UiCapture.cs(258,36): warning CS0618: 'Object.FindObjectsByType(Ty
+pe, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has b
+een deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:4208:Assets\Editor\UiCapture.cs(343,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:4210:Assets\Editor\UiCapture.cs(343,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:4212:Assets\Editor\UiCapture.cs(438,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:4214:Assets\Editor\UiCapture.cs(438,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:4216:Assets\Editor\UiCapture.cs(357,9): warning UAC0005: AppDomain.GetAssemblies() in
+ Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAs
+semblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map.log:5582:Assets\Editor\UiCapture.cs(258,112): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:5583:Assets\Editor\UiCapture.cs(258,36): warning CS0618: 'Object.FindObjectsByType(Ty
+pe, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has b
+een deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:5584:Assets\Editor\UiCapture.cs(343,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:5585:Assets\Editor\UiCapture.cs(343,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:5586:Assets\Editor\UiCapture.cs(438,104): warning CS0618: 'FindObjectsSortMode' is ob
+solete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSor
+tMode parameter.'
+C:\Users\admin\KUCA-check\map.log:5587:Assets\Editor\UiCapture.cs(438,30): warning CS0618: 'Object.FindObjectsByType<T>
+(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been
+ deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replac
+ed in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map.log:5588:Assets\Editor\UiCapture.cs(357,9): warning UAC0005: AppDomain.GetAssemblies() in
+ Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAs
+semblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map.log:5621:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5641:			LogAssemblyErrors (6ms)
+C:\Users\admin\KUCA-check\map.log:5846:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5847:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5848:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5849:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5850:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5851:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5852:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5853:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5854:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5855:[UiCapture] 끝 (380장) → C:\Users\admin\KUCA-check\Builds\MapShots
+C:\Users\admin\KUCA-check\map.log:5862:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:137)
+C:\Users\admin\KUCA-check\map.log:5863:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:121)
+C:\Users\admin\KUCA-check\map.log:5866:(Filename: Assets/Editor/UiCapture.cs Line: 137)
+C:\Users\admin\KUCA-check\map.log:5894:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\map.log:5895:Unknown Unity Connect error (400). Please contact support at support@unity.com w
+hile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa",
+ HTTP error code 403
+C:\Users\admin\KUCA-check\map.log:5897:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5898:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5899:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:5900:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
 
 
