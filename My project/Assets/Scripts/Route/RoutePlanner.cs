@@ -221,8 +221,9 @@ public partial class RoutePlanner : MonoBehaviour
         HideSheet();
         ShowLoading(true);
         int id = ++request;
-        var results = new RouteResult[Variants.Length];
+        var made = new Option[Variants.Length];
         int left = Variants.Length;
+        string lastError = null;
         for (int i = 0; i < Variants.Length; i++)
         {
             int k = i;
@@ -231,27 +232,67 @@ public partial class RoutePlanner : MonoBehaviour
             {
                 if (id != request)
                     return; // 취소함
-                results[k] = result;
-                if (--left > 0)
-                    return;
-                ShowLoading(false);
-                options.Clear();
-                var seen = new HashSet<string>();
-                for (int v = 0; v < Variants.Length; v++)
-                {
-                    Option o = results[v] != null ? MakeOption(Variants[v], results[v], MinutesFor(Variants[v])) : null;
-                    if (o != null && seen.Add(o.Key))   // 똑같은 코스는 한 번만
-                        options.Add(o);
-                }
-                if (options.Count == 0)
-                {
-                    Toast(error ?? "코스를 만들지 못했어요. 잠시 뒤 다시 해 주세요");
-                    ShowSheet();
-                    return;
-                }
-                ShowChooser(0);
+                made[k] = result != null ? MakeOption(Variants[k], result, mins) : null;
+                lastError = error ?? lastError;
+                if (--left == 0)
+                    CollectOptions(id, made, lastError, true);
             }));
         }
+    }
+
+    /// <summary>
+    /// 받은 코스를 모은다. 똑같은 장소 조합은 한 번만 보이고, retry 면 겹친 코스만 이미 나온 장소를 빼고 한 번 더 요청한다
+    /// (서버가 세 요청에 같은 곳을 골라 코스가 2개 이하로 줄어드는 것을 막는다).
+    /// </summary>
+    void CollectOptions(int id, Option[] made, string error, bool retry)
+    {
+        options.Clear();
+        var seen = new HashSet<string>();
+        var again = new List<int>();
+        for (int v = 0; v < made.Length; v++)
+        {
+            if (made[v] == null) continue;
+            if (seen.Add(made[v].Key)) options.Add(made[v]);
+            else again.Add(v);
+        }
+        if (retry && again.Count > 0 && options.Count > 0)
+        {
+            var used = new HashSet<string>();
+            foreach (Option o in options)
+                foreach (RouteStop st in o.result.stops)
+                    used.Add(st.buildingId);
+            int left = again.Count;
+            foreach (int v in again)
+            {
+                int k = v;
+                int mins = MinutesFor(Variants[k]);
+                RouteRequest req = RequestFor(Variants[k], mins);
+                req.candidateBuildingIds.RemoveAll(b => used.Contains(b));
+                if (req.candidateBuildingIds.Count == 0)
+                {
+                    made[k] = null;   // 고를 곳이 더 없으면 이 코스는 뺀다
+                    if (--left == 0) CollectOptions(id, made, error, false);
+                    continue;
+                }
+                StartCoroutine(service.Recommend(req, (result, e) =>
+                {
+                    if (id != request)
+                        return;
+                    made[k] = result != null ? MakeOption(Variants[k], result, mins) : null;
+                    if (--left == 0)
+                        CollectOptions(id, made, error, false);
+                }));
+            }
+            return;
+        }
+        ShowLoading(false);
+        if (options.Count == 0)
+        {
+            Toast(error ?? "코스를 만들지 못했어요. 잠시 뒤 다시 해 주세요");
+            ShowSheet();
+            return;
+        }
+        ShowChooser(0);
     }
 
     int MinutesFor(Variant v) => v.id == "light" ? (minutes >= 60 ? 30 : 15) : minutes;
