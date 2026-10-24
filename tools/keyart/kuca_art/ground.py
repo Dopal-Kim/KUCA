@@ -23,6 +23,8 @@ WATER_EDGE = np.array([128, 200, 212], np.float32)   # 실사 연못: 수영장 
 WATER_DEEP = np.array([60, 140, 170], np.float32)
 STONE_RIM = np.array([224, 214, 198], np.float32)
 TRACK = np.array([200, 104, 82], np.float32)
+DIRT = np.array([200, 172, 132], np.float32)        # 실사 대운동장: 마사토 흙 바닥
+YELLOW = np.array([236, 192, 64], np.float32)       # 차도 중앙선
 LINE = np.array([248, 246, 238], np.float32)
 
 ROAD_W = {'primary': 16, 'secondary': 14, 'tertiary': 11, 'residential': 8, 'unclassified': 8,
@@ -187,10 +189,10 @@ class Ground:
         pts = []
         for k in range(72):
             t = 2 * math.pi * k / 72
-            # 살짝 부푼 타원 (슈퍼엘립스) → 귀여운 연못 모양
+            # 모서리가 둥근 직사각형 (슈퍼엘립스 지수 0.15) → 실사 사색의 광장 직사각 수조
             c, s_ = math.cos(t), math.sin(t)
-            ex = math.copysign(abs(c) ** 0.8, c) * rx
-            ez = math.copysign(abs(s_) ** 0.8, s_) * rz
+            ex = math.copysign(abs(c) ** 0.15, c) * rx
+            ez = math.copysign(abs(s_) ** 0.15, s_) * rz
             pts.append(self.r.px(center[0] + ex * math.cos(a) - ez * math.sin(a), center[1] + ex * math.sin(a) + ez * math.cos(a)))
         d.polygon(pts, fill=255)
         self.lake_poly = [self.r.world(x, y) for x, y in pts]
@@ -369,16 +371,17 @@ class Ground:
             ba = np.asarray(band).astype(np.float32)
             canvas = np.where((ba.sum(axis=2) > 0)[..., None], ba, canvas)
 
-        # 운동장: 붉은 트랙, 줄무늬 잔디 구장, 흰 선
+        # 운동장: 대운동장은 마사토 흙 바닥 + 흰 선 (실사), 그 밖의 구장은 줄무늬 잔디
         paving_t = self._tile('paving', 14)
         track_tex = _recolor(paving_t, TRACK)
-        blend(self.track, track_tex)
+        blend(self.track & ~self.stadium, track_tex)
         field = ndimage.binary_erosion(self.stadium, iterations=int(12 * ppm))
         yy, xx = np.mgrid[0:H, 0:W]
         stripes = (((xx + yy * 0.0) // int(6 * ppm)) % 2).astype(np.float32)[..., None]
         pitch_tex = np.clip(grass * (1.04 + 0.06 * stripes) + np.array([-6, 8, -4], np.float32), 0, 255)
-        blend(field, pitch_tex)
-        blend(self.pitch, pitch_tex)
+        blend(self.pitch & ~self.stadium, pitch_tex)
+        dirt_tex = _recolor(paving_t, DIRT)
+        blend(self.stadium, dirt_tex)
         lines = Image.new('L', (W, H), 0)
         ld = ImageDraw.Draw(lines)
         fa = np.argwhere(field)
@@ -399,8 +402,8 @@ class Ground:
                     ld.rectangle((min(sx, sx + dx), cy - 20 * ppm, max(sx, sx + dx), cy + 20 * ppm), outline=255, width=lw)
             r9 = 9 * ppm
             ld.ellipse((cx - r9, cy - r9, cx + r9, cy + r9), outline=255, width=lw)
-        # 트랙 레인 (흰 줄) — 트랙 안쪽 경계에서 1.2 m 간격
-        track_only = self.track & ~field
+        # 트랙 레인 (흰 줄) — 트랙 안쪽 경계에서 1.2 m 간격 (흙 운동장 둘레는 레인 없음)
+        track_only = self.track & ~field & ~self.stadium
         if track_only.any():
             d_in = ndimage.distance_transform_edt(~field) / ppm
             lane = np.zeros_like(track_only)
@@ -432,7 +435,7 @@ class Ground:
         rim = self._grow(self.water, 1.4) & ~self.water
         blend(rim, flat(STONE_RIM), 0.5)
 
-        # 도로: 연석 → 아스팔트 → 중앙 점선 → 횡단보도
+        # 도로: 연석 → 아스팔트 → 노란 중앙선 (실사 정문 진입로) → 횡단보도
         print('ground: roads')
         walk_m = self.walk
         blend(walk_m, paving, 0.7)
@@ -441,20 +444,15 @@ class Ground:
         blend(self.road, asphalt, 0.7)
         marks = Image.new('L', (W, H), 0)
         md = ImageDraw.Draw(marks)
+        center = Image.new('L', (W, H), 0)
+        cd = ImageDraw.Draw(center)
         lw = max(2, int(0.3 * ppm))
         for hw, pts in self.road_lines:
-            if hw not in CENTER_LINE:
-                continue
-            for a, b in zip(pts, pts[1:]):
-                L = math.hypot(b[0] - a[0], b[1] - a[1])
-                n = int(L // 7)
-                for i in range(n):
-                    t0, t1 = (i * 7 + 1) / L, (i * 7 + 4) / L
-                    p0 = (a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0)
-                    p1 = (a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1)
-                    md.line([self.r.px(*p0), self.r.px(*p1)], fill=255, width=lw)
+            if hw in CENTER_LINE:
+                cd.line([self.r.px(*p) for p in pts], fill=255, width=lw, joint='curve')
         self._crosswalks(md)
         blend(np.asarray(marks) > 0, flat(LINE), 0.5)
+        blend((np.asarray(center) > 0) & self.road, flat(YELLOW), 0.6)
 
         # 포장 가장자리 선: 포장 안쪽 0.35 m 를 살짝 어둡게 (타일 테두리처럼 또렷하게)
         light_paved = walk_m | self.square | self.paved | self.apron | self.parking
