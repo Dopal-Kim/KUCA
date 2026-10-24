@@ -401,7 +401,32 @@ public class MatchApiTests : IDisposable
         Assert.Equal("waiting", S(await Join(c), "state"));
     }
 
-    /// <summary>MatchDemoTests 가 부른다 (Match:DemoPartner=true 서버)</summary>
+    /// <summary>경희대 메일 인증까지 마친 실제 학생 계정 (체험 계정이 아님)</summary>
+    async Task<string> RealStudent(string nickname)
+    {
+        AccountStore accounts = server.Services.GetRequiredService<AccountStore>();
+        var account = accounts.FindOrCreate("kakao", "kakao-" + Guid.NewGuid().ToString("N"));
+        accounts.SetNickname(account.Id, nickname);
+        accounts.SetGender(account.Id, "female");
+        accounts.SaveCode(account.Id, $"{Guid.NewGuid():N}"[..12] + "@khu.ac.kr", "123456");
+        Assert.Equal(AccountStore.VerifyResult.Ok, accounts.VerifyCode(account.Id, "123456"));
+        Assert.True(accounts.Find(account.Id)!.Ready);
+        return accounts.CreateSession(account.Id);
+    }
+
+    /// <summary>MatchDemoTests 가 부른다: 가상 상대가 켜져 있어도 실제 학생은 실제 학생끼리만</summary>
+    public async Task DemoSkipsRealStudents()
+    {
+        string a = await RealStudent("학생A"), b = await RealStudent("학생B");
+        Assert.Equal("waiting", S(await Join(a), "state"));
+        clock.Advance(TimeSpan.FromSeconds(30));
+        Assert.Equal("waiting", S(await State(a), "state"));   // 체험메이트가 붙지 않음
+        JsonElement p = await Join(b);
+        Assert.Equal("proposed", S(p, "state"));
+        Assert.Equal("학생A", S(p.GetProperty("partner"), "nickname"));
+    }
+
+    /// <summary>MatchDemoTests 가 부른다 (Match:DemoPartner=true 서버, 체험 계정)</summary>
     public async Task DemoFlow()
     {
         string a = await User("민지", prefs: new { tastes = new[] { "photo" } });
@@ -459,4 +484,7 @@ public class MatchDemoTests : IDisposable
 
     [Fact]
     public Task 대기_5초_뒤_체험메이트가_수락하고_바로_도착한다() => t.DemoFlow();
+
+    [Fact]
+    public Task 실제_학생에게는_가상_상대가_붙지_않는다() => t.DemoSkipsRealStudents();
 }
