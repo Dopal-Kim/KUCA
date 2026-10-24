@@ -299,10 +299,11 @@ public partial class KhuMenus : MonoBehaviour
     void BuildMainMenu()
     {
         mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
-        // 위 줄 경희몬 · 뽑기, 아래 줄 가운데 도감. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
+        // 위 줄 경희몬 · 뽑기, 아래 줄 도감 · 산책 기록. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
         MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
         MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 600f), OpenGacha);
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(0f, 270f), () => OpenCollection(Tab.Dex));
+        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
+        MenuButton(inner, "산책 기록", HudIcons.Footprints, new Vector2(160f, 270f), () => { Show(mainMenu, false); WalkHistoryScreen.Show(); });
         // 뽑기 버튼의 빨간 원: 가진 티켓 수
         gachaMenuBadge = Circle(menuButtons[1], "Badge", new Color(0.93f, 0.25f, 0.33f), 56f);
         Place(gachaMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-14f, 176f));
