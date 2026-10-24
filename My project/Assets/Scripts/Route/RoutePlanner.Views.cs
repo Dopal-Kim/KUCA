@@ -361,7 +361,7 @@ public partial class RoutePlanner
         UIKit.Stretch(bg.rectTransform);
         chooser = bg.gameObject;
         UnityEngine.Events.UnityAction back = () => { HideChooser(); ShowSheet(); };
-        BackButton.Attach(chooser, back);
+        BackButton.Attach(chooser, () => back());
 
         // 위 45%: 코스 3개가 그려진 지도
         Image frame = TopMap.Frame(bg.transform, "Map", out chooserMap, out chooserOverlay);
@@ -589,7 +589,7 @@ public partial class RoutePlanner
         Image dim = UIKit.Image(canvasRect, name, Dim, raycast: true);
         UIKit.Stretch(dim.rectTransform);
         dim.gameObject.AddComponent<Button>().onClick.AddListener(onClose); // 바깥을 누르면 닫힘
-        BackButton.Attach(dim.gameObject, onClose);
+        BackButton.Attach(dim.gameObject, () => onClose());
 
         Image panel = UIKit.Image(dim.transform, "Panel", KucaTheme.Card, raycast: true);
         panel.sprite = HudIcons.Rounded;
