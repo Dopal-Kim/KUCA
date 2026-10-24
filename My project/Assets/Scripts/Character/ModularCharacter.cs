@@ -107,9 +107,23 @@ public class ModularCharacter : MonoBehaviour
         bones.TryGetValue("UpperArm.R", out upperArms[1]);
         bodyWritten = new Vector3(float.NaN, 0, 0);
         ApplyToyLook();
+        CharacterLook.Apply(model.transform, Appearance);
         lastPos = Source.position;
         builtFrame = Time.frameCount;
     }
+
+    /// <summary>얼굴 · 색 · 슬라이더만 바꾼다. 부위를 다시 만들지 않아 꾸미기에서 움직이는 대로 바로 보인다.</summary>
+    public void ApplyLook(CharacterAppearance appearance)
+    {
+        if (model == null || appearance == null)
+            return;
+        // 같은 Appearance 객체에 덮어쓴다: 새 객체면 HUD 초상화가 슬라이더를 움직일 때마다 다시 만들어진다 (꾸미기 완료 때 한 번만)
+        JsonUtility.FromJsonOverwrite(JsonUtility.ToJson(appearance), Appearance);
+        CharacterLook.Apply(model.transform, Appearance);
+    }
+
+    /// <summary>지금 머리에 고를 수 있는 얼굴 갈래가 있는지 (경희 모험가 머리)</summary>
+    public bool HasFaceParts => CharacterLook.HasFaceParts(model != null ? model.transform : null);
 
     /// <summary>
     /// 캐릭터가 생기기 전 자리표시용 캡슐(Player 의 MeshRenderer, 건물 뒤 파란 실루엣 포함)을 숨긴다.

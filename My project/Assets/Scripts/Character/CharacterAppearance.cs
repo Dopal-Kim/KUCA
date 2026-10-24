@@ -15,6 +15,19 @@ public class CharacterAppearance
     public string legs;
     public string feet;
     public string accessory;
+    [Header("얼굴 · 색 (CharacterLook). 0 = 캐릭터 시트의 기본 모습이라 예전 저장도 그대로 보인다")]
+    public int skin;
+    public int hairColor;
+    public int eyeColor;
+    public int eyes;
+    public int brows;
+    public int mouth;
+    public int nose;
+    public int cheeks;
+    [Tooltip("눈 크기 · 간격 · 높이 슬라이더 (-1 ~ 1, 0 = 기본)")]
+    public float eyeSize;
+    public float eyeSpacing;
+    public float eyeHeight;
     [Tooltip("저장 형식 버전. CurrentVersion 보다 낮으면 기본 캐릭터(경희 모험가)로 바꾼다")]
     public int version;
 
