@@ -11,7 +11,11 @@ using UnityEngine.UI;
 /// </summary>
 public class VirtualWalk : MonoBehaviour
 {
-    public const float WalkSpeed = 1.4f, FastSpeed = 6f;   // m/s
+    public const float WalkSpeed = 1.4f;   // m/s, 걷기
+    /// <summary>속도 단계 (버튼을 누를 때마다 다음 단계): 걷기 · 빠르게 ×4 · 아주 빠르게 ×16 (심사위원이 캠퍼스를 빨리 둘러보게)</summary>
+    static readonly (float multiplier, string label)[] Speeds = { (1f, "걷기"), (4f, "빠르게 ×4"), (16f, "아주 빠르게 ×16") };
+    /// <summary>가장 빠른 단계 (m/s). 걸은 거리 집계가 이 속도까지 인정한다 (KhuMenus.TrackActivity)</summary>
+    public static float TopSpeed => WalkSpeed * Speeds[Speeds.Length - 1].multiplier;
     const string GateBuildingId = "way-473963422";         // 정문
     const float OfferAfter = 8f;                            // 위치를 이만큼 못 받으면 권한다
 
@@ -23,7 +27,8 @@ public class VirtualWalk : MonoBehaviour
     Text offerText, fastLabel;
     RectTransform knob, pad;
     Vector2 stick;
-    bool fast, offered;
+    int speedLevel;
+    bool offered;
     float startedAt, checkAt;
 
     public static VirtualWalk Instance { get; private set; }
@@ -102,7 +107,7 @@ public class VirtualWalk : MonoBehaviour
         Vector3 start = GatePosition();
         CampusMap.Vector2d geo = map.WorldToGeo(start);
         map.StartVirtualWalk(geo.x, geo.y);
-        fast = false;
+        speedLevel = 0;
         RefreshFast();
         Toast("가상 산책을 시작했어요. 왼쪽 아래 조이스틱으로 걸어요");
     }
@@ -141,10 +146,10 @@ public class VirtualWalk : MonoBehaviour
         Camera cam = Camera.main;
         float yaw = cam != null ? cam.transform.eulerAngles.y : 0f;
         Vector3 dir = Quaternion.Euler(0f, yaw, 0f) * new Vector3(stick.x, 0f, stick.y);
-        map.MoveVirtual(dir, (fast ? FastSpeed : WalkSpeed) * Mathf.Clamp01(stick.magnitude) * Time.unscaledDeltaTime);
+        map.MoveVirtual(dir, WalkSpeed * Speeds[speedLevel].multiplier * Mathf.Clamp01(stick.magnitude) * Time.unscaledDeltaTime);
     }
 
-    void RefreshFast() => fastLabel.text = fast ? "빠르게 ×4" : "걷기";
+    void RefreshFast() => fastLabel.text = Speeds[speedLevel].label;
 
     static void Toast(string message)
     {
@@ -217,7 +222,7 @@ public class VirtualWalk : MonoBehaviour
         padImg.gameObject.AddComponent<Pad>().owner = this;
         UIInputBlocker.Register(pad);
 
-        Button speed = UIKit.Button(controls.transform, "", () => { fast = !fast; RefreshFast(); }, new Color(1f, 1f, 1f, 0.9f), 28);
+        Button speed = UIKit.Button(controls.transform, "", () => { speedLevel = (speedLevel + 1) % Speeds.Length; RefreshFast(); }, new Color(1f, 1f, 1f, 0.9f), 28);
         Image si = speed.GetComponent<Image>();
         si.sprite = HudIcons.Pill;
         si.type = Image.Type.Sliced;
@@ -225,7 +230,7 @@ public class VirtualWalk : MonoBehaviour
         fastLabel = speed.GetComponentInChildren<Text>();
         fastLabel.color = Ink;
         fastLabel.fontStyle = FontStyle.Bold;
-        Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(300f, 470f), new Vector2(220f, 70f));   // 조이스틱 오른쪽
+        Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(0f, 665f), new Vector2(300f, 70f));   // 조이스틱 바로 위
         ((RectTransform)speed.transform).pivot = new Vector2(0.5f, 0.5f);
         UIInputBlocker.Register((RectTransform)speed.transform);
         controls.SetActive(false);
