@@ -431,6 +431,7 @@
 | `times` | `morning` · `day` · `evening` · `night` 중 어울리는 것 (앱 취향과 같은 코드) |
 | `indoor` | 실내면 `true`. 비·눈 오는 날 실내 스팟에 점수를 더 줍니다 |
 | `tastes` | (선택) 어울리는 취향 코드. 없으면 취향 점수는 0 |
+| `restricted` | (선택) 거주자 · 관계자만 드나드는 곳 (기숙사 등)이면 `true`. 앱이 `candidateBuildingIds` 로 보내도 **추천 후보에서 뺍니다**. 공지 연결에는 그대로 씀 |
 | `meetSpecies` | (있으면) 만남 스팟. 그 자리에 세울 경희몬 ID. 앱의 `MeetSpotCatalog` 와 같아야 함 |
 
 ### POST /api/recommendations (v2)
