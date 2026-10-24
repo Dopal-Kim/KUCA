@@ -38,6 +38,30 @@ public class VirtualWalk : MonoBehaviour
 
     public bool On => map != null && map.VirtualWalk;
 
+    /// <summary>
+    /// 걷는 중 판 · 자유 산책 판을 놓는다. 보통은 화면 아래 (로고 버튼 위), 가상 산책 중이면 조이스틱과 가운데 캐릭터를
+    /// 가리지 않게 왼쪽 위 정보 칸 아래로 (오른쪽 버튼 줄은 비켜서).
+    /// </summary>
+    public static void PlacePanel(RectTransform panel, float height)
+    {
+        if (Instance != null && Instance.On)
+        {
+            panel.anchorMin = new Vector2(0f, 1f);
+            panel.anchorMax = new Vector2(1f, 1f);
+            panel.pivot = new Vector2(0.5f, 1f);
+            panel.offsetMin = new Vector2(24f, -370f - height);
+            panel.offsetMax = new Vector2(-180f, -370f);
+        }
+        else
+        {
+            panel.anchorMin = new Vector2(0f, 0f);
+            panel.anchorMax = new Vector2(1f, 0f);
+            panel.pivot = new Vector2(0.5f, 0f);
+            panel.sizeDelta = new Vector2(-48f, height);
+            panel.anchoredPosition = new Vector2(0f, 320f);
+        }
+    }
+
     void Awake()
     {
         Instance = this;

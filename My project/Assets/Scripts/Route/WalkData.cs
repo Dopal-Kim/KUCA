@@ -19,6 +19,9 @@ public class WalkCompleteRequest
     public int plannedMeters, stopsDone, stopsTotal;
     /// <summary>코스에서 들른 경희스팟 건물 ID</summary>
     public List<string> visitedBuildingIds = new List<string>();
+    /// <summary>걸은 길 (지도 월드 좌표, WalkTrack 이 기록). 서버에는 보내지 않고 돌아보기 · 산책 기록에만 쓴다</summary>
+    [NonSerialized] public List<Vector3> track = new List<Vector3>();
+    [NonSerialized] public string title = "";
 }
 
 [Serializable]
@@ -64,6 +67,8 @@ public interface IWalkService
 public static class WalkSession
 {
     public const string Course = "course", Mate = "mate";
+    /// <summary>자유 산책 제목 (코스 없이 Course 종류로 시작, 계획 거리 · 장소 0)</summary>
+    public const string FreeTitle = "자유 산책";
 
     public static bool Active { get; private set; }
     public static string Kind { get; private set; }
@@ -77,6 +82,14 @@ public static class WalkSession
 
     static float startMeters, startTime;
     static int session;
+
+    /// <summary>산책을 새로 시작할 때마다 바뀌는 번호 (기록 · 화면이 같은 산책인지 확인)</summary>
+    public static int Id => session;
+
+    /// <summary>코스 없이 걷기 (FreeWalk). 서버에는 추천 ID 없이 알린다</summary>
+    public static void BeginFree() => Begin(Course, FreeTitle, 0, 0, "", null, "");
+
+    public static bool IsFree => Active && Kind == Course && PlannedMeters <= 0 && StopsTotal <= 0;
 
     static GameProgress Progress
     {
@@ -120,6 +133,9 @@ public static class WalkSession
         startTime = Time.realtimeSinceStartup;
     }
 
+    /// <summary>시작하고 지난 시간 (초)</summary>
+    public static float Seconds => Active ? Mathf.Max(0f, Time.realtimeSinceStartup - startTime) : 0f;
+
     public static float WalkedMeters => Active && Progress != null ? Mathf.Max(0f, Progress.walkedMeters - startMeters) : 0f;
 
     /// <summary>산책을 끝내고 서버에 보낼 내용을 만든다. visited: 코스에서 들른 건물 ID (산책메이트는 null)</summary>
@@ -138,6 +154,8 @@ public static class WalkSession
             stopsDone = visited?.Count ?? 0,
             stopsTotal = StopsTotal,
             visitedBuildingIds = visited != null ? new List<string>(visited) : new List<string>(),
+            track = WalkTrack.Points(session),
+            title = Title ?? "",
         };
         Active = false;
         return r;

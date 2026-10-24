@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -31,7 +32,11 @@ public class WalkCompleteScreen : MonoBehaviour
     bool reviewSent, busy;
     int partnerStars, courseStars;
 
-    GameObject root, partnerRow, reviewCard, rewardCard;
+    GameObject root, partnerRow, reviewCard, rewardCard, recap;
+    RawImage recapMap;
+    RectTransform recapOverlay;
+    RenderTexture recapTexture;
+    WalkHistory.Entry saved;
     Text title, sub, statMeters, statMinutes, statStops, reason, rewardText, levelText, reviewNote;
     RectTransform levelFill;
     Image[] partnerStarImages, courseStarImages;
@@ -97,7 +102,7 @@ public class WalkCompleteScreen : MonoBehaviour
         sub.text = WalkSession.Title ?? "";
         statMeters.text = RouteMath.Distance(walk.meters);
         statMinutes.text = $"{walk.minutes}분";
-        statStops.text = mate ? "함께" : $"{walk.stopsDone}/{walk.stopsTotal}곳";
+        statStops.text = mate ? "함께" : walk.stopsTotal <= 0 ? "자유" : $"{walk.stopsDone}/{walk.stopsTotal}곳";
         reason.text = "확인하는 중…";
         partnerRow.SetActive(false);   // 리뷰는 코스만 평가 (10/24 결정, 상대 별점 없음)
         rewardText.text = "";
@@ -105,6 +110,12 @@ public class WalkCompleteScreen : MonoBehaviour
         RefreshStars();
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
+        // 걸은 길 돌아보기 + 산책 기록에 남기기
+        bool hasTrack = walk.track != null && walk.track.Count >= 2;
+        recap.SetActive(hasTrack);
+        if (hasTrack)
+            StartCoroutine(DrawRecap(walk.track, LineColor(walk)));
+        saved = walk.meters > 0 || hasTrack ? WalkHistory.Add(walk, System.DateTime.Now) : null;
 
         GameProgress p = Progress;
         int score = p != null ? p.score : 0;
@@ -118,12 +129,45 @@ public class WalkCompleteScreen : MonoBehaviour
                 return;
             }
             result = r;
+            if (saved != null) WalkHistory.SetCompleted(saved.id, r.completed);
             title.text = r.completed ? (mate ? "함께 산책 완료!" : "산책 완료!") : "산책을 마쳤어요";
             reason.text = r.reason;
             reason.color = r.completed ? Green : InkQuiet;
             ApplyReward(r.xp, r.tickets, r.growth);
             StartCoroutine(FillLevel(score, r));
         }));
+    }
+
+    /// <summary>산책 종류별 길 색 (자유 산책 · 코스 · 산책메이트)</summary>
+    public static Color LineColor(WalkCompleteRequest w) => LineColor(w.kind, w.stopsTotal, w.plannedMeters);
+
+    public static Color LineColor(string kind, int stopsTotal, int plannedMeters) =>
+        kind == WalkSession.Mate ? Green : stopsTotal <= 0 && plannedMeters <= 0 ? FreeWalk.TrackColor : Accent;
+
+    /// <summary>위에서 본 지도에 걸은 길을 그린다 (흰 테두리 + 색 선 + 방향 화살표, 출발 · 끝 표시)</summary>
+    public static void DrawTrack(RawImage map, ref RenderTexture texture, RectTransform overlay, List<Vector3> track, Color color)
+    {
+        TopMap.Clear(overlay);
+        Camera cam = TopMap.Render(map, ref texture, track);
+        if (cam == null)
+            return;
+        Vector2 size = overlay.rect.size;
+        TopMap.Polyline(overlay, cam, size, track, 19f, new Color(1f, 1f, 1f, 0.95f));
+        TopMap.Polyline(overlay, cam, size, track, 12f, color, true);
+        TopMap.Marker(overlay, cam, size, track[0], Ink, "출발", 74f);
+        TopMap.Marker(overlay, cam, size, track[track.Count - 1], color, "끝", 64f);
+    }
+
+    IEnumerator DrawRecap(List<Vector3> track, Color color)
+    {
+        yield return null;   // 화면 배치가 끝난 뒤 크기를 알 수 있다
+        Canvas.ForceUpdateCanvases();
+        DrawTrack(recapMap, ref recapTexture, recapOverlay, track, color);
+    }
+
+    void OnDestroy()
+    {
+        if (recapTexture != null) recapTexture.Release();
     }
 
     /// <summary>받은 보상을 기기 저장에 더한다 (값은 서버가 정함)</summary>
@@ -280,6 +324,11 @@ public class WalkCompleteScreen : MonoBehaviour
         statMinutes = Stat(stats, "시간");
         statStops = Stat(stats, "들른 곳");
         Line(list, RouteMath.HealthNote, 24, InkQuiet, 36f).alignment = TextAnchor.MiddleCenter;
+
+        // 걸은 길 돌아보기
+        Image frame = TopMap.Frame(list, "Recap", out recapMap, out recapOverlay);
+        UIKit.Size(frame, 600f);
+        recap = frame.gameObject;
         reason = Line(list, "", 32, InkQuiet, 50f, true);
         reason.alignment = TextAnchor.MiddleCenter;
 
