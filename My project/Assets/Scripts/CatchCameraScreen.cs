@@ -300,40 +300,39 @@ public class CatchCameraScreen : MonoBehaviour
         safe.anchorMax = new Vector2(sa.xMax / Screen.width, sa.yMax / Screen.height);
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
-        Image titleBg = UIKit.Image(safe, "Title", new Color(0.05f, 0.08f, 0.18f, 0.6f));
-        titleBg.sprite = HudIcons.Pill;
-        titleBg.type = Image.Type.Sliced;
-        titleBg.pixelsPerUnitMultiplier = 120f / 100f;
-        RectTransform tr = titleBg.rectTransform;
-        tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 1f);
-        tr.anchoredPosition = new Vector2(0f, -40f);
-        tr.sizeDelta = new Vector2(820f, 100f);
-        title = UIKit.Text(titleBg.transform, "", 38, TextAnchor.MiddleCenter);
-        UIKit.Bold(title);
-        UIKit.Stretch(title.rectTransform, 24f, 0f);
+        // 카메라 앱 방식 (디자인 v4): 왼쪽 위 × · 그 옆 굵은 흰 제목 + 안내, 오른쪽 위 AR, 아래 가운데 흰 셔터
+        Button close = RoundIconButton(safe, "Close", HudIcons.Close, 112f, Close);
+        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(KucaTheme.Gutter - 20f, -24f));
 
-        note = UIKit.Text(safe, "", 28, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.9f));
+        title = UIKit.Text(safe, "", KucaTheme.Heading, TextAnchor.MiddleLeft, Color.white);
+        UIKit.Bold(title);
+        Shadowed(title);
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(KucaTheme.Gutter + 120f, -136f);
+        tr.offsetMax = new Vector2(-KucaTheme.Gutter - 260f, -24f);
+
+        note = UIKit.Text(safe, "", KucaTheme.Label, TextAnchor.UpperLeft, Color.white);
         Shadowed(note);
         RectTransform nr = note.rectTransform;
         nr.anchorMin = new Vector2(0f, 1f);
         nr.anchorMax = new Vector2(1f, 1f);
         nr.pivot = new Vector2(0.5f, 1f);
-        nr.offsetMin = new Vector2(180f, -230f);
-        nr.offsetMax = new Vector2(-180f, -150f);
-
-        Button close = RoundIconButton(safe, "Close", HudIcons.Close, 110f, Close);
-        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(40f, -170f));
+        nr.offsetMin = new Vector2(KucaTheme.Gutter, -280f);
+        nr.offsetMax = new Vector2(-KucaTheme.Gutter, -160f);
 
         BuildArSwitch(safe);
 
-        hint = UIKit.Text(safe, "", 36, TextAnchor.MiddleCenter);
+        hint = UIKit.Text(safe, "", KucaTheme.Body, TextAnchor.MiddleCenter);
         UIKit.Bold(hint);
         Shadowed(hint);
         RectTransform hr = hint.rectTransform;
         hr.anchorMin = new Vector2(0f, 0f);
         hr.anchorMax = new Vector2(1f, 0f);
-        hr.offsetMin = new Vector2(40f, 290f);
-        hr.offsetMax = new Vector2(-40f, 370f);
+        hr.offsetMin = new Vector2(KucaTheme.Gutter, 340f);
+        hr.offsetMax = new Vector2(-KucaTheme.Gutter, 430f);
 
         // 셔터
         Button shutter = UIKit.Image(safe, "Shutter", new Color(0f, 0f, 0f, 0f), raycast: true).gameObject.AddComponent<Button>();
@@ -341,13 +340,13 @@ public class CatchCameraScreen : MonoBehaviour
         shutter.onClick.AddListener(Shoot);
         shutter.gameObject.AddComponent<PressScale>();
         RectTransform sr = (RectTransform)shutter.transform;
-        Place(sr, new Vector2(0.5f, 0f), new Vector2(0f, 80f));
-        sr.sizeDelta = new Vector2(190f, 190f);
-        Image ring = Circle(sr, "Ring", Color.white, 190f);
+        Place(sr, new Vector2(0.5f, 0f), new Vector2(0f, 110f));
+        sr.sizeDelta = new Vector2(200f, 200f);
+        Image ring = Circle(sr, "Ring", Color.white, 200f);
         Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image gap = Circle(ring.transform, "Gap", new Color(0f, 0f, 0f, 0.35f), 166f);
+        Image gap = Circle(ring.transform, "Gap", new Color(0f, 0f, 0f, 0.35f), 176f);
         Place(gap.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image core = Circle(gap.transform, "Core", new Color(0.96f, 0.79f, 0.45f), 148f);
+        Image core = Circle(gap.transform, "Core", Color.white, 156f);
         Place(core.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
 
         // 셔터 번쩍임
@@ -361,18 +360,18 @@ public class CatchCameraScreen : MonoBehaviour
     /// <summary>오른쪽 위 AR 켬/끔 스위치</summary>
     void BuildArSwitch(RectTransform safe)
     {
-        Image bg = UIKit.Image(safe, "ArSwitch", new Color(0.05f, 0.08f, 0.18f, 0.55f), raycast: true);
+        Image bg = UIKit.Image(safe, "ArSwitch", new Color(0f, 0f, 0f, 0.4f), raycast: true);
         bg.sprite = HudIcons.Pill;
         bg.type = Image.Type.Sliced;
-        bg.pixelsPerUnitMultiplier = 120f / 110f;
-        Place(bg.rectTransform, new Vector2(1f, 1f), new Vector2(-40f, -170f));
-        bg.rectTransform.sizeDelta = new Vector2(250f, 110f);
+        bg.pixelsPerUnitMultiplier = 120f / 112f;
+        Place(bg.rectTransform, new Vector2(1f, 1f), new Vector2(-KucaTheme.Gutter + 20f, -24f));
+        bg.rectTransform.sizeDelta = new Vector2(250f, 112f);
         var b = bg.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
         b.onClick.AddListener(ToggleAr);
         bg.gameObject.AddComponent<PressScale>();
 
-        arLabel = UIKit.Text(bg.transform, "AR 켬", 32, TextAnchor.MiddleLeft);
+        arLabel = UIKit.Text(bg.transform, "AR 켬", KucaTheme.Label, TextAnchor.MiddleLeft);
         UIKit.Bold(arLabel);
         arLabel.rectTransform.anchorMin = Vector2.zero;
         arLabel.rectTransform.anchorMax = Vector2.one;
@@ -405,18 +404,18 @@ public class CatchCameraScreen : MonoBehaviour
         resultCard = dim.gameObject;
 
         Image card = UIKit.Image(dim.transform, "Card", KucaTheme.Card);
-        card.sprite = HudIcons.Pill;
+        card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 1.4f;
+        card.pixelsPerUnitMultiplier = 0.34f;
         Place(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        card.rectTransform.sizeDelta = new Vector2(900f, 1400f);
+        card.rectTransform.sizeDelta = new Vector2(960f, 1580f);
 
         RectTransform frame = UIKit.Rect(card.transform, "PhotoFrame");
         frame.anchorMin = new Vector2(0f, 1f);
         frame.anchorMax = new Vector2(1f, 1f);
         frame.pivot = new Vector2(0.5f, 1f);
-        frame.offsetMin = new Vector2(50f, -900f);
-        frame.offsetMax = new Vector2(-50f, -50f);
+        frame.offsetMin = new Vector2(48f, -860f);
+        frame.offsetMax = new Vector2(-48f, -48f);
         frame.gameObject.AddComponent<RectMask2D>();
         var photo = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
         photo.transform.SetParent(frame, false);
@@ -427,16 +426,15 @@ public class CatchCameraScreen : MonoBehaviour
 
         resultTitle = UIKit.Text(card.transform, "", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink);
         UIKit.Bold(resultTitle);
-        TopBox(resultTitle.rectTransform, 930f, 80f);
-        resultSub = UIKit.Text(card.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
-        TopBox(resultSub.rectTransform, 1010f, 110f);
+        TopBox(resultTitle.rectTransform, 890f, 90f);
+        resultSub = UIKit.Text(card.transform, "", KucaTheme.Body, TextAnchor.UpperCenter, KucaTheme.InkMuted);
+        TopBox(resultSub.rectTransform, 990f, 130f);
 
-        albumButton = PillButton(card.transform, "앨범에도 저장", KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, SaveToAlbum);
-        Place((RectTransform)albumButton.transform, new Vector2(0.5f, 0f), new Vector2(-190f, 50f));
-        ((RectTransform)albumButton.transform).sizeDelta = new Vector2(360f, 116f);
-        Button ok = PillButton(card.transform, "확인", KucaTheme.Primary, Color.white, Close);
-        Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(200f, 50f));
-        ((RectTransform)ok.transform).sizeDelta = new Vector2(320f, 116f);
+        // 아래: 꽉 찬 "확인" (주요) + 그 위 회색 "앨범에도 저장" (보조)
+        albumButton = UIKit.SecondaryButton(card.transform, "앨범에도 저장", SaveToAlbum);
+        Stack((RectTransform)albumButton.transform, 48f + KucaTheme.ButtonHeight + KucaTheme.Space2);
+        Button ok = UIKit.PrimaryButton(card.transform, "확인", Close);
+        Stack((RectTransform)ok.transform, 48f);
     }
 
     // ---------- 3D 무대 ----------
@@ -795,9 +793,19 @@ public class CatchCameraScreen : MonoBehaviour
         o.effectDistance = new Vector2(2f, -2f);
     }
 
+    /// <summary>카드 아래에서 bottom 만큼 올라온 꽉 찬 버튼 자리 (좌우 48)</summary>
+    static void Stack(RectTransform r, float bottom)
+    {
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = new Vector2(1f, 0f);
+        r.pivot = new Vector2(0.5f, 0f);
+        r.offsetMin = new Vector2(48f, bottom);
+        r.offsetMax = new Vector2(-48f, bottom + KucaTheme.ButtonHeight);
+    }
+
     static Button RoundIconButton(Transform parent, string name, Sprite icon, float size, UnityEngine.Events.UnityAction onClick)
     {
-        Image bg = UIKit.Image(parent, name, new Color(0.05f, 0.08f, 0.18f, 0.55f), raycast: true);
+        Image bg = UIKit.Image(parent, name, new Color(0f, 0f, 0f, 0.4f), raycast: true);
         bg.sprite = HudIcons.Circle;
         bg.rectTransform.sizeDelta = new Vector2(size, size);
         var b = bg.gameObject.AddComponent<Button>();
@@ -807,20 +815,6 @@ public class CatchCameraScreen : MonoBehaviour
         Image ic = UIKit.Image(bg.transform, "Icon", Color.white);
         ic.sprite = icon;
         UIKit.Stretch(ic.rectTransform, size * 0.25f, size * 0.25f);
-        return b;
-    }
-
-    static Button PillButton(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = UIKit.Button(parent, label, onClick, bg, 40);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 1.1f;
-        b.targetGraphic = img;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = fg;
-        UIKit.Bold(t);
         return b;
     }
 

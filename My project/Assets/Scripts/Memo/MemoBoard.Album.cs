@@ -10,9 +10,21 @@ using UnityEngine.UI;
 /// </summary>
 public partial class MemoBoard
 {
-    GameObject album;
+    GameObject album, albumEmptyCard;
     RectTransform albumGrid;
-    Text albumCount, albumEmpty;
+    Text albumCount, albumEmptyTitle, albumEmptyBody;
+
+    /// <summary>빈 상태 카드 글 (첫 줄 = 제목, 나머지 = 설명). 비우면 카드를 숨긴다</summary>
+    string AlbumEmpty
+    {
+        set
+        {
+            albumEmptyCard.SetActive(!string.IsNullOrEmpty(value));
+            int nl = (value ?? "").IndexOf('\n');
+            albumEmptyTitle.text = nl >= 0 ? value.Substring(0, nl) : value ?? "";
+            albumEmptyBody.text = nl >= 0 ? value.Substring(nl + 1) : "";
+        }
+    }
     bool albumMode;
     int albumRequest;
 
@@ -116,7 +128,7 @@ public partial class MemoBoard
         ids.Reverse(); // 나중에 올린 것이 앞에
         int request = ++albumRequest;
         albumCount.text = "";
-        albumEmpty.text = ids.Count == 0 ? "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요" : "불러오는 중…";
+        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요" : "불러오는 중…";
         if (ids.Count == 0)
             return;
 
@@ -152,8 +164,8 @@ public partial class MemoBoard
                     if (memo.likeCount > 0)
                         LikeChip(cell.transform, memo.likeCount, added > 0);
                 }
-                albumCount.text = $"게시물 {currentMemos.Count}";
-                albumEmpty.text = currentMemos.Count > 0 ? ""
+                albumCount.text = $"내가 남긴 사진 {currentMemos.Count}장";
+                AlbumEmpty = currentMemos.Count > 0 ? ""
                     : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
                     : "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요";
                 if (currentMemos.Count > 0)
@@ -191,30 +203,20 @@ public partial class MemoBoard
 
     void BuildAlbum()
     {
-        album = UIKit.Image(root.transform, "Album", Color.white, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)album.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = SafeRect(album.transform, "Safe",
-            new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
-            new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
+        // v4 화면 틀: ‹ 뒤로 · 큰 제목 · 부제(사진 수) · 3열 사진 격자 · 비었으면 빈 상태 카드
+        UIKit.Page page = UIKit.CreatePage(root.transform, "Album", "내 사진첩", Close, " ", scroll: false);
+        album = page.root;
+        albumCount = page.subtitle;
 
-        Button close = RoundButton(safe, "Close", HudIcons.Close, 88f, Color.white, Ink, Close);
-        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
-        close.transform.Find("Shadow").GetComponent<Image>().color = Line;
-        Text head = UIKit.Text(safe, "내 사진첩", 38, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(head);
-        TopBox(head.rectTransform, 30f, 88f, 140f);
-        albumCount = UIKit.Text(safe, "", 30, TextAnchor.MiddleRight, InkQuiet);
-        TopBox(albumCount.rectTransform, 30f, 88f, 40f);
-        Image hr = UIKit.Image(safe, "Line", Line);
-        TopBox(hr.rectTransform, 140f, 2f, 0f);
+        RectTransform empty = UIKit.EmptyState(page.content, " ", " ");
+        albumEmptyCard = empty.gameObject;
+        Text[] texts = empty.GetComponentsInChildren<Text>(true);
+        albumEmptyTitle = texts[0];
+        albumEmptyBody = texts[1];
 
-        RectTransform area = UIKit.Rect(safe, "Grid");
-        UIKit.StretchBetween(area, 0f, 146f);
+        RectTransform area = UIKit.Rect(page.content, "Grid");
+        UIKit.Size(area).flexibleHeight = 1f;
         albumGrid = BuildGrid(area);
-        albumEmpty = UIKit.Text(area, "", 34, TextAnchor.UpperCenter, InkQuiet);
-        UIKit.Stretch(albumEmpty.rectTransform, 40f, 120f);
-
-        album.SetActive(false);
+        albumGrid.GetComponent<GridLayoutGroup>().spacing = new Vector2(12f, 12f);
     }
 }

@@ -4,17 +4,12 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 산책 취향 체크리스트 화면. 한 화면에 질문 하나씩, 6단계.
+/// 산책 취향 체크리스트 화면. 한 화면에 질문 하나씩, 7단계 (디자인 v4: 토스 단계 질문 — 진행 막대 · 큰 질문 · 흰 카드 선택지 · 아래 고정 "다음").
 /// 첫 실행 때 자동으로 열리고 (나중에는 로그인 직후에 Open 을 부르면 된다), 설정 › 취향 다시 고르기에서도 연다.
 /// 답은 WalkPreferences 로 기기에 저장한다 (AI 산책메이트 매칭에 쓸 자료).
 /// </summary>
 public class PreferenceSurvey : MonoBehaviour
 {
-    static readonly Color Ink = KucaTheme.Ink;
-    static readonly Color InkQuiet = KucaTheme.InkMuted;
-    static readonly Color Accent = KucaTheme.Primary;
-    static readonly Color ChipOff = KucaTheme.PrimarySoft;
-    static readonly Color Paper = KucaTheme.Card;
 
     class Question
     {
@@ -45,9 +40,8 @@ public class PreferenceSurvey : MonoBehaviour
 
     GameObject root;
     Text stepText, titleText, hintText;
-    RectTransform optionList;
-    Image[] dots;
-    Button nextButton, backButton;
+    RectTransform optionList, progressFill;
+    Button nextButton;
     int step;
     List<string>[] answers;
     Action onDone;
@@ -94,9 +88,7 @@ public class PreferenceSurvey : MonoBehaviour
         stepText.text = $"{step + 1} / {Questions.Length}";
         titleText.text = q.title;
         hintText.text = q.hint;
-        for (int i = 0; i < dots.Length; i++)
-            dots[i].color = i <= step ? Accent : new Color(0f, 0f, 0f, 0.12f);
-        backButton.gameObject.SetActive(step > 0);
+        progressFill.anchorMax = new Vector2((step + 1) / (float)Questions.Length, 1f);
         UIKit.SetLabel(nextButton, step == Questions.Length - 1 ? "완료" : "다음");
 
         for (int i = optionList.childCount - 1; i >= 0; i--)
@@ -106,51 +98,56 @@ public class PreferenceSurvey : MonoBehaviour
         {
             string c = code;
             bool on = chosen.Contains(code);
-            Image row = UIKit.Image(optionList, code, on ? Accent : ChipOff, raycast: true);
+            // 흰 카드 행: 고르면 초록 테두리 + 옅은 초록 바탕 + 오른쪽 초록 ✓ 원
+            Image row = UIKit.Image(optionList, code, on ? KucaTheme.PrimarySoft : KucaTheme.Card, raycast: true);
             row.sprite = HudIcons.Rounded;
             row.type = Image.Type.Sliced;
-            row.pixelsPerUnitMultiplier = 0.7f;
-            UIKit.Size(row, sub.Length > 0 ? 136f : 112f);
+            row.pixelsPerUnitMultiplier = 0.4f;
+            Outline edge = row.gameObject.AddComponent<Outline>();
+            edge.effectColor = on ? KucaTheme.Primary : KucaTheme.Line;
+            edge.effectDistance = on ? new Vector2(4f, 4f) : new Vector2(2f, 2f);
+            UIKit.Size(row, sub.Length > 0 ? 184f : 148f);
             var b = row.gameObject.AddComponent<Button>();
             b.transition = Selectable.Transition.None;
             b.onClick.AddListener(() => Toggle(c));
             row.gameObject.AddComponent<PressScale>();
-            Text t = UIKit.Text(row.transform, label, 40, TextAnchor.MiddleLeft, on ? Color.white : Ink);
-            UIKit.Bold(t);
-            t.rectTransform.anchorMin = new Vector2(0f, sub.Length > 0 ? 0.42f : 0f);
+            Text t = UIKit.Bold(UIKit.Text(row.transform, label, KucaTheme.Body, sub.Length > 0 ? TextAnchor.LowerLeft : TextAnchor.MiddleLeft, KucaTheme.Ink));
+            t.rectTransform.anchorMin = new Vector2(0f, sub.Length > 0 ? 0.5f : 0f);
             t.rectTransform.anchorMax = Vector2.one;
-            t.rectTransform.offsetMin = new Vector2(44f, 0f);
-            t.rectTransform.offsetMax = new Vector2(-110f, 0f);
+            t.rectTransform.offsetMin = new Vector2(48f, 0f);
+            t.rectTransform.offsetMax = new Vector2(-150f, sub.Length > 0 ? -4f : 0f);
             if (sub.Length > 0)
             {
-                Text st = UIKit.Text(row.transform, sub, 28, TextAnchor.UpperLeft, on ? new Color(1f, 1f, 1f, 0.85f) : InkQuiet);
+                Text st = UIKit.Text(row.transform, sub, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
                 st.rectTransform.anchorMin = Vector2.zero;
-                st.rectTransform.anchorMax = new Vector2(1f, 0.42f);
-                st.rectTransform.offsetMin = new Vector2(44f, 0f);
-                st.rectTransform.offsetMax = new Vector2(-110f, 0f);
+                st.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+                st.rectTransform.offsetMin = new Vector2(48f, 0f);
+                st.rectTransform.offsetMax = new Vector2(-150f, -8f);
             }
-            // 오른쪽 체크 표시
-            Image mark = UIKit.Image(row.transform, "Mark", on ? Color.white : KucaTheme.Card);
+            Image mark = UIKit.Image(row.transform, "Mark", on ? KucaTheme.Primary : KucaTheme.Fill);
             mark.sprite = HudIcons.Circle;
-            if (!on)   // 꺼진 선택 원: 흰 원 + 진한 초록 테 (옅은 초록 칸 위에서 보이게)
+            if (!on)
             {
                 Outline ring = mark.gameObject.AddComponent<Outline>();
-                ring.effectColor = KucaTheme.PrimaryDeep;
+                ring.effectColor = KucaTheme.InkSoft;
                 ring.effectDistance = new Vector2(2f, 2f);
             }
             mark.rectTransform.anchorMin = mark.rectTransform.anchorMax = mark.rectTransform.pivot = new Vector2(1f, 0.5f);
-            mark.rectTransform.anchoredPosition = new Vector2(-40f, 0f);
-            mark.rectTransform.sizeDelta = new Vector2(48f, 48f);
+            mark.rectTransform.anchoredPosition = new Vector2(-48f, 0f);
+            mark.rectTransform.sizeDelta = new Vector2(64f, 64f);
             if (on)
             {
-                Text check = UIKit.Text(mark.transform, "✓", 34, TextAnchor.MiddleCenter, Accent);
-                UIKit.Bold(check);
+                Text check = UIKit.Bold(UIKit.Text(mark.transform, "✓", KucaTheme.Label, TextAnchor.MiddleCenter, Color.white));
                 UIKit.Stretch(check.rectTransform);
             }
         }
-        nextButton.interactable = chosen.Count > 0;
-        nextButton.GetComponent<Image>().color = chosen.Count > 0 ? Accent : KucaTheme.Line;
-        nextButton.GetComponentInChildren<Text>().color = chosen.Count > 0 ? Color.white : KucaTheme.InkMuted;   // 비활성: 연회색 위 진회색 글자
+        Text why = UIKit.Text(optionList, "AI 산책메이트를 찾아 줄 때만 써요. 설정에서 언제든 바꿀 수 있어요.", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft);
+        UIKit.Size(why, 90f);
+
+        bool ready = chosen.Count > 0;
+        nextButton.interactable = ready;
+        nextButton.GetComponent<Image>().color = ready ? KucaTheme.Primary : KucaTheme.Line;
+        nextButton.GetComponentInChildren<Text>().color = ready ? Color.white : KucaTheme.InkSoft;   // 비활성: 회색 칸 + 흐린 글자
     }
 
     void Toggle(string code)
@@ -234,74 +231,38 @@ public class PreferenceSurvey : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "SurveyCanvas", 45);
-        root = UIKit.Image(canvas.transform, "Survey", Paper, raycast: true).gameObject;
-        BackButton.Attach(root, BackOrClose);
-        UIKit.Stretch((RectTransform)root.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = UIKit.Rect(root.transform, "Safe");
-        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
-        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
-        safe.offsetMin = safe.offsetMax = Vector2.zero;
+        // 위 ‹ 와 안드로이드 뒤로: 앞 질문으로, 첫 질문이면 닫기
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "Survey", " ", BackOrClose, " ", bottomButtons: 1);
+        root = page.root;
+        titleText = page.title;
+        hintText = page.subtitle;
 
-        Text brand = UIKit.Text(safe, "산책 취향 알려 주기", 32, TextAnchor.MiddleLeft, Accent);
-        UIKit.Bold(brand);
-        Box(brand.rectTransform, 60f, 50f, 200f, 50f);
-        stepText = UIKit.Text(safe, "", 30, TextAnchor.MiddleRight, InkQuiet);
-        Box(stepText.rectTransform, 60f, 50f, 60f, 50f);
+        // 진행 막대 + "n / 7" (뒤로 ‹ 옆)
+        Image track = UIKit.Image(page.header, "Progress", KucaTheme.Line);
+        track.sprite = HudIcons.Pill;
+        track.type = Image.Type.Sliced;
+        track.pixelsPerUnitMultiplier = 8f;
+        RectTransform tr = track.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = Vector2.one;
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(KucaTheme.Gutter + 140f, -86f);
+        tr.offsetMax = new Vector2(-KucaTheme.Gutter - 150f, -70f);
+        Image fill = UIKit.Image(track.transform, "Fill", KucaTheme.Primary);
+        fill.sprite = HudIcons.Pill;
+        fill.type = Image.Type.Sliced;
+        fill.pixelsPerUnitMultiplier = 8f;
+        progressFill = fill.rectTransform;
+        progressFill.anchorMin = Vector2.zero;
+        progressFill.offsetMin = progressFill.offsetMax = Vector2.zero;
+        stepText = UIKit.Bold(UIKit.Text(page.header, "", KucaTheme.Label, TextAnchor.MiddleRight, KucaTheme.InkMuted));
+        Box(stepText.rectTransform, 0f, 40f, KucaTheme.Gutter, 76f);
+        stepText.rectTransform.offsetMin = new Vector2(-KucaTheme.Gutter - 130f, stepText.rectTransform.offsetMin.y);
+        stepText.rectTransform.anchorMin = new Vector2(1f, 1f);
 
-        // 진행 점 6개
-        dots = new Image[Questions.Length];
-        for (int i = 0; i < dots.Length; i++)
-        {
-            Image d = UIKit.Image(safe, "Dot", Accent);
-            d.sprite = HudIcons.Pill;
-            d.type = Image.Type.Sliced;
-            d.pixelsPerUnitMultiplier = 10f;
-            RectTransform r = d.rectTransform;
-            r.anchorMin = new Vector2(i / (float)dots.Length, 1f);
-            r.anchorMax = new Vector2((i + 1) / (float)dots.Length, 1f);
-            r.pivot = new Vector2(0.5f, 1f);
-            r.offsetMin = new Vector2(i == 0 ? 60f : 6f, -122f);
-            r.offsetMax = new Vector2(i == dots.Length - 1 ? -60f : -6f, -112f);
-            dots[i] = d;
-        }
-
-        titleText = UIKit.Text(safe, "", 56, TextAnchor.MiddleLeft, Ink);
-        UIKit.Bold(titleText);
-        Box(titleText.rectTransform, 60f, 180f, 60f, 90f);
-        hintText = UIKit.Text(safe, "", 32, TextAnchor.MiddleLeft, InkQuiet);
-        Box(hintText.rectTransform, 60f, 270f, 60f, 50f);
-        Text why = UIKit.Text(safe, "AI 산책메이트를 찾아 줄 때만 써요. 설정에서 언제든 바꿀 수 있어요.", 26, TextAnchor.MiddleLeft, InkQuiet);
-        Box(why.rectTransform, 60f, 318f, 60f, 44f);
-
-        RectTransform area = UIKit.Rect(safe, "Options");
-        area.anchorMin = Vector2.zero;
-        area.anchorMax = Vector2.one;
-        area.offsetMin = new Vector2(0f, 280f);
-        area.offsetMax = new Vector2(0f, -390f);
-        optionList = UIKit.ScrollList(area, 20f, new RectOffset(60, 60, 0, 30));
-
-        nextButton = UIKit.Button(safe, "다음", Next, Accent, 42);
-        Image ni = nextButton.GetComponent<Image>();
-        ni.sprite = HudIcons.Pill;
-        ni.type = Image.Type.Sliced;
-        ni.pixelsPerUnitMultiplier = 120f / 124f;
-        UIKit.Bold(nextButton.GetComponentInChildren<Text>());
-        RectTransform nr = (RectTransform)nextButton.transform;
-        nr.anchorMin = new Vector2(0f, 0f);
-        nr.anchorMax = new Vector2(1f, 0f);
-        nr.pivot = new Vector2(0.5f, 0f);
-        nr.offsetMin = new Vector2(60f, 60f);
-        nr.offsetMax = new Vector2(-60f, 184f);
-
-        backButton = UIKit.Button(safe, "이전", Back, new Color(0f, 0f, 0f, 0f), 34);
-        backButton.GetComponentInChildren<Text>().color = InkQuiet;
-        RectTransform br = (RectTransform)backButton.transform;
-        br.anchorMin = br.anchorMax = br.pivot = new Vector2(0.5f, 0f);
-        br.anchoredPosition = new Vector2(0f, 190f);
-        br.sizeDelta = new Vector2(240f, 70f);
-
-        root.SetActive(false);
+        optionList = page.content;
+        ((VerticalLayoutGroup)optionList.GetComponent<VerticalLayoutGroup>()).spacing = KucaTheme.Space3;
+        nextButton = UIKit.PrimaryButton(page.bottom, "다음", Next);
     }
 
     static void Box(RectTransform rt, float left, float top, float right, float height)

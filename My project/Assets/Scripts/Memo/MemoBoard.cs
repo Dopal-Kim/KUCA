@@ -5,8 +5,8 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 경희스팟 메모판. 지도에서 경희스팟(또는 건물)을 탭하면 열린다.
-/// - 메모판: 그 장소에 남긴 사진들을 종이 위 스티커처럼 기울여 붙인 콜라주로 보여 준다. 누르면 크게 보고 글을 읽는다.
-///   오른쪽 위 작은 원형 버튼으로 새 메모를 쓴다 (경희스팟 근처에서만).
+/// 디자인 v4 (docs/디자인_v4.md): 당근 동네생활 + 인스타그램 그리드 — 장소 이름 큰 제목, 사진 · 공지 세그먼트,
+/// 사진은 2열 흰 카드(작성자 · 좋아요), 화면 아래 꽉 찬 "메모 남기기" (경희스팟 근처에서만, 멀면 거리 안내 + 흐린 버튼).
 /// - 새 게시물: 사진 + 캡션 + 닉네임 + 위치를 넣어 공유한다 (SNS 새 게시물 화면처럼).
 /// serverUrl 이 비어 있으면 기기 안의 가짜 서버(MockMemoService)를 쓴다.
 /// </summary>
@@ -37,7 +37,7 @@ public partial class MemoBoard : MonoBehaviour
     const string DeviceKey = "memo_device_id";
     const string MineKey = "memo_mine";
 
-    // 콜라주 (종이·잉크)
+    // 바탕 · 글자
     static readonly Color Paper = KucaTheme.Surface;
     static readonly Color PaperDark = KucaTheme.Line;
     static readonly Color Ink = KucaTheme.Ink;
@@ -45,7 +45,7 @@ public partial class MemoBoard : MonoBehaviour
     static readonly Color NotePaper = new Color(1f, 0.98f, 0.91f);
     // 새 게시물 (흰 화면)
     static readonly Color Line = KucaTheme.Line;
-    static readonly Color Chip = KucaTheme.PrimarySoft;
+    static readonly Color Chip = KucaTheme.Fill;
     static readonly Color ShareBlue = KucaTheme.Primary;
     static readonly Color ErrorRed = KucaTheme.Crimson;
     static readonly Color LikeRed = KucaTheme.Crimson;
@@ -221,7 +221,7 @@ public partial class MemoBoard : MonoBehaviour
             if (error != null) { listStatus.text = error; return; }
             if (memos.Count == 0)
             {
-                listStatus.text = "아직 남겨진 사진이 없어요\n오른쪽 위 메모 버튼으로 첫 사진을 붙여 보세요";
+                listStatus.text = "아직 남겨진 사진이 없어요\n아래 \"메모 남기기\" 로 첫 사진을 붙여 보세요";
                 return;
             }
             listStatus.gameObject.SetActive(false);
@@ -243,10 +243,6 @@ public partial class MemoBoard : MonoBehaviour
         loadedPhotos.Clear();
     }
 
-    /// <summary>
-    /// 두 줄로 쌓되, 크기·기울기·좌우 위치를 메모마다 조금씩 다르게 해서 종이 위에 붙인 스티커처럼 보이게 한다.
-    /// 값은 메모 id 로 정하므로 열 때마다 같은 자리에 붙는다. 화면 너비가 바뀌면 Update 에서 다시 배치한다.
-    /// </summary>
     /// <summary>
     /// 대표 사진 (B-5): 최근 7일 동안 올라온 사진 중 좋아요가 가장 많은 것 (같으면 최신).
     /// 좋아요가 하나도 없으면 대표 사진을 두지 않는다. 검토 대기 사진은 제외.
@@ -284,68 +280,51 @@ public partial class MemoBoard : MonoBehaviour
         Relayout();
     }
 
+    const float CardFooter = 96f;   // 카드 아래 작성자 · 좋아요 줄
+
+    /// <summary>2열 흰 카드 격자 (대표 사진은 맨 위 가로 전체). 화면 너비가 바뀌면 Update 에서 다시 배치한다.</summary>
     void Relayout()
     {
         Canvas.ForceUpdateCanvases();
         float width = ((RectTransform)collageScroll.viewport).rect.width;
         laidOutWidth = width;
-        const float pad = 40f, gap = 22f, overlap = 34f, border = 14f;
+        float pad = KucaTheme.Gutter, gap = KucaTheme.Space3, top = KucaTheme.Space3;
         float colW = (width - pad * 2f - gap) / 2f;
-        float[] heights = { 24f, 120f }; // 오른쪽 줄은 조금 내려서 시작
-        float[] aspects = { 0.78f, 1f, 1.32f, 0.88f };
-
+        int i = 0;
         foreach (var (holder, m) in stickers)
         {
             if (holder == null)
                 continue;
             if (m.id == representativeId)
             {
-                // 대표 사진: 두 줄을 가로질러 맨 위에 크게
-                float rw = width - pad * 2f - border * 2f, rh = rw * 0.72f;
-                holder.anchoredPosition = new Vector2(width * 0.5f, -(70f + rh * 0.5f + border));
-                holder.sizeDelta = new Vector2(rw, rh) + Vector2.one * border * 2f;
-                holder.localRotation = Quaternion.Euler(0f, 0f, -1.5f);
-                float below = 70f + rh + border * 2f + 30f;
-                heights[0] = below;
-                heights[1] = below + 60f;
+                float rw = width - pad * 2f, rh = rw * 0.75f + CardFooter;
+                holder.anchoredPosition = new Vector2(width * 0.5f, -(top + 40f + rh * 0.5f));   // 위 40 은 "대표 사진" 칩 자리
+                holder.sizeDelta = new Vector2(rw, rh);
+                top += 40f + rh + gap;
                 continue;
             }
-            var rng = new System.Random(StableHash(m.id));
-            int col = heights[0] <= heights[1] ? 0 : 1;
-            float aspect = m.HasPhoto ? aspects[rng.Next(aspects.Length)] : 1f;
-            // 크기를 들쭉날쭉하게 (줄 너비의 62~88%)
-            float w = (colW - border * 2f) * (0.66f + (float)rng.NextDouble() * 0.28f);
-            float h = w / aspect;
-            float slack = colW - w - border * 2f; // 테두리까지 줄 너비 안에 들어가게
-            float x = pad + col * (colW + gap) + w * 0.5f + border + slack * (float)rng.NextDouble();
-            float y = heights[col] + h * 0.5f + border;
-            float angle = ((float)rng.NextDouble() - 0.5f) * 14f;
-            holder.anchoredPosition = new Vector2(x, -y);
-            holder.sizeDelta = new Vector2(w, h) + Vector2.one * border * 2f;
-            holder.localRotation = Quaternion.Euler(0f, 0f, angle);
-            heights[col] += h + border * 2f - overlap + (float)rng.NextDouble() * 24f;
+            float h = colW + CardFooter;
+            int col = i % 2, row = i / 2;
+            holder.anchoredPosition = new Vector2(pad + colW * 0.5f + col * (colW + gap), -(top + h * 0.5f + row * (h + gap)));
+            holder.sizeDelta = new Vector2(colW, h);
+            i++;
         }
-        collage.sizeDelta = new Vector2(collage.sizeDelta.x, Mathf.Max(heights[0], heights[1]) + 220f);
+        int rows = (i + 1) / 2;
+        collage.sizeDelta = new Vector2(collage.sizeDelta.x, top + rows * (colW + CardFooter + gap) + KucaTheme.Space8);
     }
 
-    /// <summary>스티커 하나를 만든다 (자리와 크기는 Relayout 이 정한다).</summary>
+    /// <summary>카드 하나: 위 사진(둥근 모서리로 잘림) + 아래 작성자 · 좋아요. 자리와 크기는 Relayout 이 정한다.</summary>
     RectTransform Sticker(MemoData m)
     {
-        const float border = 14f;
         var holder = new GameObject(m.id, typeof(RectTransform)).GetComponent<RectTransform>();
         holder.SetParent(collage, false);
         holder.anchorMin = holder.anchorMax = new Vector2(0f, 1f);
         holder.pivot = new Vector2(0.5f, 0.5f);
 
-        // 종이 그림자 + 흰 테두리 (누르면 크게 보기)
-        Image shadow = UIKit.Image(holder, "Shadow", new Color(0f, 0f, 0f, 0.22f));
-        shadow.sprite = HudIcons.TornPaper;
-        shadow.type = Image.Type.Sliced;
-        UIKit.Stretch(shadow.rectTransform);
-        shadow.rectTransform.anchoredPosition = new Vector2(7f, -10f);
-        Image paper = UIKit.Image(holder, "Paper", m.HasPhoto ? Color.white : NotePaper, raycast: true);
-        paper.sprite = HudIcons.TornPaper;
+        Image paper = UIKit.Image(holder, "Card", Color.white, raycast: true);
+        paper.sprite = HudIcons.Rounded;
         paper.type = Image.Type.Sliced;
+        paper.pixelsPerUnitMultiplier = 0.5f;
         UIKit.Stretch(paper.rectTransform);
         var b = paper.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
@@ -357,29 +336,63 @@ public partial class MemoBoard : MonoBehaviour
         });
         paper.gameObject.AddComponent<PressScale>();
 
+        // 아래 줄: 작성자 · 좋아요
+        Text who = UIKit.Text(paper.transform, hide ? "잠긴 쪽지" : Escape(m.author), KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        who.rectTransform.anchorMin = Vector2.zero;
+        who.rectTransform.anchorMax = new Vector2(1f, 0f);
+        who.rectTransform.pivot = new Vector2(0.5f, 0f);
+        who.rectTransform.offsetMin = new Vector2(28f, 0f);
+        who.rectTransform.offsetMax = new Vector2(-120f, CardFooter);
+        who.horizontalOverflow = HorizontalWrapMode.Overflow;
+        if (m.likeCount > 0 && !hide)
+        {
+            Text likes = UIKit.Bold(UIKit.Text(paper.transform, $"♥ {m.likeCount}", KucaTheme.Caption, TextAnchor.MiddleRight, LikeRed));
+            likes.rectTransform.anchorMin = new Vector2(1f, 0f);
+            likes.rectTransform.anchorMax = new Vector2(1f, 0f);
+            likes.rectTransform.pivot = new Vector2(1f, 0f);
+            likes.rectTransform.anchoredPosition = new Vector2(-28f, 0f);
+            likes.rectTransform.sizeDelta = new Vector2(120f, CardFooter);
+        }
+
+        // 위 칸: 사진 (둥근 모서리 스텐실 마스크) 또는 쪽지 글
+        Image frame = UIKit.Image(paper.transform, "Frame", m.HasPhoto ? PaperDark : NotePaper);
+        frame.sprite = HudIcons.Rounded;
+        frame.type = Image.Type.Sliced;
+        frame.pixelsPerUnitMultiplier = 0.5f;
+        frame.rectTransform.anchorMin = Vector2.zero;
+        frame.rectTransform.anchorMax = Vector2.one;
+        frame.rectTransform.offsetMin = new Vector2(0f, CardFooter);
+        frame.rectTransform.offsetMax = Vector2.zero;
+        frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+
+        if (m.id == representativeId)
+        {
+            // "★ 이번 주 대표 사진" 칩 (카드 위)
+            Image crown = UIKit.Image(holder, "Representative", KucaTheme.Gold);
+            crown.sprite = HudIcons.Pill;
+            crown.type = Image.Type.Sliced;
+            crown.pixelsPerUnitMultiplier = 1.4f;
+            crown.rectTransform.anchorMin = crown.rectTransform.anchorMax = crown.rectTransform.pivot = new Vector2(0f, 1f);
+            crown.rectTransform.anchoredPosition = new Vector2(0f, 40f + 8f);
+            crown.rectTransform.sizeDelta = new Vector2(420f, 64f);
+            Text ct = UIKit.Bold(UIKit.Text(crown.transform, $"★ 이번 주 대표 사진  ·  ♥ {m.likeCount}", KucaTheme.Caption, TextAnchor.MiddleCenter, Ink));
+            UIKit.Stretch(ct.rectTransform);
+        }
+
         if (!m.HasPhoto)
         {
             // 사진이 없는 예전 메모는 쪽지처럼 (가려졌으면 글 대신 자물쇠)
             if (hide)
             {
-                LockMark(paper.transform);
+                LockMark(frame.transform);
                 return holder;
             }
-            Text t = UIKit.Text(paper.transform, Clip(m.text, 60), 32, TextAnchor.UpperLeft, Ink);
-            UIKit.Stretch(t.rectTransform, border + 18f, border + 18f);
+            Text t = UIKit.Text(frame.transform, Clip(m.text, 60), KucaTheme.Label, TextAnchor.UpperLeft, Ink);
+            UIKit.Stretch(t.rectTransform, 28f, 24f);
             t.verticalOverflow = VerticalWrapMode.Truncate;
             return holder;
         }
 
-        // 사진 (기울어진 채로 잘리도록 스텐실 마스크)
-        Image frame = UIKit.Image(paper.transform, "Frame", Color.white);
-        frame.sprite = HudIcons.Rounded;
-        frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 4f;
-        UIKit.Stretch(frame.rectTransform, border, border);
-        frame.gameObject.AddComponent<Mask>().showMaskGraphic = false;
-        Image empty = UIKit.Image(frame.transform, "Loading", PaperDark);
-        UIKit.Stretch(empty.rectTransform);
         var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
         go.transform.SetParent(frame.transform, false);
         var raw = go.GetComponent<RawImage>();
@@ -389,31 +402,17 @@ public partial class MemoBoard : MonoBehaviour
         fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
         if (hide)
-            LockMark(paper.transform);
-        if (m.id == representativeId)
-        {
-            // "★ 이번 주 대표 사진" 띠
-            Image crown = UIKit.Image(holder, "Representative", new Color(0.96f, 0.72f, 0.18f));
-            crown.sprite = HudIcons.Pill;
-            crown.type = Image.Type.Sliced;
-            crown.pixelsPerUnitMultiplier = 120f / 64f;
-            Place(crown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 30f));
-            crown.rectTransform.sizeDelta = new Vector2(360f, 64f);
-            Text ct = UIKit.Text(crown.transform, $"★ 이번 주 대표 사진  ·  ♥ {m.likeCount}", 28, TextAnchor.MiddleCenter, Color.white);
-            UIKit.Bold(ct);
-            UIKit.Stretch(ct.rectTransform);
-        }
+            LockMark(frame.transform);
         if (m.IsPending)
         {
             // 검토 대기: 나에게만 보이는 사진이라는 표시
-            Image tag = UIKit.Image(paper.transform, "Pending", new Color(0.88f, 0.54f, 0.12f));
+            Image tag = UIKit.Image(frame.transform, "Pending", new Color(0.88f, 0.54f, 0.12f));
             tag.sprite = HudIcons.Pill;
             tag.type = Image.Type.Sliced;
-            tag.pixelsPerUnitMultiplier = 120f / 48f;
-            Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(border + 10f, -border - 10f));
-            tag.rectTransform.sizeDelta = new Vector2(130f, 48f);
-            Text tt = UIKit.Text(tag.transform, "검토 중", 24, TextAnchor.MiddleCenter, Color.white);
-            UIKit.Bold(tt);
+            tag.pixelsPerUnitMultiplier = 1.6f;
+            Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(20f, -20f));
+            tag.rectTransform.sizeDelta = new Vector2(150f, 56f);
+            Text tt = UIKit.Bold(UIKit.Text(tag.transform, "검토 중", KucaTheme.Caption, TextAnchor.MiddleCenter, Color.white));
             UIKit.Stretch(tt.rectTransform);
         }
         StartCoroutine(service.LoadPhoto(m, (tex, error) =>
@@ -434,7 +433,7 @@ public partial class MemoBoard : MonoBehaviour
             raw.texture = tex;
             raw.enabled = true;
             fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
-            empty.enabled = false;
+            raw.transform.SetAsFirstSibling();   // 자물쇠 · 검토 칩이 사진 위에
         }));
         return holder;
     }
@@ -684,7 +683,12 @@ public partial class MemoBoard : MonoBehaviour
     void UpdateWriteState()
     {
         canWrite = CanWrite(out float d);
-        writeButtonFace.color = canWrite ? Ink : new Color(Ink.r, Ink.g, Ink.b, 0.35f);
+        bool open = canWrite && !locked;
+        writeButton.gameObject.SetActive(boardTab == 0);
+        writeButtonFace.color = open ? KucaTheme.Primary : KucaTheme.Line;
+        Text label = writeButton.GetComponentInChildren<Text>();
+        label.color = open ? Color.white : KucaTheme.InkSoft;
+        label.text = open ? "메모 남기기" : "가까이 가서 들르면 남길 수 있어요";
         writeHint.transform.parent.gameObject.SetActive((!canWrite || locked) && boardTab == 0);
         if (locked)
             writeHint.text = lockedCount > 0
@@ -696,6 +700,11 @@ public partial class MemoBoard : MonoBehaviour
 
     void OnWriteButton()
     {
+        if (locked)
+        {
+            ShowToast("이 경희스팟에 가 보면 메모를 남길 수 있어요");
+            return;
+        }
         if (!canWrite)
         {
             ShowToast("경희스팟 가까이 가야 사진을 남길 수 있어요");
@@ -826,13 +835,13 @@ public partial class MemoBoard : MonoBehaviour
         r.anchorMin = new Vector2(0.06f, 0f);
         r.anchorMax = new Vector2(0.94f, 0f);
         r.pivot = new Vector2(0.5f, 0f);
-        r.sizeDelta = new Vector2(0f, 120f);
-        r.anchoredPosition = new Vector2(0f, 200f);
-        toastLabel = UIKit.Text(r, "", 32, TextAnchor.MiddleCenter, Color.white);
+        r.sizeDelta = new Vector2(0f, 130f);
+        r.anchoredPosition = new Vector2(0f, 330f);   // 아래 큰 버튼 위
+        toastLabel = UIKit.Text(r, "", KucaTheme.Label, TextAnchor.MiddleCenter, Color.white);
         UIKit.Stretch(toastLabel.rectTransform, 40f, 8f);
         toastLabel.resizeTextForBestFit = true;
-        toastLabel.resizeTextMinSize = 20;
-        toastLabel.resizeTextMaxSize = 32;
+        toastLabel.resizeTextMinSize = KucaTheme.Caption - 6;
+        toastLabel.resizeTextMaxSize = KucaTheme.Label;
         toast = bg.gameObject;
         toast.SetActive(false);
     }
@@ -895,22 +904,18 @@ public partial class MemoBoard : MonoBehaviour
         return r;
     }
 
+    /// <summary>위 · 아래 고정 영역 높이 (v4 큰 제목 · 아래 꽉 찬 버튼)</summary>
+    const float BoardBottom = 320f;
+
     void BuildCollageView(Vector2 safeMin, Vector2 safeMax)
     {
-        // 종이 배경 (위는 밝고 아래는 살짝 어둡게)
-        var bg = new GameObject("PaperBg", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-        bg.transform.SetParent(root.transform, false);
-        bg.texture = HudIcons.Gradient(new Color(0.93f, 0.93f, 0.92f), new Color(0.84f, 0.84f, 0.83f));
-        bg.raycastTarget = false;
-        UIKit.Stretch(bg.rectTransform);
-
-        listView = UIKit.Rect(root.transform, "Collage").gameObject;
+        listView = UIKit.Rect(root.transform, "Board").gameObject;
         UIKit.Stretch((RectTransform)listView.transform);
         RectTransform safe = SafeRect(listView.transform, "Safe", safeMin, safeMax);
 
-        // 콜라주 (자유 배치라 레이아웃 그룹 없이 내용 높이를 직접 정한다)
+        // 사진 카드 격자 (자리를 직접 정해 내용 높이를 정한다)
         RectTransform area = UIKit.Rect(safe, "Area");
-        UIKit.StretchBetween(area, 0f, BoardTop);
+        UIKit.StretchBetween(area, BoardBottom, BoardTop);
         photoArea = area.gameObject;
         collageScroll = area.gameObject.AddComponent<ScrollRect>();
         collageScroll.horizontal = false;
@@ -928,32 +933,58 @@ public partial class MemoBoard : MonoBehaviour
         collageScroll.viewport = viewport;
         collageScroll.content = collage;
 
-        listStatus = UIKit.Text(area, "", 38, TextAnchor.MiddleCenter, InkQuiet);
-        UIKit.Stretch(listStatus.rectTransform, 80f, 300f);
+        listStatus = UIKit.Text(area, "", KucaTheme.Body, TextAnchor.MiddleCenter, InkQuiet);
+        UIKit.Stretch(listStatus.rectTransform, 80f, 200f);
 
-        // 위: 닫기 · 장소 이름 · 쓰기
-        Button close = RoundButton(safe, "Close", HudIcons.Close, 96f, Color.white, Ink, Close);
-        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(32f, -40f));
-        title = UIKit.Text(safe, "", 50, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(title);
-        TopBox(title.rectTransform, 40f, 70f, 150f);
-        subtitle = UIKit.Text(safe, "", 26, TextAnchor.MiddleCenter, InkQuiet);
-        TopBox(subtitle.rectTransform, 112f, 40f, 150f);
+        // 위: ‹ 뒤로 · 장소 이름(큰 제목) · 부제 · 사진/공지
+        UIKit.IconButton(safe, HudIcons.Chevron, Close, Ink, new Vector2(KucaTheme.Gutter - 30f, -12f), flip: true);
+        title = UIKit.Bold(UIKit.Text(safe, "", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
+        TopBox(title.rectTransform, 150f, 100f, KucaTheme.Gutter);
+        title.horizontalOverflow = HorizontalWrapMode.Wrap;
+        title.resizeTextForBestFit = true;   // 긴 건물 이름도 한 줄에
+        title.resizeTextMinSize = KucaTheme.Heading - 8;
+        title.resizeTextMaxSize = KucaTheme.Title;
+        subtitle = UIKit.Text(safe, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        TopBox(subtitle.rectTransform, 250f, 64f, KucaTheme.Gutter);
         BuildBoardTabs(safe);
-        writeButton = RoundButton(safe, "Write", HudIcons.MemoWrite, 96f, Ink, Color.white, OnWriteButton);
-        writeButtonFace = writeButton.transform.Find("Face").GetComponent<Image>();
-        Place((RectTransform)writeButton.transform, new Vector2(1f, 1f), new Vector2(-32f, -40f));
 
-        // 아래: 멀리 있을 때만 거리 안내
-        Image hintPill = UIKit.Image(safe, "Hint", new Color(Ink.r, Ink.g, Ink.b, 0.82f));
-        hintPill.sprite = HudIcons.Pill;
-        hintPill.type = Image.Type.Sliced;
-        hintPill.pixelsPerUnitMultiplier = 120f / 84f;
-        Place(hintPill.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 40f));
-        hintPill.rectTransform.sizeDelta = new Vector2(900f, 84f);
-        writeHint = UIKit.Text(hintPill.transform, "", 28, TextAnchor.MiddleCenter, Color.white);
-        UIKit.Stretch(writeHint.rectTransform, 24f, 0f);
+        // 아래: 멀리 있을 때 거리 안내 + 꽉 찬 "메모 남기기"
+        RectTransform hintBox = UIKit.Rect(safe, "Hint");
+        hintBox.anchorMin = Vector2.zero;
+        hintBox.anchorMax = new Vector2(1f, 0f);
+        hintBox.pivot = new Vector2(0.5f, 0f);
+        hintBox.offsetMin = new Vector2(KucaTheme.Gutter, 32f + KucaTheme.ButtonHeight + 8f);
+        hintBox.offsetMax = new Vector2(-KucaTheme.Gutter, 32f + KucaTheme.ButtonHeight + 96f);
+        writeHint = UIKit.Text(hintBox, "", KucaTheme.Caption, TextAnchor.MiddleCenter, InkQuiet);
+        UIKit.Stretch(writeHint.rectTransform);
+        writeButton = UIKit.PrimaryButton(safe, "메모 남기기", OnWriteButton);
+        writeButtonFace = writeButton.GetComponent<Image>();
+        BottomButton((RectTransform)writeButton.transform);
     }
+
+    /// <summary>화면 아래 꽉 찬 버튼 자리 (좌우 Gutter, 아래 32)</summary>
+    static void BottomButton(RectTransform r)
+    {
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = new Vector2(1f, 0f);
+        r.pivot = new Vector2(0.5f, 0f);
+        r.offsetMin = new Vector2(KucaTheme.Gutter, 32f);
+        r.offsetMax = new Vector2(-KucaTheme.Gutter, 32f + KucaTheme.ButtonHeight);
+    }
+
+    /// <summary>하위 화면 위 막대: ‹ 뒤로 + 굵은 제목 + 아래 옅은 선. 높이 TopBarHeight</summary>
+    static Text TopBar(RectTransform safe, string text, UnityEngine.Events.UnityAction back)
+    {
+        UIKit.IconButton(safe, HudIcons.Chevron, back, Ink, new Vector2(KucaTheme.Gutter - 30f, -12f), flip: true);
+        Text head = UIKit.Bold(UIKit.Text(safe, text, KucaTheme.Heading, TextAnchor.MiddleLeft, Ink));
+        TopBox(head.rectTransform, 12f, KucaTheme.TouchMin, 0f);
+        head.rectTransform.offsetMin = new Vector2(KucaTheme.Gutter + 120f, head.rectTransform.offsetMin.y);
+        Image hr = UIKit.Image(safe, "Line", Line);
+        TopBox(hr.rectTransform, TopBarHeight, 2f, 0f);
+        return head;
+    }
+
+    const float TopBarHeight = 156f;
 
     void BuildViewer()
     {
@@ -965,19 +996,10 @@ public partial class MemoBoard : MonoBehaviour
             new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
             new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
 
-        // 위: 뒤로 · 장소 이름
-        Button back = RoundButton(safe, "Back", HudIcons.Chevron, 88f, Color.white, Ink, () => viewer.SetActive(false));
-        Place((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
-        back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
-        back.transform.Find("Shadow").GetComponent<Image>().color = Line;
-        Text head = UIKit.Text(safe, "게시물", 38, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(head);
-        TopBox(head.rectTransform, 30f, 88f, 140f);
-        Image hr = UIKit.Image(safe, "Line", Line);
-        TopBox(hr.rectTransform, 140f, 2f, 0f);
+        TopBar(safe, "게시물", () => viewer.SetActive(false));
 
         RectTransform area = UIKit.Rect(safe, "Body");
-        UIKit.StretchBetween(area, 0f, 142f);
+        UIKit.StretchBetween(area, 0f, TopBarHeight + 2f);
         RectTransform body = UIKit.ScrollList(area, 0f, new RectOffset(0, 0, 0, 80));
 
         // 작성자 줄 (누르면 프로필)
@@ -987,13 +1009,13 @@ public partial class MemoBoard : MonoBehaviour
         ab.transition = Selectable.Transition.None;
         ab.onClick.AddListener(() => { if (viewerMemo != null) OpenProfile(viewerMemo.author); });
         viewerAvatar = Avatar(authorRow.transform, 84f, out viewerAvatarLetter);
-        Place(viewerAvatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(36f, 0f));
-        viewerAuthor = UIKit.Text(authorRow.transform, "", 34, TextAnchor.MiddleLeft, Ink);
+        Place(viewerAvatar.rectTransform, new Vector2(0f, 0.5f), new Vector2(KucaTheme.Gutter, 0f));
+        viewerAuthor = UIKit.Text(authorRow.transform, "", KucaTheme.Body, TextAnchor.MiddleLeft, Ink);
         viewerAuthor.rectTransform.anchorMin = Vector2.zero;
         viewerAuthor.rectTransform.anchorMax = Vector2.one;
-        viewerAuthor.rectTransform.offsetMin = new Vector2(140f, 0f);
+        viewerAuthor.rectTransform.offsetMin = new Vector2(KucaTheme.Gutter + 110f, 0f);
         viewerAuthor.rectTransform.offsetMax = new Vector2(-200f, 0f);
-        viewerDelete = UIKit.Button(authorRow.transform, "삭제", () => { if (viewerMemo != null) Delete(viewerMemo); }, new Color(0f, 0f, 0f, 0f), 30);
+        viewerDelete = UIKit.Button(authorRow.transform, "삭제", () => { if (viewerMemo != null) Delete(viewerMemo); }, new Color(0f, 0f, 0f, 0f), KucaTheme.Label);
         viewerDelete.GetComponentInChildren<Text>().color = ErrorRed;
         Place((RectTransform)viewerDelete.transform, new Vector2(1f, 0.5f), new Vector2(-24f, 0f));
         ((RectTransform)viewerDelete.transform).sizeDelta = new Vector2(150f, 80f);
@@ -1048,13 +1070,13 @@ public partial class MemoBoard : MonoBehaviour
 
         // 좋아요 수 · 캡션
         RectTransform likesRow = UIKit.Rect(body, "Likes");
-        UIKit.Size(likesRow, 56f);
-        viewerLikes = UIKit.Text(likesRow, "", 32, TextAnchor.MiddleLeft, Ink);
+        UIKit.Size(likesRow, 64f);
+        viewerLikes = UIKit.Text(likesRow, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink);
         UIKit.Bold(viewerLikes);
-        UIKit.Stretch(viewerLikes.rectTransform, 36f, 0f);
+        UIKit.Stretch(viewerLikes.rectTransform, KucaTheme.Gutter, 0f);
         RectTransform captionRow = UIKit.Rect(body, "Caption");
-        UIKit.Vertical(captionRow, 0f, new RectOffset(36, 36, 8, 8));
-        viewerText = UIKit.Text(captionRow, "", 34, TextAnchor.UpperLeft, Ink);
+        UIKit.Vertical(captionRow, 0f, new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, 8, 8));
+        viewerText = UIKit.Text(captionRow, "", KucaTheme.Body, TextAnchor.UpperLeft, Ink);
 
         viewer.SetActive(false);
     }
@@ -1068,25 +1090,18 @@ public partial class MemoBoard : MonoBehaviour
             new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
             new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
 
-        Button back = RoundButton(safe, "Back", HudIcons.Chevron, 88f, Color.white, Ink, () => profile.SetActive(false));
-        Place((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
-        back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
-        back.transform.Find("Shadow").GetComponent<Image>().color = Line;
-        Text head = UIKit.Text(safe, "프로필", 38, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(head);
-        TopBox(head.rectTransform, 30f, 88f, 140f);
-        Image hr = UIKit.Image(safe, "Line", Line);
-        TopBox(hr.rectTransform, 140f, 2f, 0f);
+        BackButton.Attach(profile, () => profile.SetActive(false));
+        TopBar(safe, "프로필", () => profile.SetActive(false));
 
         // 프로필 사진 · 닉네임 · 게시물 수
         profileAvatar = Avatar(safe, 190f, out profileLetter);
         Place(profileAvatar.rectTransform, new Vector2(0f, 1f), new Vector2(50f, -190f));
         profileLetter.fontSize = 90;
-        profileName = UIKit.Text(safe, "", 44, TextAnchor.MiddleLeft, Ink);
+        profileName = UIKit.Text(safe, "", KucaTheme.Heading, TextAnchor.MiddleLeft, Ink);
         UIKit.Bold(profileName);
         TopBox(profileName.rectTransform, 410f, 70f, 0f);
         profileName.rectTransform.offsetMin = new Vector2(56f, profileName.rectTransform.offsetMin.y);
-        profileCount = UIKit.Text(safe, "", 40, TextAnchor.MiddleCenter, Ink);
+        profileCount = UIKit.Text(safe, "", KucaTheme.Heading, TextAnchor.MiddleCenter, Ink);
         Place(profileCount.rectTransform, new Vector2(0f, 1f), new Vector2(330f, -220f));
         profileCount.rectTransform.sizeDelta = new Vector2(320f, 130f);
         Image hr2 = UIKit.Image(safe, "Line2", Line);
@@ -1096,7 +1111,7 @@ public partial class MemoBoard : MonoBehaviour
         RectTransform area = UIKit.Rect(safe, "Grid");
         UIKit.StretchBetween(area, 0f, 504f);
         profileGrid = BuildGrid(area);
-        profileEmpty = UIKit.Text(area, "", 34, TextAnchor.UpperCenter, InkQuiet);
+        profileEmpty = UIKit.Text(area, "", KucaTheme.Body, TextAnchor.UpperCenter, InkQuiet);
         UIKit.Stretch(profileEmpty.rectTransform, 40f, 80f);
 
         profile.SetActive(false);
@@ -1118,34 +1133,27 @@ public partial class MemoBoard : MonoBehaviour
     {
         writeView = UIKit.Image(root.transform, "NewPost", Color.white, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)writeView.transform);
+        BackButton.Attach(writeView, ShowList);
         RectTransform safe = SafeRect(writeView.transform, "Safe", safeMin, safeMax);
 
-        // 위: 뒤로 · 새 게시물
-        Button back = RoundButton(safe, "Back", HudIcons.Chevron, 88f, Color.white, Ink, ShowList);
-        Place((RectTransform)back.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
-        back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
-        var ring = back.transform.Find("Shadow").GetComponent<Image>();
-        ring.color = Line;
-        Text head = UIKit.Text(safe, "새 게시물", 40, TextAnchor.MiddleCenter, Ink);
-        UIKit.Bold(head);
-        TopBox(head.rectTransform, 30f, 88f, 140f);
-        Image hr = UIKit.Image(safe, "Line", Line);
-        TopBox(hr.rectTransform, 140f, 2f, 0f);
+        TopBar(safe, "새 메모", ShowList);
 
         // 내용 (스크롤)
         RectTransform area = UIKit.Rect(safe, "Form");
-        UIKit.StretchBetween(area, 190f, 142f);
+        UIKit.StretchBetween(area, KucaTheme.ButtonHeight + 64f, TopBarHeight + 2f);
         RectTransform form = UIKit.ScrollList(area, 0f, new RectOffset(0, 0, 30, 40));
 
         // 사진 미리보기
         RectTransform photoRow = UIKit.Rect(form, "PhotoRow");
-        UIKit.Size(photoRow, 480f);
+        UIKit.Size(photoRow, 620f);
         Image frame = UIKit.Image(photoRow, "Frame", Chip, raycast: true);
         frame.sprite = HudIcons.Rounded;
         frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 1.2f;
-        Place(frame.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        frame.rectTransform.sizeDelta = new Vector2(620f, 460f);
+        frame.pixelsPerUnitMultiplier = 0.4f;
+        frame.rectTransform.anchorMin = Vector2.zero;
+        frame.rectTransform.anchorMax = Vector2.one;
+        frame.rectTransform.offsetMin = new Vector2(KucaTheme.Gutter, 0f);
+        frame.rectTransform.offsetMax = new Vector2(-KucaTheme.Gutter, 0f);
         frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         var tap = frame.gameObject.AddComponent<Button>();
         tap.transition = Selectable.Transition.None;
@@ -1162,36 +1170,36 @@ public partial class MemoBoard : MonoBehaviour
         cam.sprite = HudIcons.Camera;
         Place(cam.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 30f));
         cam.rectTransform.sizeDelta = new Vector2(110f, 110f);
-        Text camHint = UIKit.Text(photoEmpty.transform, "눌러서 사진 찍기", 30, TextAnchor.MiddleCenter, InkQuiet);
-        Place(camHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -70f));
-        camHint.rectTransform.sizeDelta = new Vector2(500f, 50f);
+        Text camHint = UIKit.Bold(UIKit.Text(photoEmpty.transform, "눌러서 사진 찍기", KucaTheme.Body, TextAnchor.MiddleCenter, InkQuiet));
+        Place(camHint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -80f));
+        camHint.rectTransform.sizeDelta = new Vector2(600f, 64f);
 
         // 캡션
-        textInput = UIKit.Input(form, "캡션 추가...", 38, true, 500);
+        textInput = UIKit.Input(form, "이 장소에서 남기고 싶은 한마디", KucaTheme.Body, true, 500);
         textInput.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         textInput.textComponent.color = Ink;
         ((Text)textInput.placeholder).color = InkQuiet;
         ((Text)textInput.placeholder).fontStyle = FontStyle.Normal;
         UIKit.Size(textInput, 260f);
-        UIKit.Stretch(textInput.textComponent.rectTransform, 40f, 20f);
-        UIKit.Stretch(((Text)textInput.placeholder).rectTransform, 40f, 20f);
+        UIKit.Stretch(textInput.textComponent.rectTransform, KucaTheme.Gutter, 24f);
+        UIKit.Stretch(((Text)textInput.placeholder).rectTransform, KucaTheme.Gutter, 24f);
 
         // 사진 칩
         RectTransform chips = UIKit.Rect(form, "Chips");
-        UIKit.Size(chips, 110f);
+        UIKit.Size(chips, 124f);
         var ch = chips.gameObject.AddComponent<HorizontalLayoutGroup>();
         ch.spacing = 16f;
-        ch.padding = new RectOffset(40, 40, 10, 10);
+        ch.padding = new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, 10, 10);
         ch.childControlWidth = ch.childControlHeight = true;
         ch.childForceExpandWidth = false;
         ch.childForceExpandHeight = true;
-        photoButton = ChipButton(chips, HudIcons.Camera, "사진 찍기", 250f, TakePhoto);
-        galleryButton = ChipButton(chips, HudIcons.Scrapbook, "앨범에서 고르기", 320f, PickFromGallery);
-        removePhotoButton = ChipButton(chips, HudIcons.Close, "빼기", 160f, () => SetPhoto(null, null));
+        photoButton = ChipButton(chips, HudIcons.Camera, "사진 찍기", 290f, TakePhoto);
+        galleryButton = ChipButton(chips, HudIcons.Scrapbook, "앨범에서", 280f, PickFromGallery);
+        removePhotoButton = ChipButton(chips, HudIcons.Close, "빼기", 190f, () => SetPhoto(null, null));
 
         // 닉네임 줄
         RectTransform nameRow = Row(form, HudIcons.Person, "닉네임");
-        authorInput = UIKit.Input(nameRow, "이름 입력", 34, false, 20);
+        authorInput = UIKit.Input(nameRow, "이름 입력", KucaTheme.Body, false, 20);
         authorInput.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
         authorInput.textComponent.color = Ink;
         authorInput.textComponent.alignment = TextAnchor.MiddleRight;
@@ -1202,46 +1210,36 @@ public partial class MemoBoard : MonoBehaviour
         ar.anchorMin = new Vector2(0.4f, 0f);
         ar.anchorMax = new Vector2(1f, 1f);
         ar.offsetMin = Vector2.zero;
-        ar.offsetMax = new Vector2(-30f, 0f);
+        ar.offsetMax = new Vector2(-KucaTheme.Gutter + 24f, 0f);
 
         // 위치 줄 + 칩
         RectTransform locRow = Row(form, HudIcons.Pin, "위치");
-        locationText = UIKit.Text(locRow, "", 32, TextAnchor.MiddleRight, InkQuiet);
+        locationText = UIKit.Text(locRow, "", KucaTheme.Body, TextAnchor.MiddleRight, InkQuiet);
         locationText.rectTransform.anchorMin = new Vector2(0.35f, 0f);
         locationText.rectTransform.anchorMax = new Vector2(1f, 1f);
         locationText.rectTransform.offsetMin = Vector2.zero;
-        locationText.rectTransform.offsetMax = new Vector2(-40f, 0f);
+        locationText.rectTransform.offsetMax = new Vector2(-KucaTheme.Gutter, 0f);
         RectTransform locChips = UIKit.Rect(form, "LocationChips");
-        UIKit.Size(locChips, 90f);
+        UIKit.Size(locChips, 104f);
         var lh = locChips.gameObject.AddComponent<HorizontalLayoutGroup>();
         lh.spacing = 14f;
-        lh.padding = new RectOffset(40, 40, 6, 6);
+        lh.padding = new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, 6, 6);
         lh.childControlWidth = lh.childControlHeight = true;
         lh.childForceExpandWidth = false;
         lh.childForceExpandHeight = true;
-        StaticChip(locChips, "경희대학교 국제캠퍼스", 360f);
-        StaticChip(locChips, "수원", 120f);
+        StaticChip(locChips, "경희대학교 국제캠퍼스", 440f);
+        StaticChip(locChips, "용인", 150f);
         RectTransform infoRow = UIKit.Rect(form, "Info");
-        UIKit.Size(infoRow, 90f);
-        Text info = UIKit.Text(infoRow, "이 사진은 이 장소를 찾은 다른 사람들도 볼 수 있어요. 메모판에 콜라주로 붙어요.", 26, TextAnchor.UpperLeft, InkQuiet);
-        UIKit.Stretch(info.rectTransform, 40f, 8f);
+        UIKit.Size(infoRow, 110f);
+        Text info = UIKit.Text(infoRow, "이 사진은 이 장소를 찾은 다른 사람들도 볼 수 있어요. 메모판 카드로 붙어요.", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+        UIKit.Stretch(info.rectTransform, KucaTheme.Gutter, 8f);
 
-        writeError = UIKit.Text(form, "", 32, TextAnchor.MiddleCenter, ErrorRed);
-        UIKit.Size(writeError, 70f);
+        writeError = UIKit.Text(form, "", KucaTheme.Label, TextAnchor.MiddleCenter, ErrorRed);
+        UIKit.Size(writeError, 80f);
 
-        // 아래: 공유하기
-        postButton = UIKit.Button(safe, "공유하기", Post, ShareBlue, 40);
-        var pimg = postButton.GetComponent<Image>();
-        pimg.sprite = HudIcons.Pill;
-        pimg.type = Image.Type.Sliced;
-        pimg.pixelsPerUnitMultiplier = 120f / 70f;
-        UIKit.Bold(postButton.GetComponentInChildren<Text>());
-        RectTransform pr = (RectTransform)postButton.transform;
-        pr.anchorMin = new Vector2(0f, 0f);
-        pr.anchorMax = new Vector2(1f, 0f);
-        pr.pivot = new Vector2(0.5f, 0f);
-        pr.offsetMin = new Vector2(40f, 40f);
-        pr.offsetMax = new Vector2(-40f, 150f);
+        // 아래: 꽉 찬 공유하기
+        postButton = UIKit.PrimaryButton(safe, "공유하기", Post);
+        BottomButton((RectTransform)postButton.transform);
 
         writeView.SetActive(false);
     }
@@ -1250,34 +1248,34 @@ public partial class MemoBoard : MonoBehaviour
     RectTransform Row(RectTransform form, Sprite icon, string label)
     {
         RectTransform row = UIKit.Rect(form, label);
-        UIKit.Size(row, 110f);
+        UIKit.Size(row, KucaTheme.TouchMin);
         Image ic = UIKit.Image(row, "Icon", Ink);
         ic.sprite = icon;
-        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(40f, 0f));
-        ic.rectTransform.sizeDelta = new Vector2(52f, 52f);
-        Text t = UIKit.Text(row, label, 36, TextAnchor.MiddleLeft, Ink);
+        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(KucaTheme.Gutter, 0f));
+        ic.rectTransform.sizeDelta = new Vector2(56f, 56f);
+        Text t = UIKit.Bold(UIKit.Text(row, label, KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
         t.rectTransform.anchorMin = new Vector2(0f, 0f);
         t.rectTransform.anchorMax = new Vector2(0.4f, 1f);
-        t.rectTransform.offsetMin = new Vector2(116f, 0f);
+        t.rectTransform.offsetMin = new Vector2(KucaTheme.Gutter + 80f, 0f);
         t.rectTransform.offsetMax = Vector2.zero;
         return row;
     }
 
     Button ChipButton(Transform parent, Sprite icon, string label, float width, UnityEngine.Events.UnityAction onClick)
     {
-        Button b = UIKit.Button(parent, label, onClick, Chip, 30);
+        Button b = UIKit.Button(parent, label, onClick, Chip, KucaTheme.Label);
         Image img = b.GetComponent<Image>();
         img.sprite = HudIcons.Pill;
         img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 90f;
+        img.pixelsPerUnitMultiplier = 1.2f;
         UIKit.Size(b, -1f, width);
         Text t = b.GetComponentInChildren<Text>();
         t.color = Ink;
         t.rectTransform.offsetMin = new Vector2(64f, 0f);
         Image ic = UIKit.Image(b.transform, "Icon", Ink);
         ic.sprite = icon;
-        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(26f, 0f));
-        ic.rectTransform.sizeDelta = new Vector2(40f, 40f);
+        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(28f, 0f));
+        ic.rectTransform.sizeDelta = new Vector2(44f, 44f);
         return b;
     }
 
@@ -1286,34 +1284,10 @@ public partial class MemoBoard : MonoBehaviour
         Image img = UIKit.Image(parent, label, Chip);
         img.sprite = HudIcons.Pill;
         img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 78f;
+        img.pixelsPerUnitMultiplier = 1.2f;
         UIKit.Size(img, -1f, width);
-        Text t = UIKit.Text(img.transform, label, 28, TextAnchor.MiddleCenter, Ink);
+        Text t = UIKit.Text(img.transform, label, KucaTheme.Caption, TextAnchor.MiddleCenter, Ink);
         UIKit.Stretch(t.rectTransform, 16f, 0f);
-    }
-
-    /// <summary>그림자 + 둥근 얼굴(이름 "Face") + 아이콘(이름 "Icon") 인 원형 버튼</summary>
-    static Button RoundButton(Transform parent, string name, Sprite icon, float size, Color face, Color iconColor, UnityEngine.Events.UnityAction onClick)
-    {
-        Image hit = UIKit.Image(parent, name, new Color(0f, 0f, 0f, 0f), raycast: true);
-        hit.rectTransform.sizeDelta = new Vector2(size, size);
-        var b = hit.gameObject.AddComponent<Button>();
-        b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(onClick);
-        hit.gameObject.AddComponent<PressScale>();
-        Image shadow = UIKit.Image(hit.transform, "Shadow", new Color(0f, 0f, 0f, 0.18f));
-        shadow.sprite = HudIcons.Circle;
-        Place(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -4f));
-        shadow.rectTransform.sizeDelta = new Vector2(size + 4f, size + 4f);
-        Image f = UIKit.Image(hit.transform, "Face", face);
-        f.sprite = HudIcons.Circle;
-        Place(f.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        f.rectTransform.sizeDelta = new Vector2(size, size);
-        Image ic = UIKit.Image(f.transform, "Icon", iconColor);
-        ic.sprite = icon;
-        Place(ic.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        ic.rectTransform.sizeDelta = new Vector2(size * 0.48f, size * 0.48f);
-        return b;
     }
 
     static void Place(RectTransform rt, Vector2 anchor, Vector2 pos)
