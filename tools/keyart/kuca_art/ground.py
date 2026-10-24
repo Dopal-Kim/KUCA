@@ -24,6 +24,7 @@ WATER_DEEP = np.array([60, 140, 170], np.float32)
 STONE_RIM = np.array([224, 214, 198], np.float32)
 TRACK = np.array([200, 104, 82], np.float32)
 DIRT = np.array([200, 172, 132], np.float32)        # 실사 대운동장: 마사토 흙 바닥
+BRICK_PAVE = np.array([170, 98, 80], np.float32)   # 실사 전자정보대학관 앞 붉은 벽돌 광장
 YELLOW = np.array([236, 192, 64], np.float32)       # 차도 중앙선
 LINE = np.array([248, 246, 238], np.float32)
 
@@ -214,6 +215,16 @@ class Ground:
         for b in buildings:
             d.polygon([self.r.px(*p) for p in b.poly], fill=255)
         self.buildings = np.asarray(img) > 127
+
+    def add_brick(self, poly):
+        """붉은 벽돌 포장 광장 (월드 다각형). 나무 · 산울타리가 들어가지 않게 막는다"""
+        img = Image.new('L', (self.W, self.H), 0)
+        ImageDraw.Draw(img).polygon([self.r.px(*p) for p in poly], fill=255)
+        m = (np.asarray(img) > 127) & ~self.buildings
+        self.brick = getattr(self, 'brick', np.zeros_like(m)) | m
+        for name in ('blocked_env', 'blocked', 'blocked_near_bld'):
+            if hasattr(self, name):
+                setattr(self, name, getattr(self, name) | m)
 
     def add_apron(self, p0, p1, width):
         """건물 입구에서 길까지 포장 (월드 점 두 개)"""
@@ -439,6 +450,8 @@ class Ground:
         print('ground: roads')
         walk_m = self.walk
         blend(walk_m, paving, 0.7)
+        if hasattr(self, 'brick'):
+            blend(self.brick, _recolor(paving_t, BRICK_PAVE))
         blend(self.curb, flat(CURB), 0.7)
         asphalt = _recolor(self._tile('road', 9, crop=(0.10, 0.0, 0.40, 1.0)), ASPHALT)
         blend(self.road, asphalt, 0.7)
