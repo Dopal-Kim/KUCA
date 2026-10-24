@@ -75,13 +75,18 @@ Shader "KUCA/StylizedBuilding"
                 if (n.y > 0.6)
                 {
                     float2 g = abs(frac(p.xz / 5.0) - 0.5);
-                    half3 roof = _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+                    float gw = max(fwidth(p.x), fwidth(p.z)) / 5.0;   // 멀리서는 지붕 격자선을 평균으로 (지글거림 방지)
+                    float gline = lerp(smoothstep(0.46, 0.49, max(g.x, g.y)), 0.1, saturate((gw - 0.01) / 0.03));
+                    half3 roof = _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * gline);
                     return lerp(roof, half3(0.90, 0.94, 1.0), _KucaSnow * 0.9);   // 겨울: 지붕 눈
                 }
                 half3 c = _WallColor.rgb * lerp(0.93h, 1.04h, saturate(p.y / 24.0));
-                if (_Brick > 0.5) c *= 1.0 - 0.06 * step(frac(p.y / 0.34), 0.12);
+                // 가는 가로선(벽돌 줄눈 · 층 띠)은 한 픽셀보다 가늘어지면 평균 농도로 바꾼다 (멀리서 무늬가 지글거리지 않게)
+                float py = fwidth(p.y);
+                if (_Brick > 0.5) c *= 1.0 - 0.06 * lerp(step(frac(p.y / 0.34), 0.12), 0.12, saturate((py - 0.02) / 0.04));
                 float fv = frac(p.y / _FloorHeight), fl = floor(p.y / _FloorHeight);
-                if (fv < 0.05 && p.y > 2.0) c = lerp(c, _TrimColor.rgb, 0.55);
+                float trimW = (fv < 0.05 && p.y > 2.0) ? 0.55 : 0.0;
+                c = lerp(c, _TrimColor.rgb, lerp(trimW, 0.55 * 0.05, saturate((py - 0.06) / 0.12)));
 
                 float wl = wall.y, wu = wall.x;
                 bool infinite = wl < 0.5;
@@ -110,7 +115,7 @@ Shader "KUCA/StylizedBuilding"
                             if (h < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * 0.8;
                         }
                         else if (abs(qx) < 0.58) resS = _TrimColor.rgb;
-                        float fadeS = saturate(fwidth(qx) * 3.0 - 0.6);
+                        float fadeS = saturate((fwidth(qx) - 0.06) / 0.18);
                         emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.25, fadeS);
                         return lerp(resS, lerp(s * ao, _WindowColor.rgb, 0.25), fadeS);
                     }
@@ -123,7 +128,7 @@ Shader "KUCA/StylizedBuilding"
                     if (hg < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (0.6 + 0.4 * fv);
                     half3 resG = gl;
                     if (abs(mu - 0.5) > 0.46 || fv < 0.06) resG = _TrimColor.rgb * 0.94;
-                    float fadeG = saturate(fwidth(wu) * 2.0 - 0.6);
+                    float fadeG = saturate((fwidth(wu) - 0.05) / 0.15);
                     emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.7, fadeG);
                     return lerp(resG, lerp(gl, _TrimColor.rgb, 0.15), fadeG);
                 }
@@ -161,7 +166,8 @@ Shader "KUCA/StylizedBuilding"
                 // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
                 float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
-                float fade = saturate(px * 3.0 - 0.6);
+                // 창틀(0.16 m)이 한 픽셀보다 가늘어질 때부터 서서히 (예전 0.2 m/px 부터는 늦어 960×720 캡처에서 긴 면이 지글거렸음)
+                float fade = saturate((px - 0.07) / 0.2);
                 emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7), fade);
                 return lerp(res, avg, fade);
             }

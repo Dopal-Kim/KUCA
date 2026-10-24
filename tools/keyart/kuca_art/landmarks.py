@@ -611,6 +611,7 @@ def secondary(by_id, entrances, builder_at, ground):
         out = 2.4 if 'bay' in (MASSING.get(bid) or ()) else 0.0   # 정면 돌출 동 앞면에서 시작
         m, elen = _entrance_frame(b, ent, out)
         if bid == CERAMICS:
+            ceramics_stair(builder_at(b), m, b, elen)
             # 도예관 입구 쪽은 옆 건물과 붙은 좁은 틈 → 데크는 숲길이 오는 서쪽 면에
             f = Footprint(b.poly, b.h).face((b.centroid[0] - 200.0, b.centroid[1]))
             m, elen = Frame.look(f['center'], f['normal']), f['length']
@@ -619,17 +620,14 @@ def secondary(by_id, entrances, builder_at, ground):
 
 def ujeongwon_front(mb, m, b, elen, ground):
     """우정원: 정면 양 끝 청록 유리 계단탑(둥근 원통, 지붕 위로 한 층) + 1층 청록 캐노피 현관"""
-    from .geo import point_in_poly
     H = b.h
-    # 실사: 계단탑은 정면 양 끝 → 입구 변이 아니라 벽 안쪽 6 m 를 따라 정면이 끝나는 곳까지 걸어가 찾는다
-    ends = []
-    for s in (-1, 1):
-        t = 0.0
-        while t < 120 and point_in_poly(*m.p((s * (t + 1.0), 0, -6.0))[::2], b.poly):
-            t += 1.0
-        ends.append(max(t, elen / 2))
-    for s, half in zip((-1, 1), ends):
-        x = s * (half - 3.0)
+    # 실사: 계단탑은 정면 양 끝. 정면 띠(정면에서 안쪽 12 m 까지)에 있는 윤곽 꼭짓점을 정면 방향으로 투영해 양 끝을 찾는다
+    # (안쪽으로 걸어가며 찾던 방식은 중정에 막혀 입구 변 끝에서 멈췄음)
+    loc = [((px - m.o[0]) * m.x[0] + (pz - m.o[2]) * m.x[2], (px - m.o[0]) * m.z[0] + (pz - m.o[2]) * m.z[2]) for px, pz in b.poly]
+    front = [lx for lx, lz in loc if -12.0 <= lz <= 1.5]
+    ends = (min(front + [-elen / 2]), max(front + [elen / 2]))
+    for s, edge in zip((-1, 1), ends):
+        x = edge - s * 3.0
         mb.prism(m, (x, 0.0, 1.2), 3.6, H + 3.3, 14, TEAL_GLASS, caps=True)
         for k in range(1, int((H + 3.3) / 3.3)):
             mb.prism(m, (x, k * 3.3 - 0.15, 1.2), 3.75, 0.3, 14, COLUMN)   # 층 띠
@@ -687,6 +685,36 @@ def union_canopy(mb, m, b, elen, ground):
         mb.box(m, (x, 2.5, 6.8), (0.8, 5.0, 0.8), COLUMN)
     for k in range(6):
         mb.box(m, (0, 0.1 * (6 - k), 2.0 + k * 0.9), (w + 4 - k * 0.5, 0.2 * (6 - k), 0.9), STEP)
+    # 실사: 정면 2층 위로 가로로 긴 청록 띠창
+    for y in (7.4, 10.6):
+        if y + 1.0 < b.h:
+            mb.box(m, (0, y, 0.12), (elen * 0.86, 1.3, 0.24), TEAL_GLASS)
+    # 실사: 정면은 2~3층, 뒤쪽에 7층까지 오르는 높은 매스 (동아리방 7F) → 뒤 절반에 덩어리 + 옥상 계단실
+    from .buildings import ROOF_RESERVED
+    fp = Footprint(b.poly, b.h)
+    half_d = fp.face((fp.center[0] + m.z[0] * 100, fp.center[1] + m.z[2] * 100))['depth'] / 2   # 앞뒤 반 깊이
+    bc = (fp.center[0] - m.z[0] * half_d * 0.35, fp.center[1] - m.z[2] * half_d * 0.35)
+    bm = Frame.look((bc[0], 0.0, bc[1]), (m.z[0], 0.0, m.z[2]))
+    bw, bd, top = min(elen * 0.55, 30.0), min(half_d * 0.9, 14.0), b.h + 3.3 * 4
+    mb.box(bm, (0, (b.h + top) / 2, 0), (bw, top - b.h + 0.2, bd), (0.90, 0.90, 0.88), top=shade(COLUMN, 0.94))
+    for k in range(1, 5):
+        mb.box(bm, (0, b.h + k * 3.3 - 1.4, bd / 2 + 0.06), (bw * 0.86, 1.2, 0.12), TEAL_GLASS)   # 뒤 매스 띠창
+    mb.box(bm, (0, top + 1.6, 0), (6.0, 3.2, 5.0), (0.92, 0.92, 0.90))   # 옥상 계단실
+    ROOF_RESERVED.setdefault(b.id, []).append(([bm.p((sx * (bw / 2 + 1), 0, sz * (bd / 2 + 1)))[::2] for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))], top))
+
+
+def ceramics_stair(mb, m, b, elen):
+    """도예관: 입구 모서리의 전면 유리 계단실 (지붕 위로 반 층) + 옆 모자이크 타일 기둥 2개 (실사)"""
+    x = elen / 2 - 2.4
+    H = b.h
+    mb.box(m, (x, (H + 1.6) / 2, 1.0), (4.4, H + 1.6, 2.6), (0.66, 0.82, 0.88), top=shade(COLUMN, 0.95))
+    for k in range(1, int((H + 1.6) / 3.3) + 1):
+        mb.box(m, (x, k * 3.3 - 0.1, 1.0), (4.6, 0.22, 2.8), COLUMN)   # 층 슬래브
+    mb.box(m, (x, H + 1.75, 1.0), (4.8, 0.3, 3.0), COLUMN)
+    tiles = ((0.20, 0.45, 0.70), (0.95, 0.85, 0.55), (0.85, 0.35, 0.30), (0.30, 0.65, 0.55), (0.98, 0.97, 0.92))
+    for j, cx in enumerate((x - 5.0, x - 9.0)):
+        for k in range(8):   # 0.5 m 조각을 쌓아 도자기 모자이크 느낌
+            mb.box(m, (cx, 0.25 + k * 0.5, 0.7), (0.9, 0.5, 0.9), tiles[(k + j * 2) % len(tiles)])
 
 
 def ceramics_deck(mb, m, b, elen, ground):
@@ -1184,12 +1212,21 @@ def gate_fountain(layer, ground):
     mb.prism(m, (0, 0.55, 0), 6.4, 0.2, 20, (0.50, 0.80, 0.94), caps=True)       # 물
     mb.prism(m, (0, 0.0, 0), 1.6, 3.2, 8, stone)                                   # 받침
     mb.prism(m, (0, 3.2, 0), 2.0, 0.35, 8, cap, caps=True)
-    mb.ico(m, (0, 5.3, 0), (1.8, 1.8, 1.8), (0.62, 0.78, 0.92), var=0.06)          # 지구본
+    mb.ico(m, (0, 5.3, 0), (1.8, 1.8, 1.8), (0.86, 0.88, 0.91), var=0.04)          # 은색 구 (실사)
     mb.prism(m, (0, 4.6, 0), 2.15, 0.25, 16, GOLD)                                 # 금색 고리
     for k in range(10):
         a = k * math.pi / 5
         mb.cone(m, (math.cos(a) * 5.2, 0.75, math.sin(a) * 5.2), 0.2, 1.8, 6, WATER_JET, bottom=False)
-    ground.occupy(x, z, 9.0, ao=0.25, ao_radius=7.5)
+    # 실사: 로터리 둘레 장미 화단 고리 (낮은 회양목 테 + 빨강 · 분홍 장미)
+    roses = ((0.86, 0.18, 0.30), (0.98, 0.62, 0.74), (0.95, 0.36, 0.45))
+    mb.ao_strength = 0.2
+    for k in range(28):
+        a = 2 * math.pi * k / 28
+        rx, rz = math.cos(a) * 9.6, math.sin(a) * 9.6
+        mb.ico(m, (rx, 0.45, rz), (1.15, 0.55, 1.15), HEDGE_C, var=0.05)
+        mb.ico(m, (rx, 0.95, rz), (0.42, 0.32, 0.42), roses[k % 3], var=0.0)
+    mb.ao_strength = 0.0
+    ground.occupy(x, z, 11.5, ao=0.25, ao_radius=7.5)
     return True
 
 
@@ -1363,6 +1400,7 @@ def arts_palace(mb, shell, b, ground):
         formal_cone(mb, cp[0], cp[2], 0.9)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     _corner_towers(mb, b, (dx / L, dz / L), pal, fh)
+    _arts_wings(mb, b, pc, width, fh, ground)
     _atelier_roof(mb, b, pal)
     # 나무·벤치가 테라스·계단에 서지 않게, 계단 앞은 포장 (apron)
     for zz in range(-1, int(td + 6), 2):
@@ -1373,6 +1411,29 @@ def arts_palace(mb, shell, b, ground):
     end = ground.nearest_walk_point(s0[0], s0[2], max_dist=30)
     if end:
         ground.add_apron((s0[0], s0[2]), end, sw)
+
+
+def _arts_wings(mb, b, pc, width, fh, ground):
+    """예술대 1층 열주 날개: 박공 현관 양옆으로 본동 정면을 따라 1층 높이 기둥 줄 + 위 평 슬래브 (실사)"""
+    f = Footprint(b.poly, b.h).face(PLAZA)
+    mf = Frame.look(f['center'], f['normal'])
+    off = (pc[0] - f['center'][0]) * mf.x[0] + (pc[1] - f['center'][2]) * mf.x[2]   # 현관 가운데의 면 방향 위치
+    h = fh * 1.15
+    for s in (-1, 1):
+        x0 = off + s * (width / 2 + 1.0)
+        x1 = s * (f['length'] / 2 - 2.0)
+        L = (x1 - x0) * s
+        if L < 6.0:
+            continue
+        L = min(L, 22.0)
+        cx = x0 + s * L / 2
+        mb.box(mf, (cx, h + 0.35, 1.6), (L, 0.7, 3.4), COLUMN, top=shade(COLUMN, 1.02))
+        n = max(2, int(L / 3.2))
+        for i in range(n + 1):
+            column(mb, mf, (x0 + s * L * i / n, 0.0, 2.9), 0.32, h, fluted=False)
+        for i in range(0, int(L) + 1, 2):
+            p = mf.p((x0 + s * i, 0, 2.6))
+            ground.occupy(p[0], p[2], 1.4)
 
 
 def _corner_towers(mb, b, front, pal, fh):
@@ -1388,9 +1449,9 @@ def _corner_towers(mb, b, front, pal, fh):
     for px, pz in corners[:2]:
         # 모서리에서 중심 쪽으로 들어가며 탑(8 m) 이 건물 안에 들어가는 첫 자리
         dl = max(1.0, math.hypot(fp.center[0] - px, fp.center[1] - pz))
-        for d in range(6, 34, 3):
+        for d in range(4, 52, 2):   # 윤곽이 패인 모서리도 더 안쪽까지 찾는다 (M4 에서 한쪽만 섰음)
             qx, qz = px + (fp.center[0] - px) * d / dl, pz + (fp.center[1] - pz) * d / dl
-            if all(point_in_poly(qx + ox, qz + oz, b.poly) for ox in (-4, 4) for oz in (-4, 4)):
+            if all(point_in_poly(qx + ox, qz + oz, b.poly) for ox in (-3, 3) for oz in (-3, 3)):
                 break
         else:
             print('landmarks: 예술대 모서리 탑 자리 없음', round(px), round(pz))
