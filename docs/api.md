@@ -431,6 +431,7 @@
 | `times` | `morning` · `day` · `evening` · `night` 중 어울리는 것 (앱 취향과 같은 코드) |
 | `indoor` | 실내면 `true`. 비·눈 오는 날 실내 스팟에 점수를 더 줍니다 |
 | `tastes` | (선택) 어울리는 취향 코드. 없으면 취향 점수는 0 |
+| `restricted` | (선택) 거주자 · 관계자만 드나드는 곳 (기숙사 등)이면 `true`. 앱이 `candidateBuildingIds` 로 보내도 **추천 후보에서 뺍니다**. 공지 연결에는 그대로 씀 |
 | `meetSpecies` | (있으면) 만남 스팟. 그 자리에 세울 경희몬 ID. 앱의 `MeetSpotCatalog` 와 같아야 함 |
 
 ### POST /api/recommendations (v2)
@@ -695,14 +696,14 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
       { "kind": "together", "xp": 60 }
     ]
   },
-  "progress": { "level": 2, "xp": 240, "levelXp": 100, "nextLevelXp": 300, "totalWalks": 3, "totalDistanceM": 4100, "togetherWalks": 1 }
+  "progress": { "level": 3, "xp": 240, "levelXp": 210, "nextLevelXp": 330, "totalWalks": 3, "totalDistanceM": 4100, "togetherWalks": 1 }
 }
 ```
 
 - **경험치 표 (Q6 제안):** 1km 10 (100m 단위 버림) · 산책 완료 30 · 함께 걸음 60 · 리뷰 10. 위 예시는 1.62km 를 함께 걸은 경우입니다. 완료가 아니면(`completed: false`) 거리 경험치만 줍니다.
 - **보상 티켓:** 완료 1장 `[가정]`. 걸은 거리 티켓(1km = 1장)은 V1 처럼 **앱이 계속 셉니다.** 서버는 완료 보너스만 줍니다 (B 와 맞출 것).
 - `distanceM`: 서버가 인정한 거리 (깎였으면 깎인 값)
-- **레벨:** 다음 레벨까지 100 × 레벨 `[가정]` (1→2 100, 2→3 200 …). 레벨 2 는 100, 3 은 300, 4 는 600 부터입니다. 앱은 받은 값만 표시합니다 (D9).
+- **레벨:** 다음 레벨까지 100 + 10 × (레벨 − 1) (1→2 100, 2→3 110, 3→4 120 …, 10/24 결정). 레벨 2 는 100, 3 은 210, 4 는 330 부터입니다. 앱은 받은 값만 표시합니다 (D9).
   - `levelXp` 는 지금 레벨이 시작된 경험치, `nextLevelXp` 는 다음 레벨이 되는 경험치. 진행 막대 = (`xp` − `levelXp`) / (`nextLevelXp` − `levelXp`)
 - 이미 끝낸 산책을 또 `finish` 하면 `409`, 남의 산책이면 `403 reason: "not_yours"`, 없으면 `404` 입니다.
 
@@ -720,7 +721,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 
 #### GET /api/me/progress
 
-- `200 { "level": 2, "xp": 240, "levelXp": 100, "nextLevelXp": 300, "totalWalks": 7, "totalDistanceM": 12400, "togetherWalks": 2 }`
+- `200 { "level": 3, "xp": 240, "levelXp": 210, "nextLevelXp": 330, "totalWalks": 7, "totalDistanceM": 12400, "togetherWalks": 2 }`
 - `totalWalks` 는 완료한 산책 수, `totalDistanceM` 은 끝낸 산책의 인정 거리 합
 - 앱 시작과 산책 완료 화면에서 부릅니다.
 

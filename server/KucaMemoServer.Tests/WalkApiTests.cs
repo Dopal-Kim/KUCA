@@ -162,10 +162,12 @@ public class WalkApiTests : IDisposable
     [InlineData(0, 1)]
     [InlineData(99, 1)]
     [InlineData(100, 2)]
-    [InlineData(299, 2)]
-    [InlineData(300, 3)]
-    [InlineData(600, 4)]
-    public void 레벨은_다음까지_100_곱하기_레벨(int xp, int level)
+    [InlineData(209, 2)]
+    [InlineData(210, 3)]   // 100 + 110
+    [InlineData(330, 4)]   // + 120
+    [InlineData(1349, 10)]
+    [InlineData(1450, 11)] // 1→11: 100 + 110 + … + 190
+    public void 레벨은_다음까지_100에서_10씩_늘어난다(int xp, int level)
     {
         Assert.Equal(level, WalkRules.LevelOf(xp));
     }

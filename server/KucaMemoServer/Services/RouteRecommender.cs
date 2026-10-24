@@ -42,7 +42,11 @@ public static class RecommendRules
     public const int NearbyCandidates = 30;
     public const int MaxReasonLength = 60;
 
-    /// <summary>[가정] 근거 문구는 A 가 준다 (A-V2). 받으면 여기만 바꾼다.</summary>
+    /// <summary>
+    /// 근거 (A-V2): Reynolds 외, Diabetologia 2016 (식사마다 10분 걷기 → 식후 혈당 평균 12% 낮음, 2형 당뇨 41명),
+    /// Buffey 외, Sports Medicine 2022 (앉아 있는 중간 가벼운 걷기 → 식후 혈당이 오래 앉아 있을 때보다 낮음, 연구 7개 메타분석).
+    /// 대상과 수치가 학생에게 그대로 맞지 않아 숫자는 쓰지 않는다.
+    /// </summary>
     public const string AfterMealNote =
         "식사 뒤 가볍게 걸으면 식후 혈당이 완만하게 오르는 데 도움이 된다는 연구가 있어요. 일반 건강 정보이며 의료 조언이 아닙니다.";
 
@@ -166,7 +170,7 @@ public partial class RouteRecommender(
         IEnumerable<Building> pool = r.CandidateBuildingIds is { Count: > 0 } ids
             ? ids.Distinct().Select(buildings.Find).OfType<Building>()
             : spots.All.Select(s => buildings.Find(s.Id)).OfType<Building>();
-        return pool.Where(b => b.Name != null)
+        return pool.Where(b => b.Name != null && spots.Find(b.Id)?.Restricted != true)
                    .Select(b => (b, d: Meters(plan.Lat, plan.Lon, b.Lat, b.Lon)))
                    .OrderBy(x => x.d)
                    .Take(RecommendRules.NearbyCandidates)

@@ -31,8 +31,13 @@ public static class WalkRules
     public static readonly TimeSpan ReviewWindow = TimeSpan.FromHours(24);
     public const int MaxReviewTextLength = 100;
 
-    /// <summary>[가정] 레벨 L 이 시작되는 경험치: 다음 레벨까지 100 × L (1→2 100, 2→3 200 …) → 50 × L × (L − 1)</summary>
-    public static int LevelStartXp(int level) => 50 * level * (level - 1);
+    /// <summary>레벨 L 이 시작되는 경험치: 다음 레벨까지 100 + 10 × (L − 1) (1→2 100, 2→3 110, 3→4 120 …, 10/24 결정).
+    /// 앱 GameHUD.LevelOf 와 같은 규칙</summary>
+    public static int LevelStartXp(int level)
+    {
+        int n = level - 1;   // 지나온 레벨 수
+        return 100 * n + 5 * n * (n - 1);
+    }
 
     public static int LevelOf(int xp)
     {

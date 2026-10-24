@@ -21,4 +21,5 @@ public record Spot(
     string[]? Seasons = null,     // spring · summer · autumn · winter
     string[]? Times = null,       // morning · day · evening · night
     bool Indoor = false,
-    string[]? Tastes = null);     // 어울리는 취향 코드 (photo · quiet · food · …)
+    string[]? Tastes = null,      // 어울리는 취향 코드 (photo · quiet · food · …)
+    bool Restricted = false);     // 거주자 · 관계자만 드나드는 곳 (기숙사 등). 추천 후보에서 빠진다

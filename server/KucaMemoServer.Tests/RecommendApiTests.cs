@@ -13,7 +13,7 @@ namespace KucaMemoServer.Tests;
 public class RecommendApiTests : IDisposable
 {
     // 앱의 경희스팟 일부 (Data/buildings.json 에 있음)
-    static readonly string[] Spots = ["way-473963422", "way-474085534", "way-474085535", "way-455725718", "way-474531805", "relation-8269760"];
+    static readonly string[] Spots = ["way-473963422", "way-474085534", "way-474085535", "way-455725718", "way-474531805", "way-455726113"];
     const double Lat = 37.2440, Lon = 127.0800;
 
     /// <summary>정해 둔 답을 돌려주는 가짜 AI</summary>
@@ -99,7 +99,7 @@ public class RecommendApiTests : IDisposable
     {
         string[] visited = Spots[..5];
         JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations", Body(15, visited: visited)));
-        Assert.Equal("relation-8269760", r.GetProperty("stops")[0].GetProperty("buildingId").GetString());
+        Assert.Equal(Spots[5], r.GetProperty("stops")[0].GetProperty("buildingId").GetString());
     }
 
     [Theory]
@@ -264,15 +264,25 @@ public class RecommendApiTests : IDisposable
     }
 
     [Theory]
-    [InlineData("relation-8269760", "저녁·밤 산책 코스의 끝으로 좋아요")]                       // 우정원: 마지막 문장이 "출입 제한" 주의
     [InlineData("way-474085534", "공강에 잠깐 들러 쉬거나 시험 기간 밤 산책 끝에 들르기 좋아요")]  // 중앙도서관
-    [InlineData("relation-6739958", "가는 길에 들르기 좋아요")]                                 // 기숙사: 추천 문장 없음
     public async Task 규칙_이유는_추천_문장을_고르고_주의_문장은_쓰지_않는다(string spot, string expected)
     {
         HttpClient client = Client();
         var at = await Midpoint(client, spot, spot);
         JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [spot])));
         Assert.Equal(expected, r.GetProperty("stops")[0].GetProperty("reason").GetString());
+    }
+
+    [Fact]
+    public async Task 출입_제한_스팟은_후보로_보내도_추천하지_않는다()
+    {
+        const string Dorm = "relation-8269760";   // 우정원 (spots.json restricted)
+        HttpClient client = Client();
+        var at = await Midpoint(client, Dorm, Library);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Dorm, Library])));
+        string[] ids = r.GetProperty("stops").EnumerateArray().Select(s => s.GetProperty("buildingId").GetString()!).ToArray();
+        Assert.Contains(Library, ids);
+        Assert.DoesNotContain(Dorm, ids);
     }
 
     [Fact]
