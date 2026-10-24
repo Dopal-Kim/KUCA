@@ -4,12 +4,10 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 게임 HUD.
-/// - 왼쪽 위: 캐릭터 얼굴(빛나는 고리), 레벨, 다음 레벨까지 남은 XP, 닉네임. 누르면 프로필.
-/// - 오른쪽 위: 원형 버튼 줄 (나침반=북쪽 보기, 도구, 꾸미기, 설정).
-/// - 왼쪽 아래: 공지사항 카드 (최근 공지 제목, 안 읽은 수).
-/// - 가운데 아래: 경희 로고 버튼 (몬스터볼 자리) → 메인 메뉴 (도감 · 경희몬 · 도구).
-/// - 오른쪽 아래: 주변에 있는 수집 대상 6칸.
+/// 지도 홈 HUD (디자인 v4 · docs/디자인_v4.md, 참조: 피크민 블룸 · 포켓몬 GO 지도 홈 + 네이버지도 아래 탭).
+/// - 지도는 화면 끝까지. 위 왼쪽: 흰 상태 카드 (얼굴 · 닉네임 · 레벨 · 경험치 막대, 누르면 프로필) + 티켓 칩.
+/// - 위 오른쪽: 흰 원형 버튼 세로 줄 (공지 · 사진첩 · 설정).
+/// - 아래: 흰 탭 막대 (지도 · 기록 · 경희몬 · 함께 · 나) 와 그 위 가운데 큰 초록 "산책 시작" (산책 중이면 숨기고 산책 카드가 그 자리).
 /// 캔버스와 화면은 실행 시 코드로 만든다. 경험치는 GameProgress.score 를 그대로 쓴다.
 /// </summary>
 public class GameHUD : MonoBehaviour
@@ -17,7 +15,7 @@ public class GameHUD : MonoBehaviour
     public float toastDuration = 2.5f;
 
     [Header("Content")]
-    [Tooltip("가운데 도감 버튼에 쓸 경희 로고")]
+    [Tooltip("(v4 에서 안 씀: 가운데 로고 버튼 대신 아래 탭 막대) 씬 직렬화 호환용")]
     public Texture2D logo;
     [Tooltip("공지사항 목록 JSON ({\"notices\":[{id,date,title,body}]})")]
     public TextAsset noticesJson;
@@ -38,19 +36,14 @@ public class GameHUD : MonoBehaviour
     public float portraitDistance = 2.7f;
     public float portraitFov = 22f;
 
-    static readonly Color Navy = KucaTheme.PrimaryDeep;
-    static readonly Color Crimson = KucaTheme.Crimson;
-    static readonly Color Gold = new Color(0.85f, 0.72f, 0.45f, 1f);
-    static readonly Color Glow = new Color(0.45f, 0.80f, 1f, 1f);
-    static readonly Color GlassFill = new Color(0.06f, 0.10f, 0.20f, 0.78f);
-    static readonly Color GlassEdge = new Color(0.55f, 0.82f, 1f, 0.55f);
-    static readonly Color XpPink = new Color(0.93f, 0.45f, 0.62f, 1f);
-    static readonly Color PortraitSky = new Color(0.62f, 0.80f, 0.96f, 1f);
+    static readonly Color Shade = new Color(0f, 0f, 0f, 0.14f);   // 지도 위 흰 카드 아래 그림자
 
-    const float Margin = 36f;
+    const float Margin = 32f;
+    /// <summary>아래 탭 막대 높이 (안전 영역 안)</summary>
+    const float TabBarHeight = 196f;
+    /// <summary>탭 막대 위로 산책 카드 · 시작 버튼이 놓이는 높이 (VirtualWalk.PlacePanel 이 쓴다)</summary>
+    public const float BottomReserve = TabBarHeight + 32f;
     // 아래쪽 줄은 가로가 좁은 폰(iPhone 등, 약 980 단위)에서도 겹치지 않게 작게 잡는다.
-    const float BottomSide = 22f;
-    const float BottomGap = 28f;
     const string NicknameKey = "memo_author"; // MemoBoard 와 같은 키
     const string ReadNoticesKey = "notice_read_ids";
 
@@ -71,9 +64,7 @@ public class GameHUD : MonoBehaviour
     float xpPopupTimer;
 
     // 버튼
-    RectTransform compassNeedle;
-    RectTransform logoGlow;
-    Text noticeTitle;
+    GameObject startButton;
     GameObject noticeBadge;
     Text noticeBadgeText;
     readonly List<RawImage> nearbyIcons = new List<RawImage>();
@@ -130,28 +121,31 @@ public class GameHUD : MonoBehaviour
         UIKit.Stretch(hud);
 
         LoadNotices();
-        BuildProfile();
-        BuildSideButtons();
-        BuildNoticeCard();
-        BuildLogoButton();
+        BuildStatus();
+        BuildTopButtons();
         BuildNearby();
+        BuildTabBar();
+        BuildStartButton();
 
-        toastBg = UIKit.Image(safe, "Toast", new Color(0.04f, 0.07f, 0.15f, 0.85f));
+        // 토스트: 진한 알약 (흰 카드 · 지도 어디 위에서도 읽히게), 시작 버튼 위
+        toastBg = UIKit.Image(safe, "Toast", new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.92f));
         toastBg.sprite = HudIcons.Pill;
         toastBg.type = Image.Type.Sliced;
         toastBg.pixelsPerUnitMultiplier = 1.2f;
         RectTransform tr = toastBg.rectTransform;
         tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, 420f);
-        tr.sizeDelta = new Vector2(940f, 104f);
-        toastText = UIKit.Text(toastBg.transform, "", 38, TextAnchor.MiddleCenter);
-        UIKit.Stretch(toastText.rectTransform, 30f, 10f);
+        tr.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
+        tr.sizeDelta = new Vector2(980f, 120f);
+        toastText = UIKit.Text(toastBg.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter);
+        UIKit.Stretch(toastText.rectTransform, 36f, 10f);
         toastBg.gameObject.SetActive(false);
 
-        noticeScreen = BuildScreen("NoticeScreen", "공지사항", CloseNotices, out _, out noticeList);
-        settingsScreen = BuildScreen("SettingsScreen", "설정", CloseSettings, out _, out settingsList);
-        BackButton.Attach(noticeScreen, CloseNotices);
-        BackButton.Attach(settingsScreen, CloseSettings);
+        UIKit.Page noticePage = UIKit.CreatePage(canvas.transform, "NoticeScreen", "공지사항", CloseNotices);
+        noticeScreen = noticePage.root;
+        noticeList = noticePage.content;
+        UIKit.Page settingsPage = UIKit.CreatePage(canvas.transform, "SettingsScreen", "설정", CloseSettings);
+        settingsScreen = settingsPage.root;
+        settingsList = settingsPage.content;
         BuildSettings();
         RefreshNotices();
 
@@ -211,14 +205,9 @@ public class GameHUD : MonoBehaviour
             return;
 
         nicknameText.text = Nickname;
-
-        if (compassNeedle != null && cameraFollow != null)
-            compassNeedle.localRotation = Quaternion.Euler(0f, 0f, cameraFollow.yaw);
-
-        // 로고 뒤 빛 고리가 천천히 숨 쉬듯 커졌다 작아진다.
-        float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 2.2f);
-        logoGlow.localScale = Vector3.one * (1f + 0.05f * pulse);
-        logoGlow.GetComponent<Image>().color = new Color(Glow.r, Glow.g, Glow.b, 0.65f + 0.35f * pulse);
+        // 산책 중에는 시작 버튼 자리에 산책 카드(코스 · 자유 · 산책메이트)가 뜬다
+        if (startButton.activeSelf == WalkSession.Active)
+            startButton.SetActive(!WalkSession.Active);
 
         nearbyTimer -= Time.unscaledDeltaTime;
         if (nearbyTimer <= 0f)
@@ -261,7 +250,7 @@ public class GameHUD : MonoBehaviour
         this.types = types;
 
         LevelOf(progress.score, out int level, out int xpInLevel, out int xpNeeded);
-        levelText.text = $"<size=30>LV</size> {level}";
+        levelText.text = $"Lv {level}";
         nextText.text = $"다음 레벨까지 {xpNeeded - xpInLevel} XP";
         xpFill.anchorMax = new Vector2(xpNeeded > 0 ? (float)xpInLevel / xpNeeded : 0f, 1f);
 
@@ -287,10 +276,10 @@ public class GameHUD : MonoBehaviour
         bool capped = progress.TicketCapped;
         float m = progress.ticketMeters;
         eggText.text = capped
-            ? $"{progress.tickets}장  ·  오늘 다 받음"
-            : $"{progress.tickets}장  ·  {m:N0}/{GachaRules.TicketMeters:N0}m";
+            ? $"티켓 {progress.tickets}장 · 오늘 다 받음"
+            : $"티켓 {progress.tickets}장 · {m:N0}/{GachaRules.TicketMeters:N0}m";
         eggFill.anchorMax = new Vector2(capped ? 1f : Mathf.Clamp01(m / GachaRules.TicketMeters), 1f);
-        eggFill.GetComponent<Image>().color = capped ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
+        eggFill.GetComponent<Image>().color = capped ? KucaTheme.Line : KucaTheme.Gold;
     }
 
     /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*10 XP 가 필요하다 (서버 WalkRules.LevelStartXp 와 같은 규칙).</summary>
@@ -328,57 +317,22 @@ public class GameHUD : MonoBehaviour
         safe.offsetMin = safe.offsetMax = Vector2.zero;
     }
 
-    // ---------- 왼쪽 위: 프로필 ----------
+    // ---------- 위 왼쪽: 상태 카드 (얼굴 · 닉네임 · 레벨 · 경험치) + 티켓 칩 ----------
 
-    void BuildProfile()
+    void BuildStatus()
     {
-        const float avatar = 176f;
-        RectTransform root = UIKit.Rect(hud, "Profile");
+        const float h = 156f, avatar = 124f;
+        // 카드 전체가 프로필 버튼
+        Button button = InvisibleButton(hud, "Status", () => menus.OpenProfile(), 0f);
+        RectTransform root = (RectTransform)button.transform;
         Place(root, new Vector2(0f, 1f), new Vector2(Margin, -Margin));
-        root.sizeDelta = new Vector2(560f, 280f);
-        Vector2 center = new Vector2(avatar * 0.5f + 8f, -avatar * 0.5f - 8f);
+        root.sizeDelta = new Vector2(660f, h);
+        UIInputBlocker.Register(root);
+        Image card = Floating(root, "Card", HudIcons.Pill, 1.3f);
 
-        // 레벨 카드 (얼굴 뒤에서 오른쪽으로 뻗는 유리 알약)
-        Image card = Glass(root, "LevelCard", new Vector2(430f, 128f), 64f);
-        Place(card.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x, center.y + 64f));
-        levelText = UIKit.Text(card.transform, "<size=30>LV</size> 1", 58, TextAnchor.MiddleLeft);
-        UIKit.Bold(levelText);
-        levelText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        SetBox(levelText.rectTransform, 124f, 0.42f, 1f, 24f);
-        nextText = UIKit.Text(card.transform, "", 26, TextAnchor.UpperLeft, new Color(0.8f, 0.9f, 1f, 0.85f));
-        nextText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        SetBox(nextText.rectTransform, 126f, 0.14f, 0.42f, 24f);
-        Image bar = UIKit.Image(card.transform, "XpBar", new Color(1f, 1f, 1f, 0.15f));
-        bar.sprite = HudIcons.Pill;
-        bar.type = Image.Type.Sliced;
-        bar.pixelsPerUnitMultiplier = 12f;
-        RectTransform br = bar.rectTransform;
-        br.anchorMin = new Vector2(0f, 0f);
-        br.anchorMax = new Vector2(1f, 0f);
-        br.offsetMin = new Vector2(126f, 14f);
-        br.offsetMax = new Vector2(-34f, 24f);
-        Image fill = UIKit.Image(bar.transform, "Fill", Glow);
-        fill.sprite = HudIcons.Pill;
-        fill.type = Image.Type.Sliced;
-        fill.pixelsPerUnitMultiplier = 12f;
-        xpFill = fill.rectTransform;
-        xpFill.anchorMin = Vector2.zero;
-        xpFill.anchorMax = new Vector2(0f, 1f);
-        xpFill.offsetMin = xpFill.offsetMax = Vector2.zero;
-
-        // 얼굴: 빛 고리 + 남색 테두리 + 둥근 사진. 누르면 꾸미기.
-        Button face = InvisibleButton(root, "Avatar", () => menus.OpenProfile(), avatar);
-        Place((RectTransform)face.transform, new Vector2(0f, 1f), center);
-        RectTransform ft = (RectTransform)face.transform;
-        ft.pivot = new Vector2(0.5f, 0.5f);
-        UIInputBlocker.Register(ft);
-        Image glow = Circle(ft, "Glow", Glow, avatar * 1.42f);
-        glow.sprite = HudIcons.GlowRing;
-        Place(glow.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image rim = Circle(ft, "Rim", Navy, avatar - 6f);
-        Place(rim.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image mask = Circle(rim.transform, "Mask", PortraitSky, avatar - 22f);
-        Place(mask.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        // 얼굴: 옅은 초록 원 안의 3D 초상
+        Image mask = Circle(card.transform, "Face", KucaTheme.PrimarySoft, avatar);
+        Place(mask.rectTransform, new Vector2(0f, 0.5f), new Vector2((h - avatar) / 2f, 0f));
         mask.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         portraitImage = new GameObject("Portrait", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         portraitImage.transform.SetParent(mask.transform, false);
@@ -386,70 +340,79 @@ public class GameHUD : MonoBehaviour
         UIKit.Stretch(portraitImage.rectTransform);
         portraitImage.enabled = false;
 
-        // 닉네임 알약 (얼굴 아래)
-        Image nick = Glass(root, "Nickname", new Vector2(230f, 64f), 32f);
-        Place(nick.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f));
-        nicknameText = UIKit.Text(nick.transform, defaultNickname, 32, TextAnchor.MiddleCenter);
-        UIKit.Bold(nicknameText);
-        UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
+        float left = h - 6f;
+        nicknameText = UIKit.Bold(UIKit.Text(card.transform, defaultNickname, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        nicknameText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        SetBox(nicknameText.rectTransform, left, 0.52f, 0.92f, 170f);
+        levelText = UIKit.Bold(UIKit.Text(card.transform, "Lv 1", KucaTheme.Label, TextAnchor.MiddleRight, KucaTheme.PrimaryDeep));
+        SetBox(levelText.rectTransform, left, 0.52f, 0.92f, 40f);
 
-        // 티켓 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 티켓 1장
-        Image eggPill = Glass(root, "TicketGauge", new Vector2(300f, 60f), 30f);
-        Place(eggPill.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f - 64f - 12f));
-        Image eggIcon = UIKit.Image(eggPill.transform, "Ticket", new Color(1f, 0.93f, 0.78f));
-        eggIcon.sprite = HudIcons.Ticket;
-        eggIcon.rectTransform.anchorMin = eggIcon.rectTransform.anchorMax = eggIcon.rectTransform.pivot = new Vector2(0f, 0.5f);
-        eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
-        eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
-        eggText = UIKit.Text(eggPill.transform, "", 26, TextAnchor.MiddleLeft);
-        UIKit.Bold(eggText);
+        Image bar = UIKit.Image(card.transform, "XpBar", KucaTheme.Fill);
+        bar.sprite = HudIcons.Pill;
+        bar.type = Image.Type.Sliced;
+        bar.pixelsPerUnitMultiplier = 8f;
+        SetBox(bar.rectTransform, left, 0.40f, 0.48f, 40f);
+        Image fill = UIKit.Image(bar.transform, "Fill", KucaTheme.Primary);
+        fill.sprite = HudIcons.Pill;
+        fill.type = Image.Type.Sliced;
+        fill.pixelsPerUnitMultiplier = 8f;
+        xpFill = fill.rectTransform;
+        xpFill.anchorMin = Vector2.zero;
+        xpFill.anchorMax = new Vector2(0f, 1f);
+        xpFill.offsetMin = xpFill.offsetMax = Vector2.zero;
+        nextText = UIKit.Text(card.transform, "", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        nextText.horizontalOverflow = HorizontalWrapMode.Overflow;
+        SetBox(nextText.rectTransform, left, 0.06f, 0.36f, 40f);
+
+        // 티켓 칩 (상태 카드 아래): 걸은 만큼 차고, 1km 가 되면 티켓 1장
+        RectTransform chip = UIKit.Rect(hud, "TicketChip");
+        Place(chip, new Vector2(0f, 1f), new Vector2(Margin, -Margin - h - KucaTheme.Space2));
+        chip.sizeDelta = new Vector2(520f, 104f);
+        Image chipFace = Floating(chip, "Card", HudIcons.Pill, 2f);
+        Image ticket = UIKit.Image(chipFace.transform, "Ticket", KucaTheme.Gold);
+        ticket.sprite = HudIcons.Ticket;
+        Place(ticket.rectTransform, new Vector2(0f, 0.5f), new Vector2(28f, 0f));
+        ticket.rectTransform.sizeDelta = new Vector2(60f, 60f);
+        eggText = UIKit.Bold(UIKit.Text(chipFace.transform, "", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.Ink));
         eggText.horizontalOverflow = HorizontalWrapMode.Overflow;
-        eggText.rectTransform.anchorMin = new Vector2(0f, 0.25f);
-        eggText.rectTransform.anchorMax = new Vector2(1f, 1f);
-        eggText.rectTransform.offsetMin = new Vector2(62f, 0f);
-        eggText.rectTransform.offsetMax = new Vector2(-12f, 0f);
-        Image eggBar = UIKit.Image(eggPill.transform, "Bar", new Color(1f, 1f, 1f, 0.15f));
+        SetBox(eggText.rectTransform, 104f, 0.34f, 0.94f, 32f);
+        Image eggBar = UIKit.Image(chipFace.transform, "Bar", KucaTheme.Fill);
         eggBar.sprite = HudIcons.Pill;
         eggBar.type = Image.Type.Sliced;
-        eggBar.pixelsPerUnitMultiplier = 12f;
-        eggBar.rectTransform.anchorMin = new Vector2(0f, 0f);
-        eggBar.rectTransform.anchorMax = new Vector2(1f, 0f);
-        eggBar.rectTransform.offsetMin = new Vector2(62f, 9f);
-        eggBar.rectTransform.offsetMax = new Vector2(-18f, 17f);
-        Image eggBarFill = UIKit.Image(eggBar.transform, "Fill", new Color(1f, 0.85f, 0.4f));
+        eggBar.pixelsPerUnitMultiplier = 8f;
+        SetBox(eggBar.rectTransform, 104f, 0.18f, 0.27f, 40f);
+        Image eggBarFill = UIKit.Image(eggBar.transform, "Fill", KucaTheme.Gold);
         eggBarFill.sprite = HudIcons.Pill;
         eggBarFill.type = Image.Type.Sliced;
-        eggBarFill.pixelsPerUnitMultiplier = 12f;
+        eggBarFill.pixelsPerUnitMultiplier = 8f;
         eggFill = eggBarFill.rectTransform;
         eggFill.anchorMin = Vector2.zero;
         eggFill.anchorMax = new Vector2(0f, 1f);
         eggFill.offsetMin = eggFill.offsetMax = Vector2.zero;
 
-        // "+N XP" (레벨 카드 아래 오른쪽에 잠깐)
-        Image pill = UIKit.Image(root, "XpPopup", XpPink);
+        // "+N XP" (티켓 칩 오른쪽에 잠깐)
+        Image pill = UIKit.Image(hud, "XpPopup", KucaTheme.Primary);
         pill.sprite = HudIcons.Pill;
         pill.type = Image.Type.Sliced;
-        pill.pixelsPerUnitMultiplier = 120f / 64f;
+        pill.pixelsPerUnitMultiplier = 1.4f;
         RectTransform pr = pill.rectTransform;
-        Place(pr, new Vector2(0f, 1f), new Vector2(center.x + 170f, -avatar - 26f));
-        pr.sizeDelta = new Vector2(190f, 64f);
-        xpPopupText = UIKit.Text(pill.transform, "", 38, TextAnchor.MiddleCenter);
-        UIKit.Bold(xpPopupText);
+        Place(pr, new Vector2(0f, 1f), new Vector2(Margin + 520f + KucaTheme.Space2, -Margin - h - KucaTheme.Space2 - 8f));
+        pr.sizeDelta = new Vector2(220f, 88f);
+        xpPopupText = UIKit.Bold(UIKit.Text(pill.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter, Color.white));
         UIKit.Stretch(xpPopupText.rectTransform);
         xpPopup = pill.gameObject.AddComponent<CanvasGroup>();
         xpPopup.blocksRaycasts = false;
         pill.gameObject.SetActive(false);
     }
 
-    // ---------- 오른쪽 위: 원형 버튼 줄 ----------
+    // ---------- 위 오른쪽: 공지 · 사진첩 · 설정 ----------
 
-    void BuildSideButtons()
+    void BuildTopButtons()
     {
-        const float size = 120f, gap = 26f;
+        const float size = 120f, gap = 20f;
         var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
-            ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
-            ("Match", HudIcons.Partner, MatchScreen.Open), // 산책메이트 매칭 (v2 에서 도구 버튼 자리)
+            ("Notices", HudIcons.Bell, OpenNotices),
             ("Album", HudIcons.Photos, OpenAlbum),
             ("Settings", HudIcons.Gear, OpenSettings),
         };
@@ -457,141 +420,134 @@ public class GameHUD : MonoBehaviour
         {
             RectTransform face = RoundButton(hud, buttons[i].name, size, buttons[i].action);
             Place(face, new Vector2(1f, 1f), new Vector2(-Margin, -Margin - i * (size + gap)));
-            if (buttons[i].name == "Album")
+            Image icon = UIKit.Image(face.Find("Face"), "Icon", KucaTheme.Ink);
+            icon.sprite = buttons[i].icon;
+            icon.rectTransform.sizeDelta = new Vector2(size * 0.5f, size * 0.5f);
+            Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+            if (buttons[i].name == "Notices")
+            {
+                // 안 읽은 공지 수
+                Image badge = Circle(face, "Badge", KucaTheme.Crimson, 48f);
+                Place(badge.rectTransform, new Vector2(1f, 1f), new Vector2(6f, 6f));
+                noticeBadgeText = UIKit.Bold(UIKit.Text(badge.transform, "", KucaTheme.Caption - 6, TextAnchor.MiddleCenter, Color.white));
+                UIKit.Stretch(noticeBadgeText.rectTransform);
+                noticeBadge = badge.gameObject;
+            }
+            else if (buttons[i].name == "Album")
             {
                 // 내 게시물에 새 좋아요가 오면 빨간 점
-                albumBadge = Circle(face, "Badge", new Color(0.93f, 0.25f, 0.33f), 34f);
+                albumBadge = Circle(face, "Badge", KucaTheme.Crimson, 34f);
                 Place(albumBadge.rectTransform, new Vector2(1f, 1f), new Vector2(-4f, -4f));
                 albumBadge.gameObject.SetActive(false);
             }
-            Image icon;
-            if (buttons[i].icon != null)
-            {
-                icon = UIKit.Image(face.Find("Face"), "Icon", Navy);
-                icon.sprite = buttons[i].icon;
-                icon.rectTransform.sizeDelta = new Vector2(size * 0.52f, size * 0.52f);
-            }
-            else
-            {
-                icon = UIKit.Image(face.Find("Face"), "Needle", Color.white);
-                icon.sprite = HudIcons.Needle;
-                icon.rectTransform.sizeDelta = new Vector2(size * 0.7f, size * 0.7f);
-                compassNeedle = icon.rectTransform;
-            }
-            Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         }
     }
 
-    // ---------- 왼쪽 아래: 공지 카드 ----------
+    // ---------- 아래: 탭 막대 (네이버지도 · 토스 아래 탭: 아이콘 + 이름표) ----------
 
-    void BuildNoticeCard()
+    void BuildTabBar()
     {
-        Button button = InvisibleButton(hud, "NoticeCard", OpenNotices, 0f);
-        RectTransform root = (RectTransform)button.transform;
-        Place(root, new Vector2(0f, 0f), new Vector2(BottomSide, BottomGap));
-        root.sizeDelta = new Vector2(300f, 116f);
-        UIInputBlocker.Register(root);
+        Image bar = UIKit.Image(hud, "TabBar", KucaTheme.Card, raycast: true);
+        bar.sprite = HudIcons.Rounded;
+        bar.type = Image.Type.Sliced;
+        bar.pixelsPerUnitMultiplier = 0.34f;
+        RectTransform br = bar.rectTransform;
+        br.anchorMin = Vector2.zero;
+        br.anchorMax = new Vector2(1f, 0f);
+        br.pivot = new Vector2(0.5f, 0f);
+        br.offsetMin = new Vector2(0f, -400f);   // 아래 둥근 모서리는 홈 표시줄 아래로 숨긴다
+        br.offsetMax = new Vector2(0f, TabBarHeight);
+        UIInputBlocker.Register(br);
+        Image line = UIKit.Image(bar.transform, "Line", KucaTheme.Line);
+        line.rectTransform.anchorMin = new Vector2(0f, 1f);
+        line.rectTransform.anchorMax = Vector2.one;
+        line.rectTransform.offsetMin = new Vector2(48f, -2f);
+        line.rectTransform.offsetMax = new Vector2(-48f, 0f);
 
-        Image card = Glass(root, "Card", root.sizeDelta, 58f);
-        UIKit.Stretch(card.rectTransform.parent as RectTransform);
-
-        Image hex = UIKit.Image(card.transform, "Emblem", Color.white);
-        hex.sprite = HudIcons.Hexagon;
-        Place(hex.rectTransform, new Vector2(0f, 0.5f), new Vector2(10f, 0f));
-        hex.rectTransform.sizeDelta = new Vector2(84f, 84f);
-        Image bell = UIKit.Image(hex.transform, "Bell", Gold);
-        bell.sprite = HudIcons.Bell;
-        Place(bell.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        bell.rectTransform.sizeDelta = new Vector2(44f, 44f);
-
-        Image badge = Circle(hex.transform, "Badge", Crimson, 38f);
-        Place(badge.rectTransform, new Vector2(1f, 1f), new Vector2(8f, 6f));
-        noticeBadgeText = UIKit.Text(badge.transform, "", 22, TextAnchor.MiddleCenter);
-        UIKit.Bold(noticeBadgeText);
-        UIKit.Stretch(noticeBadgeText.rectTransform);
-        noticeBadge = badge.gameObject;
-
-        Text title = UIKit.Text(card.transform, "공지사항", 32, TextAnchor.LowerLeft);
-        UIKit.Bold(title);
-        SetBox(title.rectTransform, 106f, 0.5f, 0.92f, 40f);
-        noticeTitle = UIKit.Text(card.transform, "", 23, TextAnchor.UpperLeft, new Color(0.8f, 0.9f, 1f, 0.85f));
-        noticeTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
-        SetBox(noticeTitle.rectTransform, 108f, 0.1f, 0.48f, 40f);
-
-        Image chevron = UIKit.Image(card.transform, "Chevron", new Color(1f, 1f, 1f, 0.85f));
-        chevron.sprite = HudIcons.Chevron;
-        Place(chevron.rectTransform, new Vector2(1f, 0.5f), new Vector2(-12f, 0f));
-        chevron.rectTransform.sizeDelta = new Vector2(30f, 30f);
+        var tabs = new (string label, Sprite icon, UnityEngine.Events.UnityAction action)[]
+        {
+            ("지도", HudIcons.Pin, () => { if (cameraFollow != null) cameraFollow.ResetNorthUp(); }),   // 이미 지도: 북쪽 위로 되돌리기
+            ("기록", HudIcons.Footprints, WalkHistoryScreen.Show),
+            ("경희몬", HudIcons.Monster, () => menus.OpenMainMenu()),
+            ("함께", HudIcons.Partner, MatchScreen.Open),
+            ("나", HudIcons.Person, () => menus.OpenProfile()),
+        };
+        for (int i = 0; i < tabs.Length; i++)
+        {
+            Button b = InvisibleButton(bar.transform, tabs[i].label, tabs[i].action, 0f);
+            RectTransform r = (RectTransform)b.transform;
+            r.anchorMin = new Vector2(i / (float)tabs.Length, 1f);
+            r.anchorMax = new Vector2((i + 1) / (float)tabs.Length, 1f);
+            r.pivot = new Vector2(0.5f, 1f);
+            r.offsetMin = new Vector2(0f, -TabBarHeight);
+            r.offsetMax = Vector2.zero;
+            Color c = i == 0 ? KucaTheme.Primary : KucaTheme.InkMuted;   // 지금 보는 탭 = 지도
+            Image icon = UIKit.Image(r, "Icon", c);
+            icon.sprite = tabs[i].icon;
+            Place(icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f));
+            icon.rectTransform.sizeDelta = new Vector2(76f, 76f);
+            Text label = UIKit.Text(r, tabs[i].label, KucaTheme.Caption, TextAnchor.MiddleCenter, c);
+            if (i == 0) UIKit.Bold(label);
+            SetBox(label.rectTransform, 0f, 0.14f, 0.40f, 0f);
+            if (i == 2)
+            {
+                // 받을 보상 · 뽑을 티켓이 있으면 빨간 점 (KhuMenus → SetMenuBadge)
+                menuBadge = Circle(icon.transform, "Badge", KucaTheme.Crimson, 30f);
+                Place(menuBadge.rectTransform, new Vector2(1f, 1f), new Vector2(6f, 6f));
+                menuBadge.gameObject.SetActive(false);
+            }
+        }
     }
 
-    // ---------- 가운데 아래: 경희 로고 ----------
+    // ---------- 아래 가운데: 산책 시작 (피크민 블룸 · 포켓몬 GO 의 가운데 큰 버튼) ----------
 
-    void BuildLogoButton()
+    void BuildStartButton()
     {
-        const float size = 188f;
-        Button button = InvisibleButton(hud, "LogoButton", () => menus.OpenMainMenu(), size);
+        Button button = InvisibleButton(hud, "StartWalk", RoutePlanner.Open, 0f);
         RectTransform root = (RectTransform)button.transform;
-        Place(root, new Vector2(0.5f, 0f), new Vector2(0f, BottomGap + 6f));
+        Place(root, new Vector2(0.5f, 0f), new Vector2(0f, BottomReserve));
+        root.sizeDelta = new Vector2(560f, KucaTheme.ButtonHeight);
         UIInputBlocker.Register(root);
-
-        Image glow = Circle(root, "Glow", Glow, size * 1.42f);
-        glow.sprite = HudIcons.GlowRing;
-        Place(glow.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        logoGlow = glow.rectTransform;
-        Image shadow = Circle(root, "Shadow", new Color(0f, 0f, 0f, 0.3f), size);
-        Place(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -6f));
-        Image ring = Circle(root, "Ring", Gold, size);
-        Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image face = Circle(ring.transform, "Face", Color.white, size - 12f);
-        Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        // 받을 퀘스트 보상이 있으면 빨간 점
-        menuBadge = Circle(root, "Badge", new Color(0.93f, 0.25f, 0.33f), 46f);
-        Place(menuBadge.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(size * 0.36f, size * 0.36f));
-        menuBadge.gameObject.SetActive(false);
-
-        if (logo != null)
-        {
-            var raw = new GameObject("Logo", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            raw.transform.SetParent(face.transform, false);
-            raw.texture = logo;
-            raw.raycastTarget = false;
-            // 가로로 긴 교표가 원 안에 들어가도록 지름의 80% 폭으로 맞춘다.
-            float w = (size - 12f) * 0.8f;
-            Place(raw.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 3f));
-            raw.rectTransform.sizeDelta = new Vector2(w, w * logo.height / logo.width);
-        }
-        else
-        {
-            Text t = UIKit.Text(face.transform, "경희", 60, TextAnchor.MiddleCenter, Crimson);
-            UIKit.Bold(t);
-            UIKit.Stretch(t.rectTransform);
-        }
+        startButton = root.gameObject;
+        Image face = Floating(root, "Face", HudIcons.Pill, 1f);
+        face.color = KucaTheme.Primary;
+        Image icon = UIKit.Image(face.transform, "Icon", Color.white);
+        icon.sprite = HudIcons.Footprints;
+        Place(icon.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-150f, 0f));
+        icon.rectTransform.sizeDelta = new Vector2(68f, 68f);
+        Text t = UIKit.Bold(UIKit.Text(face.transform, "산책 시작", KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
+        UIKit.Stretch(t.rectTransform);
+        t.rectTransform.offsetMin = new Vector2(90f, 0f);
     }
 
-    // ---------- 오른쪽 아래: 주변 ----------
+    // ---------- 오른쪽: 주변 (자연 출현이 켜진 경우만) ----------
 
     void BuildNearby()
     {
-        const float cell = 78f, gap = 9f, pad = 13f;
-        Vector2 size = new Vector2(cell * 3f + gap * 2f + pad * 2f, cell * 2f + gap + pad * 2f);
+        const float cell = 96f, gap = 10f, pad = 16f;
+        Vector2 size = new Vector2(cell * 2f + gap + pad * 2f, cell * 3f + gap * 2f + pad * 2f + 56f);
         Button button = InvisibleButton(hud, "Nearby", ShowNearbyToast, 0f);
         RectTransform root = (RectTransform)button.transform;
         nearbyRoot = root.gameObject;
-        Place(root, new Vector2(1f, 0f), new Vector2(-BottomSide, BottomGap));
+        Place(root, new Vector2(1f, 1f), new Vector2(-Margin, -Margin - 3f * 140f - KucaTheme.Space2));
         root.sizeDelta = size;
         UIInputBlocker.Register(root);
 
-        Image panel = Glass(root, "Panel", size, 30f);
-        UIKit.Stretch(panel.rectTransform.parent as RectTransform);
+        Image panel = Floating(root, "Panel", HudIcons.Rounded, 0.5f);
+        Text tag = UIKit.Bold(UIKit.Text(panel.transform, "주변", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.Ink));
+        tag.rectTransform.anchorMin = new Vector2(0f, 1f);
+        tag.rectTransform.anchorMax = Vector2.one;
+        tag.rectTransform.offsetMin = new Vector2(0f, -60f);
+        tag.rectTransform.offsetMax = new Vector2(0f, -8f);
         for (int i = 0; i < 6; i++)
         {
-            int col = i % 3, row = i / 3;
-            Image slot = UIKit.Image(panel.transform, "Slot" + i, new Color(1f, 1f, 1f, 0.1f));
+            int col = i % 2, row = i / 2;
+            Image slot = UIKit.Image(panel.transform, "Slot" + i, KucaTheme.Fill);
             slot.sprite = HudIcons.Rounded;
             slot.type = Image.Type.Sliced;
             RectTransform sr = slot.rectTransform;
             sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(0f, 1f);
-            sr.anchoredPosition = new Vector2(pad - 3f + col * (cell + gap), -(pad - 3f) - row * (cell + gap));
+            sr.anchoredPosition = new Vector2(pad + col * (cell + gap), -56f - pad - row * (cell + gap));
             sr.sizeDelta = new Vector2(cell, cell);
             // 동물 피규어 썸네일 (칸보다 살짝 크게 그려 피규어가 꽉 차 보이게)
             var icon = new GameObject("Icon", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
@@ -602,16 +558,24 @@ public class GameHUD : MonoBehaviour
             icon.gameObject.SetActive(false);
             nearbyIcons.Add(icon);
         }
+    }
 
-        Image tag = UIKit.Image(root, "Tag", Navy);
-        tag.sprite = HudIcons.Pill;
-        tag.type = Image.Type.Sliced;
-        tag.pixelsPerUnitMultiplier = 120f / 38f;
-        Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(14f, 20f));
-        tag.rectTransform.sizeDelta = new Vector2(92f, 38f);
-        Text t = UIKit.Text(tag.transform, "주변", 22, TextAnchor.MiddleCenter);
-        UIKit.Bold(t);
-        UIKit.Stretch(t.rectTransform);
+    /// <summary>지도 위에 뜬 흰 면 (아래로 살짝 그림자). 반환값 = 흰 면</summary>
+    static Image Floating(RectTransform parent, string name, Sprite sprite, float ppuMultiplier)
+    {
+        Image shadow = UIKit.Image(parent, name + "Shadow", Shade);
+        shadow.sprite = sprite;
+        shadow.type = Image.Type.Sliced;
+        shadow.pixelsPerUnitMultiplier = ppuMultiplier;
+        UIKit.Stretch(shadow.rectTransform);
+        shadow.rectTransform.offsetMin = new Vector2(0f, -6f);
+        shadow.rectTransform.offsetMax = new Vector2(0f, -6f);
+        Image face = UIKit.Image(parent, name, KucaTheme.Card);
+        face.sprite = sprite;
+        face.type = Image.Type.Sliced;
+        face.pixelsPerUnitMultiplier = ppuMultiplier;
+        UIKit.Stretch(face.rectTransform);
+        return face;
     }
 
     readonly List<Collectible> nearbyBuffer = new List<Collectible>();
@@ -689,7 +653,7 @@ public class GameHUD : MonoBehaviour
         portraitCam = camGo.GetComponent<Camera>();
         portraitCam.targetTexture = portraitTexture;
         portraitCam.clearFlags = CameraClearFlags.SolidColor;
-        portraitCam.backgroundColor = PortraitSky;
+        portraitCam.backgroundColor = KucaTheme.PrimarySoft;
         portraitCam.cullingMask = 1 << character.gameObject.layer;
         portraitCam.fieldOfView = portraitFov;
         portraitCam.nearClipPlane = 1f;
@@ -723,7 +687,7 @@ public class GameHUD : MonoBehaviour
     Image albumBadge, menuBadge;
 
 
-    /// <summary>가운데 경희 로고 버튼의 "받을 퀘스트 보상 있음" 점</summary>
+    /// <summary>아래 탭 "경희몬" 의 "받을 보상 · 뽑을 티켓 있음" 점</summary>
     public void SetMenuBadge(bool on)
     {
         if (menuBadge == null) return;
@@ -782,7 +746,6 @@ public class GameHUD : MonoBehaviour
                 unread++;
         noticeBadge.SetActive(unread > 0);
         noticeBadgeText.text = unread > 9 ? "9+" : unread.ToString();
-        noticeTitle.text = notices.notices.Count > 0 ? Ellipsize(notices.notices[0].title, 7) : "새 공지가 없어요";
     }
 
     void OpenNotices()
@@ -802,18 +765,16 @@ public class GameHUD : MonoBehaviour
         Clear(noticeList);
         if (notices.notices.Count == 0)
         {
-            UIKit.Size(UIKit.Text(noticeList, "새 공지가 없어요.", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted), 200f);
+            UIKit.EmptyState(noticeList, "새 공지가 없어요", "학교 · 앱 소식이 생기면 여기에 올라와요.");
             return;
         }
         foreach (var nt in notices.notices)
         {
             bool isNew = !readNotices.Contains(nt.id);
-            Image card = Card(noticeList, nt.id);
-            UIKit.Vertical(card, 14f, new RectOffset(40, 40, 32, 36));
-            UIKit.Text(card.transform, (isNew ? "<color=#A6192E><b>NEW</b></color>  " : "") + nt.date, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
-            Text title = UIKit.Text(card.transform, nt.title, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink);
-            UIKit.Bold(title);
-            UIKit.Text(card.transform, nt.body, KucaTheme.Body, TextAnchor.UpperLeft, KucaTheme.Ink);
+            RectTransform card = UIKit.CardBox(noticeList, nt.id, 16f);
+            UIKit.Text(card, (isNew ? "<color=#A6192E><b>NEW</b></color>  " : "") + nt.date, KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+            UIKit.Bold(UIKit.Paragraph(card, nt.title, KucaTheme.Heading, KucaTheme.Ink));
+            UIKit.Paragraph(card, nt.body, KucaTheme.Body, KucaTheme.Ink);
         }
     }
 
@@ -863,13 +824,13 @@ public class GameHUD : MonoBehaviour
         RectTransform nick = Padded(profileGroup, "Nickname");
         UIKit.Text(nick, "닉네임", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         RectTransform row = UIKit.Rect(nick, "Row");
-        UIKit.Size(row, 110f);
+        UIKit.Size(row, KucaTheme.TouchMin);
         var h = UIKit.Horizontal(row, 20f);
         h.childForceExpandWidth = false;
         nicknameInput = UIKit.Input(row, defaultNickname, KucaTheme.Body, false, 12);
-        UIKit.Size(nicknameInput, 110f, -1f, 1f);
+        UIKit.Size(nicknameInput, KucaTheme.TouchMin, -1f, 1f);
         Button save = UIKit.Button(row, "저장", SaveNickname, KucaTheme.Primary, KucaTheme.Body);
-        UIKit.Size(save, 110f, 180f);
+        UIKit.Size(save, KucaTheme.TouchMin, 200f);
         UIKit.Text(nick, "메모를 남길 때도 이 이름이 쓰여요.", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         UIKit.ListRow(profileGroup, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); });
 
@@ -910,15 +871,15 @@ public class GameHUD : MonoBehaviour
         RectTransform server = Padded(advanced, "Server");
         UIKit.Text(server, "메모 서버", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         RectTransform srow = UIKit.Rect(server, "Row");
-        UIKit.Size(srow, 110f);
+        UIKit.Size(srow, KucaTheme.TouchMin);
         var sh = UIKit.Horizontal(srow, 20f);
         sh.childForceExpandWidth = false;
         serverInput = UIKit.Input(srow, "비우면 기본 서버", KucaTheme.Label, false, 80);
         serverInput.keyboardType = TouchScreenKeyboardType.URL;
-        UIKit.Size(serverInput, 110f, -1f, 1f);
+        UIKit.Size(serverInput, KucaTheme.TouchMin, -1f, 1f);
         Button check = UIKit.Button(srow, "연결", SaveServer, KucaTheme.PrimarySoft, KucaTheme.Body);
         check.GetComponentInChildren<Text>().color = KucaTheme.PrimaryDeep;
-        UIKit.Size(check, 110f, 180f);
+        UIKit.Size(check, KucaTheme.TouchMin, 200f);
         serverStatus = UIKit.Text(server, "", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
 
         RectTransform danger = UIKit.ListGroup(settingsList, null);
@@ -1009,90 +970,13 @@ public class GameHUD : MonoBehaviour
         fill?.Invoke();
     }
 
-    /// <summary>제목 · 요약 · 왼쪽 위 닫기(×)와 스크롤 목록이 있는 밝은 전체 화면 (공지 · 설정)</summary>
-    GameObject BuildScreen(string name, string titleText, UnityEngine.Events.UnityAction onClose, out Text summary, out RectTransform list)
-    {
-        Image root = UIKit.Image(canvas.transform, name, KucaTheme.Surface, raycast: true);
-        UIKit.Stretch(root.rectTransform);
-        RectTransform inner = UIKit.Rect(root.transform, "Inner");
-        inner.anchorMin = safe.anchorMin;
-        inner.anchorMax = safe.anchorMax;
-        inner.offsetMin = inner.offsetMax = Vector2.zero;
-
-        RectTransform head = UIKit.Rect(inner, "Header");
-        head.anchorMin = new Vector2(0f, 1f);
-        head.anchorMax = new Vector2(1f, 1f);
-        head.pivot = new Vector2(0.5f, 1f);
-        head.offsetMin = head.offsetMax = Vector2.zero;
-        head.sizeDelta = new Vector2(0f, 200f);
-
-        Image close = UIKit.Image(head, "Close", new Color(1f, 1f, 1f, 0f), raycast: true);
-        Place(close.rectTransform, new Vector2(0f, 1f), new Vector2(30f, -36f));
-        close.rectTransform.pivot = new Vector2(0f, 1f);
-        close.rectTransform.sizeDelta = new Vector2(KucaTheme.TouchMin, KucaTheme.TouchMin);
-        close.gameObject.AddComponent<Button>().onClick.AddListener(onClose);
-        Image x = UIKit.Image(close.transform, "Icon", KucaTheme.Ink);
-        x.sprite = HudIcons.Close;
-        Place(x.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        x.rectTransform.sizeDelta = new Vector2(44f, 44f);
-
-        Text title = UIKit.Text(head, titleText, KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink);
-        UIKit.Bold(title);
-        RectTransform tr = title.rectTransform;
-        tr.anchorMin = new Vector2(0f, 1f);
-        tr.anchorMax = new Vector2(1f, 1f);
-        tr.pivot = new Vector2(0.5f, 1f);
-        tr.offsetMin = new Vector2(140f, -132f);
-        tr.offsetMax = new Vector2(-50f, -36f);
-
-        summary = UIKit.Text(head, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
-        RectTransform smr = summary.rectTransform;
-        smr.anchorMin = new Vector2(0f, 0f);
-        smr.anchorMax = new Vector2(1f, 0f);
-        smr.pivot = new Vector2(0.5f, 0f);
-        smr.offsetMin = new Vector2(140f, 16f);
-        smr.offsetMax = new Vector2(-50f, 64f);
-
-        RectTransform area = UIKit.Rect(inner, "List");
-        UIKit.StretchBetween(area, 0f, 200f);
-        list = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset(36, 36, 8, 60));
-
-        root.gameObject.SetActive(false);
-        return root.gameObject;
-    }
-
-    /// <summary>테두리가 은은히 빛나는 유리 패널. 반환값은 안쪽 면(내용을 넣는 곳), 바깥 테두리는 그 부모.</summary>
-    static Image Glass(Transform parent, string name, Vector2 size, float radius)
-    {
-        Image edge = UIKit.Image(parent, name, GlassEdge);
-        edge.sprite = HudIcons.Pill;
-        edge.type = Image.Type.Sliced;
-        edge.pixelsPerUnitMultiplier = 60f / radius;
-        edge.rectTransform.sizeDelta = size;
-        Image fill = UIKit.Image(edge.transform, "Fill", GlassFill);
-        fill.sprite = HudIcons.Pill;
-        fill.type = Image.Type.Sliced;
-        fill.pixelsPerUnitMultiplier = 60f / Mathf.Max(radius - 3f, 1f);
-        UIKit.Stretch(fill.rectTransform, 3f, 3f);
-        return fill;
-    }
-
-    static Image Card(Transform parent, string name)
-    {
-        Image card = UIKit.Image(parent, name, KucaTheme.Card);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.6f;
-        return card;
-    }
-
     /// <summary>그림자 + 흰 원 얼굴(이름 "Face")을 가진 원형 버튼</summary>
     static RectTransform RoundButton(Transform parent, string name, float size, UnityEngine.Events.UnityAction onClick)
     {
         Button button = InvisibleButton(parent, name, onClick, size);
         RectTransform root = (RectTransform)button.transform;
         UIInputBlocker.Register(root);
-        Image shadow = Circle(root, "Shadow", new Color(0f, 0f, 0f, 0.28f), size);
+        Image shadow = Circle(root, "Shadow", Shade, size);
         Place(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -5f));
         Image face = Circle(root, "Face", Color.white, size);
         Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
@@ -1134,7 +1018,6 @@ public class GameHUD : MonoBehaviour
         rt.offsetMax = new Vector2(-right, 0f);
     }
 
-    static string Ellipsize(string s, int max) => string.IsNullOrEmpty(s) || s.Length <= max ? s : s.Substring(0, max) + "…";
 
     static void Clear(RectTransform content)
     {

@@ -185,7 +185,7 @@ public static class TopMap
         Image frame = UIKit.Image(parent, name, new Color(0.55f, 0.72f, 0.42f));
         frame.sprite = HudIcons.Rounded;
         frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 1f;
+        frame.pixelsPerUnitMultiplier = 0.34f;   // v4 카드와 같은 모서리 (약 48)
         frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         var mm = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
         mm.transform.SetParent(frame.transform, false);
