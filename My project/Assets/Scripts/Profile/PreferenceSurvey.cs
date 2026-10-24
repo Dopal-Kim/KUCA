@@ -116,7 +116,7 @@ public class PreferenceSurvey : MonoBehaviour
             b.onClick.AddListener(() => Toggle(c));
             row.gameObject.AddComponent<PressScale>();
             Text t = UIKit.Text(row.transform, label, 40, TextAnchor.MiddleLeft, on ? Color.white : Ink);
-            t.fontStyle = FontStyle.Bold;
+            UIKit.Bold(t);
             t.rectTransform.anchorMin = new Vector2(0f, sub.Length > 0 ? 0.42f : 0f);
             t.rectTransform.anchorMax = Vector2.one;
             t.rectTransform.offsetMin = new Vector2(44f, 0f);
@@ -144,7 +144,7 @@ public class PreferenceSurvey : MonoBehaviour
             if (on)
             {
                 Text check = UIKit.Text(mark.transform, "✓", 34, TextAnchor.MiddleCenter, Accent);
-                check.fontStyle = FontStyle.Bold;
+                UIKit.Bold(check);
                 UIKit.Stretch(check.rectTransform);
             }
         }
@@ -244,7 +244,7 @@ public class PreferenceSurvey : MonoBehaviour
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         Text brand = UIKit.Text(safe, "산책 취향 알려 주기", 32, TextAnchor.MiddleLeft, Accent);
-        brand.fontStyle = FontStyle.Bold;
+        UIKit.Bold(brand);
         Box(brand.rectTransform, 60f, 50f, 200f, 50f);
         stepText = UIKit.Text(safe, "", 30, TextAnchor.MiddleRight, InkQuiet);
         Box(stepText.rectTransform, 60f, 50f, 60f, 50f);
@@ -267,7 +267,7 @@ public class PreferenceSurvey : MonoBehaviour
         }
 
         titleText = UIKit.Text(safe, "", 56, TextAnchor.MiddleLeft, Ink);
-        titleText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(titleText);
         Box(titleText.rectTransform, 60f, 180f, 60f, 90f);
         hintText = UIKit.Text(safe, "", 32, TextAnchor.MiddleLeft, InkQuiet);
         Box(hintText.rectTransform, 60f, 270f, 60f, 50f);
@@ -286,7 +286,7 @@ public class PreferenceSurvey : MonoBehaviour
         ni.sprite = HudIcons.Pill;
         ni.type = Image.Type.Sliced;
         ni.pixelsPerUnitMultiplier = 120f / 124f;
-        nextButton.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+        UIKit.Bold(nextButton.GetComponentInChildren<Text>());
         RectTransform nr = (RectTransform)nextButton.transform;
         nr.anchorMin = new Vector2(0f, 0f);
         nr.anchorMax = new Vector2(1f, 0f);

@@ -16,8 +16,22 @@ public static class UIKit
     public static readonly Color Accent = KucaTheme.Primary;
     public static readonly Color Quiet = new Color(1f, 1f, 1f, 0.6f);
 
-    static Font font;
-    public static Font Font => font != null ? font : font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+    static Font font, boldFont;
+    /// <summary>본문 글꼴: Pretendard Medium (Resources/KUCA/Fonts, OFL). 없으면 내장 글꼴</summary>
+    public static Font Font => font != null ? font : font = Resources.Load<Font>("KUCA/Fonts/Pretendard-Medium") ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+    /// <summary>굵은 글꼴: Pretendard Bold. 가짜 굵게(FontStyle.Bold) 대신 이걸 쓴다</summary>
+    public static Font BoldFont => boldFont != null ? boldFont : boldFont = Resources.Load<Font>("KUCA/Fonts/Pretendard-Bold");
+
+    /// <summary>글자를 Pretendard Bold 로 (굵은 글꼴이 없으면 FontStyle.Bold)</summary>
+    public static Text Bold(Text t)
+    {
+        if (BoldFont != null) { t.font = BoldFont; t.fontStyle = FontStyle.Normal; }
+        else t.fontStyle = FontStyle.Bold;
+        return t;
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => font = boldFont = null;
 
     public static Canvas CreateCanvas(Transform parent, string name, int sortingOrder)
     {
@@ -69,6 +83,7 @@ public static class UIKit
         go.transform.SetParent(parent, false);
         var t = go.GetComponent<Text>();
         t.font = Font;
+        t.lineSpacing = 1.1f;
         t.fontSize = size;
         t.alignment = anchor;
         t.color = color ?? Color.white;
@@ -79,15 +94,16 @@ public static class UIKit
         return t;
     }
 
-    /// <summary>둥근 알약 모양 버튼 (모든 화면 공통 모양, docs/인터페이스_기준.md)</summary>
+    /// <summary>둥근 사각 버튼 (모든 화면 공통 모양, docs/디자인_v4.md). 새 화면은 PrimaryButton · SecondaryButton 을 쓴다</summary>
     public static Button Button(Transform parent, string label, UnityAction onClick, Color color, int fontSize = 44)
     {
         Image img = Image(parent, label, color, raycast: true);
-        img.sprite = HudIcons.Pill;
+        img.sprite = HudIcons.Rounded;   // v4: 알약 대신 둥근 사각 (모서리 약 40)
         img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 0.4f;
         var button = img.gameObject.AddComponent<Button>();
         button.onClick.AddListener(onClick);
-        Text t = Text(img.transform, label, fontSize, TextAnchor.MiddleCenter);
+        Text t = Bold(Text(img.transform, label, fontSize, TextAnchor.MiddleCenter));
         Stretch(t.rectTransform);
         return button;
     }
@@ -114,6 +130,237 @@ public static class UIKit
         field.lineType = multiLine ? InputField.LineType.MultiLineNewline : InputField.LineType.SingleLine;
         field.characterLimit = characterLimit;
         return field;
+    }
+
+    // ================= v4 공통 부품 (docs/디자인_v4.md) =================
+
+    /// <summary>v4 전체 화면 하나: 회색 바탕 · 위 뒤로(‹) · 큰 왼쪽 정렬 제목 · 스크롤 내용 · (선택) 아래 고정 버튼 칸</summary>
+    public class Page
+    {
+        public GameObject root;
+        public Text title, subtitle;
+        public RectTransform header, content, bottom;
+        public Button back;
+    }
+
+    /// <summary>
+    /// v4 화면 틀. content 에 카드 · 목록을 쌓는다 (세로 레이아웃, 좌우 Gutter). bottomButtons &gt; 0 이면 아래 고정 칸(bottom)에
+    /// 주요 버튼을 넣을 자리가 생기고 내용은 그 위에서 끝난다. onBack 은 ‹ 버튼과 안드로이드 뒤로 가기 둘 다.
+    /// </summary>
+    public static Page CreatePage(Transform parent, string name, string title, UnityAction onBack, string subtitle = null, int bottomButtons = 0, bool scroll = true)
+    {
+        var page = new Page();
+        Image bg = Image(parent, name, KucaTheme.Surface, raycast: true);
+        Stretch(bg.rectTransform);
+        page.root = bg.gameObject;
+        if (onBack != null)
+            BackButton.Attach(page.root, () => onBack());
+
+        Rect sa = Screen.safeArea;
+        RectTransform safe = Rect(bg.transform, "Safe");
+        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
+        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
+        safe.offsetMin = safe.offsetMax = Vector2.zero;
+
+        // 위: 뒤로 + 큰 제목 + 부제
+        float headH = 150f + (string.IsNullOrEmpty(title) ? 0f : 100f) + (string.IsNullOrEmpty(subtitle) ? 0f : 70f);
+        RectTransform head = Rect(safe, "Header");
+        head.anchorMin = new Vector2(0f, 1f);
+        head.anchorMax = Vector2.one;
+        head.pivot = new Vector2(0.5f, 1f);
+        head.offsetMin = new Vector2(0f, -headH);
+        head.offsetMax = Vector2.zero;
+        page.header = head;
+        if (onBack != null)
+            page.back = IconButton(head, HudIcons.Chevron, onBack, KucaTheme.Ink, new Vector2(KucaTheme.Gutter - 30f, -12f), flip: true);
+        if (!string.IsNullOrEmpty(title))
+        {
+            page.title = Bold(Text(head, title, KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink));
+            Box(page.title.rectTransform, KucaTheme.Gutter, 150f, 100f);
+        }
+        if (!string.IsNullOrEmpty(subtitle))
+        {
+            page.subtitle = Text(head, subtitle, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+            Box(page.subtitle.rectTransform, KucaTheme.Gutter, 250f, 64f);
+        }
+
+        // 아래 고정 버튼 칸 (버튼 수만큼 세로로)
+        float bottomH = 0f;
+        if (bottomButtons > 0)
+        {
+            bottomH = bottomButtons * KucaTheme.ButtonHeight + (bottomButtons - 1) * KucaTheme.Space2 + 2 * KucaTheme.Space4;
+            page.bottom = Rect(safe, "Bottom");
+            page.bottom.anchorMin = Vector2.zero;
+            page.bottom.anchorMax = new Vector2(1f, 0f);
+            page.bottom.pivot = new Vector2(0.5f, 0f);
+            page.bottom.offsetMin = Vector2.zero;
+            page.bottom.offsetMax = new Vector2(0f, bottomH);
+            Vertical(page.bottom, KucaTheme.Space2, new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, (int)KucaTheme.Space4, (int)KucaTheme.Space4));
+        }
+
+        RectTransform area = Rect(safe, "Content");
+        area.anchorMin = Vector2.zero;
+        area.anchorMax = Vector2.one;
+        area.offsetMin = new Vector2(0f, bottomH);
+        area.offsetMax = new Vector2(0f, -headH);
+        var pad = new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, (int)KucaTheme.Space3, (int)KucaTheme.Space8);
+        if (scroll)
+            page.content = ScrollList(area, KucaTheme.Space4, pad);
+        else
+        {
+            page.content = area;
+            Vertical(area, KucaTheme.Space4, pad);
+        }
+        page.root.SetActive(false);
+        return page;
+    }
+
+    /// <summary>아이콘만 있는 둥근 터치 영역 (‹ 뒤로 · × 닫기 등). flip: 좌우 뒤집기 (› 를 ‹ 로)</summary>
+    public static Button IconButton(Transform parent, Sprite icon, UnityAction onClick, Color color, Vector2 topLeft, bool flip = false)
+    {
+        Image hit = Image(parent, "IconButton", new Color(1f, 1f, 1f, 0f), raycast: true);
+        RectTransform r = hit.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0f, 1f);
+        r.anchoredPosition = topLeft;
+        r.sizeDelta = new Vector2(KucaTheme.TouchMin, KucaTheme.TouchMin);
+        var b = hit.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        Image ic = Image(hit.transform, "Icon", color);
+        ic.sprite = icon;
+        RectTransform ir = ic.rectTransform;
+        ir.anchorMin = ir.anchorMax = ir.pivot = new Vector2(0.5f, 0.5f);
+        ir.sizeDelta = new Vector2(60f, 60f);
+        if (flip) ir.localScale = new Vector3(-1f, 1f, 1f);
+        return b;
+    }
+
+    /// <summary>부모 위에서 top 만큼 내려와 높이 height 로 가로를 채운다 (좌우 pad)</summary>
+    static void Box(RectTransform rt, float pad, float top, float height)
+    {
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = Vector2.one;
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.offsetMin = new Vector2(pad, -top - height);
+        rt.offsetMax = new Vector2(-pad, -top);
+    }
+
+    /// <summary>v4 주요 버튼: 꽉 찬 너비 · 168 높이 · 둥근 사각 · 초록 + 흰 굵은 글자. 화면당 하나</summary>
+    public static Button PrimaryButton(Transform parent, string label, UnityAction onClick)
+        => BigButton(parent, label, onClick, KucaTheme.Primary, Color.white);
+
+    /// <summary>v4 보조 버튼: 회색 바탕 + 진한 글자 (주요 버튼 옆 · 아래)</summary>
+    public static Button SecondaryButton(Transform parent, string label, UnityAction onClick)
+        => BigButton(parent, label, onClick, KucaTheme.Fill, KucaTheme.Ink);
+
+    public static Button BigButton(Transform parent, string label, UnityAction onClick, Color bg, Color fg)
+    {
+        Image img = Image(parent, label, bg, raycast: true);
+        img.sprite = HudIcons.Rounded;
+        img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 0.4f;   // 모서리 반지름 약 40
+        var b = img.gameObject.AddComponent<Button>();
+        b.onClick.AddListener(onClick);
+        var c = b.colors;
+        c.pressedColor = new Color(0.85f, 0.85f, 0.85f);
+        c.disabledColor = new Color(1f, 1f, 1f, 0.45f);
+        b.colors = c;
+        Text t = Bold(Text(img.transform, label, KucaTheme.Heading - 4, TextAnchor.MiddleCenter, fg));
+        Stretch(t.rectTransform, 24f, 0f);
+        Size(img, KucaTheme.ButtonHeight);
+        return b;
+    }
+
+    /// <summary>v4 흰 카드: 둥근 사각 + 안쪽 여백 48 의 세로 레이아웃. 반환값에 내용을 넣는다</summary>
+    public static RectTransform CardBox(Transform parent, string name = "Card", float spacing = 24f)
+    {
+        Image card = Image(parent, name, KucaTheme.Card);
+        card.sprite = HudIcons.Rounded;
+        card.type = UnityEngine.UI.Image.Type.Sliced;
+        card.pixelsPerUnitMultiplier = 0.34f;   // 모서리 반지름 약 48
+        Vertical(card, spacing, new RectOffset(48, 48, 44, 48));
+        return card.rectTransform;
+    }
+
+    /// <summary>카드 · 구역 제목 (굵게, Heading)</summary>
+    public static Text SectionTitle(Transform parent, string text)
+    {
+        Text t = Bold(Text(parent, text, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        Size(t, 72f);
+        return t;
+    }
+
+    /// <summary>본문 한 덩어리 (여러 줄 가능, 높이는 글 길이에 맞춤)</summary>
+    public static Text Paragraph(Transform parent, string text, int size = KucaTheme.Body, Color? color = null)
+    {
+        Text t = Text(parent, text, size, TextAnchor.UpperLeft, color ?? KucaTheme.InkMuted);
+        t.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        return t;
+    }
+
+    /// <summary>큰 숫자 줄: (값, 이름) 을 가로로 같은 너비로. 예) 1.9 km 걸은 거리 · 32 분 시간 (애플 피트니스 요약)</summary>
+    public static RectTransform StatRow(Transform parent, params (string value, string label)[] stats)
+    {
+        RectTransform row = Rect(parent, "Stats");
+        Size(row, 190f);
+        Horizontal(row, KucaTheme.Space2);
+        foreach (var (value, label) in stats)
+        {
+            RectTransform cell = Rect(row, label);
+            Text v = Bold(Text(cell, value, KucaTheme.Display - 20, TextAnchor.LowerLeft, KucaTheme.Ink));
+            v.horizontalOverflow = HorizontalWrapMode.Overflow;
+            v.rectTransform.anchorMin = new Vector2(0f, 0.38f);
+            v.rectTransform.anchorMax = Vector2.one;
+            v.rectTransform.offsetMin = v.rectTransform.offsetMax = Vector2.zero;
+            Text l = Text(cell, label, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+            l.rectTransform.anchorMin = Vector2.zero;
+            l.rectTransform.anchorMax = new Vector2(1f, 0.36f);
+            l.rectTransform.offsetMin = l.rectTransform.offsetMax = Vector2.zero;
+        }
+        return row;
+    }
+
+    /// <summary>선택 칩 (둥근 알약). on = 초록 바탕 + 흰 글자, off = 흰 바탕 + 회색 테 + 진한 글자</summary>
+    public static Button Chip(Transform parent, string label, bool on, UnityAction onClick)
+    {
+        Image img = Image(parent, label, on ? KucaTheme.Primary : KucaTheme.Card, raycast: true);
+        img.sprite = HudIcons.Pill;
+        img.type = UnityEngine.UI.Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 1.4f;
+        if (!on)
+        {
+            var o = img.gameObject.AddComponent<Outline>();
+            o.effectColor = KucaTheme.Line;
+            o.effectDistance = new Vector2(2f, -2f);
+        }
+        var b = img.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        Text t = Text(img.transform, label, KucaTheme.Label, TextAnchor.MiddleCenter, on ? Color.white : KucaTheme.Ink);
+        if (on) Bold(t);
+        Stretch(t.rectTransform, 32f, 0f);
+        var fit = img.gameObject.AddComponent<LayoutElement>();
+        fit.preferredHeight = fit.minHeight = 104f;
+        fit.preferredWidth = t.preferredWidth + 80f;
+        return b;
+    }
+
+    /// <summary>빈 상태: 큰 제목 + 설명 + (선택) 할 일 버튼. "아무것도 없어요" 로 끝내지 않고 다음 행동을 준다</summary>
+    public static RectTransform EmptyState(Transform parent, string title, string body, string actionLabel = null, UnityAction onAction = null)
+    {
+        RectTransform card = CardBox(parent, "Empty", 20f);
+        ((VerticalLayoutGroup)card.GetComponent<VerticalLayoutGroup>()).padding = new RectOffset(48, 48, 72, 56);
+        Text h = Bold(Text(card, title, KucaTheme.Heading, TextAnchor.MiddleCenter, KucaTheme.Ink));
+        Size(h, 80f);
+        Text b = Text(card, body, KucaTheme.Body, TextAnchor.UpperCenter, KucaTheme.InkMuted);
+        b.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        if (!string.IsNullOrEmpty(actionLabel) && onAction != null)
+        {
+            RectTransform gap = Rect(card, "Gap");
+            Size(gap, 16f);
+            PrimaryButton(card, actionLabel, onAction);
+        }
+        return card;
     }
 
     /// <summary>설정형 목록 묶음: 회색 소제목 + 흰 둥근 카드. 반환값(카드)에 ListRow · 내용을 넣는다 (iOS 그룹 목록 · Material 목록)</summary>

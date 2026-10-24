@@ -3,7 +3,8 @@
 경희대 국제캠퍼스 산책 앱 (Unity 6 URP 앱 `My project/` · ASP.NET 서버 `server/` · 문서 `docs/`).
 
 ## 화면(UI)을 만들거나 고칠 때
-- 먼저 `docs/인터페이스_기준.md` 를 읽고 0장 "연계 규칙"과 그 화면의 체크리스트를 지킨다.
+- 먼저 `docs/디자인_v4.md` (참조 화면 · 토큰 · 화면 짜는 법) 와 `docs/인터페이스_기준.md` (연계 규칙 · 체크리스트) 를 읽는다.
+- 새 화면 · 고친 화면은 `UIKit.CreatePage` 틀 + `PrimaryButton` · `CardBox` · `ListGroup` 등 v4 부품으로 짠다. 굵은 글자는 `UIKit.Bold`.
 - 색 · 글자 크기 · 간격은 `My project/Assets/Scripts/KucaTheme.cs` 만 쓴다 (화면 코드에 `new Color(...)` · 숫자 글자 크기 금지).
 - 버튼 · 칩 · 카드 · 시트 · 빈 상태 · 불러오기는 `UI/UIKit.cs` 의 공통 부품을 쓰고, 없으면 UIKit 에 먼저 추가한다.
 - 바꾼 뒤 `KUCA › UI 화면 캡처` (`-executeMethod UiCapture.Run`) 로 찍어 확인하고, 새 화면이면 `Assets/Editor/UiCapture.cs` 의 `Script()` 에 한 줄 넣는다.

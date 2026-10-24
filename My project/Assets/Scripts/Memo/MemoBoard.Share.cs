@@ -174,7 +174,7 @@ public partial class MemoBoard
         cr.anchoredPosition = Vector2.zero;
 
         Text title = UIKit.Text(cr, "친구에게도 공유할까요?", 44, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         TopBox(title.rectTransform, 54f, 64f, 30f);
         shareSubtitle = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
         TopBox(shareSubtitle.rectTransform, 124f, 44f, 30f);
@@ -208,12 +208,12 @@ public partial class MemoBoard
         Place((RectTransform)cancel.transform, new Vector2(0f, 1f), new Vector2(20f, -30f));
         ((RectTransform)cancel.transform).sizeDelta = new Vector2(160f, 88f);
         Text head = UIKit.Text(safe, "스토리에 올릴 부분", 38, TextAnchor.MiddleCenter, Color.white);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 200f);
         cropNext = UIKit.Button(safe, "올리기", FinishCrop, new Color(0f, 0f, 0f, 0f), 36);
         Text nextLabel = cropNext.GetComponentInChildren<Text>();
         nextLabel.color = new Color(0.45f, 0.62f, 1f);
-        nextLabel.fontStyle = FontStyle.Bold;
+        UIKit.Bold(nextLabel);
         Place((RectTransform)cropNext.transform, new Vector2(1f, 1f), new Vector2(-20f, -30f));
         ((RectTransform)cropNext.transform).sizeDelta = new Vector2(200f, 88f);
 
@@ -286,7 +286,7 @@ public partial class MemoBoard
         bi.pixelsPerUnitMultiplier = 120f / 112f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = ink;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         t.rectTransform.offsetMin = new Vector2(60f, 0f);
         TopBox((RectTransform)b.transform, top, 112f, 50f);
         Image ic = UIKit.Image(b.transform, "Icon", ink);

@@ -1403,7 +1403,7 @@ public partial class KhuMenus : MonoBehaviour
         img.pixelsPerUnitMultiplier = 1.1f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = fg;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.targetGraphic = img;
         return b;
     }
@@ -1451,7 +1451,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         Text t = UIKit.Text(parent, text, size, anchor, color);
         if (bold)
-            t.fontStyle = FontStyle.Bold;
+            UIKit.Bold(t);
         return t;
     }
 

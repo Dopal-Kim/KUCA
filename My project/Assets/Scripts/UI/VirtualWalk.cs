@@ -223,7 +223,7 @@ public class VirtualWalk : MonoBehaviour
         tag.pixelsPerUnitMultiplier = 120f / 70f;
         Place(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -440f), new Vector2(520f, 70f)); // HUD 닉네임 · 티켓 게이지 아래
         Text tt = UIKit.Text(tag.transform, "가상 산책 중 · 체험 계정", 28, TextAnchor.MiddleCenter, Color.white);
-        tt.fontStyle = FontStyle.Bold;
+        UIKit.Bold(tt);
         UIKit.Stretch(tt.rectTransform, 20f, 0f);
         UIInputBlocker.Register(tag.rectTransform);
 
@@ -253,7 +253,7 @@ public class VirtualWalk : MonoBehaviour
         si.pixelsPerUnitMultiplier = 120f / 70f;
         fastLabel = speed.GetComponentInChildren<Text>();
         fastLabel.color = Ink;
-        fastLabel.fontStyle = FontStyle.Bold;
+        UIKit.Bold(fastLabel);
         Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(0f, 665f), new Vector2(300f, 70f));   // 조이스틱 바로 위
         ((RectTransform)speed.transform).pivot = new Vector2(0.5f, 0.5f);
         UIInputBlocker.Register((RectTransform)speed.transform);
@@ -269,7 +269,7 @@ public class VirtualWalk : MonoBehaviour
         card.pixelsPerUnitMultiplier = 0.5f;
         Place(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 700f));
         Text title = UIKit.Text(card.transform, "가상 산책으로 둘러볼까요?", 46, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(820f, 70f));
         offerText = UIKit.Text(card.transform, "", 32, TextAnchor.UpperCenter, new Color(Ink.r, Ink.g, Ink.b, 0.65f));
         Place(offerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -160f), new Vector2(800f, 230f));
@@ -289,7 +289,7 @@ public class VirtualWalk : MonoBehaviour
         img.pixelsPerUnitMultiplier = 120f / 110f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = ink;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }

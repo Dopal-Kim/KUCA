@@ -342,7 +342,7 @@ public class GameHUD : MonoBehaviour
         Image card = Glass(root, "LevelCard", new Vector2(430f, 128f), 64f);
         Place(card.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x, center.y + 64f));
         levelText = UIKit.Text(card.transform, "<size=30>LV</size> 1", 58, TextAnchor.MiddleLeft);
-        levelText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(levelText);
         levelText.horizontalOverflow = HorizontalWrapMode.Overflow;
         SetBox(levelText.rectTransform, 124f, 0.42f, 1f, 24f);
         nextText = UIKit.Text(card.transform, "", 26, TextAnchor.UpperLeft, new Color(0.8f, 0.9f, 1f, 0.85f));
@@ -390,7 +390,7 @@ public class GameHUD : MonoBehaviour
         Image nick = Glass(root, "Nickname", new Vector2(230f, 64f), 32f);
         Place(nick.rectTransform.parent as RectTransform, new Vector2(0f, 1f), new Vector2(center.x - 115f, -avatar - 26f));
         nicknameText = UIKit.Text(nick.transform, defaultNickname, 32, TextAnchor.MiddleCenter);
-        nicknameText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(nicknameText);
         UIKit.Stretch(nicknameText.rectTransform, 12f, 0f);
 
         // 티켓 게이지 (닉네임 아래): 걸은 만큼 차고, 1km 가 되면 티켓 1장
@@ -402,7 +402,7 @@ public class GameHUD : MonoBehaviour
         eggIcon.rectTransform.anchoredPosition = new Vector2(14f, 2f);
         eggIcon.rectTransform.sizeDelta = new Vector2(40f, 40f);
         eggText = UIKit.Text(eggPill.transform, "", 26, TextAnchor.MiddleLeft);
-        eggText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(eggText);
         eggText.horizontalOverflow = HorizontalWrapMode.Overflow;
         eggText.rectTransform.anchorMin = new Vector2(0f, 0.25f);
         eggText.rectTransform.anchorMax = new Vector2(1f, 1f);
@@ -434,7 +434,7 @@ public class GameHUD : MonoBehaviour
         Place(pr, new Vector2(0f, 1f), new Vector2(center.x + 170f, -avatar - 26f));
         pr.sizeDelta = new Vector2(190f, 64f);
         xpPopupText = UIKit.Text(pill.transform, "", 38, TextAnchor.MiddleCenter);
-        xpPopupText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(xpPopupText);
         UIKit.Stretch(xpPopupText.rectTransform);
         xpPopup = pill.gameObject.AddComponent<CanvasGroup>();
         xpPopup.blocksRaycasts = false;
@@ -507,12 +507,12 @@ public class GameHUD : MonoBehaviour
         Image badge = Circle(hex.transform, "Badge", Crimson, 38f);
         Place(badge.rectTransform, new Vector2(1f, 1f), new Vector2(8f, 6f));
         noticeBadgeText = UIKit.Text(badge.transform, "", 22, TextAnchor.MiddleCenter);
-        noticeBadgeText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(noticeBadgeText);
         UIKit.Stretch(noticeBadgeText.rectTransform);
         noticeBadge = badge.gameObject;
 
         Text title = UIKit.Text(card.transform, "공지사항", 32, TextAnchor.LowerLeft);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         SetBox(title.rectTransform, 106f, 0.5f, 0.92f, 40f);
         noticeTitle = UIKit.Text(card.transform, "", 23, TextAnchor.UpperLeft, new Color(0.8f, 0.9f, 1f, 0.85f));
         noticeTitle.horizontalOverflow = HorizontalWrapMode.Overflow;
@@ -563,7 +563,7 @@ public class GameHUD : MonoBehaviour
         else
         {
             Text t = UIKit.Text(face.transform, "경희", 60, TextAnchor.MiddleCenter, Crimson);
-            t.fontStyle = FontStyle.Bold;
+            UIKit.Bold(t);
             UIKit.Stretch(t.rectTransform);
         }
     }
@@ -610,7 +610,7 @@ public class GameHUD : MonoBehaviour
         Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(14f, 20f));
         tag.rectTransform.sizeDelta = new Vector2(92f, 38f);
         Text t = UIKit.Text(tag.transform, "주변", 22, TextAnchor.MiddleCenter);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         UIKit.Stretch(t.rectTransform);
     }
 
@@ -812,7 +812,7 @@ public class GameHUD : MonoBehaviour
             UIKit.Vertical(card, 14f, new RectOffset(40, 40, 32, 36));
             UIKit.Text(card.transform, (isNew ? "<color=#A6192E><b>NEW</b></color>  " : "") + nt.date, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
             Text title = UIKit.Text(card.transform, nt.title, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink);
-            title.fontStyle = FontStyle.Bold;
+            UIKit.Bold(title);
             UIKit.Text(card.transform, nt.body, KucaTheme.Body, TextAnchor.UpperLeft, KucaTheme.Ink);
         }
     }
@@ -1037,7 +1037,7 @@ public class GameHUD : MonoBehaviour
         x.rectTransform.sizeDelta = new Vector2(44f, 44f);
 
         Text title = UIKit.Text(head, titleText, KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         RectTransform tr = title.rectTransform;
         tr.anchorMin = new Vector2(0f, 1f);
         tr.anchorMax = new Vector2(1f, 1f);

@@ -128,10 +128,10 @@ public class FreeWalk : MonoBehaviour
         Place(dot.rectTransform, new Vector2(0f, 1f), new Vector2(54f, -56f));
         dot.rectTransform.sizeDelta = new Vector2(44f, 44f);
         title = UIKit.Text(pr, "", 32, TextAnchor.MiddleLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Box(title.rectTransform, 96f, 26f, 380f, 60f);
         stats = UIKit.Text(pr, "", 44, TextAnchor.MiddleLeft, Ink);
-        stats.fontStyle = FontStyle.Bold;
+        UIKit.Bold(stats);
         Box(stats.rectTransform, 40f, 104f, 40f, 80f);
 
         Button t = Pill(pr, "경로 켜짐", TrackColor, Color.white, () => { showPath = !showPath; Refresh(); });
@@ -154,7 +154,7 @@ public class FreeWalk : MonoBehaviour
         img.pixelsPerUnitMultiplier = 1f;
         Text txt = b.GetComponentInChildren<Text>();
         txt.color = textColor;
-        txt.fontStyle = FontStyle.Bold;
+        UIKit.Bold(txt);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }

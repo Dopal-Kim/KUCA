@@ -400,7 +400,7 @@ public partial class MemoBoard : MonoBehaviour
             Place(crown.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, 30f));
             crown.rectTransform.sizeDelta = new Vector2(360f, 64f);
             Text ct = UIKit.Text(crown.transform, $"★ 이번 주 대표 사진  ·  ♥ {m.likeCount}", 28, TextAnchor.MiddleCenter, Color.white);
-            ct.fontStyle = FontStyle.Bold;
+            UIKit.Bold(ct);
             UIKit.Stretch(ct.rectTransform);
         }
         if (m.IsPending)
@@ -413,7 +413,7 @@ public partial class MemoBoard : MonoBehaviour
             Place(tag.rectTransform, new Vector2(0f, 1f), new Vector2(border + 10f, -border - 10f));
             tag.rectTransform.sizeDelta = new Vector2(130f, 48f);
             Text tt = UIKit.Text(tag.transform, "검토 중", 24, TextAnchor.MiddleCenter, Color.white);
-            tt.fontStyle = FontStyle.Bold;
+            UIKit.Bold(tt);
             UIKit.Stretch(tt.rectTransform);
         }
         StartCoroutine(service.LoadPhoto(m, (tex, error) =>
@@ -935,7 +935,7 @@ public partial class MemoBoard : MonoBehaviour
         Button close = RoundButton(safe, "Close", HudIcons.Close, 96f, Color.white, Ink, Close);
         Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(32f, -40f));
         title = UIKit.Text(safe, "", 50, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         TopBox(title.rectTransform, 40f, 70f, 150f);
         subtitle = UIKit.Text(safe, "", 26, TextAnchor.MiddleCenter, InkQuiet);
         TopBox(subtitle.rectTransform, 112f, 40f, 150f);
@@ -971,7 +971,7 @@ public partial class MemoBoard : MonoBehaviour
         back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
         back.transform.Find("Shadow").GetComponent<Image>().color = Line;
         Text head = UIKit.Text(safe, "게시물", 38, TextAnchor.MiddleCenter, Ink);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 140f);
         Image hr = UIKit.Image(safe, "Line", Line);
         TopBox(hr.rectTransform, 140f, 2f, 0f);
@@ -1050,7 +1050,7 @@ public partial class MemoBoard : MonoBehaviour
         RectTransform likesRow = UIKit.Rect(body, "Likes");
         UIKit.Size(likesRow, 56f);
         viewerLikes = UIKit.Text(likesRow, "", 32, TextAnchor.MiddleLeft, Ink);
-        viewerLikes.fontStyle = FontStyle.Bold;
+        UIKit.Bold(viewerLikes);
         UIKit.Stretch(viewerLikes.rectTransform, 36f, 0f);
         RectTransform captionRow = UIKit.Rect(body, "Caption");
         UIKit.Vertical(captionRow, 0f, new RectOffset(36, 36, 8, 8));
@@ -1073,7 +1073,7 @@ public partial class MemoBoard : MonoBehaviour
         back.transform.Find("Face/Icon").localRotation = Quaternion.Euler(0f, 0f, 180f);
         back.transform.Find("Shadow").GetComponent<Image>().color = Line;
         Text head = UIKit.Text(safe, "프로필", 38, TextAnchor.MiddleCenter, Ink);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 140f);
         Image hr = UIKit.Image(safe, "Line", Line);
         TopBox(hr.rectTransform, 140f, 2f, 0f);
@@ -1083,7 +1083,7 @@ public partial class MemoBoard : MonoBehaviour
         Place(profileAvatar.rectTransform, new Vector2(0f, 1f), new Vector2(50f, -190f));
         profileLetter.fontSize = 90;
         profileName = UIKit.Text(safe, "", 44, TextAnchor.MiddleLeft, Ink);
-        profileName.fontStyle = FontStyle.Bold;
+        UIKit.Bold(profileName);
         TopBox(profileName.rectTransform, 410f, 70f, 0f);
         profileName.rectTransform.offsetMin = new Vector2(56f, profileName.rectTransform.offsetMin.y);
         profileCount = UIKit.Text(safe, "", 40, TextAnchor.MiddleCenter, Ink);
@@ -1109,7 +1109,7 @@ public partial class MemoBoard : MonoBehaviour
         circle.sprite = HudIcons.Circle;
         circle.rectTransform.sizeDelta = new Vector2(size, size);
         letter = UIKit.Text(circle.transform, "", Mathf.RoundToInt(size * 0.45f), TextAnchor.MiddleCenter, Color.white);
-        letter.fontStyle = FontStyle.Bold;
+        UIKit.Bold(letter);
         UIKit.Stretch(letter.rectTransform);
         return circle;
     }
@@ -1127,7 +1127,7 @@ public partial class MemoBoard : MonoBehaviour
         var ring = back.transform.Find("Shadow").GetComponent<Image>();
         ring.color = Line;
         Text head = UIKit.Text(safe, "새 게시물", 40, TextAnchor.MiddleCenter, Ink);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 140f);
         Image hr = UIKit.Image(safe, "Line", Line);
         TopBox(hr.rectTransform, 140f, 2f, 0f);
@@ -1235,7 +1235,7 @@ public partial class MemoBoard : MonoBehaviour
         pimg.sprite = HudIcons.Pill;
         pimg.type = Image.Type.Sliced;
         pimg.pixelsPerUnitMultiplier = 120f / 70f;
-        postButton.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+        UIKit.Bold(postButton.GetComponentInChildren<Text>());
         RectTransform pr = (RectTransform)postButton.transform;
         pr.anchorMin = new Vector2(0f, 0f);
         pr.anchorMax = new Vector2(1f, 0f);

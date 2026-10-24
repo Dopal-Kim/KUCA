@@ -312,7 +312,7 @@ public class EvolutionScreen : MonoBehaviour
         captionGroup = Group(r, "Caption", out RectTransform cr);
         Place(cr, new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(1000f, 100f));
         caption = UIKit.Text(cr, "", 50, TextAnchor.MiddleCenter, Color.white);
-        caption.fontStyle = FontStyle.Bold;
+        UIKit.Bold(caption);
         UIKit.Stretch(caption.rectTransform);
         Shade(caption);
 
@@ -337,7 +337,7 @@ public class EvolutionScreen : MonoBehaviour
         oi.pixelsPerUnitMultiplier = 120f / 120f;
         Text ot = ok.GetComponentInChildren<Text>();
         ot.color = new Color(0.2f, 0.12f, 0.02f);
-        ot.fontStyle = FontStyle.Bold;
+        UIKit.Bold(ot);
         Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0f, 300f), new Vector2(600f, 120f));
         ok.gameObject.AddComponent<PressScale>();
 

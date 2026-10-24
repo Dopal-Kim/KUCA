@@ -309,7 +309,7 @@ public class CatchCameraScreen : MonoBehaviour
         tr.anchoredPosition = new Vector2(0f, -40f);
         tr.sizeDelta = new Vector2(820f, 100f);
         title = UIKit.Text(titleBg.transform, "", 38, TextAnchor.MiddleCenter);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         UIKit.Stretch(title.rectTransform, 24f, 0f);
 
         note = UIKit.Text(safe, "", 28, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.9f));
@@ -327,7 +327,7 @@ public class CatchCameraScreen : MonoBehaviour
         BuildArSwitch(safe);
 
         hint = UIKit.Text(safe, "", 36, TextAnchor.MiddleCenter);
-        hint.fontStyle = FontStyle.Bold;
+        UIKit.Bold(hint);
         Shadowed(hint);
         RectTransform hr = hint.rectTransform;
         hr.anchorMin = new Vector2(0f, 0f);
@@ -373,7 +373,7 @@ public class CatchCameraScreen : MonoBehaviour
         bg.gameObject.AddComponent<PressScale>();
 
         arLabel = UIKit.Text(bg.transform, "AR 켬", 32, TextAnchor.MiddleLeft);
-        arLabel.fontStyle = FontStyle.Bold;
+        UIKit.Bold(arLabel);
         arLabel.rectTransform.anchorMin = Vector2.zero;
         arLabel.rectTransform.anchorMax = Vector2.one;
         arLabel.rectTransform.offsetMin = new Vector2(28f, 0f);
@@ -426,7 +426,7 @@ public class CatchCameraScreen : MonoBehaviour
         resultFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
 
         resultTitle = UIKit.Text(card.transform, "", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink);
-        resultTitle.fontStyle = FontStyle.Bold;
+        UIKit.Bold(resultTitle);
         TopBox(resultTitle.rectTransform, 930f, 80f);
         resultSub = UIKit.Text(card.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         TopBox(resultSub.rectTransform, 1010f, 110f);
@@ -820,7 +820,7 @@ public class CatchCameraScreen : MonoBehaviour
         b.targetGraphic = img;
         Text t = b.GetComponentInChildren<Text>();
         t.color = fg;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         return b;
     }
 

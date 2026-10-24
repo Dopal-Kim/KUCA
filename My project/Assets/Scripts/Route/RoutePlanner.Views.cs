@@ -94,7 +94,7 @@ public partial class RoutePlanner
         Swallow(panel.gameObject);
 
         Text title = UIKit.Text(pr, "산책 길잡이", 46, TextAnchor.MiddleLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Box(title.rectTransform, 50f, 46f, 150f, 70f);
         CloseButton(pr, HideSheet);
 
@@ -147,7 +147,7 @@ public partial class RoutePlanner
     void Heading(RectTransform parent, string text, float top)
     {
         Text t = UIKit.Text(parent, text, 36, TextAnchor.MiddleLeft, Ink);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Box(t.rectTransform, 50f, top, 50f, 60f);
     }
 
@@ -164,7 +164,7 @@ public partial class RoutePlanner
         b.onClick.AddListener(onClick);
         row.gameObject.AddComponent<PressScale>();
         Text l = UIKit.Text(row.transform, label, 32, TextAnchor.MiddleLeft, RouteBlue);
-        l.fontStyle = FontStyle.Bold;
+        UIKit.Bold(l);
         Box(l.rectTransform, 34f, 0f, 0f, 100f);
         Text v = UIKit.Text(row.transform, "", 34, TextAnchor.MiddleRight, Ink);
         Box(v.rectTransform, 150f, 0f, 34f, 100f);
@@ -220,7 +220,7 @@ public partial class RoutePlanner
         b.transition = Selectable.Transition.None;
         b.onClick.AddListener(() => { pick(); picker.SetActive(false); RefreshChips(); UIInputBlocker.SetModal(this, sheet.activeSelf); });
         Text t = UIKit.Text(row.transform, (on ? "<color=#2A6BF2>✓</color>  " : "") + Escape(name), 36, TextAnchor.UpperLeft, Ink);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Box(t.rectTransform, 34f, 16f, 34f, 50f);
         Text s = UIKit.Text(row.transform, sub, 26, TextAnchor.UpperLeft, InkQuiet);
         Box(s.rectTransform, 34f, 70f, 34f, 40f);
@@ -238,7 +238,7 @@ public partial class RoutePlanner
         cr.offsetMin = cr.offsetMax = Vector2.zero;
         Swallow(card.gameObject);
         pickerTitle = UIKit.Text(cr, "", 42, TextAnchor.MiddleLeft, Ink);
-        pickerTitle.fontStyle = FontStyle.Bold;
+        UIKit.Bold(pickerTitle);
         Box(pickerTitle.rectTransform, 50f, 40f, 150f, 70f);
         CloseButton(cr, () => { picker.SetActive(false); UIInputBlocker.SetModal(this, sheet.activeSelf); });
         RectTransform area = UIKit.Rect(cr, "List");
@@ -286,7 +286,7 @@ public partial class RoutePlanner
         Place(loadingPartner.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 70f));
         loadingPartner.rectTransform.sizeDelta = new Vector2(280f, 280f);
         Text t = UIKit.Text(card.transform, "코스 3개를 짜고 있어요…", 40, TextAnchor.MiddleCenter, Ink);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Place(t.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 190f));
         t.rectTransform.sizeDelta = new Vector2(700f, 60f);
         Text sub = UIKit.Text(card.transform, "파트너가 길을 찾고 있어요", 30, TextAnchor.MiddleCenter, InkQuiet);
@@ -388,7 +388,7 @@ public partial class RoutePlanner
             string hex = ColorUtility.ToHtmlStringRGB(o.variant.color);
             string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
             Text head = UIKit.Text(card.transform, $"<color=#{hex}>{o.variant.label}</color>   <size=26><color=#8C8C91>{source}</color></size>", 36, TextAnchor.UpperLeft, Ink);
-            head.fontStyle = FontStyle.Bold;
+            UIKit.Bold(head);
             int visits = o.result.stops.Count - (o.returns ? 1 : 0);
             UIKit.Text(card.transform, $"{RouteMath.Distance(o.meters)}  ·  약 {o.walkMinutes}분  ·  {visits}곳" + (o.returns ? "  ·  한 바퀴" : ""), 30, TextAnchor.UpperLeft, Ink);
             var names = o.result.stops.ConvertAll(s => Escape(s.name));
@@ -423,7 +423,7 @@ public partial class RoutePlanner
         cr.offsetMax = new Vector2(-24f, -110f);
         Swallow(card.gameObject);
         Text title = UIKit.Text(cr, "코스를 골라요", 44, TextAnchor.MiddleLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Box(title.rectTransform, 46f, 30f, 150f, 70f);
         CloseButton(cr, () => { HideChooser(); ShowSheet(); });
 
@@ -491,7 +491,7 @@ public partial class RoutePlanner
         Place(walkDot.rectTransform, new Vector2(0f, 1f), new Vector2(40f, -42f));
         walkDot.rectTransform.sizeDelta = new Vector2(28f, 28f);
         walkTitle = UIKit.Text(pr, "", 32, TextAnchor.MiddleLeft, Ink);
-        walkTitle.fontStyle = FontStyle.Bold;
+        UIKit.Bold(walkTitle);
         Box(walkTitle.rectTransform, 84f, 26f, 380f, 60f);
 
         Button toggle = Pill(pr, "경로 켜짐", RouteBlue, Color.white, () => { showPath = !showPath; RefreshWalkPanel(); }, 26);
@@ -510,7 +510,7 @@ public partial class RoutePlanner
         nb.transition = Selectable.Transition.None;
         nb.onClick.AddListener(() => { int i = done.FindIndex(x => !x); OpenPlace(i < 0 ? 0 : i); });
         walkNext = UIKit.Text(next.transform, "", 40, TextAnchor.UpperLeft, Ink);
-        walkNext.fontStyle = FontStyle.Bold;
+        UIKit.Bold(walkNext);
         Box(walkNext.rectTransform, 10f, 0f, 10f, 60f);
         walkReason = UIKit.Text(next.transform, "", 28, TextAnchor.UpperLeft, InkQuiet);
         walkReason.verticalOverflow = VerticalWrapMode.Truncate;
@@ -589,7 +589,7 @@ public partial class RoutePlanner
         cr.sizeDelta = new Vector2(0f, 1560f);
         Swallow(card.gameObject);
         popupName = UIKit.Text(cr, "", 44, TextAnchor.MiddleLeft, Ink);
-        popupName.fontStyle = FontStyle.Bold;
+        UIKit.Bold(popupName);
         Box(popupName.rectTransform, 50f, 46f, 140f, 64f);
         CloseButton(cr, ClosePlace);
         popupReason = UIKit.Text(cr, "", 30, TextAnchor.UpperLeft, InkQuiet);
@@ -610,7 +610,7 @@ public partial class RoutePlanner
         UIKit.Stretch(miniOverlay);
 
         Text head = UIKit.Text(cr, "장소 공지", 32, TextAnchor.MiddleLeft, Ink);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         Box(head.rectTransform, 50f, 896f, 50f, 50f);
         RectTransform area = UIKit.Rect(cr, "List");
         UIKit.StretchBetween(area, 190f, 960f);
@@ -636,10 +636,10 @@ public partial class RoutePlanner
         if (withPlace)
         {
             Text place = UIKit.Text(row.transform, n.buildingName, 26, TextAnchor.UpperLeft, RouteBlue);
-            place.fontStyle = FontStyle.Bold;
+            UIKit.Bold(place);
         }
         Text title = UIKit.Text(row.transform, n.title, 32, TextAnchor.UpperLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         if (!string.IsNullOrEmpty(n.summary))
             UIKit.Text(row.transform, n.summary, 27, TextAnchor.UpperLeft, InkQuiet);
         UIKit.Text(row.transform, $"{n.postedAt}   <color=#2A6BF2>원문 보기 ›</color>", 26, TextAnchor.UpperLeft, InkQuiet);
@@ -694,7 +694,7 @@ public partial class RoutePlanner
         img.pixelsPerUnitMultiplier = 1f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = textColor;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }
@@ -715,7 +715,7 @@ public partial class RoutePlanner
         c.rectTransform.anchorMin = c.rectTransform.anchorMax = c.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         c.rectTransform.sizeDelta = new Vector2(size, size);
         Text t = UIKit.Text(c.transform, label, Mathf.RoundToInt(size * 0.48f), TextAnchor.MiddleCenter, Color.white);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         UIKit.Stretch(t.rectTransform);
         return c;
     }

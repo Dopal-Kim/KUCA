@@ -182,7 +182,7 @@ public partial class MemoBoard
         Place(heart.rectTransform, new Vector2(0f, 0.5f), new Vector2(14f, 0f));
         heart.rectTransform.sizeDelta = new Vector2(30f, 30f);
         Text t = UIKit.Text(chip.transform, count.ToString(), 28, TextAnchor.MiddleLeft, Color.white);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         t.rectTransform.anchorMin = Vector2.zero;
         t.rectTransform.anchorMax = Vector2.one;
         t.rectTransform.offsetMin = new Vector2(52f, 0f);
@@ -202,7 +202,7 @@ public partial class MemoBoard
         Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
         close.transform.Find("Shadow").GetComponent<Image>().color = Line;
         Text head = UIKit.Text(safe, "내 사진첩", 38, TextAnchor.MiddleCenter, Ink);
-        head.fontStyle = FontStyle.Bold;
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 140f);
         albumCount = UIKit.Text(safe, "", 30, TextAnchor.MiddleRight, InkQuiet);
         TopBox(albumCount.rectTransform, 30f, 88f, 40f);

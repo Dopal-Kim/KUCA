@@ -393,7 +393,7 @@ public class WalkCompleteScreen : MonoBehaviour
     static Text Line(Transform parent, string text, int size, Color color, float height, bool bold = false)
     {
         Text t = UIKit.Text(parent, text, size, TextAnchor.MiddleLeft, color);
-        if (bold) t.fontStyle = FontStyle.Bold;
+        if (bold) UIKit.Bold(t);
         UIKit.Size(t, height);
         return t;
     }
@@ -405,7 +405,7 @@ public class WalkCompleteScreen : MonoBehaviour
         box.type = Image.Type.Sliced;
         box.pixelsPerUnitMultiplier = 0.6f;
         Text v = UIKit.Text(box.transform, "", 46, TextAnchor.MiddleCenter, Ink);
-        v.fontStyle = FontStyle.Bold;
+        UIKit.Bold(v);
         v.rectTransform.anchorMin = new Vector2(0f, 0.38f);
         v.rectTransform.anchorMax = Vector2.one;
         v.rectTransform.offsetMin = v.rectTransform.offsetMax = Vector2.zero;
@@ -460,7 +460,7 @@ public class WalkCompleteScreen : MonoBehaviour
         img.pixelsPerUnitMultiplier = 120f / 110f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = ink;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }

@@ -69,7 +69,7 @@ public class CharacterCustomizer : MonoBehaviour
     void Start()
     {
         EnsureEventSystem();
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIKit.Font;
         BuildUI();
 
         CharacterAppearance saved = CharacterAppearance.Load();
@@ -617,7 +617,7 @@ public class CharacterCustomizer : MonoBehaviour
         SetWidth(Arrow(row.transform, "<", prev), 110f, 0f);
         Text value = CreateText(row.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter);
         value.color = KucaTheme.Ink;
-        value.fontStyle = FontStyle.Bold;
+        UIKit.Bold(value);
         SetWidth(value.gameObject, 0f, 1f);
         SetWidth(Arrow(row.transform, ">", next), 110f, 0f);
         return value;

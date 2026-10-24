@@ -131,7 +131,7 @@ public class HatchScreen : MonoBehaviour
         cr.sizeDelta = new Vector2(820f, 1060f);
 
         title = UIKit.Text(cr, "", 44, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(760f, 70f));
 
         rays = UIKit.Image(cr, "Rays", new Color(1f, 0.8f, 0.3f, 0.8f)).rectTransform;
@@ -152,10 +152,10 @@ public class HatchScreen : MonoBehaviour
         Center(creature, -370f, 440f);
 
         nameText = UIKit.Text(cr, "", 54, TextAnchor.MiddleCenter, Ink);
-        nameText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(nameText);
         Place(nameText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -610f), new Vector2(760f, 76f));
         tierText = UIKit.Text(cr, "", 34, TextAnchor.MiddleCenter, Ink);
-        tierText.fontStyle = FontStyle.Bold;
+        UIKit.Bold(tierText);
         Place(tierText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -692f), new Vector2(760f, 50f));
         info = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
         Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -754f), new Vector2(760f, 96f));
@@ -165,7 +165,7 @@ public class HatchScreen : MonoBehaviour
         oi.sprite = HudIcons.Pill;
         oi.type = Image.Type.Sliced;
         oi.pixelsPerUnitMultiplier = 120f / 110f;
-        ok.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+        UIKit.Bold(ok.GetComponentInChildren<Text>());
         Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(720f, 110f));
 
         flash = UIKit.Image(root.transform, "Flash", new Color(1f, 1f, 1f, 0f));

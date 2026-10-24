@@ -174,7 +174,7 @@ public static class TopMap
         c.rectTransform.anchorMin = c.rectTransform.anchorMax = c.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         c.rectTransform.sizeDelta = new Vector2(size, size);
         Text t = UIKit.Text(c.transform, label, Mathf.RoundToInt(size * 0.48f), TextAnchor.MiddleCenter, Color.white);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         UIKit.Stretch(t.rectTransform);
         return c;
     }

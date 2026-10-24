@@ -478,7 +478,7 @@ public class MatchScreen : MonoBehaviour
         Button close = IconButton(safe, HudIcons.Close, Hide);
         Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(30f, -30f));
         Text title = UIKit.Text(safe, "산책메이트", 44, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Box(title.rectTransform, 150f, 40f, 150f, 70f);
         reportButton = UIKit.Button(safe, "신고 · 차단", OpenReport, new Color(0f, 0f, 0f, 0f), 30);
         reportButton.GetComponentInChildren<Text>().color = Danger;
@@ -633,7 +633,7 @@ public class MatchScreen : MonoBehaviour
         Box(card.rectTransform, 60f, 120f, 60f, 420f);
         card.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
         talkTopic = UIKit.Text(card.transform, "", 50, TextAnchor.MiddleCenter, Ink);
-        talkTopic.fontStyle = FontStyle.Bold;
+        UIKit.Bold(talkTopic);
         UIKit.Stretch(talkTopic.rectTransform, 60f, 40f);
         Button more = Pill(p, "다음 주제", ChipOff, Ink, NextTopic);
         Box((RectTransform)more.transform, 220f, 580f, 220f, 100f);
@@ -702,7 +702,7 @@ public class MatchScreen : MonoBehaviour
     static Text Heading(Transform parent, string text, float top, TextAnchor anchor = TextAnchor.MiddleLeft)
     {
         Text t = UIKit.Text(parent, text, 50, anchor, Ink);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Box(t.rectTransform, 60f, top, 60f, 80f);
         return t;
     }
@@ -710,7 +710,7 @@ public class MatchScreen : MonoBehaviour
     static Text Label(Transform parent, string text, float top)
     {
         Text t = UIKit.Text(parent, text, 36, TextAnchor.MiddleLeft, Ink);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Box(t.rectTransform, 60f, top, 60f, 60f);
         return t;
     }
@@ -758,7 +758,7 @@ public class MatchScreen : MonoBehaviour
         img.pixelsPerUnitMultiplier = 120f / 120f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = ink;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }

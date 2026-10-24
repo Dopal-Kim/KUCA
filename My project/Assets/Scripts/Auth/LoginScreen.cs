@@ -344,7 +344,7 @@ public class LoginScreen : MonoBehaviour
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         Text brand = UIKit.Text(safe, "KUCA", 120, TextAnchor.MiddleCenter, Color.white);
-        brand.fontStyle = FontStyle.Bold;
+        UIKit.Bold(brand);
         Box(brand.rectTransform, 0f, 90f, 0f, 150f);
         Text tag = UIKit.Text(safe, "경희대 국제캠퍼스를 함께 걷는 산책 동반자", 34, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.85f));
         Box(tag.rectTransform, 0f, 245f, 0f, 60f);
@@ -372,7 +372,7 @@ public class LoginScreen : MonoBehaviour
         loginPage = UIKit.Rect(panel, "LoginPage").gameObject;
         UIKit.Stretch((RectTransform)loginPage.transform);
         Text welcome = UIKit.Text(loginPage.transform, "시작하기", 52, TextAnchor.MiddleLeft, Ink);
-        welcome.fontStyle = FontStyle.Bold;
+        UIKit.Bold(welcome);
         Box(welcome.rectTransform, 60f, 90f, 60f, 80f);
         Text sub = UIKit.Text(loginPage.transform, "로그인한 뒤 경희대 메일 인증을 한 번 해요.", 30, TextAnchor.MiddleLeft, InkQuiet);
         Box(sub.rectTransform, 60f, 170f, 60f, 50f);
@@ -401,7 +401,7 @@ public class LoginScreen : MonoBehaviour
         emailPage = UIKit.Rect(panel, "EmailPage").gameObject;
         UIKit.Stretch((RectTransform)emailPage.transform);
         Text et = UIKit.Text(emailPage.transform, "경희대 메일 인증", 52, TextAnchor.MiddleLeft, Ink);
-        et.fontStyle = FontStyle.Bold;
+        UIKit.Bold(et);
         Box(et.rectTransform, 60f, 60f, 60f, 80f);
         emailHint = UIKit.Text(emailPage.transform, "", 28, TextAnchor.UpperLeft, InkQuiet);
         Box(emailHint.rectTransform, 60f, 140f, 60f, 80f);
@@ -427,7 +427,7 @@ public class LoginScreen : MonoBehaviour
         nickPage = UIKit.Rect(panel, "NickPage").gameObject;
         UIKit.Stretch((RectTransform)nickPage.transform);
         Text nt = UIKit.Text(nickPage.transform, "닉네임을 정해 주세요", 52, TextAnchor.MiddleLeft, Ink);
-        nt.fontStyle = FontStyle.Bold;
+        UIKit.Bold(nt);
         Box(nt.rectTransform, 60f, 60f, 60f, 80f);
         Text nh = UIKit.Text(nickPage.transform, "메모판과 산책메이트에서 보이는 이름이에요 (1~20자).", 28, TextAnchor.UpperLeft, InkQuiet);
         Box(nh.rectTransform, 60f, 140f, 60f, 60f);
@@ -439,7 +439,7 @@ public class LoginScreen : MonoBehaviour
         genderPage = UIKit.Rect(panel, "GenderPage").gameObject;
         UIKit.Stretch((RectTransform)genderPage.transform);
         Text gt = UIKit.Text(genderPage.transform, "성별을 알려 주세요", 52, TextAnchor.MiddleLeft, Ink);
-        gt.fontStyle = FontStyle.Bold;
+        UIKit.Bold(gt);
         Box(gt.rectTransform, 60f, 60f, 60f, 80f);
         Text gh = UIKit.Text(genderPage.transform, "상대에게 보이지 않아요. 산책메이트 '동성만' 조건에만 써요.", 28, TextAnchor.UpperLeft, InkQuiet);
         Box(gh.rectTransform, 60f, 140f, 60f, 60f);
@@ -457,7 +457,7 @@ public class LoginScreen : MonoBehaviour
         privacyPage = UIKit.Rect(panel, "PrivacyPage").gameObject;
         UIKit.Stretch((RectTransform)privacyPage.transform);
         Text pt = UIKit.Text(privacyPage.transform, "개인정보 안내", 52, TextAnchor.MiddleLeft, Ink);
-        pt.fontStyle = FontStyle.Bold;
+        UIKit.Bold(pt);
         Box(pt.rectTransform, 60f, 50f, 60f, 80f);
         Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요.", 28, TextAnchor.UpperLeft, InkQuiet);
         Box(ph.rectTransform, 60f, 130f, 60f, 50f);
@@ -481,7 +481,7 @@ public class LoginScreen : MonoBehaviour
             row.pixelsPerUnitMultiplier = 0.8f;
             Box(row.rectTransform, 60f, top, 60f, 116f);
             Text name = UIKit.Text(row.transform, item, 32, TextAnchor.UpperLeft, Ink);
-            name.fontStyle = FontStyle.Bold;
+            UIKit.Bold(name);
             Box(name.rectTransform, 32f, 18f, 32f, 44f);
             Text k = UIKit.Text(row.transform, keep, 26, TextAnchor.UpperRight, Burgundy);
             Box(k.rectTransform, 32f, 22f, 32f, 40f);
@@ -518,7 +518,7 @@ public class LoginScreen : MonoBehaviour
         img.pixelsPerUnitMultiplier = 120f / 116f;
         Text t = b.GetComponentInChildren<Text>();
         t.color = ink;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         Box((RectTransform)b.transform, 60f, top, 60f, 116f);
         b.gameObject.AddComponent<PressScale>();
         return b;

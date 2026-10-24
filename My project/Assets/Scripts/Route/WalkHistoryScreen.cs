@@ -104,12 +104,12 @@ public class WalkHistoryScreen : MonoBehaviour
         Text when = UIKit.Text(row.transform, When(e.EndedAt), 26, TextAnchor.UpperLeft, InkQuiet);
         Box(when.rectTransform, 60f, 24f, 200f, 40f);
         Text name = UIKit.Text(row.transform, e.title, 36, TextAnchor.UpperLeft, Ink);
-        name.fontStyle = FontStyle.Bold;
+        UIKit.Bold(name);
         Box(name.rectTransform, 60f, 66f, 200f, 52f);
         Text stats = UIKit.Text(row.transform, Stats(e), 30, TextAnchor.UpperLeft, Ink);
         Box(stats.rectTransform, 60f, 124f, 200f, 44f);
         Text done = UIKit.Text(row.transform, e.completed ? "" : "중간에 끝냄", 28, TextAnchor.MiddleRight, InkQuiet);   // 완료가 기본: 다른 것만 표시
-        done.fontStyle = FontStyle.Bold;
+        UIKit.Bold(done);
         Box(done.rectTransform, 0f, 0f, 44f, 190f);
         done.rectTransform.anchorMin = new Vector2(0.7f, 1f);
     }
@@ -146,7 +146,7 @@ public class WalkHistoryScreen : MonoBehaviour
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         Text title = UIKit.Text(safe, "산책 기록", 52, TextAnchor.MiddleLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
+        UIKit.Bold(title);
         Box(title.rectTransform, 140f, 40f, 60f, 80f);
         CloseButton(safe, Close, left: true);   // 전체 화면은 왼쪽 위 × (함께 걷기 · 사진첩 · 장소 메모와 같게)
         summary = UIKit.Text(safe, "", 30, TextAnchor.MiddleLeft, InkQuiet);
@@ -171,7 +171,7 @@ public class WalkHistoryScreen : MonoBehaviour
         cr.pivot = new Vector2(0.5f, 0.5f);
         cr.sizeDelta = new Vector2(0f, 1300f);
         detailTitle = UIKit.Text(cr, "", 42, TextAnchor.MiddleLeft, Ink);
-        detailTitle.fontStyle = FontStyle.Bold;
+        UIKit.Bold(detailTitle);
         Box(detailTitle.rectTransform, 50f, 40f, 140f, 64f);
         CloseButton(cr, () => detail.SetActive(false));
         detailStats = UIKit.Text(cr, "", 30, TextAnchor.UpperLeft, InkQuiet);
