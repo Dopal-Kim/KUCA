@@ -7,9 +7,9 @@ using UnityEngine.UI;
 /// </summary>
 public class FreeWalk : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color ChipOff = new Color(0.94f, 0.95f, 0.96f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color ChipOff = KucaTheme.PrimarySoft;
     /// <summary>자유 산책 선 색 (코스 색 파랑 · 보라 · 분홍과 다르게)</summary>
     public static readonly Color TrackColor = new Color(0.05f, 0.62f, 0.66f);
 

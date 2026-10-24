@@ -12,13 +12,13 @@ using UnityEngine.UI;
 /// </summary>
 public class MatchScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
     static readonly Color Warm = new Color(0.96f, 0.52f, 0.16f);
-    static readonly Color ChipOff = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color Danger = new Color(0.86f, 0.25f, 0.25f);
-    static readonly Color Paper = new Color(0.98f, 0.98f, 1f);
+    static readonly Color ChipOff = KucaTheme.PrimarySoft;
+    static readonly Color Danger = KucaTheme.Crimson;
+    static readonly Color Paper = KucaTheme.Surface;
 
     static readonly Dictionary<string, string> TasteNames = new Dictionary<string, string>
     {

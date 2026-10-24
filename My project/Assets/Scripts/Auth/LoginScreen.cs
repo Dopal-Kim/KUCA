@@ -10,13 +10,13 @@ using UnityEngine.UI;
 /// </summary>
 public class LoginScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
     static readonly Color KakaoYellow = new Color(1f, 0.9f, 0f);
-    static readonly Color Burgundy = new Color(0.55f, 0.13f, 0.20f);
-    static readonly Color Field = new Color(0.95f, 0.96f, 0.97f);
-    static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
+    static readonly Color Burgundy = KucaTheme.Crimson;
+    static readonly Color Field = KucaTheme.Surface;
+    static readonly Color ErrorRed = KucaTheme.Crimson;
 
     const string PrivacySeenKey = "privacy_seen";
 

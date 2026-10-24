@@ -19,8 +19,8 @@ public class VirtualWalk : MonoBehaviour
     const string GateBuildingId = "way-473963422";         // 정문
     const float OfferAfter = 8f;                            // 위치를 이만큼 못 받으면 권한다
 
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color Accent = KucaTheme.Primary;
 
     CampusMap map;
     GameObject offer, controls;

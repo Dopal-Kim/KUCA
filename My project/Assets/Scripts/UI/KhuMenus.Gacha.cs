@@ -9,9 +9,9 @@ using UnityEngine.UI;
 /// </summary>
 public partial class KhuMenus
 {
-    static readonly Color GachaInk = new Color(0.16f, 0.11f, 0.30f);
-    static readonly Color GachaQuiet = new Color(0.16f, 0.11f, 0.30f, 0.6f);
-    static readonly Color GachaPurple = new Color(0.45f, 0.30f, 0.85f);
+    static readonly Color GachaInk = KucaTheme.Ink;
+    static readonly Color GachaQuiet = KucaTheme.InkMuted;
+    static readonly Color GachaPurple = KucaTheme.Primary;
     static readonly Color GachaGold = new Color(0.95f, 0.66f, 0.12f);
 
     GameObject gachaScreen, oddsPanel, starterScreen;

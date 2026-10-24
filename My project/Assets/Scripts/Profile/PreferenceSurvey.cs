@@ -10,11 +10,11 @@ using UnityEngine.UI;
 /// </summary>
 public class PreferenceSurvey : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
-    static readonly Color ChipOff = new Color(0.95f, 0.96f, 0.97f);
-    static readonly Color Paper = new Color(0.99f, 0.99f, 1f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
+    static readonly Color ChipOff = KucaTheme.PrimarySoft;
+    static readonly Color Paper = KucaTheme.Card;
 
     class Question
     {

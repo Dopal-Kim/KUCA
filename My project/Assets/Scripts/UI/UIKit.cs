@@ -81,9 +81,12 @@ public static class UIKit
         return t;
     }
 
+    /// <summary>둥근 알약 모양 버튼 (모든 화면 공통 모양, docs/인터페이스_기준.md)</summary>
     public static Button Button(Transform parent, string label, UnityAction onClick, Color color, int fontSize = 44)
     {
         Image img = Image(parent, label, color, raycast: true);
+        img.sprite = HudIcons.Pill;
+        img.type = UnityEngine.UI.Image.Type.Sliced;
         var button = img.gameObject.AddComponent<Button>();
         button.onClick.AddListener(onClick);
         Text t = Text(img.transform, label, fontSize, TextAnchor.MiddleCenter);

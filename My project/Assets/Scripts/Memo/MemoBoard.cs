@@ -38,17 +38,17 @@ public partial class MemoBoard : MonoBehaviour
     const string MineKey = "memo_mine";
 
     // 콜라주 (종이·잉크)
-    static readonly Color Paper = new Color(0.90f, 0.90f, 0.89f);
-    static readonly Color PaperDark = new Color(0.83f, 0.83f, 0.82f);
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
+    static readonly Color Paper = KucaTheme.Surface;
+    static readonly Color PaperDark = KucaTheme.Line;
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
     static readonly Color NotePaper = new Color(1f, 0.98f, 0.91f);
     // 새 게시물 (흰 화면)
-    static readonly Color Line = new Color(0f, 0f, 0f, 0.08f);
-    static readonly Color Chip = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color ShareBlue = new Color(0.29f, 0.37f, 0.98f);
-    static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
-    static readonly Color LikeRed = new Color(0.93f, 0.25f, 0.33f);
+    static readonly Color Line = KucaTheme.Line;
+    static readonly Color Chip = KucaTheme.PrimarySoft;
+    static readonly Color ShareBlue = KucaTheme.Primary;
+    static readonly Color ErrorRed = KucaTheme.Crimson;
+    static readonly Color LikeRed = KucaTheme.Crimson;
 
     IMemoService service;
     string serviceUrl;

@@ -16,15 +16,15 @@ public partial class KhuMenus : MonoBehaviour
 {
     public enum Tab { Dex, Monsters, Items }
 
-    static readonly Color Teal = new Color(0.17f, 0.45f, 0.49f);
-    static readonly Color TealDeep = new Color(0.10f, 0.33f, 0.37f);
+    static readonly Color Teal = KucaTheme.Primary;
+    static readonly Color TealDeep = KucaTheme.PrimaryDeep;
     static readonly Color Mint = new Color(0.38f, 0.86f, 0.70f);
-    static readonly Color Gray = new Color(0.42f, 0.47f, 0.49f);
+    static readonly Color Gray = KucaTheme.InkMuted;
     static readonly Color Orange = new Color(0.96f, 0.58f, 0.10f);
-    static readonly Color Green = new Color(0.33f, 0.78f, 0.55f);
-    static readonly Color ValueGreen = new Color(0.22f, 0.66f, 0.52f);
+    static readonly Color Green = KucaTheme.Primary;
+    static readonly Color ValueGreen = KucaTheme.Primary;
     // 메인 메뉴 (파란 그라데이션)
-    static readonly Color MenuNavy = new Color(0.10f, 0.22f, 0.52f);
+    static readonly Color MenuNavy = KucaTheme.PrimaryDeep;
     // 프로필 (버건디 그라데이션)
     static readonly Color PText = new Color(1f, 0.94f, 0.90f);
     static readonly Color PGold = new Color(0.96f, 0.79f, 0.45f);

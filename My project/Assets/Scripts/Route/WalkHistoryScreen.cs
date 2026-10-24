@@ -8,11 +8,11 @@ using UnityEngine.UI;
 /// </summary>
 public class WalkHistoryScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Page = new Color(0.98f, 0.98f, 1f);
-    static readonly Color Dim = new Color(0f, 0f, 0f, 0.45f);
-    static readonly Color Green = new Color(0.18f, 0.62f, 0.36f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Page = KucaTheme.Surface;
+    static readonly Color Dim = KucaTheme.Scrim;
+    static readonly Color Green = KucaTheme.Primary;
 
     GameObject root, detail;
     RectTransform list;

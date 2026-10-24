@@ -17,12 +17,12 @@ using UnityEngine.UI;
 [DefaultExecutionOrder(1000)] // 카메라가 움직인 뒤에 표시 자리를 잡는다
 public partial class RoutePlanner : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color RouteBlue = new Color(0.16f, 0.42f, 0.95f);
-    static readonly Color DoneGreen = new Color(0.24f, 0.68f, 0.38f);
-    static readonly Color ChipOff = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color Dim = new Color(0f, 0f, 0f, 0.45f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color RouteBlue = KucaTheme.Primary;
+    static readonly Color DoneGreen = KucaTheme.Primary;
+    static readonly Color ChipOff = KucaTheme.PrimarySoft;
+    static readonly Color Dim = KucaTheme.Scrim;
 
     static readonly (int minutes, string label)[] TimeChoices = { (15, "15분"), (30, "30분"), (60, "1시간") };
     static readonly (string id, string label)[] TasteChoices =

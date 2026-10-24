@@ -8,8 +8,8 @@ using UnityEngine.UI;
 /// </summary>
 public class HatchScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
     static readonly Color TicketPaper = new Color(1f, 0.93f, 0.78f);
     static readonly Color TicketGold = new Color(1f, 0.78f, 0.25f);
 

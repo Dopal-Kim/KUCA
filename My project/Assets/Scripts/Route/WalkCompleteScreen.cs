@@ -12,12 +12,12 @@ using UnityEngine.UI;
 /// </summary>
 public class WalkCompleteScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
     static readonly Color Gold = new Color(0.98f, 0.72f, 0.12f);
-    static readonly Color Field = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color Green = new Color(0.24f, 0.68f, 0.38f);
+    static readonly Color Field = KucaTheme.PrimarySoft;
+    static readonly Color Green = KucaTheme.Primary;
 
     /// <summary>
     /// A-V4: 파트너와 AR 사진 화면을 여는 함수. CollectController 가 CatchCameraScreen.OpenPartnerPhoto 를 넣어 준다.

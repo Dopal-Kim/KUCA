@@ -38,8 +38,8 @@ public class GameHUD : MonoBehaviour
     public float portraitDistance = 2.7f;
     public float portraitFov = 22f;
 
-    static readonly Color Navy = new Color(0.11f, 0.16f, 0.39f, 1f);
-    static readonly Color Crimson = new Color(0.86f, 0.22f, 0.25f, 1f);
+    static readonly Color Navy = KucaTheme.PrimaryDeep;
+    static readonly Color Crimson = KucaTheme.Crimson;
     static readonly Color Gold = new Color(0.85f, 0.72f, 0.45f, 1f);
     static readonly Color Glow = new Color(0.45f, 0.80f, 1f, 1f);
     static readonly Color GlassFill = new Color(0.06f, 0.10f, 0.20f, 0.78f);
