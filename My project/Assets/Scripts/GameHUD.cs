@@ -293,7 +293,7 @@ public class GameHUD : MonoBehaviour
         eggFill.GetComponent<Image>().color = capped ? new Color(1f, 1f, 1f, 0.35f) : new Color(1f, 0.85f, 0.4f);
     }
 
-    /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*50 XP 가 필요하다.</summary>
+    /// <summary>레벨 n 에서 n+1 로 가려면 100 + (n-1)*10 XP 가 필요하다 (서버 WalkRules.LevelStartXp 와 같은 규칙).</summary>
     public static void LevelOf(int score, out int level, out int xpInLevel, out int xpNeeded)
     {
         level = 1;
@@ -303,7 +303,7 @@ public class GameHUD : MonoBehaviour
         {
             xpInLevel -= xpNeeded;
             level++;
-            xpNeeded = 100 + (level - 1) * 50;
+            xpNeeded = 100 + (level - 1) * 10;
         }
     }
 

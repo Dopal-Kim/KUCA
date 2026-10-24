@@ -71,6 +71,15 @@ public class WalkCompleteTests
     }
 
     [Test]
+    public void 레벨은_다음까지_100에서_10씩_늘어난다()
+    {
+        GameHUD.LevelOf(209, out int lv, out int inLv, out int need);
+        Assert.AreEqual((2, 109, 110), (lv, inLv, need));
+        GameHUD.LevelOf(330, out lv, out inLv, out need);
+        Assert.AreEqual((4, 0, 130), (lv, inLv, need));   // 100 + 110 + 120
+    }
+
+    [Test]
     public void 리뷰는_별점이_있어야_하고_10XP()
     {
         var local = new LocalWalkService();
