@@ -6,10 +6,11 @@ using UnityEngine;
 
 /// <summary>
 /// 테스터 배포용 안드로이드 APK 를 한 번에 만든다 (메뉴 KUCA › 안드로이드 APK 빌드).
-/// - 버전 코드를 1 올리고 버전 이름을 0.1.&lt;코드&gt; 로 맞춘다 → Firebase App Distribution 과 테스터 폰에서 새 버전으로 보인다
+/// - 버전 코드만 1 올린다 → Firebase App Distribution 과 테스터 폰에서 새 버전으로 보인다.
+///   버전 이름(bundleVersion)은 iOS(TestFlight)와 같이 쓰므로 건드리지 않는다
 /// - 팀 서명 키(kuca.keystore)로 서명한다 → 테스터 폰에서 지우지 않고 업데이트된다
 /// - 서명 키 경로·비밀번호는 이 PC 에만 두고 빌드가 끝나면 Player Settings 를 원래대로 돌린다 → ProjectSettings 에 개인 경로가 남지 않는다
-/// - 결과: 저장소 폴더의 Builds/Android/KUCA-0.1.&lt;코드&gt;.apk (git 에 올라가지 않음)
+/// - 결과: 저장소 폴더의 Builds/Android/KUCA-&lt;버전&gt;-&lt;코드&gt;.apk (git 에 올라가지 않음)
 /// 올리는 방법: docs/안드로이드_자동배포.md
 /// </summary>
 public class AndroidApkBuild : EditorWindow
@@ -40,8 +41,8 @@ public class AndroidApkBuild : EditorWindow
     void OnGUI()
     {
         int next = PlayerSettings.Android.bundleVersionCode + 1;
-        EditorGUILayout.HelpBox("APK 를 만든 뒤 Firebase App Distribution 에 올리면 kuca-team 테스터 폰에 새 버전 알림이 갑니다.", MessageType.Info);
-        EditorGUILayout.LabelField("이번 버전", $"0.1.{next}  (버전 코드 {next})");
+        EditorGUILayout.HelpBox("APK 를 만든 뒤 Firebase App Distribution 에 올리면 고른 그룹(kuca-team · kuca-pilot) 테스터 폰에 새 버전 알림이 갑니다.", MessageType.Info);
+        EditorGUILayout.LabelField("이번 버전", $"{PlayerSettings.bundleVersion}  (버전 코드 {next})");
         EditorGUILayout.Space();
 
         using (new EditorGUILayout.HorizontalScope())
@@ -71,7 +72,7 @@ public class AndroidApkBuild : EditorWindow
         bool ready = File.Exists(keystorePath) && !string.IsNullOrEmpty(alias) && keystorePass.Length > 0 && aliasPass.Length > 0;
         using (new EditorGUI.DisabledScope(!ready))
         {
-            if (GUILayout.Button($"빌드 → KUCA-0.1.{next}.apk", GUILayout.Height(36f)))
+            if (GUILayout.Button($"빌드 → KUCA-{PlayerSettings.bundleVersion}-{next}.apk", GUILayout.Height(36f)))
                 EditorApplication.delayCall += () => Build(next);
         }
         if (!ready)
@@ -93,10 +94,9 @@ public class AndroidApkBuild : EditorWindow
         string oldKeystoreName = PlayerSettings.Android.keystoreName;
         string oldAliasName = PlayerSettings.Android.keyaliasName;
         int oldCode = PlayerSettings.Android.bundleVersionCode;
-        string oldVersion = PlayerSettings.bundleVersion;
         bool oldAppBundle = EditorUserBuildSettings.buildAppBundle;
 
-        string version = $"0.1.{code}";
+        string version = $"{PlayerSettings.bundleVersion}-{code}";
         string dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "Android"));
         Directory.CreateDirectory(dir);
         string apk = Path.Combine(dir, $"KUCA-{version}.apk");
@@ -110,7 +110,6 @@ public class AndroidApkBuild : EditorWindow
             PlayerSettings.Android.keyaliasName = alias;
             PlayerSettings.Android.keyaliasPass = aliasPass;
             PlayerSettings.Android.bundleVersionCode = code;
-            PlayerSettings.bundleVersion = version;
             EditorUserBuildSettings.buildAppBundle = false;
 
             report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
@@ -134,7 +133,6 @@ public class AndroidApkBuild : EditorWindow
         {
             // 실패한 빌드는 버전 번호를 쓰지 않는다
             PlayerSettings.Android.bundleVersionCode = oldCode;
-            PlayerSettings.bundleVersion = oldVersion;
             EditorUtility.DisplayDialog("빌드 실패", $"결과: {report.summary.result} · 오류 {report.summary.totalErrors}개\nConsole 창의 빨간 줄을 확인하세요.", "확인");
             return;
         }
@@ -143,7 +141,7 @@ public class AndroidApkBuild : EditorWindow
         double mb = new FileInfo(apk).Length / (1024.0 * 1024.0);
         EditorUtility.RevealInFinder(apk);
         if (EditorUtility.DisplayDialog("빌드 완료",
-                $"KUCA-{version}.apk ({mb:F0} MB)\n\nFirebase App Distribution 에 이 파일을 끌어다 놓고 kuca-team 그룹에 배포하세요.\n버전이 올라간 ProjectSettings 는 커밋해 두세요.",
+                $"KUCA-{version}.apk ({mb:F0} MB)\n\nFirebase App Distribution 에 이 파일을 끌어다 놓고 kuca-team (팀) 또는 kuca-pilot (실사용) 그룹에 배포하세요.\n버전이 올라간 ProjectSettings 는 커밋해 두세요.",
                 "Firebase 열기", "닫기"))
             Application.OpenURL(ConsoleUrl);
     }
