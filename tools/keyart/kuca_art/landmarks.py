@@ -5,7 +5,7 @@
 import math
 
 from .geo import Footprint
-from .mesh import Frame, IDENT, Builder, shade
+from .mesh import Frame, IDENT, Builder, outward_normal, shade
 
 STONE = (0.94, 0.91, 0.83)
 COLUMN = (0.98, 0.96, 0.90)
@@ -30,18 +30,18 @@ OBSERVATORY, CERAMICS, THEATER, GATE = 'way-474521125', 'way-474521123', 'way-47
 REAL_LEVELS = {
     'relation-8269760': 7,   # 우정원: 지하1·지상7
     'way-474085540': 7,      # 전자정보대학관: 지하1·지상7 (ㅁ자)
-    'way-474085537': 8,      # 멀티미디어교육관: 8층
+    'way-474085537': 9,      # 멀티미디어교육관: 지하2·지상9 (공식 캠퍼스맵 층별 안내)
     'way-585696506': 5,      # 선승관: 지상 3층 대공간 체육관 (층고가 높아 5층 높이)
     'way-585696507': 5,      # 외국어대학관
     'way-474085534': 4,      # 중앙도서관 (연면적 17,498 m² / 바닥 5,500 m²)
     'way-455726113': 4,      # 체육대학관
-    'way-474085536': 4,      # 예술디자인대학
-    'way-455725718': 4,      # 공학관
+    'way-474085536': 4,      # 예술디자인대학 (실제 본동은 7층: 다음 사이클에 본동 · 낮은 전면동으로 나누기)
+    'way-455725718': 6,      # 공학관: 지하2·지상6 (공식 캠퍼스맵)
     'way-455728922': 2,      # 공학실험동: 지하1·지상2
-    'way-474085539': 5,      # 국제대학 (국제·경영대학관)
+    'way-474085539': 4,      # 국제대학 (국제·경영대학관): 지하1·지상4 (공식 캠퍼스맵)
     'way-474085542': 4,      # 국제학관: OSM 4층
     'way-474521123': 2,      # 도예관
-    'way-474521125': 2,      # 천문대 (돔 아래 기단 건물)
+    'way-474521125': 3,      # 천문대: 지하2·지상3 (공식 캠퍼스맵), 돔 아래 계단식 몸체
 }
 LEVEL_H = 3.3
 
@@ -55,7 +55,7 @@ def is_campus_seed(b):
         or '경희' in (b.name or '')
 
 HIDDEN = {THEATER, GATE}          # 상자 건물 대신 이 형태만 보인다 (충돌체·정보는 Unity 에 남김)
-NO_DETAILS = {THEATER, GATE, OBSERVATORY, CERAMICS}   # 공통 디테일(난간 등)을 붙이지 않을 건물
+NO_DETAILS = {THEATER, GATE, OBSERVATORY}   # 공통 디테일(난간 등)을 붙이지 않을 건물
 
 
 def build(buildings, layer, ground, shells=None, entrances=None):
@@ -102,18 +102,16 @@ def build(buildings, layer, ground, shells=None, entrances=None):
     if b:
         face = f.face(PLAZA)
         mb = builder_at(b)
-        arena_roof(mb, b, f)             # 실제: 대공간 종합체육관 → 배럴 볼트 지붕 (컨셉아트 아이콘도 둥근 지붕)
-        arcade(mb, face, b.h)
-        clock_tower(mb, face, b.h)
+        drum_roof(mb, b, f)              # 실사: 붉은 벽돌 원형 드럼 + 짙은 회색 낮은 둥근 지붕 + 금색 띠 (2017 개관 평화의전당형)
+        drum_arcade(mb, b)               # 실사: 1층 반원 아치 회랑이 둘레를 한 바퀴
+        clock_tower(mb, face, b.h, spire=SPIRE_GREEN)
         _occupy_face(ground, face, 12)
 
     b, f = fp(OBSERVATORY)
     if b:
         observatory(builder_at(b), b, f)
 
-    b, f = fp(CERAMICS)
-    if b:
-        pitched_roof(builder_at(b), b, f)
+    # 도예관: 실사는 적갈색 외벽 2~3층 평지붕 (박공지붕 아님) → 공통 디테일 · 벽돌 스타일로
 
     b, f = fp(THEATER)
     if b:
@@ -223,7 +221,45 @@ def arcade(mb, f, height):
         mb.box(m, (0, 0.15 + 0.15 * (2 - i), 3.6 + i * 0.8), (width * 0.5 + i * 1.5, 0.3 + 0.3 * (2 - i), 0.8), STEP)
 
 
-def clock_tower(mb, f, height):
+SPIRE_GREEN = (0.36, 0.56, 0.44)   # 선승관 시계탑 첨탑 (실사: 녹청 동판)
+DOME_GRAY = (0.38, 0.40, 0.43)     # 선승관 지붕 (실사: 짙은 회색)
+
+
+def drum_roof(mb, b, f):
+    """선승관: 외곽을 따라 금색 띠 + 처마, 그 위 짙은 회색 낮은 타원 돔 (외곽 크기에 맞춘 납작한 반구)"""
+    (ax, az), L, Wd = f.long_axis()
+    H = b.h
+    mb.band(b.poly, H - 2.6, H - 0.9, 0.18, -0.01, GOLD)                    # 금색 프리즈
+    mb.band(b.poly, H - 0.2, H + 0.5, 0.9, 1.4, DOME_GRAY, top_col=shade(DOME_GRAY, 1.08))   # 내민 처마
+    k = 0.47
+    dome = Frame((f.center[0], H + 0.4, f.center[1]), (ax * L * k, 0.0, az * L * k), (0.0, min(L, Wd) * 0.16, 0.0),
+                 (-az * Wd * k, 0.0, ax * Wd * k))
+    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 40, 7, DOME_GRAY)
+    lantern = Frame((f.center[0], H + 0.4 + min(L, Wd) * 0.16, f.center[1]))
+    mb.prism(lantern, (0, -0.3, 0), 3.2, 1.6, 16, GOLD, caps=True)
+
+
+def drum_arcade(mb, b):
+    """선승관: 외벽 둘레 1층에 2층 높이 반원 아치 (밝은 석재 테 + 어두운 안쪽)"""
+    n = len(b.poly)
+    for i in range(n):
+        a, c = b.poly[i], b.poly[(i + 1) % n]
+        dx, dz = c[0] - a[0], c[1] - a[1]
+        seg = math.hypot(dx, dz)
+        count = int(seg / 4.6)
+        if count < 1:
+            continue
+        nx, nz = outward_normal(b.poly, i)
+        mid = ((a[0] + c[0]) / 2, 0.0, (a[1] + c[1]) / 2)
+        m = Frame.look(mid, (nx, 0.0, nz))
+        w = seg / count
+        for k in range(count):
+            x = -seg / 2 + w * (k + 0.5)
+            mb.arch_panel(m, (x, 0.0, 0.05), w * 0.78, 6.6, COLUMN)
+            mb.arch_panel(m, (x, 0.0, 0.1), w * 0.6, 6.0, DARK)
+
+
+def clock_tower(mb, f, height, spire=None):
     c, n, t = f['center'], f['normal'], f['tangent']
     pos = (c[0] + t[0] * (f['length'] / 2 - 6) - n[0] * 4, 0.0, c[2] + t[2] * (f['length'] / 2 - 6) - n[2] * 4)
     m = Frame.look(pos, n)
@@ -236,8 +272,9 @@ def clock_tower(mb, f, height):
     for y in (height, height + 9):
         mb.box(m, (0, y, 0), (w + 0.6, 0.6, w + 0.6), COLUMN)
     mb.box(m, (0, tower_h + 0.4, 0), (w + 1.4, 0.8, w + 1.4), STEP)
-    mb.cone(m, (0, tower_h + 0.8, 0), (w + 1.4) * 0.72, 7.0, 4, ROOF, rot=45)
-    mb.prism(m, (0, tower_h + 7.6, 0), 0.12, 2.2, 4, GOLD)
+    spire_h = 11.0 if spire else 7.0
+    mb.cone(m, (0, tower_h + 0.8, 0), (w + 1.4) * 0.72, spire_h, 4, spire or ROOF, rot=45)
+    mb.prism(m, (0, tower_h + 0.6 + spire_h, 0), 0.12, 2.2, 4, GOLD)
     clock_y = tower_h - 4.0
     for k in range(4):
         side = m.child((0, 0, 0), 90 * k)

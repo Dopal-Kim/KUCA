@@ -292,14 +292,14 @@
   },
   "Classical": {
    "wall": [
-    0.97,
-    0.9,
-    0.77
+    0.95,
+    0.94,
+    0.9
    ],
    "trim": [
     1.0,
-    0.97,
-    0.89
+    0.99,
+    0.97
    ],
    "window": [
     0.38,
@@ -379,9 +379,9 @@
   },
   "Brick": {
    "wall": [
-    0.82,
-    0.45,
-    0.33
+    0.74,
+    0.4,
+    0.31
    ],
    "trim": [
     0.98,
@@ -431,6 +431,64 @@
    "spacing": 4.2,
    "windowWidth": 0.4,
    "windowHeight": 0.36,
+   "pilasterEvery": 0,
+   "brick": 0,
+   "arch": 0
+  },
+  "Stone": {
+   "wall": [
+    0.9,
+    0.8,
+    0.75
+   ],
+   "trim": [
+    0.97,
+    0.95,
+    0.92
+   ],
+   "window": [
+    0.3,
+    0.42,
+    0.52
+   ],
+   "roof": [
+    0.76,
+    0.74,
+    0.72
+   ],
+   "floorHeight": 3.6,
+   "spacing": 3.2,
+   "windowWidth": 0.86,
+   "windowHeight": 0.42,
+   "pilasterEvery": 0,
+   "brick": 0,
+   "arch": 0
+  },
+  "Granite": {
+   "wall": [
+    0.74,
+    0.74,
+    0.73
+   ],
+   "trim": [
+    0.86,
+    0.86,
+    0.85
+   ],
+   "window": [
+    0.3,
+    0.44,
+    0.56
+   ],
+   "roof": [
+    0.74,
+    0.74,
+    0.73
+   ],
+   "floorHeight": 3.5,
+   "spacing": 3.0,
+   "windowWidth": 0.62,
+   "windowHeight": 0.5,
    "pilasterEvery": 0,
    "brick": 0,
    "arch": 0

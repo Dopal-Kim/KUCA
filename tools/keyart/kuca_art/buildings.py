@@ -16,22 +16,24 @@ from .mesh import Frame, IDENT, extrude_poly, glass_mix_cols, offset_polygon, ou
 STYLES = {
     'way-474085534': 'Classical',  # 중앙도서관
     'way-474085536': 'Classical',  # 예술디자인대학
-    'way-474521123': 'Classical',  # 도예관
+    'way-474521123': 'Brick',      # 도예관 (실사: 적갈색 외벽)
     'way-455726113': 'Classical',  # 체육대학관
-    'way-585696506': 'Classical',  # 선승관
+    'way-585696506': 'Brick',      # 선승관 (실사: 붉은 벽돌 원형 드럼)
     'way-474521125': 'Classical',  # 천문대
     'way-455725718': 'Modern',     # 공학관
     'way-455728922': 'Modern',     # 공학실험동
-    'way-474085540': 'Modern',     # 전자정보대학
-    'way-474085537': 'Glass',      # 멀티미디어교육관
-    'way-474085538': 'Glass',      # 글로벌관
-    'relation-8269760': 'Brick',   # 우정원
+    'way-474085540': 'Stone',      # 전자정보대학 (실사: 베이지 · 연분홍 석재 + 띠창)
+    'way-474085539': 'Stone',      # 국제대학 · 국제·경영대학관 (실사: 연분홍 석재 액자 + 흰 띠)
+    'way-474085542': 'Stone',      # 국제학관 (실사: 연분홍 석재)
+    'way-474085537': 'Granite',    # 멀티미디어교육관 (실사: 회색 석재 판상형 + 규칙 창, 커튼월 아님)
+    'way-474085538': 'Granite',    # 글로벌관
+    'relation-8269760': 'Modern',  # 우정원 (실사: 흰 외벽 고층 + 청록 유리 계단탑)
 }
 
 # 스타일별 색: 벽·띠는 KeyArtLook.json (셰이더 재질과 같은 값), 기단은 따로
 FLOOR_H = {}
 _BASE = {'Outside': (0.82, 0.83, 0.84), 'Default': (0.80, 0.76, 0.69), 'Classical': (0.82, 0.77, 0.68), 'Modern': (0.74, 0.75, 0.75),
-         'Glass': (0.72, 0.74, 0.76), 'Brick': (0.62, 0.56, 0.50)}
+         'Glass': (0.72, 0.74, 0.76), 'Brick': (0.62, 0.56, 0.50), 'Stone': (0.80, 0.74, 0.70), 'Granite': (0.62, 0.62, 0.62)}
 PALETTE = {}
 
 
