@@ -9,6 +9,12 @@ using UnityEngine;
 /// </summary>
 public class MeetSpotFigures : MonoBehaviour
 {
+    /// <summary>
+    /// 지도에 만남 스팟 경희몬을 세울지. 10/24: 지도에는 경희몬을 두지 않고 뽑기로만 얻게 해서 꺼 둔다 (B 요청).
+    /// 매칭 화면은 여전히 스팟 이름과 그 경희몬 그림을 보여 준다. 다시 세우려면 true.
+    /// </summary>
+    public static bool ShowOnMap = false;
+
     const float Scale = 1.15f;       // 지도 경희몬과 같은 크기 (받침 포함 약 10 m)
     const float SideOffset = 16f;    // 기둥에서 옆으로 (배지와 겹치지 않게)
     const int RimStage = 1;          // 1단계 진화 테두리 빛 → 다른 지도 장식과 구별
@@ -20,6 +26,8 @@ public class MeetSpotFigures : MonoBehaviour
     {
         // 경희스팟은 KyungHeeSpots.Start 에서 만들어진다 → 모든 Start 가 끝난 다음 프레임에 찾는다
         yield return null;
+        if (!ShowOnMap)
+            yield break;
         var spots = FindAnyObjectByType<KyungHeeSpots>();
         if (spots == null)
             yield break;

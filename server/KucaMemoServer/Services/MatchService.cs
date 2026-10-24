@@ -73,12 +73,14 @@ public class MatchService(
         public required int Minutes;
         public required Prefs Prefs;
         public required DateTimeOffset Since, Until;
+        public bool IsGuest;   // 체험 계정만 시연용 가상 상대를 만난다
     }
 
     sealed class Side
     {
         public required string UserId, Nickname, Gender, MatchGender, BuildingId;
         public required Prefs Prefs;
+        public bool IsGuest;
         public bool Accepted, Arrived, Finished;
         public string? Appearance;
         public bool IsDemo => UserId == MatchRules.DemoUserId;
@@ -138,7 +140,7 @@ public class MatchService(
             ended.Remove(user.Id);
             waiting[user.Id] = new Waiting
             {
-                UserId = user.Id, Nickname = user.Nickname ?? "익명", Gender = user.Gender ?? "",
+                UserId = user.Id, Nickname = user.Nickname ?? "익명", Gender = user.Gender ?? "", IsGuest = user.IsGuest,
                 MatchGender = matchGender, BuildingId = body.BuildingId, Minutes = body.Minutes, Prefs = prefs,
                 Since = now, Until = now + MatchRules.WaitLimit,
             };
@@ -424,7 +426,8 @@ public class MatchService(
                 .FirstOrDefault();
             if (best != null)
                 Propose(ToSide(w), ToSide(best), w.Minutes, now);
-            else if (DemoOn && now - w.Since >= MatchRules.DemoDelay)
+            // 가상 상대는 체험 계정(심사 · 시연)에게만. 실제 학생은 켜 둬도 실제 학생끼리만 짝이 된다
+            else if (DemoOn && w.IsGuest && now - w.Since >= MatchRules.DemoDelay)
                 Propose(ToSide(w), DemoSide(w), w.Minutes, now);
         }
     }
@@ -562,7 +565,7 @@ public class MatchService(
         current.Remove(s.UserId);
         waiting[s.UserId] = new Waiting
         {
-            UserId = s.UserId, Nickname = s.Nickname, Gender = s.Gender, MatchGender = s.MatchGender,
+            UserId = s.UserId, Nickname = s.Nickname, Gender = s.Gender, MatchGender = s.MatchGender, IsGuest = s.IsGuest,
             BuildingId = s.BuildingId, Minutes = minutes, Prefs = s.Prefs, Since = now, Until = now + MatchRules.WaitLimit,
         };
     }
@@ -582,7 +585,7 @@ public class MatchService(
 
     static Side ToSide(Waiting w) => new()
     {
-        UserId = w.UserId, Nickname = w.Nickname, Gender = w.Gender, MatchGender = w.MatchGender,
+        UserId = w.UserId, Nickname = w.Nickname, Gender = w.Gender, MatchGender = w.MatchGender, IsGuest = w.IsGuest,
         BuildingId = w.BuildingId, Prefs = w.Prefs,
     };
 

@@ -143,7 +143,7 @@ az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Recommend__A
 - 타이머가 없습니다. 앱이 3초마다 부르는 `GET /api/match` 때 만료 · 노쇼를 처리하고 짝을 찾습니다.
 - 스몰토크 AI 는 산책 추천과 같은 `Recommend:*` 설정(챗쿠)을 씁니다. 키가 없으면 `Data/smalltalk.json` 예시에서 고릅니다.
 - 숫자는 모두 `Services/MatchService.cs` 의 `MatchRules` 에 있습니다. 운영 시간은 없습니다 (24시간).
-- **시연용 가상 상대:** 시연 기간에만 켭니다.
+- **시연용 가상 상대:** 체험 계정(둘러보기)에게만 나타납니다. 실제 학생은 실제 학생끼리만 짝이 되므로 심사 · 실사용 기간에 켜 둬도 됩니다.
 
 ```bash
 az webapp config appsettings set -g kuca-rg -n kuca-memo --settings Match__DemoPartner=true
@@ -187,7 +187,7 @@ curl -H "X-Admin-Key: <관리자 키>" https://kuca-memo.azurewebsites.net/api/a
 3. **AI 장애 대비.** `aiLast24h` 의 `fallbackRate` 가 갑자기 높으면 AI 가 안 되는 것입니다.
    - 앱은 계속 동작합니다 (추천은 규칙, 스몰토크는 예시, 내용 검사는 금지어).
    - 키 · 크레딧 · 게이트웨이 상태를 확인합니다.
-4. **시연하는 날만** `Match__DemoPartner=true`, 끝나면 `false`.
+4. 심사 · 시연 기간에 `Match__DemoPartner=true` (체험 계정에게만 적용), 끝나면 `false`.
 5. **한 대만.** 매칭 상태가 메모리에 있으므로 인스턴스를 2개 이상으로 늘리지 않습니다 (scale out 금지).
 
 ## 테스트
