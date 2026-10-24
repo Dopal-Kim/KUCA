@@ -1,0 +1,258 @@
+﻿
+C:\Users\admin\KUCA-check\ui.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
+C:\Users\admin\KUCA-check\ui.log:53:UiCapture.Run
+C:\Users\admin\KUCA-check\ui.log:184:			LogAssemblyErrors (4ms)
+C:\Users\admin\KUCA-check\ui.log:320:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 enti
+tlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:340:			LogAssemblyErrors (7ms)
+C:\Users\admin\KUCA-check\ui.log:1522:Assets\Editor\UiCapture.cs(261,113): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1524:Assets\Editor\UiCapture.cs(261,37): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1526:Assets\Editor\UiCapture.cs(272,112): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1528:Assets\Editor\UiCapture.cs(272,36): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1530:Assets\Editor\UiCapture.cs(357,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1532:Assets\Editor\UiCapture.cs(357,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1534:Assets\Editor\UiCapture.cs(452,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1536:Assets\Editor\UiCapture.cs(452,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1538:Assets\Editor\UiCapture.cs(371,9): warning UAC0005: AppDomain.GetAssemblies() in 
+Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAss
+emblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui.log:2974:Assets\Editor\UiCapture.cs(261,113): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2975:Assets\Editor\UiCapture.cs(261,37): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2976:Assets\Editor\UiCapture.cs(272,112): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2977:Assets\Editor\UiCapture.cs(272,36): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2978:Assets\Editor\UiCapture.cs(357,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2979:Assets\Editor\UiCapture.cs(357,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2980:Assets\Editor\UiCapture.cs(452,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2981:Assets\Editor\UiCapture.cs(452,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2982:Assets\Editor\UiCapture.cs(371,9): warning UAC0005: AppDomain.GetAssemblies() in 
+Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAss
+emblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui.log:3015:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3035:			LogAssemblyErrors (5ms)
+C:\Users\admin\KUCA-check\ui.log:3289:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/UiCaptu
+re.cs:63)
+C:\Users\admin\KUCA-check\ui.log:3290:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui.log:3292:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui.log:3317:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/UiCaptu
+re.cs:63)
+C:\Users\admin\KUCA-check\ui.log:3318:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui.log:3320:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui.log:3345:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/UiCaptu
+re.cs:63)
+C:\Users\admin\KUCA-check\ui.log:3346:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui.log:3348:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui.log:3373:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/UiCaptu
+re.cs:63)
+C:\Users\admin\KUCA-check\ui.log:3374:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui.log:3376:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui.log:3438:[UiCapture] 01_개인정보_안내
+C:\Users\admin\KUCA-check\ui.log:3445:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3446:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:146)
+C:\Users\admin\KUCA-check\ui.log:3447:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3450:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3457:[UiCapture] 02_로그인
+C:\Users\admin\KUCA-check\ui.log:3464:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3465:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:149)
+C:\Users\admin\KUCA-check\ui.log:3466:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3469:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3480:[UiCapture] 03_첫_꾸미기
+C:\Users\admin\KUCA-check\ui.log:3487:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3488:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:152)
+C:\Users\admin\KUCA-check\ui.log:3489:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3492:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3495:[UiCapture] 04_지도
+C:\Users\admin\KUCA-check\ui.log:3502:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3503:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:159)
+C:\Users\admin\KUCA-check\ui.log:3504:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3507:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3509:[UiCapture] 카메라 Main Camera pos=(0.00, 292.16, -312.12) rot=(42.00, 0.00, 0.00) f
+ar=6000 clear=Skybox bg=RGBA(0.192, 0.302, 0.475, 0.000) mask=-1
+C:\Users\admin\KUCA-check\ui.log:3516:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:494)
+C:\Users\admin\KUCA-check\ui.log:3517:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:159)
+C:\Users\admin\KUCA-check\ui.log:3518:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3521:(Filename: Assets/Editor/UiCapture.cs Line: 494)
+C:\Users\admin\KUCA-check\ui.log:3523:[UiCapture] 05_꾸미기_Face
+C:\Users\admin\KUCA-check\ui.log:3530:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3531:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:170)
+C:\Users\admin\KUCA-check\ui.log:3532:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3535:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3561:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3562:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3563:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3564:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3565:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3566:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3567:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3568:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3569:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3570:[UiCapture] 06_꾸미기_Color
+C:\Users\admin\KUCA-check\ui.log:3577:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3578:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:170)
+C:\Users\admin\KUCA-check\ui.log:3579:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3582:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3584:[UiCapture] 07_꾸미기_Clothes
+C:\Users\admin\KUCA-check\ui.log:3591:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3592:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:170)
+C:\Users\admin\KUCA-check\ui.log:3593:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3596:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3598:[UiCapture] 08_경희몬_메뉴
+C:\Users\admin\KUCA-check\ui.log:3605:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3606:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:180)
+C:\Users\admin\KUCA-check\ui.log:3607:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3610:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3612:[UiCapture] 09_경희몬_Monsters
+C:\Users\admin\KUCA-check\ui.log:3619:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3620:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:183)
+C:\Users\admin\KUCA-check\ui.log:3621:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3624:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3626:[UiCapture] 10_경희몬_Dex
+C:\Users\admin\KUCA-check\ui.log:3633:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3634:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:183)
+C:\Users\admin\KUCA-check\ui.log:3635:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3638:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3640:[UiCapture] 11_뽑기
+C:\Users\admin\KUCA-check\ui.log:3647:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3648:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:184)
+C:\Users\admin\KUCA-check\ui.log:3649:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3652:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3654:[UiCapture] 12_뽑기_결과_1
+C:\Users\admin\KUCA-check\ui.log:3661:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3662:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:188)
+C:\Users\admin\KUCA-check\ui.log:3663:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3666:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3668:[UiCapture] 13_뽑기_결과_2
+C:\Users\admin\KUCA-check\ui.log:3675:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3676:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:191)
+C:\Users\admin\KUCA-check\ui.log:3677:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3680:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3682:[UiCapture] 14_프로필
+C:\Users\admin\KUCA-check\ui.log:3689:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3690:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:194)
+C:\Users\admin\KUCA-check\ui.log:3691:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3694:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3696:[UiCapture] 15_산책_추천
+C:\Users\admin\KUCA-check\ui.log:3703:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3704:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:197)
+C:\Users\admin\KUCA-check\ui.log:3705:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3708:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3711:[UiCapture] 16_함께_걷기
+C:\Users\admin\KUCA-check\ui.log:3718:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3719:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:199)
+C:\Users\admin\KUCA-check\ui.log:3720:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3723:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3725:[UiCapture] 17_산책_기록
+C:\Users\admin\KUCA-check\ui.log:3732:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3733:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:201)
+C:\Users\admin\KUCA-check\ui.log:3734:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3737:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3739:[UiCapture] 18_산책_완료
+C:\Users\admin\KUCA-check\ui.log:3746:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3747:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:213)
+C:\Users\admin\KUCA-check\ui.log:3748:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3751:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3753:[UiCapture] 19_진화_1
+C:\Users\admin\KUCA-check\ui.log:3760:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3761:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:220)
+C:\Users\admin\KUCA-check\ui.log:3762:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3765:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3767:[UiCapture] 20_진화_2
+C:\Users\admin\KUCA-check\ui.log:3774:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3775:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:222)
+C:\Users\admin\KUCA-check\ui.log:3776:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3779:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3781:[UiCapture] 21_설정
+C:\Users\admin\KUCA-check\ui.log:3788:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3789:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:227)
+C:\Users\admin\KUCA-check\ui.log:3790:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3793:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3795:[UiCapture] 22_기록_앨범
+C:\Users\admin\KUCA-check\ui.log:3802:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3803:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:229)
+C:\Users\admin\KUCA-check\ui.log:3804:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3807:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3809:[UiCapture] 23_장소_메모
+C:\Users\admin\KUCA-check\ui.log:3816:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3817:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:233)
+C:\Users\admin\KUCA-check\ui.log:3818:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3821:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3823:[UiCapture] 24_파트너_사진
+C:\Users\admin\KUCA-check\ui.log:3830:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3831:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:236)
+C:\Users\admin\KUCA-check\ui.log:3832:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3835:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3837:[UiCapture] 25_취향_설문
+C:\Users\admin\KUCA-check\ui.log:3844:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3845:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:239)
+C:\Users\admin\KUCA-check\ui.log:3846:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3849:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3851:[UiCapture] 26_지도_끝
+C:\Users\admin\KUCA-check\ui.log:3858:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:489)
+C:\Users\admin\KUCA-check\ui.log:3859:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:241)
+C:\Users\admin\KUCA-check\ui.log:3860:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3863:(Filename: Assets/Editor/UiCapture.cs Line: 489)
+C:\Users\admin\KUCA-check\ui.log:3865:[UiCapture] 카메라 Main Camera pos=(0.00, 292.16, -312.12) rot=(42.00, 0.00, 0.00) f
+ar=6000 clear=Skybox bg=RGBA(0.192, 0.302, 0.475, 0.000) mask=-1
+C:\Users\admin\KUCA-check\ui.log:3872:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:494)
+C:\Users\admin\KUCA-check\ui.log:3873:UiCapture/<Script>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:241)
+C:\Users\admin\KUCA-check\ui.log:3874:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:109)
+C:\Users\admin\KUCA-check\ui.log:3877:(Filename: Assets/Editor/UiCapture.cs Line: 494)
+C:\Users\admin\KUCA-check\ui.log:3879:[UiCapture] 끝 (26장) → C:\Users\admin\KUCA-check\Builds\UiShots
+C:\Users\admin\KUCA-check\ui.log:3886:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:137)
+C:\Users\admin\KUCA-check\ui.log:3887:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:121)
+C:\Users\admin\KUCA-check\ui.log:3890:(Filename: Assets/Editor/UiCapture.cs Line: 137)
+C:\Users\admin\KUCA-check\ui.log:3918:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\ui.log:3919:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
+ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
+HTTP error code 403
+
+
