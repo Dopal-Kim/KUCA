@@ -34,6 +34,9 @@ LENS = (0.20, 0.10, 0.14)
 PEARL = (0.97, 0.94, 0.96)
 BEADS = [(0.15, 0.55, 0.95), CRIMSON, GOLD, (0.15, 0.70, 0.30)]
 
+# 몸이 머리보다 아주 작은 동물: 펜던트 크기 배율 (머리 크기로 재면 다리까지 내려온다)
+PENDANT_SCALE = {'art_chameleon': 0.6}
+
 ITEMS = ['headband_blossom', 'headband_crimson_ears', 'headband_laurel',
          'necklace_star', 'necklace_beads', 'necklace_heart',
          'glasses_round', 'glasses_heart', 'glasses_star',
@@ -54,7 +57,7 @@ class Mesh:
         for i in us:
             i2 = (i + 1) % nu
             for j in range(nv - 1):
-                for a, b, c in (((i, j), (i2, j), (i2, j + 1)), ((i, j), (i2, j + 1), (i, j + 1))):
+                for a, b, c in (((i, j), (i2, j + 1), (i2, j)), ((i, j), (i, j + 1), (i2, j + 1))):   # 바깥(법선 쪽)에서 반시계
                     for q in (a, b, c):
                         self.pos.append(P[q])
                         self.nrm.append(N[q])
@@ -298,10 +301,12 @@ def measure(cid, rec):
     C = (back + front) / 2 if back is not None and front is not None else probe
     C[1] = mid[1] + spread * 0.15
     top, _ = _hit(head, C + np.array([0, 9.0, 0]), [0, -1, 0])
+    bottom, _ = _hit(head, C - np.array([0, 9.0, 0]), [0, 1, 0])
+    if head(C[None])[0] > 0 and top is not None and bottom is not None:   # 눈이 머리 꼭대기에 붙은 개구리: C 가 머리 밖
+        C[1] = (top[1] + bottom[1]) / 2
     sideR, _ = _hit(head, C + np.cross([0, 1, 0], fwd) * -9, np.cross([0, 1, 0], fwd))
     sideL, _ = _hit(head, C - np.cross([0, 1, 0], fwd) * -9, -np.cross([0, 1, 0], fwd))
-    bottom, _ = _hit(head, C - np.array([0, 9.0, 0]), [0, 1, 0])
-    return dict(fig=fig, whole=whole, head=head, L=L, R=R, mid=mid, fwd=fwd, spread=spread, eye=eye_size,
+    return dict(cid=cid, fig=fig, whole=whole, head=head, L=L, R=R, mid=mid, fwd=fwd, spread=spread, eye=eye_size,
                 C=C, top=top, sideL=sideL, sideR=sideR, bottom=bottom)
 
 
@@ -322,20 +327,29 @@ def band_path(a, tilt=-4.0, span=88, out=0.06, n=41):
     C = a['C']
     t = math.radians(tilt)
     upb = up * math.cos(t) - f * math.sin(t)
-    pts, nrms = [], []
+    hits = []
     for ang in np.linspace(-span, span, n):
         r = math.radians(ang)
         d = upb * math.cos(r) + right * math.sin(r)
         p, nn = _hit(a['head'], C + d * 9, -d)
-        if p is None:
-            continue
+        if p is not None:
+            hits.append((r, d, p, nn, np.linalg.norm(p - C)))
+    # 귀·더듬이 테두리를 타고 올라가지 않게: 정수리·옆 거리로 만든 타원보다 먼 점은 타원 위로 (띠가 귀 밑동을 지난다)
+    rt = min([h[4] for h in hits if abs(h[0]) <= math.radians(20)], default=None)
+    rs = min([h[4] for h in hits if abs(h[0]) >= math.radians(70)], default=None)
+    pts, nrms = [], []
+    for r, d, p, nn, dist in hits:
+        if rt and rs:
+            e = 1 / math.hypot(math.cos(r) / rt, math.sin(r) / rs)
+            if dist > e * 1.12:
+                p, nn = C + d * e, d
         pts.append(p + nn * out)
         nrms.append(nn)
     return np.array(pts), np.array(nrms)
 
 
 def headband(a, kind):
-    s = a['spread']
+    s = min(a['spread'], 2.1)   # 눈 사이가 아주 넓은 개구리·카멜레온: 액세서리가 너무 커지지 않게
     pts, nrms = band_path(a, out=0.07 * s)
     col = {'headband_blossom': PINK, 'headband_crimson_ears': CRIMSON, 'headband_laurel': GOLD}[kind]
     m = tube(pts, 0.11 * s, col)
@@ -382,7 +396,7 @@ def headband(a, kind):
 
 
 def glasses(a, kind):
-    s = a['spread']
+    s = min(a['spread'], 2.1)   # 눈 사이가 아주 넓은 개구리·카멜레온: 액세서리가 너무 커지지 않게
     f, right, up = axes(a)
     r = max(a['eye'] * 1.25, 0.34 * min(s, 1.9))
     shape, frame_col, lens_col = {'glasses_round': ('circle', CRIMSON, LENS), 'glasses_heart': ('heart', PINK, (0.55, 0.20, 0.32)),
@@ -403,7 +417,7 @@ def glasses(a, kind):
         if side is None or abs((side - a['C']) @ right) > 1.3 * min(s, 1.9) + a['eye']:
             side = a['C'] + right * sgn * (1.1 * min(s, 1.9))
         end = side + right * sgn * 0.08 * s - f * 0.3 * s
-        end[1] = start[1]
+        end[1] = max(start[1] - 0.8 * s, min(start[1], side[1]))   # 눈이 머리 위에 있으면(개구리) 다리를 머리 옆으로 내린다
         m.merge(tube([start, (start + end) / 2 + right * sgn * 0.1 * s, end], 0.06 * s, frame_col))
     return m
 
@@ -443,7 +457,7 @@ def chin_y(a):
 
 def neck_ring(a):
     """턱 아래 몸통 단면을 따라 도는 고리"""
-    s = a['spread']
+    s = min(a['spread'], 2.1)   # 눈 사이가 아주 넓은 개구리·카멜레온: 액세서리가 너무 커지지 않게
     y = chin_y(a) - 0.05 * s
     axis_c = np.array([a['C'][0], y, a['C'][2]])
     pts = []
@@ -478,7 +492,7 @@ def neck_ring(a):
 
 
 def necklace(a, kind):
-    s = a['spread']
+    s = min(a['spread'], 2.1)   # 눈 사이가 아주 넓은 개구리·카멜레온: 액세서리가 너무 커지지 않게
     f, right, up = axes(a)
     pts, fi = neck_ring(a)
     m = Mesh()
@@ -495,7 +509,12 @@ def necklace(a, kind):
         # 금빛 이음매 몇 개
         for k in range(0, len(pts), 4):
             m.merge(sphere(pts[k], 0.06 * s, GOLD, 6, 4))
+    s = s * PENDANT_SCALE.get(a['cid'], 1.0)
     hang = front - up * 0.32 * s + f * 0.08 * s
+    for _ in range(40):   # 가슴에 묻힌 펜던트는 앞으로 꺼낸다 (가운데·아래 끝이 몸 밖에)
+        if min(a['whole'](hang[None])[0], a['whole']((hang - up * 0.25 * s)[None])[0]) >= 0.06 * s:
+            break
+        hang = hang + f * 0.03 * s
     m.merge(tube([front, hang + up * 0.12 * s], 0.035 * s, GOLD, seg=6))
     shape, col = ('star', GOLD) if kind == 'necklace_star' else ('heart', CRIMSON)
     m.merge(slab(shape, hang, right, up, 0.3 * s, 0.12 * s, col))
@@ -505,7 +524,7 @@ def necklace(a, kind):
 
 
 def earrings(a, kind):
-    s = a['spread']
+    s = min(a['spread'], 2.1)   # 눈 사이가 아주 넓은 개구리·카멜레온: 액세서리가 너무 커지지 않게
     f, right, up = axes(a)
     m = Mesh()
     for side, sgn in ((a['sideL'], -1), (a['sideR'], 1)):
