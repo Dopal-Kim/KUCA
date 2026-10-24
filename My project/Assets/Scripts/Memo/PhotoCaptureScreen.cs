@@ -59,6 +59,9 @@ public class PhotoCaptureScreen : MonoBehaviour
         r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0f);
         r.anchoredPosition = new Vector2(0f, 150f);
         r.sizeDelta = new Vector2(200f, 200f);
+        var edge = ring.gameObject.AddComponent<Outline>();   // 밝은 하늘 · 흰 벽 위에서도 셔터가 보이게
+        edge.effectColor = KucaTheme.Scrim;
+        edge.effectDistance = new Vector2(4f, -4f);
         Image gap = UIKit.Image(ring.transform, "Gap", Color.black);
         gap.sprite = HudIcons.Circle;
         UIKit.Stretch(gap.rectTransform, 10f, 10f);

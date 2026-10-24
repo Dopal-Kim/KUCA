@@ -42,7 +42,7 @@ public class GameHUD : MonoBehaviour
     /// <summary>아래 탭 막대 높이 (안전 영역 안)</summary>
     const float TabBarHeight = 196f;
     /// <summary>탭 막대 위로 산책 카드 · 시작 버튼이 놓이는 높이 (VirtualWalk.PlacePanel 이 쓴다)</summary>
-    public const float BottomReserve = TabBarHeight + 32f;
+    public const float BottomReserve = TabBarHeight + 56f;   // 32 는 캡처에서 버튼 그림자가 탭 막대에 닿았음
     // 아래쪽 줄은 가로가 좁은 폰(iPhone 등, 약 980 단위)에서도 겹치지 않게 작게 잡는다.
     const string NicknameKey = "memo_author"; // MemoBoard 와 같은 키
     const string ReadNoticesKey = "notice_read_ids";
@@ -134,7 +134,7 @@ public class GameHUD : MonoBehaviour
         toastBg.pixelsPerUnitMultiplier = 1.2f;
         RectTransform tr = toastBg.rectTransform;
         tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
+        tr.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space6);
         tr.sizeDelta = new Vector2(980f, 120f);
         toastText = UIKit.Text(toastBg.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter);
         UIKit.Stretch(toastText.rectTransform, 36f, 10f);

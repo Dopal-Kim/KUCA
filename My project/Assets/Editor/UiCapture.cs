@@ -143,6 +143,9 @@ public static class UiCapture
 
     static IEnumerator Script()
     {
+        Shot("개인정보_안내");
+        Click("확인하고 시작");   // 저장 폴더를 지우고 시작하므로 동의 화면이 먼저 뜬다
+        yield return 1.5f;
         Shot("로그인");
         Click("에디터: 로그인 건너뛰기");
         yield return 4f;
@@ -242,6 +245,8 @@ public static class UiCapture
 
     static IEnumerator MapScript()
     {
+        Click("확인하고 시작");
+        yield return 1.5f;
         Click("에디터: 로그인 건너뛰기");
         yield return 5f;
         yield return CloseAll();
@@ -482,5 +487,11 @@ public static class UiCapture
         rt.Release();
         UnityEngine.Object.DestroyImmediate(rt);
         Debug.Log($"[UiCapture] {shotIndex:00}_{name}");
+        if (name.StartsWith("지도"))
+        {
+            // 첫 실행 지도가 남색 한 색으로 찍힘: 캡처 방식 탓인지 실제 화면인지 가리려고 Game 화면도 그대로 저장하고 카메라 상태를 남긴다
+            ScreenCapture.CaptureScreenshot(Path.Combine(outDir, $"{shotIndex:00}_{name}_게임화면.png"));
+            Debug.Log($"[UiCapture] 카메라 {cam.name} pos={cam.transform.position} rot={cam.transform.eulerAngles} far={cam.farClipPlane} clear={cam.clearFlags} bg={cam.backgroundColor} mask={cam.cullingMask}");
+        }
     }
 }

@@ -180,7 +180,7 @@ public partial class MemoBoard : MonoBehaviour
         UIInputBlocker.SetModal(this, true);
         title.text = target.DisplayName;
         // 서버 주소 대신 이 화면이 무엇인지 (가짜 서버일 때만 '이 기기에만 저장' 을 알린다)
-        subtitle.text = service is MockMemoService ? service.Description : locked ? "가까이 가서 들르면 메모를 남길 수 있어요" : "다녀간 사람들이 남긴 메모";
+        subtitle.text = service is MockMemoService ? service.Description : "다녀간 사람들이 남긴 메모";   // 잠김 안내는 아래 버튼이 한다
         ShowList();
         SetBoardTab(0);
     }

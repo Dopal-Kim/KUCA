@@ -249,9 +249,9 @@ public static class UIKit
     public static Button PrimaryButton(Transform parent, string label, UnityAction onClick)
         => BigButton(parent, label, onClick, KucaTheme.Primary, Color.white);
 
-    /// <summary>v4 보조 버튼: 회색 바탕 + 진한 글자 (주요 버튼 옆 · 아래)</summary>
+    /// <summary>v4 보조 버튼: 옅은 초록 바탕 + 진한 초록 글자 (회색 바탕 · 흰 카드 어디서나 버튼으로 보이게)</summary>
     public static Button SecondaryButton(Transform parent, string label, UnityAction onClick)
-        => BigButton(parent, label, onClick, KucaTheme.Fill, KucaTheme.Ink);
+        => BigButton(parent, label, onClick, KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep);
 
     public static Button BigButton(Transform parent, string label, UnityAction onClick, Color bg, Color fg)
     {
@@ -437,7 +437,8 @@ public static class UIKit
     {
         if (!c.TryGetComponent(out LayoutElement le))
             le = c.gameObject.AddComponent<LayoutElement>();
-        if (height >= 0f) { le.preferredHeight = height; le.minHeight = height; }
+        // 높이를 정했으면 늘어나지 않게: 안에 레이아웃 그룹(childForceExpand)이 있으면 flexibleHeight 1 을 보고해 남는 높이를 나눠 가짐
+        if (height >= 0f) { le.preferredHeight = height; le.minHeight = height; le.flexibleHeight = 0f; }
         if (width >= 0f) { le.preferredWidth = width; le.minWidth = width; }
         if (flexibleWidth >= 0f) le.flexibleWidth = flexibleWidth;
         return le;
