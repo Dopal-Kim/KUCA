@@ -1,0 +1,632 @@
+﻿
+C:\Users\admin\KUCA-check\ui.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
+C:\Users\admin\KUCA-check\ui.log:53:UiCapture.Run
+C:\Users\admin\KUCA-check\ui.log:1400:Assets\Editor\UiCapture.cs(240,112): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1402:Assets\Editor\UiCapture.cs(240,36): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1404:Assets\Editor\UiCapture.cs(310,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1406:Assets\Editor\UiCapture.cs(310,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1408:Assets\Editor\UiCapture.cs(404,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:1410:Assets\Editor\UiCapture.cs(404,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:1412:Assets\Editor\UiCapture.cs(324,9): warning UAC0005: AppDomain.GetAssemblies() in 
+Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAss
+emblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui.log:2922:Assets\Editor\UiCapture.cs(240,112): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2923:Assets\Editor\UiCapture.cs(240,36): warning CS0618: 'Object.FindObjectsByType(Typ
+e, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has be
+en deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2924:Assets\Editor\UiCapture.cs(310,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2925:Assets\Editor\UiCapture.cs(310,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2926:Assets\Editor\UiCapture.cs(404,104): warning CS0618: 'FindObjectsSortMode' is obs
+olete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjectsSort
+Mode parameter.'
+C:\Users\admin\KUCA-check\ui.log:2927:Assets\Editor\UiCapture.cs(404,30): warning CS0618: 'Object.FindObjectsByType<T>(
+FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter has been 
+deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be replace
+d in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui.log:2928:Assets\Editor\UiCapture.cs(324,9): warning UAC0005: AppDomain.GetAssemblies() in 
+Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'CurrentAss
+emblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui.log:2947:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:2967:			LogAssemblyErrors (4ms)
+C:\Users\admin\KUCA-check\ui.log:3122:[UiCapture] 01_시작
+C:\Users\admin\KUCA-check\ui.log:3129:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3130:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:127)
+C:\Users\admin\KUCA-check\ui.log:3131:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3134:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3136:[UiCapture] 버튼 없음: 확인하고 시작
+C:\Users\admin\KUCA-check\ui.log:3143:UiCapture:Click (string) (at Assets/Editor/UiCapture.cs:319)
+C:\Users\admin\KUCA-check\ui.log:3144:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:128)
+C:\Users\admin\KUCA-check\ui.log:3145:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3148:(Filename: Assets/Editor/UiCapture.cs Line: 319)
+C:\Users\admin\KUCA-check\ui.log:3151:ArgumentOutOfRangeException: Index was out of range. Must be non-negative and les
+s than the size of the collection.
+C:\Users\admin\KUCA-check\ui.log:3160:UnityEngine.StackTraceUtility:ExtractStringFromExceptionInternal(Object, String&,
+ String&)
+C:\Users\admin\KUCA-check\ui.log:3167:[UiCapture] 02_로그인
+C:\Users\admin\KUCA-check\ui.log:3174:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3175:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:130)
+C:\Users\admin\KUCA-check\ui.log:3176:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3179:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3188:[UiCapture] 03_첫_화면
+C:\Users\admin\KUCA-check\ui.log:3195:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3196:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:133)
+C:\Users\admin\KUCA-check\ui.log:3197:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3200:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3202:[UiCapture] 버튼 없음: 다음
+C:\Users\admin\KUCA-check\ui.log:3209:UiCapture:Click (string) (at Assets/Editor/UiCapture.cs:319)
+C:\Users\admin\KUCA-check\ui.log:3210:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:134)
+C:\Users\admin\KUCA-check\ui.log:3211:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3214:(Filename: Assets/Editor/UiCapture.cs Line: 319)
+C:\Users\admin\KUCA-check\ui.log:3216:[UiCapture] 04_지도
+C:\Users\admin\KUCA-check\ui.log:3223:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3224:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:148)
+C:\Users\admin\KUCA-check\ui.log:3225:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3228:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3230:[UiCapture] 05_꾸미기_Face
+C:\Users\admin\KUCA-check\ui.log:3237:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3238:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:159)
+C:\Users\admin\KUCA-check\ui.log:3239:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3242:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3244:[UiCapture] 06_꾸미기_Color
+C:\Users\admin\KUCA-check\ui.log:3251:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3252:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:159)
+C:\Users\admin\KUCA-check\ui.log:3253:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3256:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3258:[UiCapture] 07_꾸미기_Clothes
+C:\Users\admin\KUCA-check\ui.log:3265:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3266:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:159)
+C:\Users\admin\KUCA-check\ui.log:3267:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3270:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3272:[UiCapture] 08_경희몬_메뉴
+C:\Users\admin\KUCA-check\ui.log:3279:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3280:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:169)
+C:\Users\admin\KUCA-check\ui.log:3281:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3284:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3286:[UiCapture] 09_경희몬_Monsters
+C:\Users\admin\KUCA-check\ui.log:3293:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3294:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:172)
+C:\Users\admin\KUCA-check\ui.log:3295:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3298:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3300:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\ui.log:3301:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
+ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
+HTTP error code 403
+C:\Users\admin\KUCA-check\ui.log:3302:.[UiCapture] 10_경희몬_Dex
+C:\Users\admin\KUCA-check\ui.log:3309:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3310:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:172)
+C:\Users\admin\KUCA-check\ui.log:3311:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3314:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3316:[UiCapture] 11_경희몬_Items
+C:\Users\admin\KUCA-check\ui.log:3323:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3324:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:172)
+C:\Users\admin\KUCA-check\ui.log:3325:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3328:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3354:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3355:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3356:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3357:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3358:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3359:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3360:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3361:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3362:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3363:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3364:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3365:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3366:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3367:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3368:[UiCapture] 12_뽑기
+C:\Users\admin\KUCA-check\ui.log:3375:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3376:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:173)
+C:\Users\admin\KUCA-check\ui.log:3377:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3380:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3382:[UiCapture] 13_뽑기_결과_1
+C:\Users\admin\KUCA-check\ui.log:3389:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3390:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:174)
+C:\Users\admin\KUCA-check\ui.log:3391:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3394:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3396:[UiCapture] 14_뽑기_결과_2
+C:\Users\admin\KUCA-check\ui.log:3403:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3404:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:174)
+C:\Users\admin\KUCA-check\ui.log:3405:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3408:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3411:[UiCapture] 15_프로필
+C:\Users\admin\KUCA-check\ui.log:3418:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3419:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:176)
+C:\Users\admin\KUCA-check\ui.log:3420:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3423:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3425:[UiCapture] 16_산책_추천
+C:\Users\admin\KUCA-check\ui.log:3432:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3433:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:179)
+C:\Users\admin\KUCA-check\ui.log:3434:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3437:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3439:[UiCapture] 17_함께_걷기
+C:\Users\admin\KUCA-check\ui.log:3446:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3447:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:181)
+C:\Users\admin\KUCA-check\ui.log:3448:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3451:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3454:[UiCapture] 18_산책_기록
+C:\Users\admin\KUCA-check\ui.log:3461:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3462:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:183)
+C:\Users\admin\KUCA-check\ui.log:3463:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3466:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3468:[UiCapture] 19_산책_완료
+C:\Users\admin\KUCA-check\ui.log:3475:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3476:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:195)
+C:\Users\admin\KUCA-check\ui.log:3477:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3480:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3482:[UiCapture] 20_진화_1
+C:\Users\admin\KUCA-check\ui.log:3489:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3490:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:202)
+C:\Users\admin\KUCA-check\ui.log:3491:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3494:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3496:[UiCapture] 21_진화_2
+C:\Users\admin\KUCA-check\ui.log:3503:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3504:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:204)
+C:\Users\admin\KUCA-check\ui.log:3505:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3508:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3510:[UiCapture] 22_설정
+C:\Users\admin\KUCA-check\ui.log:3517:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3518:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:209)
+C:\Users\admin\KUCA-check\ui.log:3519:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3522:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3524:[UiCapture] 23_기록_앨범
+C:\Users\admin\KUCA-check\ui.log:3531:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3532:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:211)
+C:\Users\admin\KUCA-check\ui.log:3533:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3536:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3538:[UiCapture] 24_장소_메모
+C:\Users\admin\KUCA-check\ui.log:3545:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3546:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:215)
+C:\Users\admin\KUCA-check\ui.log:3547:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3550:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3552:[UiCapture] 25_파트너_사진
+C:\Users\admin\KUCA-check\ui.log:3559:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3560:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:218)
+C:\Users\admin\KUCA-check\ui.log:3561:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3564:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3566:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3567:[UiCapture] 26_취향_설문
+C:\Users\admin\KUCA-check\ui.log:3574:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3575:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:221)
+C:\Users\admin\KUCA-check\ui.log:3576:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3579:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3581:[UiCapture] 27_지도_끝
+C:\Users\admin\KUCA-check\ui.log:3588:UiCapture:Shot (string) (at Assets/Editor/UiCapture.cs:441)
+C:\Users\admin\KUCA-check\ui.log:3589:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:223)
+C:\Users\admin\KUCA-check\ui.log:3590:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\ui.log:3593:(Filename: Assets/Editor/UiCapture.cs Line: 441)
+C:\Users\admin\KUCA-check\ui.log:3595:[UiCapture] 끝 (27장) → C:\Users\admin\KUCA-check\Builds\UiShots
+C:\Users\admin\KUCA-check\ui.log:3602:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:118)
+C:\Users\admin\KUCA-check\ui.log:3603:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:102)
+C:\Users\admin\KUCA-check\ui.log:3606:(Filename: Assets/Editor/UiCapture.cs Line: 118)
+C:\Users\admin\KUCA-check\ui.log:3668:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:3686:			LogAssemblyErrors (3ms)
+C:\Users\admin\KUCA-check\ui.log:3793:[Worker0] Imported GUID: 1e77b2ee08844640bdee7bd9742804e7 - Path: Assets/Editor/U
+iCapture.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '
+3866796244271da55f2bdb5c36e97391') in 0.1472993 seconds
+C:\Users\admin\KUCA-check\ui.log:4272:[Worker0] Imported GUID: f79c84772bc81844fb9e662249f1e400 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/CheckUnityException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEdito
+r.Search:ASIAI0B -> (ImportResultId: '0ee34202896b0c117ba787c3c19cb953') in 0.0287918 seconds
+C:\Users\admin\KUCA-check\ui.log:4311:[Worker0] Imported GUID: e86abcad326bbd44a9f3c0516899ce75 - Path: Packages/com.un
+ity.collab-proxy/Editor/WebApi/ErrorResponse.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.
+Search:ASIAI0B -> (ImportResultId: '1226f65b9dcc597e95f2fbc58c34b170') in 0.0254055 seconds
+C:\Users\admin\KUCA-check\ui.log:4674:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:4676:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:4677:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui.log:4824:[Worker1] Imported GUID: 17983278f10d4455a8b77556019ab3b1 - Path: Packages/com.un
+ity.collab-proxy/Editor/CodeEditor/Rendering/VisualLinesInvalidException.cs - Importer: ScriptedImporter/UnityEditor.Qu
+ickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'bd5a8497381f66fbd1aa2ef5a04394b4') in 0.0207139 seconds
+C:\Users\admin\KUCA-check\ui.log:4843:[Worker2] Imported GUID: 4809ab5cb1988e5449f9e1911e77d7ef - Path: Packages/com.un
+ity.collab-proxy/Editor/CodeEditor/Editing/DragDropException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '366f8316aff2b9a4e0809849de665319') in 0.0211032 seconds
+C:\Users\admin\KUCA-check\ui.log:4917:[Worker2] Imported GUID: 331d1c37d891f334390adb8324042856 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/Errors/ErrorsListView.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEdi
+tor.Search:ASIAI0B -> (ImportResultId: '5d7f9980cd02703f487a3a76fd434c98') in 0.0214091 seconds
+C:\Users\admin\KUCA-check\ui.log:4939:[Worker0] Imported GUID: 8c069d7fb0d30cf499458f0d9c9fe035 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/Errors/ErrorsListHeaderState.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:U
+nityEditor.Search:ASIAI0B -> (ImportResultId: '30fed1fc3140367d594b211375eaa607') in 0.0267608 seconds
+C:\Users\admin\KUCA-check\ui.log:4949:[Worker2] Imported GUID: 79a84f5f92624d57ae40a84a53bd9d24 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/Errors/ErrorsPanel.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor
+.Search:ASIAI0B -> (ImportResultId: 'bd480a7fda830e3b094ed9dc8ebc2661') in 0.0216705 seconds
+C:\Users\admin\KUCA-check\ui.log:4951:[Worker0] Imported GUID: 0188683ab76112f4897348feb19a3b77 - Path: Packages/com.un
+ity.collab-proxy/Editor/Gluon/UpdateReport/ErrorListViewItem.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '462a639262a5511c56b4bde4ed9cdc33') in 0.0253188 seconds
+C:\Users\admin\KUCA-check\ui.log:4956:[Worker1] Imported GUID: e27c01b3192a4dcfbd46563a4acacd59 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/Errors/ErrorsDialog.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEdito
+r.Search:ASIAI0B -> (ImportResultId: '0cd1b547d6c4460cfdf63e17fb6764f5') in 0.0213539 seconds
+C:\Users\admin\KUCA-check\ui.log:4967:[Worker1] Imported GUID: 71c34e5fa319ca644b6806e573c33d88 - Path: Packages/com.un
+ity.collab-proxy/Editor/UI/Errors/ErrorListViewItem.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unity
+Editor.Search:ASIAI0B -> (ImportResultId: '70d06d2220f92238acd6d40f55d0ce2b') in 0.0209759 seconds
+C:\Users\admin\KUCA-check\ui.log:5245:[Worker0] Imported GUID: 8e6494de947444dc9a132f39b8faa02c - Path: Packages/com.un
+ity.collab-proxy/Editor/UVCSToolbar/PopupWindow/BranchesList/ErrorEmptyState.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'b583a91e10a291d1f50879f927305391') in 0.0228431 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:5498:[Worker0] Imported GUID: 917a51fff055ce547b4ad1215321f3da - Path: Packages/com.un
+ity.ide.visualstudio/Editor/Messaging/ExceptionEventArgs.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:
+UnityEditor.Search:ASIAI0B -> (ImportResultId: 'a2061f410588ec65647d85278bed1640') in 0.0257939 seconds
+C:\Users\admin\KUCA-check\ui.log:5533:[Worker0] Imported GUID: 788fbcfc0abc6c54b9504cfee3176c22 - Path: Packages/com.un
+ity.ide.visualstudio/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.S
+earch:ASIAI0B -> (ImportResultId: '190fd9e8184efb25f5a34ce6df7b8165') in 0.0238326 seconds
+C:\Users\admin\KUCA-check\ui.log:5850:[Worker3] Imported GUID: 4585b5feb801bdb44b0e5eafdd95a3be - Path: Packages/com.un
+ity.ugui/Tests/Editor/UGUI/Canvas/CanvasWidthAssertionErrorWithRectTransform.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '0c2e34e8bdefcdfcd060403b88183fbc') in 0.0243377 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:5904:[Worker1] Imported GUID: 0b2706df6fdff50448f84a3f6629b40f - Path: Packages/com.un
+ity.ugui/Tests/Runtime/UGUI/Util/ExceptionUtils.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEdit
+or.Search:ASIAI0B -> (ImportResultId: 'c251c66e69596f2d2cd6423ad97b7427') in 0.0233388 seconds
+C:\Users\admin\KUCA-check\ui.log:5938:[Worker3] Imported GUID: fee59c2b2318a7e4fa7a2c2af28d9553 - Path: Packages/com.un
+ity.collections/pvpExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0
+B -> (ImportResultId: 'a96af1fa81bebe4e3d93253d8ef34907') in 0.0204097 seconds
+C:\Users\admin\KUCA-check\ui.log:5990:[Worker0] Imported GUID: 6fe576033d6a2424c888d599967457a2 - Path: Packages/com.un
+ity.collections/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search
+:ASIAI0B -> (ImportResultId: 'ae43019c4200e9c6a2a8b78a30d8ed7e') in 0.0240345 seconds
+C:\Users\admin\KUCA-check\ui.log:6034:[Worker1] Imported GUID: 2d53df25c7f81aa419ea121140c42d6b - Path: Packages/com.un
+ity.collections/Unity.Collections.CodeGen/UserError.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unity
+Editor.Search:ASIAI0B -> (ImportResultId: '3a8a438a2e997548ea89792ec319d1ed') in 0.0212128 seconds
+C:\Users\admin\KUCA-check\ui.log:6322:[Worker2] Imported GUID: d3b04c9998700e44b84ce96e466cc29a - Path: Packages/com.un
+ity.ai.inference/Editor/Torch/Pickle/PythonException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unit
+yEditor.Search:ASIAI0B -> (ImportResultId: '7e65fb63c0ebe3fe6aab12109962e59d') in 0.0250503 seconds
+C:\Users\admin\KUCA-check\ui.log:6328:[Worker3] Imported GUID: 608b0b30f857b5047ba99efe26cfb0dd - Path: Packages/com.un
+ity.ai.inference/Editor/Torch/Pickle/PickleException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unit
+yEditor.Search:ASIAI0B -> (ImportResultId: '7e2d03807df570a5aa63044b4ced44c6') in 0.0236735 seconds
+C:\Users\admin\KUCA-check\ui.log:6331:[Worker0] Imported GUID: 3debc1ae2ba797d4fbb34d730939aea6 - Path: Packages/com.un
+ity.ai.inference/Editor/Torch/Pickle/InvalidOpcodeException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModu
+le:UnityEditor.Search:ASIAI0B -> (ImportResultId: '6bd22c03cddc1ff24a226c003c2421fc') in 0.0239993 seconds
+C:\Users\admin\KUCA-check\ui.log:6603:[Worker0] Imported GUID: 1ff95a2e4eee2fb489ce97fcd49f809a - Path: Packages/com.un
+ity.ai.inference/Editor/Torch/Pickle/Objects/ExceptionConstructor.cs - Importer: ScriptedImporter/UnityEditor.QuickSear
+chModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'b6593d20a0e1d2ad3d0dc846b7f6150d') in 0.0228475 seconds
+C:\Users\admin\KUCA-check\ui.log:7060:[Worker1] Imported GUID: eaa8f2e68dae4f04b914d895482c28b0 - Path: Packages/com.un
+ity.ai.inference/Runtime/Core/Resources/Sentis/ComputeShaders/WarningAsError.cginc - Importer: ScriptedImporter/UnityEd
+itor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'ef0a507e9079eb9f275ad4fa1f37ffc9') in 0.0223155 
+seconds
+C:\Users\admin\KUCA-check\ui.log:7380:[Worker3] Imported GUID: 8a0fd4a8e3885488e9afc7e5e7ead9c6 - Path: Packages/com.un
+ity.searcher/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:AS
+IAI0B -> (ImportResultId: '029de80696a022ebc21f37f01b35b9b5') in 0.020494 seconds
+C:\Users\admin\KUCA-check\ui.log:7786:[Worker1] Imported GUID: 3b141285055b41fa87088e83d7ba9c4c - Path: Packages/com.un
+ity.dt.app-ui/Runtime/Redux/Exceptions.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search
+:ASIAI0B -> (ImportResultId: '342edce86304cfbbeb939d9f793e71d5') in 0.0256515 seconds
+C:\Users\admin\KUCA-check\ui.log:9820:[Worker3] Imported GUID: 9dea0abe7c654c109592fce288f98a00 - Path: Packages/com.un
+ity.dt.app-ui/Runtime/UI/Exceptions/VisualElementNotFoundException.cs - Importer: ScriptedImporter/UnityEditor.QuickSea
+rchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'f7398bfcbd7e3799a7d6fcf0e5db3943') in 0.0207325 seconds
+C:\Users\admin\KUCA-check\ui.log:9829:[Worker3] Imported GUID: 9b8ad8d5bcdb44638e302cd6367e29d4 - Path: Packages/com.un
+ity.dt.app-ui/Runtime/UI/Exceptions/ValueOutOfRangeException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'bf921c923aa3e68be46924cd9d973f65') in 0.0345646 seconds
+C:\Users\admin\KUCA-check\ui.log:10096:[Worker3] Imported GUID: 5a5fb3c69ece94eadada0dacf019b141 - Path: Packages/com.u
+nity.xr.management/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Sea
+rch:ASIAI0B -> (ImportResultId: '014693211624985652156d77945b4a5a') in 0.0205733 seconds
+C:\Users\admin\KUCA-check\ui.log:10574:[Worker3] Imported GUID: f658c411e0892ba499e17093373f687b - Path: Packages/com.u
+nity.render-pipelines.core/Runtime/RenderGraph/RenderGraph.ExceptionMessages.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '3da3a9b3641c423ee1518598a78fa615') in 0.0329501 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:10682:[Worker1] Imported GUID: 9eb26d0567d9108418c5bf72b7b62682 - Path: Packages/com.u
+nity.render-pipelines.core/Runtime/UnifiedRayTracing/UnifiedRayTracingException.cs - Importer: ScriptedImporter/UnityEd
+itor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '99fa1976c5e94e9e55a6a69ce97826e3') in 0.0209591 
+seconds
+C:\Users\admin\KUCA-check\ui.log:11504:[Worker2] Imported GUID: 1a06c562b0c5eb046bcb876a29f93c98 - Path: Packages/com.u
+nity.test-framework/UnityEditor.TestRunner/Api/IErrorCallbacks.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchM
+odule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '983c363403e0029feaec739488e23a0e') in 0.0210053 seconds
+C:\Users\admin\KUCA-check\ui.log:11514:[Worker0] Imported GUID: 63572993f2104574099a48392460b211 - Path: Packages/com.u
+nity.test-framework/UnityEditor.TestRunner/CommandLineTest/SetupException.cs - Importer: ScriptedImporter/UnityEditor.Q
+uickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'd0ce8cb3a16c4a1c6be02dbe42c5b738') in 0.0244948 second
+s
+C:\Users\admin\KUCA-check\ui.log:11526:[Worker3] Imported GUID: 2fcdb9402e0a4427bd5bd01f71ecf6d5 - Path: Packages/com.u
+nity.test-framework/UnityEngine.TestRunner/Assertions/OutOfOrderExpectedLogMessageException.cs - Importer: ScriptedImpo
+rter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'f69dc7111a820a9a9ca543887f68afd2') i
+n 0.0229981 seconds
+C:\Users\admin\KUCA-check\ui.log:11535:[Worker2] Imported GUID: 416b65350c010294db54ceca7fd02072 - Path: Packages/com.u
+nity.test-framework/UnityEditor.TestRunner/TestRun/RequiredTestRunDataMissingException.cs - Importer: ScriptedImporter/
+UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'aea6fd7eee9598d6d197f4145bbdf4ac') in 0.0
+20586 seconds
+C:\Users\admin\KUCA-check\ui.log:11551:[Worker3] Imported GUID: 1d45b9d3cf85bee4f99c1492fca8438a - Path: Packages/com.u
+nity.test-framework/UnityEditor.TestRunner/TestRun/TestRunCanceledException.cs - Importer: ScriptedImporter/UnityEditor
+.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'ae2d6236851afd3b34b9fcdc6fb558f6') in 0.0240882 seco
+nds
+C:\Users\admin\KUCA-check\ui.log:11555:[Worker3] Imported GUID: a8ed4063f2beecd41a234a582202f3c4 - Path: Packages/com.u
+nity.test-framework/UnityEngine.TestRunner/Assertions/UnhandledLogMessageException.cs - Importer: ScriptedImporter/Unit
+yEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'ca2c3d976d1208d37263b860f1dbf356') in 0.02112
+55 seconds
+C:\Users\admin\KUCA-check\ui.log:11560:[Worker0] Imported GUID: 9650d910fcaefb34cb45f121c1993892 - Path: Packages/com.u
+nity.test-framework/UnityEngine.TestRunner/Assertions/InvalidSignatureException.cs - Importer: ScriptedImporter/UnityEd
+itor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '9dece5f83043cbe8298081897a6b162f') in 0.022142 s
+econds
+C:\Users\admin\KUCA-check\ui.log:11567:[Worker1] Imported GUID: 5b2eeca598284bd4abb4a15c30df1576 - Path: Packages/com.u
+nity.test-framework/UnityEngine.TestRunner/Assertions/UnexpectedLogMessageException.cs - Importer: ScriptedImporter/Uni
+tyEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'c20f9c3c5066f7cdd622a7ab00bdcaba') in 0.0202
+461 seconds
+C:\Users\admin\KUCA-check\ui.log:11572:[Worker1] Imported GUID: ffb335140c799c4408411d81789fb05c - Path: Packages/com.u
+nity.test-framework/UnityEngine.TestRunner/Assertions/UnityTestTimeoutException.cs - Importer: ScriptedImporter/UnityEd
+itor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '13a69086f0b0e31d9730da33c84f2eb4') in 0.0232862 
+seconds
+C:\Users\admin\KUCA-check\ui.log:11827:[Worker1] Imported GUID: d00d86b97c647834c8bab980d49627e2 - Path: Packages/com.u
+nity.ai.assistant/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Sear
+ch:ASIAI0B -> (ImportResultId: '512457338d80964cb1f44706c12d9d50') in 0.0226557 seconds
+C:\Users\admin\KUCA-check\ui.log:12142:[Worker1] Imported GUID: 4b49aaaa8b4cf40ccb275f2c313ccd1a - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/Acp/GatewayCapReachedException.cs - Importer: ScriptedImporter/UnityEditor.QuickSear
+chModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '38115030e0e105c12309d79dcd6b3877') in 0.0240935 seconds
+C:\Users\admin\KUCA-check\ui.log:12197:[Worker2] Imported GUID: 5a06b40bb1660574182d8c92348577c8 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/Checkpoint/CheckpointErrorType.cs - Importer: ScriptedImporter/UnityEditor.QuickSear
+chModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'd41d82a0b35adcd19f8dfef41d5fa473') in 0.021029 seconds
+C:\Users\admin\KUCA-check\ui.log:12213:[Worker3] Imported GUID: 643b4d4c45b9b4797849f24c35a343cb - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/Analytics/AIAssistantErrorType.cs - Importer: ScriptedImporter/UnityEditor.QuickSear
+chModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'c023bf5b1b39f4307fa9ce88570ff8f9') in 0.0227397 seconds
+C:\Users\admin\KUCA-check\ui.log:12229:[Worker3] Imported GUID: 59a6ca49ff394f9fa43fd66576caf291 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/CodeAnalyze/CompilationErrors.cs - Importer: ScriptedImporter/UnityEditor.QuickSearc
+hModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '4f55ba539d89dc71099fb34a94c3580d') in 0.0211972 seconds
+C:\Users\admin\KUCA-check\ui.log:12257:[Worker3] Imported GUID: 5e08bc0b6515c4b498ec702f56bd02e3 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/ErrorHandling/TracesUploader.cs - Importer: ScriptedImporter/UnityEditor.QuickSearch
+Module:UnityEditor.Search:ASIAI0B -> (ImportResultId: '95078e4bc8c89057cde876f6bf006eba') in 0.0217816 seconds
+C:\Users\admin\KUCA-check\ui.log:12275:[Worker3] Imported GUID: feef83473eabe4058bec8a652240fe94 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/Relay/RelayConnectionException.cs - Importer: ScriptedImporter/UnityEditor.QuickSear
+chModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '477deab8e3008541bef7e92570596d72') in 0.0207405 seconds
+C:\Users\admin\KUCA-check\ui.log:12296:[Worker0] Imported GUID: f0ac2531d17af4774bb6a243d8fdaa0f - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/ErrorHandling/BackendFailureClassifier.cs - Importer: ScriptedImporter/UnityEditor.Q
+uickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'c2822a8e0a2feda74989b1b34f6710bd') in 0.0240172 second
+s
+C:\Users\admin\KUCA-check\ui.log:12302:[Worker3] Imported GUID: 190fcd1e8eb69cf40aea5edf9a0f5975 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/ErrorHandling/ErrorHandlingUtility.cs - Importer: ScriptedImporter/UnityEditor.Quick
+SearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '7509079d847a698e292ac9a76d5be295') in 0.0219543 seconds
+C:\Users\admin\KUCA-check\ui.log:12304:[Worker1] Imported GUID: 0147a438956f40ab8ca0390e1d174eae - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/ErrorHandling/ErrorInfo.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModul
+e:UnityEditor.Search:ASIAI0B -> (ImportResultId: '51fe954eef087051a9652697a0091b68') in 0.0211503 seconds
+C:\Users\admin\KUCA-check\ui.log:12422:[Worker1] Imported GUID: 8932a9b7afbc48599d5e6d117823bb39 - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Styles/ChatElementBlockError.uss - Importer: ScriptedImporter/UnityEditor.QuickSearchModule
+:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'd34b049eb153ae7f85767d032567c8b9') in 0.025402 seconds
+C:\Users\admin\KUCA-check\ui.log:12515:[Worker1] Imported GUID: 22fd4fdf884f4b019099e09cc1cf507a - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Views/ChatElementBlockError.uxml - Importer: ScriptedImporter/UnityEditor.QuickSearchModule
+:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'e61d95f5dbdba60d637efe84df20dd01') in 0.0255849 seconds
+C:\Users\admin\KUCA-check\ui.log:12756:[Worker1] Imported GUID: 6ea8b2ef8c1948bab2a5e31eba7bcbcb - Path: Packages/com.u
+nity.ai.assistant/Modules/Unity.AI.Generators.Redux/Services/ReduxException.cs - Importer: ScriptedImporter/UnityEditor
+.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '4d7008ba19aeea38459f13d5b5e3139e') in 0.0213947 seco
+nds
+C:\Users\admin\KUCA-check\ui.log:12763:[Worker0] Imported GUID: 849b2c3d7ec447ac8d4cab0022876ab2 - Path: Packages/com.u
+nity.ai.assistant/Modules/Unity.AI.Generators.Redux/Thunks/RejectedAsyncThunkException.cs - Importer: ScriptedImporter/
+UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '7d99b58d2b1a58818b0a5ce27988da4e') in 0.0
+231686 seconds
+C:\Users\admin\KUCA-check\ui.log:12850:[Worker1] Imported GUID: e5aba144671f42ad8d30bdc7798aee7d - Path: Packages/com.u
+nity.ai.assistant/Modules/Unity.AI.Image/Utilities/HandledFailureException.cs - Importer: ScriptedImporter/UnityEditor.
+QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '8e05155dace9141ce3d9fbce612c3b91') in 0.0214493 secon
+ds
+C:\Users\admin\KUCA-check\ui.log:13183:[Worker2] Imported GUID: c399849b705f74e86936f140123a24b0 - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/ErrorHandling/ErrorInfo.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:
+UnityEditor.Search:ASIAI0B -> (ImportResultId: 'd9c5b4667654b94bb38c9852b463a926') in 0.0215997 seconds
+C:\Users\admin\KUCA-check\ui.log:13191:[Worker0] Imported GUID: 80a5c6ea734a476ca4cd791974804e38 - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/ErrorHandling/BackendResult.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '48918b24c894710a3e3a5b69ad1b35c8') in 0.023183 seconds
+C:\Users\admin\KUCA-check\ui.log:13220:[Worker0] Imported GUID: c1d085876c8d4610aca184a2d79c56f1 - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/FunctionCalling/Utils/CompilationErrorUtils.cs - Importer: ScriptedImporter/UnityEdi
+tor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '548f13ddf9d93effbfa156ea7cb2b064') in 0.0222233 s
+econds
+C:\Users\admin\KUCA-check\ui.log:13314:[Worker3] Imported GUID: 4bbaa874691d136428baa6a359df5d4f - Path: Packages/com.u
+nity.ai.assistant/Editor/Assistant/Relay/Acp/AcpSessionError.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '1752a46367df0d6da1d1842d987e4eb7') in 0.0216794 seconds
+C:\Users\admin\KUCA-check\ui.log:13391:[Worker3] Imported GUID: ad344570452e9f74d90351aeeb9c189f - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Assets/icons/Error.png - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEdit
+or.Search:ASIAI0B -> (ImportResultId: 'e6f92e62a25493bf9080f2f462b2de5b') in 0.0252568 seconds
+C:\Users\admin\KUCA-check\ui.log:13409:[Worker3] Imported GUID: 1936de16d2218482fba5c0d13522bcf6 - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Scripts/Components/ImeCompositionErrorWorkaround.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '8e9e657f6c6662007c7b02abe0e78c9b') in 0.0211083 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:13477:[Worker1] Imported GUID: 0115237be7034c00b84e8e0aacdcd9f0 - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Scripts/Utils/ErrorHandlingUtils.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '0f5014eaf5db1d9f659b38ba8a1a1783') in 0.0198739 seconds
+C:\Users\admin\KUCA-check\ui.log:13505:[Worker1] Imported GUID: d9fcfb711c9f64bd0acefcb93f72887a - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Scripts/Events/EventRetryableErrorOccurred.cs - Importer: ScriptedImporter/UnityEditor.Quic
+kSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '5cf70a5c1c039393967036dd1d9bbeed') in 0.0215948 seconds
+C:\Users\admin\KUCA-check\ui.log:13625:[Worker0] Imported GUID: 495bab15aba914052847e75fc3ad2010 - Path: Packages/com.u
+nity.ai.assistant/Modules/Unity.AI.Generators.Redux/UIElements/Core/ExceptionUtilities.cs - Importer: ScriptedImporter/
+UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '10d9aab88a579ae51fcb97abc74cf19f') in 0.0
+252529 seconds
+C:\Users\admin\KUCA-check\ui.log:14378:[Worker1] Imported GUID: a5b71d033413c40e483ffe81e93d1e85 - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Scripts/Data/MessageBlocks/ErrorBlockModel.cs - Importer: ScriptedImporter/UnityEditor.Quic
+kSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '9e4352f815460e9bb48cc38f605467a9') in 0.0247827 seconds
+C:\Users\admin\KUCA-check\ui.log:14567:[Worker0] Imported GUID: 25255abd0f854624bae46f68d314c295 - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Client/UnexpectedResponseException.cs - Importer: ScriptedImporter/Unity
+Editor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'ba27020d24df3c9072ac7da750a6c873') in 0.022847
+1 seconds
+C:\Users\admin\KUCA-check\ui.log:14612:[Worker3] Imported GUID: bcb24858c695428eb8aff79a0ac48284 - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Model/ErrorResponseV1.cs - Importer: ScriptedImporter/UnityEditor.QuickS
+earchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '82eaa1f96303143450aa5108eb237320') in 0.0210142 seconds
+C:\Users\admin\KUCA-check\ui.log:14615:[Worker2] Imported GUID: 8be81bfa07e94f53900352042678a3ed - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Client/ConnectionException.cs - Importer: ScriptedImporter/UnityEditor.Q
+uickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '0dbb6afcb9bc4499ce7eb352d0571bdc') in 0.0208855 second
+s
+C:\Users\admin\KUCA-check\ui.log:14619:[Worker2] Imported GUID: 67ac509c64ce401f9a919de56f82a9ed - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Client/ApiException.cs - Importer: ScriptedImporter/UnityEditor.QuickSea
+rchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '05e6f9b888a75022256a0569e5f5fd84') in 0.0203827 seconds
+C:\Users\admin\KUCA-check\ui.log:14631:[Worker1] Imported GUID: 2192f405972342ceb0b05f3e01aafeb2 - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Model/ValidationError.cs - Importer: ScriptedImporter/UnityEditor.QuickS
+earchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'bc6ff55f4eee9c9a5c16f29b1334b957') in 0.019584 seconds
+C:\Users\admin\KUCA-check\ui.log:14637:[Worker2] Imported GUID: eccf28a3314540c9a1cd0f746bd94e20 - Path: Packages/com.u
+nity.ai.assistant/Editor/UI/Scripts/Components/ChatElements/ChatElementBlock/ChatElementBlockError.cs - Importer: Scrip
+tedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '4e12f3aa3864e8e2e67069e880051
+e28') in 0.0204272 seconds
+C:\Users\admin\KUCA-check\ui.log:14644:[Worker2] Imported GUID: fadde322d06246bd817287433f40307d - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Model/HTTPValidationError.cs - Importer: ScriptedImporter/UnityEditor.Qu
+ickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '9b183d94970124c3c230aa221b824d4e') in 0.0239429 seconds
+C:\Users\admin\KUCA-check\ui.log:14646:[Worker1] Imported GUID: 6ce366d25e9c4e0b82813a792939405e - Path: Packages/com.u
+nity.ai.assistant/Runtime/Socket/Protocol/REST/Model/ValidationErrorLocInner.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '357930b8a9b503afcfa000fdd040c222') in 0.0213538 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:14882:[Worker1] Imported GUID: c50290f104bbc4fb8ac6055598095d0c - Path: Packages/com.u
+nity.xr.arkit/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:A
+SIAI0B -> (ImportResultId: 'cdb95251fbdf050b7f002d29db1e3b44') in 0.0211052 seconds
+C:\Users\admin\KUCA-check\ui.log:14942:[Worker1] Imported GUID: 5fd420220c8ee413ba691d737a3f0f1b - Path: Packages/com.u
+nity.xr.arkit/Runtime/NativeTypes/Foundation/NSError.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unit
+yEditor.Search:ASIAI0B -> (ImportResultId: '86e5d1752de95f977b1eff3000926a6d') in 0.0210618 seconds
+C:\Users\admin\KUCA-check\ui.log:14976:[Worker2] Imported GUID: 906ba9a56633440cb8a4c6b91ce7cafc - Path: Packages/com.u
+nity.xr.arkit/Runtime/NativeTypes/Foundation/NSErrorDomain.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModul
+e:UnityEditor.Search:ASIAI0B -> (ImportResultId: '4e631e6bbe818a00422b6aa5720dbf99') in 0.0209769 seconds
+C:\Users\admin\KUCA-check\ui.log:14978:[Worker1] Imported GUID: 0fba486e06ba1462980fc8a47e94cf04 - Path: Packages/com.u
+nity.xr.arkit/Runtime/NativeTypes/CoreLocation/CoreLocationErrorCode.cs - Importer: ScriptedImporter/UnityEditor.QuickS
+earchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '789493a78c5a61e465c4a949db693cb2') in 0.021599 seconds
+C:\Users\admin\KUCA-check\ui.log:14988:[Worker1] Imported GUID: a47fe48916fd144a4945f7687f45f317 - Path: Packages/com.u
+nity.xr.arkit/Runtime/NativeTypes/ARKit/ARKitErrorCode.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Un
+ityEditor.Search:ASIAI0B -> (ImportResultId: '51d2a01e7148f543020a3c1c701eedb3') in 0.021901 seconds
+C:\Users\admin\KUCA-check\ui.log:15033:[Worker3] Imported GUID: d9fe79419851eee4e8c90f7d0f934859 - Path: Packages/com.u
+nity.inputsystem/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Searc
+h:ASIAI0B -> (ImportResultId: 'b31d9683cfd1544959d3d77aee401579') in 0.0211821 seconds
+C:\Users\admin\KUCA-check\ui.log:15403:[Worker2] Imported GUID: d717b0e790ee146dd93d1be641984b6a - Path: Packages/com.u
+nity.inputsystem/InputSystem/Runtime/Utilities/ExceptionHelpers.cs - Importer: ScriptedImporter/UnityEditor.QuickSearch
+Module:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'b0b232e59537b0b4224bfb4c2c580ae1') in 0.0209178 seconds
+C:\Users\admin\KUCA-check\ui.log:15760:[Worker1] Imported GUID: 32382bdf2a41c4141a26fb433b9395f6 - Path: Packages/com.u
+nity.pipeline/Runtime/IlInterpreter/ScriptException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Unity
+Editor.Search:ASIAI0B -> (ImportResultId: 'fc15d4c02e9407ef5f0c8cde72bccf6d') in 0.0207054 seconds
+C:\Users\admin\KUCA-check\ui.log:15859:[Worker3] Imported GUID: 28daaf27186926745a8e1ebf5539c5f8 - Path: Packages/com.u
+nity.visualscripting/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.S
+earch:ASIAI0B -> (ImportResultId: '8b4aa02b7e16a33b7267d46e2b38ef39') in 0.0202438 seconds
+C:\Users\admin\KUCA-check\ui.log:16025:[Worker1] Imported GUID: 225941bd29e0f467386bc14f662d7839 - Path: Packages/com.u
+nity.visualscripting/Editor/VisualScripting.Core/Exceptions/UnityEditorInternalException.cs - Importer: ScriptedImporte
+r/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'c5ffcecfce444a626422569a67f9a959') in 0
+.0238262 seconds
+C:\Users\admin\KUCA-check\ui.log:16045:[Worker0] Imported GUID: d1e7d8b131d284028b03a61759279d37 - Path: Packages/com.u
+nity.visualscripting/Editor/VisualScripting.Core/Exceptions/EditorDebugUtility.cs - Importer: ScriptedImporter/UnityEdi
+tor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '94ce9c5e3959f061c64cbaf3a5ed2416') in 0.0243377 s
+econds
+C:\Users\admin\KUCA-check\ui.log:16401:[Worker1] Imported GUID: 8dc2791b3a1a24557addbdc57a45b5bd - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Connections/InvalidConnectionException.cs - Importer: ScriptedImporte
+r/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'b01d12a8ad61ce601cca4388c05ae3a1') in 0
+.021772 seconds
+C:\Users\admin\KUCA-check\ui.log:16431:[Worker3] Imported GUID: 2aa3ea0a99d074d89ac71b6156691ea1 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Exceptions/UnexpectedEnumValueException.cs - Importer: ScriptedImport
+er/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '787fa7c457b098f7af7eed5f77ed0c82') in 
+0.0211575 seconds
+C:\Users\admin\KUCA-check\ui.log:16438:[Worker0] Imported GUID: b217cb060732b439ab2575423ca7eb5d - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Graphs/GraphPointerException.cs - Importer: ScriptedImporter/UnityEdi
+tor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '1f637633ccea65b24b249106bc51fb00') in 0.0263592 s
+econds
+C:\Users\admin\KUCA-check\ui.log:16445:[Worker3] Imported GUID: 052fca7ced5fd4e419bc11f7627bbfc0 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Exceptions/InvalidConversionException.cs - Importer: ScriptedImporter
+/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '809b66ad9e629a9f39180f90c79f15c4') in 0.
+0219062 seconds
+C:\Users\admin\KUCA-check\ui.log:16478:[Worker2] Imported GUID: 5cff42b146c644392b254ff4cd35f1db - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Exceptions/DebugUtility.cs - Importer: ScriptedImporter/UnityEditor.Q
+uickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'c3352d71469ab1765fdcf90002bec282') in 0.0210596 second
+s
+C:\Users\admin\KUCA-check\ui.log:16483:[Worker2] Imported GUID: 516936d95362a47c1bbf1eae0077d930 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Ensure/ExceptionMessages.cs - Importer: ScriptedImporter/UnityEditor.
+QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '0cf9468b7c9848f7a9f25e841c97f40f') in 0.0217121 secon
+ds
+C:\Users\admin\KUCA-check\ui.log:16490:[Worker2] Imported GUID: ba39e771494a542fb9f11fafe2479f54 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Graphs/GraphsExceptionUtility.cs - Importer: ScriptedImporter/UnityEd
+itor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'b1363dbdf1d5231dcb55ab618a8500c6') in 0.0223167 
+seconds
+C:\Users\admin\KUCA-check\ui.log:16493:[Worker0] Imported GUID: 0a69171d7129543bf9453c8c22067cfe - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Exceptions/InvalidImplementationException.cs - Importer: ScriptedImpo
+rter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '5fb42ff0c1d21add1b5a67816ae3d111') i
+n 0.0240172 seconds
+C:\Users\admin\KUCA-check\ui.log:16504:[Worker3] Imported GUID: 7f804b6c44a294916b0052bae34a42b7 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Utilities/ExceptionUtility.cs - Importer: ScriptedImporter/UnityEdito
+r.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '51ff651f26d521ecda94a8f85fc9fad8') in 0.0208065 sec
+onds
+C:\Users\admin\KUCA-check\ui.log:16513:[Worker2] Imported GUID: 82f21756470a44b4a9e0bb6021481946 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Reflection/GenericClosingException.cs - Importer: ScriptedImporter/Un
+ityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'f351251ba00854fd6e5f1b93b40fa657') in 0.020
+1185 seconds
+C:\Users\admin\KUCA-check\ui.log:16685:[Worker0] Imported GUID: c897ea0941856453697b4618f9c9d0fc - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Flow/Ports/MissingValuePortInputException.cs - Importer: ScriptedImporter/
+UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '91a3e049a0e25a82bf55cbb7fbd5f3a5') in 0.0
+236939 seconds
+C:\Users\admin\KUCA-check\ui.log:16925:[Worker3] Imported GUID: 521bba425c159452e902b0b73f80e68c - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Dependencies/FullSerializer/fsExceptions.cs - Importer: ScriptedImpor
+ter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '378813505a781ec0796a065d82da52e8') in
+ 0.0219714 seconds
+C:\Users\admin\KUCA-check\ui.log:16999:[Worker2] Imported GUID: 4a6c6829dd03e4750a1bd7107faa4730 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Reflection/Operators/InvalidOperatorException.cs - Importer: Scripted
+Importer/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'a3bb57c0c74709ea5c47882dd66fae3a
+') in 0.0220122 seconds
+C:\Users\admin\KUCA-check\ui.log:17005:[Worker0] Imported GUID: 440712d4b1f8a4163805ea5af7bca155 - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Reflection/Operators/AmbiguousOperatorException.cs - Importer: Script
+edImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '8855fcbe602fb89be0f5fea0291933
+0c') in 0.024074 seconds
+C:\Users\admin\KUCA-check\ui.log:17029:[Worker1] Imported GUID: 46d4b046e765e4eeb8d73bbf9f5470ec - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Core/Reflection/Operators/OperatorException.cs - Importer: ScriptedImporte
+r/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '3e84fe49c02efac321669fc0135d448c') in 0
+.0213561 seconds
+C:\Users\admin\KUCA-check\ui.log:17089:[Worker2] Imported GUID: 6499d38cb236f4d369ab2ce0e0585ecc - Path: Packages/com.u
+nity.visualscripting/Runtime/VisualScripting.Flow/Dependencies/NCalc/EvaluationException.cs - Importer: ScriptedImporte
+r/UnityEditor.QuickSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '6f80baaffa25f05e9f1f66737ddd99da') in 0
+.0218672 seconds
+C:\Users\admin\KUCA-check\ui.log:17477:[Worker1] Imported GUID: 24772c9264eb4f3d8e1f026e3c3881b2 - Path: Packages/com.u
+nity.xr.core-utils/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Sea
+rch:ASIAI0B -> (ImportResultId: '90614ed4b3de9feb33114c00163623a4') in 0.0218182 seconds
+C:\Users\admin\KUCA-check\ui.log:18030:[Worker0] Imported GUID: e00dc5a0cda466b41b09a50bd18b4916 - Path: Packages/com.u
+nity.timeline/Editor/treeview/TrackGui/TimelineTrackErrorGUI.cs - Importer: ScriptedImporter/UnityEditor.QuickSearchMod
+ule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'bad01bdc7a23e29b60079559a3c33d80') in 0.0251432 seconds
+C:\Users\admin\KUCA-check\ui.log:18205:[Worker3] Imported GUID: 203bedb65db239c4aa5d9cf073cd3b73 - Path: Packages/com.u
+nity.ai.navigation/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Sea
+rch:ASIAI0B -> (ImportResultId: '9c04fd45ef23e6648d7862ed8280e932') in 0.020417 seconds
+C:\Users\admin\KUCA-check\ui.log:18277:[Worker3] Imported GUID: 48c9c41c17e434ca7b87c90de1da39f8 - Path: Packages/com.u
+nity.xr.arfoundation/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.S
+earch:ASIAI0B -> (ImportResultId: '593556a5f1961070f1233297e10c113b') in 0.0221554 seconds
+C:\Users\admin\KUCA-check\ui.log:19449:[Worker3] Imported GUID: da07703fcc09f8d4799221050659bd55 - Path: Packages/com.u
+nity.shadergraph/Editor/Resources/Shaders/FallbackError.shader - Importer: ScriptedImporter/UnityEditor.QuickSearchModu
+le:UnityEditor.Search:ASIAI0B -> (ImportResultId: '8b69647537f9b8ab706348b706045ece') in 0.0246579 seconds
+C:\Users\admin\KUCA-check\ui.log:19989:[Worker0] Imported GUID: 3afe581e949e3cc489c978bd8e000c4b - Path: Packages/com.u
+nity.render-pipelines.universal/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Un
+ityEditor.Search:ASIAI0B -> (ImportResultId: '49f94c12afeec5bf13d53267a5a5116d') in 0.0296357 seconds
+C:\Users\admin\KUCA-check\ui.log:20014:[Worker0] Imported GUID: b6029123aa4ab4e0481a4b3ad8a15af9 - Path: Packages/com.u
+nity.ide.rider/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:UnityEditor.Search:
+ASIAI0B -> (ImportResultId: 'a0077afbed4174b0e5c84eb43508c582') in 0.0253972 seconds
+C:\Users\admin\KUCA-check\ui.log:20361:[Worker2] Imported GUID: 8a93286a65c615346b9518c4b6af2b1d - Path: Packages/com.u
+nity.render-pipelines.universal/Runtime/Decal/DecalDrawErrorRenderPass.cs - Importer: ScriptedImporter/UnityEditor.Quic
+kSearchModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: 'a31e23aab64fe61ff99bce5ca50b3912') in 0.0207899 seconds
+C:\Users\admin\KUCA-check\ui.log:20538:[Worker2] Imported GUID: 5fd9a8feb75a4b5894c241777f519d4e - Path: Packages/com.u
+nity.render-pipelines.universal/Shaders/Utils/MaterialError.shader - Importer: ScriptedImporter/UnityEditor.QuickSearch
+Module:UnityEditor.Search:ASIAI0B -> (ImportResultId: '91643d46adc5c6258a8030af2d1f376e') in 0.0230559 seconds
+C:\Users\admin\KUCA-check\ui.log:20550:[Worker2] Imported GUID: e6e9a19c3678ded42a3bc431ebef7dbd - Path: Packages/com.u
+nity.render-pipelines.universal/Shaders/Utils/FallbackError.shader - Importer: ScriptedImporter/UnityEditor.QuickSearch
+Module:UnityEditor.Search:ASIAI0B -> (ImportResultId: '162a87aa64cd4238b882307b0b2ec0a2') in 0.0247887 seconds
+C:\Users\admin\KUCA-check\ui.log:21214:[Worker1] Imported GUID: 45422469be932c24aa3fc0ed68b1c6d9 - Path: Packages/com.u
+nity.test-framework.performance/Runtime/PerformanceTestException.cs - Importer: ScriptedImporter/UnityEditor.QuickSearc
+hModule:UnityEditor.Search:ASIAI0B -> (ImportResultId: '8954eac4f3126687836f176b14887ad2') in 0.0200816 seconds
+C:\Users\admin\KUCA-check\ui.log:21216:[Worker2] Imported GUID: a23a55c69f9544b56a85639e7258ea1d - Path: Packages/com.u
+nity.test-framework.performance/ValidationExceptions.json - Importer: ScriptedImporter/UnityEditor.QuickSearchModule:Un
+ityEditor.Search:ASIAI0B -> (ImportResultId: 'aaf663585323d0aba246c3ece8ffb1ee') in 0.0204513 seconds
+C:\Users\admin\KUCA-check\ui.log:21219:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 en
+titlement groups and 0 free entitlements matching requested entitlement ids)
+
+
