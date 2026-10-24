@@ -21,8 +21,8 @@ public class KyungHeeSpot : MonoBehaviour
     float spinAngle, spinSpeed, spinVel;
     float yaw, yawVel;
 
-    const float PoleHeight = 18f;
-    const float BadgeSize = 26f;
+    const float PoleHeight = 13f;   // 18 · 26 은 가까운 지도 시점에서 건물보다 커서 화면 아래를 가렸음 (UI_REVIEW_v5)
+    const float BadgeSize = 17f;
     const int Segments = 64;
 
     // 배지 텍스처에서 색을 뽑을 자리 (512 px 원: 금 246~254, 남색 208~246, 금 202~208, 흰 0~202)

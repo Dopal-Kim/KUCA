@@ -22,6 +22,8 @@ public class LoginScreen : MonoBehaviour
 
     const string PrivacySeenKey = "privacy_seen";
 
+    static readonly string[] HeroSpecies = { "pigeon", "library_owl", "squirrel" };
+    readonly RawImage[] hero = new RawImage[3];
     GameObject root, checking, loginPage, emailPage, nickPage, genderPage, privacyPage;
     Button privacyButton;
     bool privacyOnly; // 설정에서 열었으면 확인을 눌러도 닫기만 한다
@@ -315,6 +317,13 @@ public class LoginScreen : MonoBehaviour
     {
         foreach (GameObject p in new[] { checking, loginPage, emailPage, nickPage, genderPage, privacyPage })
             p.SetActive(p == page);
+        if (page == loginPage)
+            for (int i = 0; i < hero.Length; i++)
+                if (hero[i].texture == null)
+                {
+                    hero[i].texture = MonsterThumbnails.Get(HeroSpecies[i]);   // 모델이 없으면 null → 숨김
+                    hero[i].enabled = hero[i].texture != null;
+                }
     }
 
     static void Toast(string message)
@@ -365,6 +374,18 @@ public class LoginScreen : MonoBehaviour
         Box(welcome.rectTransform, G, 180f, G, 190f);
         Text sub = UIKit.Text(loginPage.transform, "파트너 경희몬과 함께 걷고, 장소마다 메모를 남겨요.\n로그인한 뒤 경희대 메일 인증을 한 번 해요.", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
         Box(sub.rectTransform, G, 390f, G, 130f);
+
+        // 가운데: 경희몬 셋 (문구와 버튼 사이가 통째로 비어 있었음 — 무슨 앱인지 그림으로 바로 보이게)
+        RectTransform heroRow = UIKit.Rect(loginPage.transform, "Hero");
+        Box(heroRow, G, 560f, G, 310f);   // 칸 너비 (960 - 32) / 3 ≈ 310: 정사각 썸네일이 늘어나지 않게
+        UIKit.Horizontal(heroRow, KucaTheme.Space2);
+        for (int i = 0; i < hero.Length; i++)
+        {
+            hero[i] = new GameObject(HeroSpecies[i], typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+            hero[i].transform.SetParent(heroRow, false);
+            hero[i].raycastTarget = false;
+            hero[i].enabled = false;
+        }
 
         RectTransform actions = UIKit.Rect(loginPage.transform, "Actions");
         actions.anchorMin = Vector2.zero;

@@ -277,7 +277,7 @@ public class CharacterCustomizer : MonoBehaviour
 
     // ---------- UI 생성 ----------
 
-    const float PanelHeight = 1120f;
+    const float PanelHeight = 1300f;   // 1120 은 항목이 3줄 남짓만 보였음: 시트를 키우고 위 무대를 줄임
     const float ChipHeight = 104f;
 
     void BuildUI()
