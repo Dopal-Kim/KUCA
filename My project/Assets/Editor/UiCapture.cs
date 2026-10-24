@@ -33,10 +33,23 @@ public static class UiCapture
     static EnterPlayModeOptions savedOptions;
 
     [MenuItem("KUCA/UI 화면 캡처")]
-    public static void Run()
+    public static void Run() => Start(OutDir, Script());
+
+    /// <summary>
+    /// 캠퍼스 이름 있는 건물마다 북 · 동 · 남 · 서 (35° 내려다봄) 와 위 (80°) 에서 지도만 찍는다 → Builds/MapShots/&lt;이름&gt;_N.png …
+    ///   Unity.exe -batchmode -projectPath "My project" -executeMethod UiCapture.RunMap -logFile map.log
+    /// </summary>
+    [MenuItem("KUCA/구조물 사방 캡처")]
+    public static void RunMap() => Start(MapDir, MapScript());
+
+    static readonly string MapDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "MapShots"));
+    static string outDir;
+
+    static void Start(string dir, IEnumerator first)
     {
-        Directory.CreateDirectory(OutDir);
-        foreach (string f in Directory.GetFiles(OutDir, "*.png"))
+        outDir = dir;
+        Directory.CreateDirectory(dir);
+        foreach (string f in Directory.GetFiles(dir, "*.png"))
             File.Delete(f);
         savedProduct = PlayerSettings.productName;
         savedOptionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
@@ -47,7 +60,7 @@ public static class UiCapture
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
         shotIndex = 0;
         steps.Clear();
-        steps.Push(Script());
+        steps.Push(first);
         startedAt = EditorApplication.timeSinceStartup;
         waitUntil = startedAt + 6;
         EditorApplication.update += Tick;
@@ -97,7 +110,7 @@ public static class UiCapture
         PlayerSettings.productName = savedProduct;
         EditorSettings.enterPlayModeOptionsEnabled = savedOptionsEnabled;
         EditorSettings.enterPlayModeOptions = savedOptions;
-        Debug.Log($"[UiCapture] 끝 ({shotIndex}장) → {OutDir}");
+        Debug.Log($"[UiCapture] 끝 ({shotIndex}장) → {outDir}");
         if (Application.isBatchMode)
             EditorApplication.Exit(code);
     }
@@ -195,6 +208,69 @@ public static class UiCapture
         if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; Shot("취향_설문"); }
         yield return CloseAll();
         Shot("지도_끝");
+    }
+
+    // ---------- 구조물 사방 ----------
+
+    static IEnumerator MapScript()
+    {
+        Click("확인하고 시작");
+        yield return 1.5f;
+        Click("에디터: 로그인 건너뛰기");
+        yield return 5f;
+        yield return CloseAll();
+        Type infoType = TypeOf("CampusBuildingInfo");
+        Camera cam = Camera.main != null ? Camera.main : UnityEngine.Object.FindAnyObjectByType<Camera>();
+        if (infoType == null || cam == null)
+            yield break;
+        var done = new HashSet<string>();
+        foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
+        {
+            string name = Get(info, "buildingName") as string;
+            Collider col = info.GetComponentInChildren<Collider>(true);
+            if (string.IsNullOrEmpty(name) || col == null || !done.Add(name))
+                continue;
+            Bounds b = col.bounds;
+            float size = Mathf.Max(b.size.x, b.size.z, b.size.y * 1.5f);
+            float dist = size * 1.4f + 40f;
+            Vector3 target = new Vector3(b.center.x, b.min.y + b.size.y * 0.35f, b.center.z);
+            foreach (var (tag, yaw, pitch) in new[] { ("N", 180f, 35f), ("E", 270f, 35f), ("S", 0f, 35f), ("W", 90f, 35f), ("T", 0f, 80f) })
+            {
+                // 북쪽(+z)에서 남쪽을 바라보면 yaw 180
+                Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
+                ShotFrom(cam, target - rot * Vector3.forward * dist, rot, $"{Safe(name)}_{tag}");
+            }
+            yield return 0.05f;
+        }
+    }
+
+    static string Safe(string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Replace(' ', '_');
+
+    /// <summary>지도 카메라를 잠깐 옮겨 화면 캔버스 없이 지도만 960×720 으로 찍는다</summary>
+    static void ShotFrom(Camera cam, Vector3 pos, Quaternion rot, string name)
+    {
+        Vector3 oldPos = cam.transform.position;
+        Quaternion oldRot = cam.transform.rotation;
+        float oldFar = cam.farClipPlane;
+        cam.transform.SetPositionAndRotation(pos, rot);
+        cam.farClipPlane = Mathf.Max(oldFar, 3000f);
+        var rt = new RenderTexture(960, 720, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
+        RenderTexture oldTarget = cam.targetTexture;
+        cam.targetTexture = rt;
+        cam.Render();
+        cam.targetTexture = oldTarget;
+        cam.transform.SetPositionAndRotation(oldPos, oldRot);
+        cam.farClipPlane = oldFar;
+        RenderTexture.active = rt;
+        var tex = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
+        tex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+        tex.Apply();
+        RenderTexture.active = null;
+        shotIndex++;
+        File.WriteAllBytes(Path.Combine(outDir, name + ".png"), tex.EncodeToPNG());
+        UnityEngine.Object.DestroyImmediate(tex);
+        rt.Release();
+        UnityEngine.Object.DestroyImmediate(rt);
     }
 
     // ---------- 도우미 ----------
@@ -337,7 +413,7 @@ public static class UiCapture
         tex.Apply();
         RenderTexture.active = null;
         shotIndex++;
-        File.WriteAllBytes(Path.Combine(OutDir, $"{shotIndex:00}_{name}.png"), tex.EncodeToPNG());
+        File.WriteAllBytes(Path.Combine(outDir, $"{shotIndex:00}_{name}.png"), tex.EncodeToPNG());
 
         foreach (var (canvas, _) in switched)
         {
