@@ -7,6 +7,7 @@ using UnityEditor.iOS.Xcode;
 /// <summary>
 /// iOS 빌드 뒤 Xcode 프로젝트와 Info.plist 에 Unity 설정 화면에 없는 항목을 넣는다.
 /// - NSLocalNetworkUsageDescription: 같은 와이파이의 PC 메모 서버(http://192.168.x.x:5080)에 붙으려면 iOS 14+ 의 로컬 네트워크 권한 안내 문구가 필요하다.
+/// - ITSAppUsesNonExemptEncryption = false: HTTPS 만 쓰므로 수출 규정 암호화 해당 없음 (App Store Connect 질문 생략).
 ///   (http 주소 허용은 Player Settings 의 Allow downloads over HTTP = Always allowed 로 한다.)
 /// - 공유(Assets/Plugins/iOS/KucaShare.swift): 카카오 SDK(Swift Package)를 UnityFramework 에 붙이고,
 ///   카카오톡·인스타그램 앱을 열 수 있게 URL 스킴을 등록한다.
@@ -46,6 +47,8 @@ public static class IosBuildSettings
         plist.ReadFromFile(plistPath);
         PlistElementDict root = plist.root;
         root.SetString("NSLocalNetworkUsageDescription", "같은 와이파이에 있는 KUCA 메모 서버에 연결해 장소 메모와 사진을 주고받기 위해 사용합니다.");
+        // 수출 규정: HTTPS(운영체제 기본 암호화)만 쓴다. 넣어 두면 TestFlight 업로드마다 암호화 질문을 하지 않는다
+        root.SetBoolean("ITSAppUsesNonExemptEncryption", false);
 
         PlistElementArray schemes = root["LSApplicationQueriesSchemes"] as PlistElementArray ?? root.CreateArray("LSApplicationQueriesSchemes");
         foreach (string s in new[] { "kakaokompassauth", "kakaolink", "kakaoplus", "kakaotalk", "instagram", "instagram-stories" })
