@@ -54,6 +54,7 @@ public class GameHUD : MonoBehaviour
     Text toastText;
     Image toastBg;
     float toastTimer;
+    int lastModalCount;
 
     // 프로필
     Text levelText, nextText, nicknameText;
@@ -180,6 +181,11 @@ public class GameHUD : MonoBehaviour
     {
         ApplySafeArea();
 
+        // 새 화면이 열리면 지도 안내 토스트를 거둔다 (그 화면 안에서 띄운 토스트는 화면 수가 그대로라 남는다)
+        int modalCount = UIInputBlocker.ModalCount;
+        if (modalCount > lastModalCount)
+            toastTimer = Mathf.Min(toastTimer, 0.0001f);
+        lastModalCount = modalCount;
         if (toastTimer > 0f)
         {
             toastTimer -= Time.unscaledDeltaTime;

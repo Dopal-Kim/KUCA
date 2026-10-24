@@ -20,6 +20,7 @@ public static class UIInputBlocker
 
     /// <summary>모달 화면이 하나라도 열려 있는지</summary>
     public static bool IsModalOpen => modals.Count > 0;
+    public static int ModalCount => modals.Count;
 
     /// <summary>owner 말고 다른 모달 화면이 열려 있는지 (다른 화면이 열리면 스스로 닫는 팝업용)</summary>
     public static bool IsOtherModalOpen(object owner)

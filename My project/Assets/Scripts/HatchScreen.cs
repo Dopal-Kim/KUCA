@@ -16,6 +16,7 @@ public class HatchScreen : MonoBehaviour
 
     GameObject root;
     RectTransform egg, creature, rays;
+    Image cardBg;   // 흔들리는 동안은 숨겨 티켓만 띄운다 (큰 빈 카드가 휑했음, UI_REVIEW_v5 F)
     RawImage creatureImage;
     Image flash;
     Text title, nameText, tierText, info;
@@ -67,6 +68,8 @@ public class HatchScreen : MonoBehaviour
         tierChip.enabled = false;
         ok.gameObject.SetActive(false);
         skip = false;
+        cardBg.enabled = false;
+        title.color = Color.white;
         flash.color = new Color(1f, 1f, 1f, 0f);
 
         // 1) 점점 세게 흔들린다
@@ -79,6 +82,8 @@ public class HatchScreen : MonoBehaviour
         }
         // 2) 번쩍
         egg.gameObject.SetActive(false);
+        cardBg.enabled = true;
+        title.color = InkQuiet;
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
         title.text = "뽑았어요!";
@@ -127,6 +132,7 @@ public class HatchScreen : MonoBehaviour
         UIKit.Stretch((RectTransform)root.transform);
 
         Image card = UIKit.Image(root.transform, "Card", KucaTheme.Card, raycast: true);
+        cardBg = card;
         card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
         card.pixelsPerUnitMultiplier = 0.34f;

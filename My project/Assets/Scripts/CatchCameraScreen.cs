@@ -342,6 +342,8 @@ public class CatchCameraScreen : MonoBehaviour
         RectTransform sr = (RectTransform)shutter.transform;
         Place(sr, new Vector2(0.5f, 0f), new Vector2(0f, 110f));
         sr.sizeDelta = new Vector2(200f, 200f);
+        Image back = Circle(sr, "Back", KucaTheme.Scrim, 236f);   // 밝은 하늘 · 흰 벽 위에서도 셔터가 보이게
+        Place(back.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         Image ring = Circle(sr, "Ring", Color.white, 200f);
         Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         Image gap = Circle(ring.transform, "Gap", new Color(0f, 0f, 0f, 0.35f), 176f);
