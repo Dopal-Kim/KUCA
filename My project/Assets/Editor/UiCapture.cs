@@ -6,13 +6,12 @@ using System.Linq;
 using System.Reflection;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 /// <summary>
 /// 실제 구동 화면을 1080×1920 PNG 로 차례대로 찍는다 (인터페이스 개선 사이클, docs/인터페이스_기준.md).
 ///   메뉴 KUCA › UI 화면 캡처, 또는 배치 모드:
-///   Unity.exe -batchmode -projectPath "My project" -executeMethod UiCapture.Run -logFile ui.log
+///   Unity.exe -projectPath "My project" -executeMethod UiCapture.Run -logFile ui.log   (-batchmode 에서는 UI 가 안 찍힘: 창을 띄워 실행)
 /// 결과: 저장소 폴더 Builds/UiShots/NN_이름.png (git 에 올라가지 않음).
 /// - 화면 캔버스(Overlay)를 찍는 순간에만 카메라 캔버스로 바꿔 지도 카메라 위에 겹친다.
 /// - 사용자 저장 데이터(PlayerPrefs · 캐릭터 파일)와 섞이지 않게 제품 이름을 KUCA-Capture 로 바꿔 실행하고 끝나면 되돌린다.
@@ -58,6 +57,12 @@ public static class UiCapture
         // 도메인을 다시 불러오지 않아야 이 스크립트의 진행 상태가 플레이 모드 안에서도 이어진다
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
+        // 명령줄 실행은 빈 씬으로 시작하므로 첫 빌드 씬(지도 · 카메라 · HUD)을 연다
+        if (string.IsNullOrEmpty(UnityEngine.SceneManagement.SceneManager.GetActiveScene().path) && EditorBuildSettings.scenes.Length > 0)
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(EditorBuildSettings.scenes[0].path);
+        // Game 화면을 모바일 세로(1080×1920)로: 레이아웃이 PC 비율이 아니라 폰 기준으로 잡히게
+        typeof(Editor).Assembly.GetType("UnityEditor.PlayModeWindow")?.GetMethod("SetCustomRenderingResolution")
+            ?.Invoke(null, new object[] { (uint)W, (uint)H, "KUCA Mobile" });
         shotIndex = 0;
         steps.Clear();
         steps.Push(first);
@@ -130,6 +135,14 @@ public static class UiCapture
         {
             yield return 1f;
             Shot($"설문_{i}");
+        }
+        // 처음 깐 앱: 첫 파트너 고르기가 뜨면 찍고 비둘기를 고른다
+        object starterMenus = Find("KhuMenus");
+        if (Get(starterMenus, "starterScreen") is GameObject starter && starter.activeInHierarchy)
+        {
+            Shot("첫_파트너");
+            Call(starterMenus, "PickStarter", "pigeon");
+            yield return 2f;
         }
         yield return CloseAll();
         Shot("지도");
@@ -383,10 +396,9 @@ public static class UiCapture
         var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
         var uiCam = new GameObject("UiCaptureCamera").AddComponent<Camera>();
         uiCam.cullingMask = 1 << UiLayer;
-        uiCam.clearFlags = CameraClearFlags.Depth;
-        uiCam.GetUniversalAdditionalCameraData().renderType = CameraRenderType.Overlay;
-        UniversalAdditionalCameraData baseData = cam.GetUniversalAdditionalCameraData();
-        baseData.cameraStack.Add(uiCam);
+        // 카메라 스택 대신 같은 RT 에 따로 한 번 더 그린다 (수동 Render 에선 스택 Overlay 가 안 그려짐)
+        uiCam.clearFlags = CameraClearFlags.Nothing;
+        uiCam.targetTexture = rt;   // 캔버스가 1080×1920 기준으로 배치되게
 
         var switched = new List<(Canvas canvas, int layer)>();
         foreach (Canvas c in UnityEngine.Object.FindObjectsByType<Canvas>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
@@ -406,6 +418,7 @@ public static class UiCapture
         cam.targetTexture = rt;
         cam.Render();
         cam.targetTexture = oldTarget;
+        uiCam.Render();
 
         RenderTexture.active = rt;
         var tex = new Texture2D(W, H, TextureFormat.RGB24, false);
@@ -420,7 +433,7 @@ public static class UiCapture
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.worldCamera = null;
         }
-        baseData.cameraStack.Remove(uiCam);
+        uiCam.targetTexture = null;
         UnityEngine.Object.DestroyImmediate(uiCam.gameObject);
         UnityEngine.Object.DestroyImmediate(tex);
         rt.Release();
