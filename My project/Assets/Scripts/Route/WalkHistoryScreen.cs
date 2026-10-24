@@ -108,7 +108,7 @@ public class WalkHistoryScreen : MonoBehaviour
         Box(name.rectTransform, 60f, 66f, 200f, 52f);
         Text stats = UIKit.Text(row.transform, Stats(e), 30, TextAnchor.UpperLeft, Ink);
         Box(stats.rectTransform, 60f, 124f, 200f, 44f);
-        Text done = UIKit.Text(row.transform, e.completed ? "완료" : "", 28, TextAnchor.MiddleRight, Green);
+        Text done = UIKit.Text(row.transform, e.completed ? "" : "중간에 끝냄", 28, TextAnchor.MiddleRight, InkQuiet);   // 완료가 기본: 다른 것만 표시
         done.fontStyle = FontStyle.Bold;
         Box(done.rectTransform, 0f, 0f, 44f, 190f);
         done.rectTransform.anchorMin = new Vector2(0.7f, 1f);
@@ -147,10 +147,10 @@ public class WalkHistoryScreen : MonoBehaviour
 
         Text title = UIKit.Text(safe, "산책 기록", 52, TextAnchor.MiddleLeft, Ink);
         title.fontStyle = FontStyle.Bold;
-        Box(title.rectTransform, 60f, 40f, 160f, 80f);
-        CloseButton(safe, Close);
+        Box(title.rectTransform, 140f, 40f, 60f, 80f);
+        CloseButton(safe, Close, left: true);   // 전체 화면은 왼쪽 위 × (함께 걷기 · 사진첩 · 장소 메모와 같게)
         summary = UIKit.Text(safe, "", 30, TextAnchor.MiddleLeft, InkQuiet);
-        Box(summary.rectTransform, 60f, 124f, 60f, 50f);
+        Box(summary.rectTransform, 140f, 124f, 60f, 50f);
 
         RectTransform area = UIKit.Rect(safe, "List");
         UIKit.StretchBetween(area, 0f, 190f);
@@ -183,11 +183,11 @@ public class WalkHistoryScreen : MonoBehaviour
         root.SetActive(false);
     }
 
-    static void CloseButton(RectTransform parent, UnityEngine.Events.UnityAction onClick)
+    static void CloseButton(RectTransform parent, UnityEngine.Events.UnityAction onClick, bool left = false)
     {
         Image close = UIKit.Image(parent, "Close", new Color(0f, 0f, 0f, 0f), raycast: true);
-        close.rectTransform.anchorMin = close.rectTransform.anchorMax = close.rectTransform.pivot = new Vector2(1f, 1f);
-        close.rectTransform.anchoredPosition = new Vector2(-30f, -36f);
+        close.rectTransform.anchorMin = close.rectTransform.anchorMax = close.rectTransform.pivot = new Vector2(left ? 0f : 1f, 1f);
+        close.rectTransform.anchoredPosition = new Vector2(left ? 30f : -30f, -36f);
         close.rectTransform.sizeDelta = new Vector2(96f, 96f);
         close.gameObject.AddComponent<Button>().onClick.AddListener(onClick);
         Image ci = UIKit.Image(close.transform, "Icon", Ink);

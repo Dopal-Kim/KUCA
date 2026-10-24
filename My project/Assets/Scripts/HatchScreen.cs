@@ -19,6 +19,7 @@ public class HatchScreen : MonoBehaviour
     Image flash;
     Text title, nameText, tierText, info;
     Button ok;
+    bool skip;   // 흔들리는 중에 화면을 누르면 바로 연다
     System.Action onClose;
 
     /// <summary>뽑기 결과를 보여 준다. premium: 5장 뽑기 (티켓이 금색)</summary>
@@ -62,10 +63,11 @@ public class HatchScreen : MonoBehaviour
         rays.gameObject.SetActive(false);
         foreach (Text t in new[] { nameText, tierText, info }) t.enabled = false;
         ok.gameObject.SetActive(false);
+        skip = false;
         flash.color = new Color(1f, 1f, 1f, 0f);
 
         // 1) 점점 세게 흔들린다
-        for (float t = 0f; t < 1.6f; t += Time.unscaledDeltaTime)
+        for (float t = 0f; t < 1.6f && !skip; t += Time.unscaledDeltaTime)
         {
             float k = t / 1.6f;
             egg.localRotation = Quaternion.Euler(0f, 0f, Mathf.Sin(t * 22f) * 16f * k);
@@ -115,6 +117,9 @@ public class HatchScreen : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "HatchCanvas", 40);
         root = UIKit.Image(canvas.transform, "Hatch", KucaTheme.Scrim, raycast: true).gameObject;
         BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다
+        Button tapAnywhere = root.AddComponent<Button>();
+        tapAnywhere.transition = Selectable.Transition.None;
+        tapAnywhere.onClick.AddListener(() => skip = true);
         UIKit.Stretch((RectTransform)root.transform);
 
         Image card = UIKit.Image(root.transform, "Card", Color.white, raycast: true);

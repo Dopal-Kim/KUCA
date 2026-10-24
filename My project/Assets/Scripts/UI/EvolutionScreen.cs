@@ -178,7 +178,13 @@ public class EvolutionScreen : MonoBehaviour
     void Close()
     {
         if (t < ButtonAt)
-            return; // 버튼이 나오기 전에는 닫지 않는다
+        {
+            // 연출 중 뒤로 가기 · 화면 누르기: 끝 모습(앞을 보고 멈춤 + 확인 버튼)으로 건너뛴다
+            t = Duration;
+            Sample(t);
+            playing = false;
+            return;
+        }
         playing = false;
         root.SetActive(false);
         UIInputBlocker.SetModal(this, false);
@@ -240,7 +246,7 @@ public class EvolutionScreen : MonoBehaviour
         const float fov = 26f;
         float radius = b.extents.magnitude * CreatureLibrary.StageScales[CreatureLibrary.StageScales.Length - 1] * 1.15f;
         float dist = radius / Mathf.Sin(fov * 0.5f * Mathf.Deg2Rad);
-        var camGo = new GameObject("Camera", typeof(Camera));
+        var camGo = new GameObject("Camera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(stageRoot.transform, false);
         camGo.transform.localPosition = new Vector3(0f, radius * 0.2f, -dist);
         camGo.transform.LookAt(stageRoot.transform.position);
@@ -284,6 +290,9 @@ public class EvolutionScreen : MonoBehaviour
         bg.raycastTarget = true;
         UIKit.Stretch(bg.rectTransform);
         root = bg.gameObject;
+        Button skip = root.AddComponent<Button>();
+        skip.transition = Selectable.Transition.None;
+        skip.onClick.AddListener(() => { if (t < ButtonAt) Close(); });
         BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다 (연출 중이면 건너뛰기)
         RectTransform r = bg.rectTransform;
 
@@ -305,12 +314,14 @@ public class EvolutionScreen : MonoBehaviour
         caption = UIKit.Text(cr, "", 50, TextAnchor.MiddleCenter, Color.white);
         caption.fontStyle = FontStyle.Bold;
         UIKit.Stretch(caption.rectTransform);
+        Shade(caption);
 
         namesGroup = Group(r, "Names", out RectTransform nr);
         Place(nr, new Vector2(0.5f, 0f), new Vector2(0f, 560f), new Vector2(1060f, 180f));
         names = UIKit.Text(nr, "", 46, TextAnchor.UpperCenter, Color.white);
         names.supportRichText = true;
         UIKit.Stretch(names.rectTransform);
+        Shade(names);   // 노란 빛줄기 위에서도 읽히게
         dots = new Image[3];
         for (int i = 0; i < dots.Length; i++)
         {
@@ -333,6 +344,16 @@ public class EvolutionScreen : MonoBehaviour
         flash = UIKit.Image(r, "Flash", new Color(1f, 1f, 1f, 0f));
         UIKit.Stretch(flash.rectTransform);
         root.SetActive(false);
+    }
+
+    static void Shade(Text t)
+    {
+        var s = t.gameObject.AddComponent<Shadow>();
+        s.effectColor = new Color(0f, 0f, 0f, 0.6f);
+        s.effectDistance = new Vector2(0f, -4f);
+        var o = t.gameObject.AddComponent<Outline>();
+        o.effectColor = new Color(0.05f, 0.15f, 0.08f, 0.55f);
+        o.effectDistance = new Vector2(2f, -2f);
     }
 
     static CanvasGroup Group(RectTransform parent, string name, out RectTransform rt)

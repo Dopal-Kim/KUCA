@@ -31,6 +31,7 @@ public class WalkCompleteScreen : MonoBehaviour
     WalkCompleteResult result;
     bool reviewSent, busy;
     int partnerStars, courseStars;
+    static readonly Color StarOff = new Color(0.82f, 0.84f, 0.82f);   // 빈 별: 흰 카드 위에서 보이는 회색 (#D0D5D2)
 
     GameObject root, partnerRow, reviewCard, rewardCard, recap;
     RawImage recapMap;
@@ -239,8 +240,8 @@ public class WalkCompleteScreen : MonoBehaviour
     {
         for (int i = 0; i < 5; i++)
         {
-            partnerStarImages[i].color = i < partnerStars ? Gold : new Color(0f, 0f, 0f, 0.12f);
-            courseStarImages[i].color = i < courseStars ? Gold : new Color(0f, 0f, 0f, 0.12f);
+            partnerStarImages[i].color = i < partnerStars ? Gold : StarOff;
+            courseStarImages[i].color = i < courseStars ? Gold : StarOff;
         }
         sendButton.interactable = !reviewSent;
         UIKit.SetLabel(sendButton, reviewSent ? "리뷰를 보냈어요" : $"리뷰 보내기  (+{LocalWalkService.ReviewXp} XP)");
@@ -438,7 +439,7 @@ public class WalkCompleteScreen : MonoBehaviour
         for (int i = 0; i < 5; i++)
         {
             int n = i + 1;
-            Image star = UIKit.Image(row, "Star" + n, new Color(0f, 0f, 0f, 0.12f), raycast: true);
+            Image star = UIKit.Image(row, "Star" + n, StarOff, raycast: true);
             star.sprite = HudIcons.Star;
             UIKit.Size(star, 76f, 76f);
             var b = star.gameObject.AddComponent<Button>();

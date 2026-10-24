@@ -24,8 +24,8 @@ public class CharacterCustomizer : MonoBehaviour
     [Tooltip("미리보기 카메라가 바라보는 높이 (캐릭터 로컬 단위) — 옷 탭")]
     public float previewLookHeight = 0.9f;
     [Tooltip("얼굴 · 색 탭에서 얼굴 가까이 갈 때의 거리와 높이")]
-    public float faceDistance = 2.6f;
-    public float faceLookHeight = 1.55f;
+    public float faceDistance = 3.4f;     // 2.6 은 캡처에서 모자 · 어깨가 잘렸음: 머리 + 어깨까지
+    public float faceLookHeight = 1.5f;
     public float previewFov = 30f;
     public float previewRotateSpeed = 0.4f;
 
@@ -104,7 +104,8 @@ public class CharacterCustomizer : MonoBehaviour
         if (!IsOpen || previewCam == null || character == null)
             return;
         // 얼굴 · 색 탭에서는 얼굴 가까이, 옷 탭에서는 전신 (부드럽게 옮겨 간다)
-        zoom = Mathf.MoveTowards(zoom, tab == Tab.Clothes ? 0f : 1f, Time.unscaledDeltaTime * 3f);
+        // 옷 = 전신, 색 = 반신 (피부 · 머리 · 옷 색이 함께 보이게), 얼굴 = 얼굴
+        zoom = Mathf.MoveTowards(zoom, tab == Tab.Clothes ? 0f : tab == Tab.Color ? 0.5f : 1f, Time.unscaledDeltaTime * 3f);
         float k = Mathf.SmoothStep(0f, 1f, zoom);
         float distance = Mathf.Lerp(previewDistance, faceDistance, k);
         float height = Mathf.Lerp(previewLookHeight, faceLookHeight, k);
@@ -539,7 +540,7 @@ public class CharacterCustomizer : MonoBehaviour
     {
         previewTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32) { name = "CharacterPreview", antiAliasing = 2 };
 
-        var camGo = new GameObject("CharacterPreviewCamera", typeof(Camera));
+        var camGo = new GameObject("CharacterPreviewCamera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(transform, false);
         previewCam = camGo.GetComponent<Camera>();
         previewCam.targetTexture = previewTexture;
@@ -585,14 +586,18 @@ public class CharacterCustomizer : MonoBehaviour
         fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
         fitter.aspectRatio = 1f;
 
-        Text hint = CreateText(area.transform, "좌우로 드래그해서 돌려 보기", KucaTheme.Label, TextAnchor.LowerCenter);
-        hint.color = KucaTheme.InkMuted;
+        // 안내는 패널 바로 위 반투명 칩: 캐릭터 몸 위에 겹쳐도 읽힌다
+        Image chip = Child(area.transform, "HintChip", new Color(1f, 1f, 1f, 0.85f), HudIcons.Pill);
+        chip.type = Image.Type.Sliced;
+        Place(chip.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(520f, 64f));
+        chip.rectTransform.pivot = new Vector2(0.5f, 0f);
+        chip.rectTransform.anchoredPosition = new Vector2(0f, 16f);
+        Text hint = CreateText(chip.transform, "좌우로 드래그해서 돌려 보기", KucaTheme.Label, TextAnchor.MiddleCenter);
+        hint.color = KucaTheme.Ink;
         var hr = hint.rectTransform;
-        hr.anchorMin = new Vector2(0f, 0f);
-        hr.anchorMax = new Vector2(1f, 0f);
-        hr.pivot = new Vector2(0.5f, 0f);
-        hr.sizeDelta = new Vector2(0f, 60f);
-        hr.anchoredPosition = new Vector2(0f, 10f);
+        hr.anchorMin = Vector2.zero;
+        hr.anchorMax = Vector2.one;
+        hr.offsetMin = hr.offsetMax = Vector2.zero;
     }
 
     Text CreateRow(Transform parent, string label, UnityEngine.Events.UnityAction prev, UnityEngine.Events.UnityAction next, float height)

@@ -684,7 +684,7 @@ public class GameHUD : MonoBehaviour
         if (character == null)
             return;
         portraitTexture = new RenderTexture(256, 256, 24, RenderTextureFormat.ARGB32) { name = "HUDPortrait", antiAliasing = 2 };
-        var camGo = new GameObject("HUDPortraitCamera", typeof(Camera));
+        var camGo = new GameObject("HUDPortraitCamera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(transform, false);
         portraitCam = camGo.GetComponent<Camera>();
         portraitCam.targetTexture = portraitTexture;

@@ -156,7 +156,6 @@ public partial class KhuMenus
     void BuildQuests()
     {
         questScreen = FullScreen("Quests", new Color(1f, 0.95f, 0.84f), new Color(0.99f, 0.82f, 0.62f), out RectTransform inner);
-        Frame(questScreen.transform, QuestOrange);
         Text title = T(inner, "퀘스트", 60, TextAnchor.MiddleLeft, QuestInk, bold: true);
         Box(title.rectTransform, 60f, 40f, 60f, 90f);
         questTimer = T(inner, "", 30, TextAnchor.MiddleLeft, QuestQuiet);
@@ -168,7 +167,7 @@ public partial class KhuMenus
         area.offsetMin = new Vector2(0f, 220f);
         area.offsetMax = new Vector2(0f, -190f);
         questList = UIKit.ScrollList(area, 22f, new RectOffset(48, 48, 0, 40));
-        CloseFab(inner, () => Show(questScreen, false), filled: true, QuestOrange);
+        CloseFab(inner, () => Show(questScreen, false));
     }
 
     /// <summary>부모 위쪽에서 (left, top) 떨어지고 오른쪽 여백 right, 높이 height 인 칸</summary>

@@ -113,7 +113,6 @@ public partial class KhuMenus
     {
         gachaScreen = FullScreen("Gacha", KucaTheme.Surface, KucaTheme.PrimarySoft, out RectTransform inner);
         BackButton.Attach(gachaScreen, () => Show(gachaScreen, false));
-        Frame(gachaScreen.transform, new Color(0.62f, 0.52f, 0.95f));
 
         Text title = T(inner, "뽑기", 64, TextAnchor.MiddleCenter, GachaInk, bold: true);
         TopBox(title.rectTransform, 60f, 90f);
@@ -153,7 +152,7 @@ public partial class KhuMenus
         Place((RectTransform)oc.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
         ((RectTransform)oc.transform).sizeDelta = new Vector2(400f, 116f);
 
-        CloseFab(inner, () => Show(gachaScreen, false), filled: true, KucaTheme.Primary);
+        CloseFab(inner, () => Show(gachaScreen, false));
     }
 
     /// <summary>흰 카드 버튼: 왼쪽 색 띠 + 제목 + 설명 + 오른쪽 "티켓 n장"</summary>
@@ -239,7 +238,7 @@ public partial class KhuMenus
             Text name = T(card.transform, CreatureLibrary.NameOf(id), 40, TextAnchor.MiddleCenter, GachaInk, bold: true);
             BottomBox(name.rectTransform, 70f, 60f);
             FitOneLine(name, 40);
-            Text grade = T(card.transform, "C 등급", 28, TextAnchor.MiddleCenter, GachaRules.ColorOf(GachaRules.Grade.C), bold: true);
+            Text grade = T(card.transform, "C 등급", 28, TextAnchor.MiddleCenter, KucaTheme.InkMuted, bold: true);   // 회색 C 등급 색은 흰 카드 위 대비 부족
             BottomBox(grade.rectTransform, 28f, 40f);
         }
         Show(starterScreen, true);

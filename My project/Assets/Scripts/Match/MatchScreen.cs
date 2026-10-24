@@ -528,7 +528,7 @@ public class MatchScreen : MonoBehaviour
             ChipAt(p, "동성만", () => { sameGender = true; RefreshChips(); }, 60f, 520f, 300f),
             ChipAt(p, "상관없어요", () => { sameGender = false; RefreshChips(); }, 380f, 520f, 300f),
         };
-        Note(p, "위치는 건물 단위로만 쓰고, 매칭이 끝나면 지워요. 성별은 상대에게 보이지 않아요.", 660f);
+        Note(p, "위치는 건물 단위로만 쓰고, 매칭이 끝나면 지워요.\n성별은 상대에게 보이지 않아요.", 660f);
         serviceLabel = Note(p, "", 740f);
         PrimaryAtBottom(p, "산책메이트 찾기", Accent, Join);
     }

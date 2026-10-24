@@ -298,19 +298,20 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildMainMenu()
     {
-        mainMenu = FullScreen("MainMenu", KucaTheme.PrimarySoft, KucaTheme.Primary, out RectTransform inner);
+        mainMenu = FullScreen("MainMenu", KucaTheme.Primary, KucaTheme.PrimaryDeep, out RectTransform inner);   // 진한 초록: 흰 이름이 읽히게
         // 위 줄 경희몬 · 뽑기, 아래 줄 도감 · 산책 기록. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
-        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
-        MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 600f), OpenGacha);
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
-        MenuButton(inner, "산책 기록", HudIcons.Footprints, new Vector2(160f, 270f), () => { Show(mainMenu, false); WalkHistoryScreen.Show(); });
+        // 두 줄을 화면 세로 가운데에 (엄지가 닿는 아래 절반 쪽으로 조금 내림)
+        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 10f), () => OpenCollection(Tab.Monsters));
+        MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 10f), OpenGacha);
+        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, -320f), () => OpenCollection(Tab.Dex));
+        MenuButton(inner, "산책 기록", HudIcons.Footprints, new Vector2(160f, -320f), () => { Show(mainMenu, false); WalkHistoryScreen.Show(); });
         // 뽑기 버튼의 빨간 원: 가진 티켓 수
         gachaMenuBadge = Circle(menuButtons[1], "Badge", KucaTheme.Crimson, 56f);
         Place(gachaMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-14f, 176f));
         gachaMenuBadgeText = T(gachaMenuBadge.transform, "", 30, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(gachaMenuBadgeText.rectTransform);
         gachaMenuBadge.gameObject.SetActive(false);
-        CloseFab(inner, () => Show(mainMenu, false), filled: false, MenuNavy);
+        CloseFab(inner, () => Show(mainMenu, false));
         BackButton.Attach(mainMenu, () => Show(mainMenu, false));
     }
 
@@ -319,7 +320,7 @@ public partial class KhuMenus : MonoBehaviour
         const float size = 210f;
         Button b = InvisibleButton(parent, label, onClick, new Vector2(size + 20f, size + 90f));
         RectTransform rt = (RectTransform)b.transform;
-        Place(rt, new Vector2(0.5f, 0f), pos);
+        Place(rt, new Vector2(0.5f, 0.5f), pos);
         rt.pivot = new Vector2(0.5f, 0f);
         menuButtons.Add(rt);
 
@@ -355,7 +356,6 @@ public partial class KhuMenus : MonoBehaviour
     void BuildCollection()
     {
         collection = FullScreen("Collection", KucaTheme.Surface, KucaTheme.PrimarySoft, out RectTransform inner);
-        Frame(collection.transform, new Color(0.56f, 0.86f, 0.56f));
 
         // 탭
         RectTransform tabs = UIKit.Rect(inner, "Tabs");
@@ -418,17 +418,17 @@ public partial class KhuMenus : MonoBehaviour
 
         // 그리드
         RectTransform area = UIKit.Rect(inner, "Grid");
-        UIKit.StretchBetween(area, 0f, 346f);
+        UIKit.StretchBetween(area, FabZone, 346f);   // 아래 닫기 버튼 자리는 비워 둔다 (내용이 버튼 밑에 깔리지 않게)
         // 내용: 등급별 구역(제목 + 3열 그리드)을 세로로 쌓는다. 경희몬·도구 탭은 제목 없는 구역 하나.
         grid = ScrollContent(area, out gridScroll);
-        UIKit.Vertical(grid, 8f, new RectOffset(0, 0, 4, 280));
+        UIKit.Vertical(grid, 8f, new RectOffset(0, 0, 4, 24));
 
         emptyText = T(area, "", 38, TextAnchor.MiddleCenter, Gray);
         UIKit.Stretch(emptyText.rectTransform, 80f, 200f);
 
         // 정렬 버튼 (경희몬 탭)
         Button sort = InvisibleButton(inner, "Sort", CycleSort, new Vector2(124f, 124f));
-        Place((RectTransform)sort.transform, new Vector2(1f, 0f), new Vector2(-50f, 60f));
+        Place((RectTransform)sort.transform, new Vector2(1f, 0f), new Vector2(-50f, 38f));
         Image sRing = Circle(sort.transform, "Ring", Teal, 124f);
         Place(sRing.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         Image sFace = Circle(sRing.transform, "Face", Color.white, 112f);
@@ -439,7 +439,7 @@ public partial class KhuMenus : MonoBehaviour
         sIcon.rectTransform.sizeDelta = new Vector2(60f, 60f);
         sortButton = sort.gameObject;
 
-        CloseFab(inner, () => Show(collection, false), filled: true);
+        CloseFab(inner, () => Show(collection, false));
         BackButton.Attach(collection, () => Show(collection, false));
     }
 
@@ -1006,7 +1006,6 @@ public partial class KhuMenus : MonoBehaviour
     {
         profile = FullScreen("Profile", KucaTheme.PrimaryDeep, Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.7f), out RectTransform inner);
         BackButton.Attach(profile, CloseProfile);
-        Frame(profile.transform, Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.35f));
 
         // 탭: 나 / 프렌드 / 소셜
         RectTransform tabs = UIKit.Rect(inner, "Tabs");
@@ -1034,10 +1033,10 @@ public partial class KhuMenus : MonoBehaviour
 
         // "나" 탭: 세로로 스크롤되는 내용
         RectTransform area = UIKit.Rect(inner, "Me");
-        UIKit.StretchBetween(area, 0f, 190f);
+        UIKit.StretchBetween(area, FabZone, 190f);
         profileMe = area.gameObject;
         RectTransform content = ScrollContent(area, out ScrollRect scroll);
-        UIKit.Vertical(content, 0f, new RectOffset(0, 0, 0, 240));
+        UIKit.Vertical(content, 0f, new RectOffset(0, 0, 0, 24));
 
         BuildProfileHero(Section(content, "Hero", 960f), scroll);
         BuildProfileLevel(Section(content, "Level", 200f));
@@ -1051,7 +1050,7 @@ public partial class KhuMenus : MonoBehaviour
         profileOtherText = T(other, "", 40, TextAnchor.MiddleCenter, PText);
         UIKit.Stretch(profileOtherText.rectTransform, 80f, 200f);
 
-        CloseFab(inner, CloseProfile, filled: true, PCircle);
+        CloseFab(inner, CloseProfile);
     }
 
     void BuildProfileHero(RectTransform s, ScrollRect scroll)
@@ -1066,6 +1065,7 @@ public partial class KhuMenus : MonoBehaviour
         profileView = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(ProfileDragArea)).GetComponent<RawImage>();
         profileView.transform.SetParent(s, false);
         UIKit.Stretch(profileView.rectTransform);
+        profileView.rectTransform.offsetMax = new Vector2(0f, -270f);   // 이름 · 파트너 · 칩 아래에서 캐릭터가 시작 (머리와 안 겹치게)
         var drag = profileView.GetComponent<ProfileDragArea>();
         drag.scroll = scroll;
         drag.onDragX = dx => profileYaw += dx * 0.4f;
@@ -1080,7 +1080,7 @@ public partial class KhuMenus : MonoBehaviour
         TopBox(profilePartner.rectTransform, 112f, 60f);
         profilePartner.rectTransform.offsetMin = new Vector2(58f, profilePartner.rectTransform.offsetMin.y);
 
-        Button change = PillButton(s, "파트너 정하기", new Color(1f, 1f, 1f, 0.14f), PGold, () => OpenCollection(Tab.Monsters));
+        Button change = PillButton(s, "파트너 정하기", PGold, KucaTheme.Ink, () => OpenCollection(Tab.Monsters));   // 채운 금색 + 진한 글자 (대비)
         Place((RectTransform)change.transform, new Vector2(0f, 1f), new Vector2(56f, -190f));
         ((RectTransform)change.transform).sizeDelta = new Vector2(250f, 70f);
         change.GetComponentInChildren<Text>().fontSize = 30;
@@ -1130,7 +1130,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         var items = new (string label, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
-            ("역대\n파트너", HudIcons.Partner, ShowPartnerHistory),
+            ("지난 파트너", HudIcons.Partner, ShowPartnerHistory),
             ("스크랩북", HudIcons.Scrapbook, ShowScrapbook),
             ("모험노트", HudIcons.Notebook, ShowAdventureNote),
             ("갈아입는다", HudIcons.Hanger, () => { if (customizer != null) customizer.SetOpen(true); }),
@@ -1253,7 +1253,7 @@ public partial class KhuMenus : MonoBehaviour
             return;
         if (profileCam == null)
         {
-            var camGo = new GameObject("ProfileCamera", typeof(Camera));
+            var camGo = new GameObject("ProfileCamera", typeof(Camera), typeof(NeutralAmbient));
             camGo.transform.SetParent(transform, false);
             profileCam = camGo.GetComponent<Camera>();
             profileCam.clearFlags = CameraClearFlags.SolidColor;
@@ -1267,14 +1267,14 @@ public partial class KhuMenus : MonoBehaviour
             lightGo.transform.SetParent(transform, false);
             profileLight = lightGo.GetComponent<Light>();
             profileLight.type = LightType.Directional;
-            profileLight.intensity = 1.1f;
+            profileLight.intensity = 1.45f;   // 1.1 은 캡처에서 탁하고 어두웠음
             profileLight.shadows = LightShadows.None;
             profileLight.cullingMask = 1 << character.gameObject.layer;
         }
 
         // 화면 영역 비율에 맞는 렌더 텍스처
         Canvas.ForceUpdateCanvases();
-        Rect r = profileHero.rect;
+        Rect r = profileView.rectTransform.rect;
         float aspect = r.height > 1f ? r.width / r.height : 1f;
         int h = 900, w = Mathf.Clamp(Mathf.RoundToInt(h * aspect), 256, 2048);
         if (profileTexture == null || profileTexture.width != w || profileTexture.height != h)
@@ -1358,21 +1358,6 @@ public partial class KhuMenus : MonoBehaviour
         return raw.gameObject;
     }
 
-    /// <summary>화면 양옆의 색 띠</summary>
-    static void Frame(Transform parent, Color color)
-    {
-        for (int i = 0; i < 2; i++)
-        {
-            Image bar = UIKit.Image(parent, i == 0 ? "FrameL" : "FrameR", color);
-            RectTransform r = bar.rectTransform;
-            r.anchorMin = new Vector2(i, 0f);
-            r.anchorMax = new Vector2(i, 1f);
-            r.pivot = new Vector2(i, 0.5f);
-            r.offsetMin = r.offsetMax = Vector2.zero;
-            r.sizeDelta = new Vector2(16f, 0f);
-        }
-    }
-
     /// <summary>화면을 어둡게 덮고 가운데에 흰 카드를 띄운다.</summary>
     static GameObject Overlay(Transform parent, string name, Vector2 size, out RectTransform card)
     {
@@ -1390,21 +1375,20 @@ public partial class KhuMenus : MonoBehaviour
         return dim.gameObject;
     }
 
-    /// <summary>아래 가운데의 둥근 닫기 버튼</summary>
-    static void CloseFab(RectTransform parent, UnityEngine.Events.UnityAction onClick, bool filled, Color? accent = null)
+    /// <summary>아래 닫기 버튼이 차지하는 높이: 스크롤 영역은 이 위에서 끝난다</summary>
+    const float FabZone = 220f;
+
+    /// <summary>아래 가운데의 둥근 닫기 버튼. 전체 화면 메뉴(메뉴 · 경희몬 · 뽑기 · 프로필 · 퀘스트)는 모두 이 한 모양 (docs/인터페이스_기준.md)</summary>
+    static void CloseFab(RectTransform parent, UnityEngine.Events.UnityAction onClick)
     {
-        Color ringColor = accent ?? Teal;
-        Color fillColor = accent.HasValue ? Color.Lerp(accent.Value, Color.black, 0.12f) : new Color(0.2f, 0.56f, 0.58f);
         const float size = 124f;
         Button b = InvisibleButton(parent, "Close", onClick, new Vector2(size, size));
         Place((RectTransform)b.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
-        Image halo = Circle(b.transform, "Halo", new Color(1f, 1f, 1f, filled ? 0.9f : 0.55f), size + 16f);
+        Image halo = Circle(b.transform, "Halo", new Color(1f, 1f, 1f, 0.9f), size + 16f);
         Place(halo.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image ring = Circle(b.transform, "Ring", ringColor, size);
-        Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image face = Circle(ring.transform, "Face", filled ? fillColor : new Color(0.97f, 0.99f, 0.97f), size - 10f);
+        Image face = Circle(b.transform, "Face", KucaTheme.Primary, size);
         Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image x = UIKit.Image(face.transform, "X", filled ? Color.white : ringColor);
+        Image x = UIKit.Image(face.transform, "X", Color.white);
         x.sprite = HudIcons.Close;
         Place(x.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         x.rectTransform.sizeDelta = new Vector2(64f, 64f);

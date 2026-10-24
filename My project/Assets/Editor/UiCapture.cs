@@ -54,6 +54,7 @@ public static class UiCapture
         savedOptionsEnabled = EditorSettings.enterPlayModeOptionsEnabled;
         savedOptions = EditorSettings.enterPlayModeOptions;
         PlayerSettings.productName = "KUCA-Capture";
+        ResetCaptureData();
         // 도메인을 다시 불러오지 않아야 이 스크립트의 진행 상태가 플레이 모드 안에서도 이어진다
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
@@ -70,6 +71,24 @@ public static class UiCapture
         waitUntil = startedAt + 6;
         EditorApplication.update += Tick;
         EditorApplication.EnterPlaymode();
+    }
+
+    /// <summary>
+    /// 지난 캡처가 남긴 산책 기록 · 진행 · 설정을 지워 매번 처음 깐 앱 상태로 찍는다.
+    /// 제품 이름이 KUCA-Capture 로 바뀐 저장 폴더일 때만 지운다 (사용자 실제 데이터 보호).
+    /// </summary>
+    static void ResetCaptureData()
+    {
+        string dir = Application.persistentDataPath;
+        if (!dir.Contains("KUCA-Capture"))
+        {
+            Debug.LogWarning("[UiCapture] 저장 폴더가 캡처 전용이 아니라 초기화를 건너뜀: " + dir);
+            return;
+        }
+        if (Directory.Exists(dir))
+            Directory.Delete(dir, true);
+        PlayerPrefs.DeleteAll();
+        PlayerPrefs.Save();
     }
 
     static void Tick()
@@ -124,26 +143,15 @@ public static class UiCapture
 
     static IEnumerator Script()
     {
-        Shot("시작");
-        Click("확인하고 시작");
-        yield return 1.5f;
         Shot("로그인");
         Click("에디터: 로그인 건너뛰기");
         yield return 4f;
-        Shot("첫_화면");
-        for (int i = 1; i <= 6 && Click("다음"); i++)
-        {
-            yield return 1f;
-            Shot($"설문_{i}");
-        }
-        // 처음 깐 앱: 첫 파트너 고르기가 뜨면 찍고 비둘기를 고른다
-        object starterMenus = Find("KhuMenus");
-        if (Get(starterMenus, "starterScreen") is GameObject starter && starter.activeInHierarchy)
-        {
+        Shot("첫_꾸미기");   // 처음 깐 앱은 로그인 뒤 꾸미기가 먼저 뜬다
+        yield return CloseAll();
+        // 첫 파트너 고르기는 다른 화면이 다 닫힌 뒤 뜬다 → 기다렸다 찍고 비둘기를 고른다
+        yield return 1.5f;
+        if (StarterShown())
             Shot("첫_파트너");
-            Call(starterMenus, "PickStarter", "pigeon");
-            yield return 2f;
-        }
         yield return CloseAll();
         Shot("지도");
 
@@ -168,10 +176,17 @@ public static class UiCapture
             Set(progress, "tickets", 12);   // 뽑기 화면 · 결과를 보이게
         if (Call(menus, "OpenMainMenu")) { yield return 1f; Shot("경희몬_메뉴"); }
         Type menuTab = menus?.GetType().GetNestedType("Tab");
-        foreach (string t in new[] { "Monsters", "Dex", "Items" })
+        foreach (string t in new[] { "Monsters", "Dex" })   // 도구(가방) 탭은 v2 에서 숨김 (결정 D4)
             if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; Shot("경희몬_" + t); }
         if (Call(menus, "OpenGacha")) { yield return 1f; Shot("뽑기"); }
-        if (Click("1장 뽑기")) { yield return 1.2f; Shot("뽑기_결과_1"); yield return 2.5f; Shot("뽑기_결과_2"); }
+        if (Click("1장 뽑기"))
+        {
+            yield return 1.0f;
+            Shot("뽑기_결과_1");
+            Set(Find("HatchScreen"), "skip", true);   // 화면 누르기와 같음: 흔들림을 건너뛰고 연다
+            yield return 1.5f;
+            Shot("뽑기_결과_2");
+        }
         yield return CloseAll();
         if (Call(menus, "OpenProfile")) { yield return 1f; Shot("프로필"); }
         yield return CloseAll();
@@ -200,7 +215,7 @@ public static class UiCapture
         {
             yield return 1f;
             Shot("진화_1");
-            yield return 2.5f;
+            yield return 4.8f;   // 5.6 초 연출이 앞을 보고 멈추고 확인 버튼이 나온 뒤
             Shot("진화_2");
         }
         yield return CloseAll();
@@ -227,8 +242,6 @@ public static class UiCapture
 
     static IEnumerator MapScript()
     {
-        Click("확인하고 시작");
-        yield return 1.5f;
         Click("에디터: 로그인 건너뛰기");
         yield return 5f;
         yield return CloseAll();
@@ -288,9 +301,23 @@ public static class UiCapture
 
     // ---------- 도우미 ----------
 
+    /// <summary>첫 파트너 고르기가 떠 있으면 비둘기를 골라 닫는다 (뒤로 가기로는 안 닫히는 필수 화면)</summary>
+    static bool StarterShown()
+    {
+        object menus = Find("KhuMenus");
+        return Get(menus, "starterScreen") is GameObject s && s.activeInHierarchy;
+    }
+
+    static void PickStarterIfShown()
+    {
+        if (StarterShown())
+            Call(Find("KhuMenus"), "PickStarter", "pigeon");
+    }
+
     /// <summary>열린 화면을 뒤로 가기(BackButton)로 위에서부터 닫는다</summary>
     static IEnumerator CloseAll()
     {
+        PickStarterIfShown();
         Type back = TypeOf("BackButton");
         FieldInfo open = back?.GetField("open", BindingFlags.NonPublic | BindingFlags.Static);
         MethodInfo handle = back?.GetMethod("HandleBack", BindingFlags.NonPublic | BindingFlags.Static);
@@ -303,6 +330,7 @@ public static class UiCapture
             yield return 0.6f;
         }
         yield return 0.4f;
+        PickStarterIfShown();
     }
 
     static bool Click(string label)
@@ -382,7 +410,7 @@ public static class UiCapture
         return t.GetField(member, Any)?.GetValue(target);
     }
 
-    static void Set(object target, string field, object value) => target.GetType().GetField(field, Any)?.SetValue(target, value);
+    static void Set(object target, string field, object value) => target?.GetType().GetField(field, Any)?.SetValue(target, value);
 
     /// <summary>지도 카메라 위에 화면 캔버스를 겹쳐 1080×1920 으로 찍는다</summary>
     static void Shot(string name)
@@ -393,7 +421,8 @@ public static class UiCapture
             Debug.LogWarning("[UiCapture] 카메라 없음");
             return;
         }
-        var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 4 };
+        // 멀티샘플 없이: 4x 에서는 UI 사각형 두 삼각형의 대각선 이음매가 옅은 줄로 찍혔음 (기기 Overlay 캔버스에는 없음)
+        var rt = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB) { antiAliasing = 1 };
         var uiCam = new GameObject("UiCaptureCamera").AddComponent<Camera>();
         uiCam.cullingMask = 1 << UiLayer;
         // 카메라 스택 대신 같은 RT 에 따로 한 번 더 그린다 (수동 Render 에선 스택 Overlay 가 안 그려짐)

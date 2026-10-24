@@ -130,8 +130,14 @@ public class PreferenceSurvey : MonoBehaviour
                 st.rectTransform.offsetMax = new Vector2(-110f, 0f);
             }
             // 오른쪽 체크 표시
-            Image mark = UIKit.Image(row.transform, "Mark", on ? Color.white : new Color(0f, 0f, 0f, 0.12f));
+            Image mark = UIKit.Image(row.transform, "Mark", on ? Color.white : KucaTheme.Card);
             mark.sprite = HudIcons.Circle;
+            if (!on)   // 꺼진 선택 원: 흰 원 + 진한 초록 테 (옅은 초록 칸 위에서 보이게)
+            {
+                Outline ring = mark.gameObject.AddComponent<Outline>();
+                ring.effectColor = KucaTheme.PrimaryDeep;
+                ring.effectDistance = new Vector2(2f, 2f);
+            }
             mark.rectTransform.anchorMin = mark.rectTransform.anchorMax = mark.rectTransform.pivot = new Vector2(1f, 0.5f);
             mark.rectTransform.anchoredPosition = new Vector2(-40f, 0f);
             mark.rectTransform.sizeDelta = new Vector2(48f, 48f);
@@ -143,7 +149,8 @@ public class PreferenceSurvey : MonoBehaviour
             }
         }
         nextButton.interactable = chosen.Count > 0;
-        nextButton.GetComponent<Image>().color = chosen.Count > 0 ? Accent : new Color(Accent.r, Accent.g, Accent.b, 0.35f);
+        nextButton.GetComponent<Image>().color = chosen.Count > 0 ? Accent : KucaTheme.Line;
+        nextButton.GetComponentInChildren<Text>().color = chosen.Count > 0 ? Color.white : KucaTheme.InkMuted;   // 비활성: 연회색 위 진회색 글자
     }
 
     void Toggle(string code)
@@ -204,6 +211,18 @@ public class PreferenceSurvey : MonoBehaviour
         Fill();
     }
 
+    /// <summary>안드로이드 뒤로 가기: 앞 질문으로, 첫 질문이면 저장하지 않고 닫는다 (첫 실행이면 다음에 다시 뜬다)</summary>
+    void BackOrClose()
+    {
+        if (step > 0)
+        {
+            Back();
+            return;
+        }
+        root.SetActive(false);
+        UIInputBlocker.SetModal(this, false);
+    }
+
     static void Toast(string message)
     {
         var hud = FindAnyObjectByType<GameHUD>();
@@ -216,6 +235,7 @@ public class PreferenceSurvey : MonoBehaviour
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "SurveyCanvas", 45);
         root = UIKit.Image(canvas.transform, "Survey", Paper, raycast: true).gameObject;
+        BackButton.Attach(root, BackOrClose);
         UIKit.Stretch((RectTransform)root.transform);
         Rect sa = Screen.safeArea;
         RectTransform safe = UIKit.Rect(root.transform, "Safe");
