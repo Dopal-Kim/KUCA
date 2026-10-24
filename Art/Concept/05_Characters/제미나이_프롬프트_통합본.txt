@@ -29,7 +29,7 @@ LANDMARK BACKGROUND MAP (LEGENDARY characters -> key art file to use as the card
   #1 Space Engineering Rabbit  ->  "01_Buildings/[캠퍼스 내 건물] - [공학관]_아이콘_기본.png"
   #10 Library Owl  ->  "01_Buildings/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_아이콘_기본.png"  +  "03_Place_Cards_9x16/[캠퍼스 내 건물] - [중앙도서관(대학본부)]_카드_기본.png (9:16 background composition)"
   #11 Plaza Lake Duck  ->  "02_Landscapes/[캠퍼스 내 조경] - [사색의 광장(오벨리스크 2기)]_아이콘_기본.png"
-  #12 Main Gate Magpie  ->  "02_Landscapes/[캠퍼스 내 조경] - [정문(새천년기념탑:네오르네상스문)]_아이콘_기본.png"
+  #12 Main Gate Magpie  ->  "02_Landscapes/[캠퍼스 내 조경] - [정문(새천년기념탑·네오르네상스문)]_아이콘_기본.png"
   #13 Sports College Lion Cub  ->  "01_Buildings/[캠퍼스 내 건물] - [체육대학관]_아이콘_기본.png"
   #14 Clock Tower Rooster  ->  "01_Buildings/[캠퍼스 내 건물] - [선승관(시계탑)]_아이콘_기본.png"
   #15 Art College Chameleon  ->  "01_Buildings/[캠퍼스 내 건물] - [예술·디자인대학관]_아이콘_기본.png"
