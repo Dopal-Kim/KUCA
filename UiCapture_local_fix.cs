@@ -254,6 +254,20 @@ public static class UiCapture
         Camera cam = Camera.main != null ? Camera.main : UnityEngine.Object.FindAnyObjectByType<Camera>();
         if (infoType == null || cam == null)
             yield break;
+        // 플레이 모드에서만 바꾸므로 끝나면 저절로 되돌아간다:
+        // 건물 위 위치 표지(배지 + 막대)는 건물 앞을 가려 끄고, 한낮 · 봄으로 고정해 웹 미리보기(tools/keyart/preview)와 같은 조건으로 찍는다
+        Type spotType = TypeOf("KyungHeeSpot");
+        if (spotType != null)
+            foreach (Component s in UnityEngine.Object.FindObjectsByType(spotType, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>())
+                s.gameObject.SetActive(false);
+        object look = Find("KeyArtLook");
+        Type lookType = look?.GetType();
+        if (lookType != null)
+        {
+            Call(look, "SetMode", Enum.Parse(lookType.GetNestedType("Mode"), "Day"));
+            Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), "Spring"));
+        }
+        yield return 0.5f;
         var done = new HashSet<string>();
         foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
         {
