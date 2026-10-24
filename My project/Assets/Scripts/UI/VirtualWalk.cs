@@ -50,7 +50,14 @@ public class VirtualWalk : MonoBehaviour
         }
         if (On && !Allowed)
             Stop(); // 체험 계정에서 나갔다
-        controls.SetActive(On);
+        // 메뉴 · 화면이 열려 있으면 (경희대 로고 메뉴 등) 조이스틱을 숨기고 멈춘다
+        bool show = On && !UIInputBlocker.IsModalOpen;
+        if (controls.activeSelf && !show)
+        {
+            stick = Vector2.zero;
+            knob.anchoredPosition = Vector2.zero;
+        }
+        controls.SetActive(show);
         if (On)
             Walk();
         else if (Allowed && !offered && Time.unscaledTime >= checkAt)
@@ -153,6 +160,7 @@ public class VirtualWalk : MonoBehaviour
         public void OnDrag(PointerEventData e)
         {
             RectTransformUtility.ScreenPointToLocalPointInRectangle(owner.pad, e.position, e.pressEventCamera, out Vector2 local);
+            local -= owner.pad.rect.center;   // 패드 가운데 기준 (기준점이 어디든 상하좌우가 고르게)
             float r = owner.pad.rect.width * 0.5f;
             Vector2 v = Vector2.ClampMagnitude(local / r, 1f);
             owner.stick = v;
@@ -193,8 +201,9 @@ public class VirtualWalk : MonoBehaviour
         Image padImg = UIKit.Image(controls.transform, "Pad", new Color(1f, 1f, 1f, 0.28f), raycast: true);
         padImg.sprite = HudIcons.Circle;
         pad = padImg.rectTransform;
-        Place(pad, new Vector2(0f, 0f), new Vector2(60f, 330f), new Vector2(260f, 260f));
-        pad.pivot = Vector2.zero;
+        // 화면 아래 가운데, 경희대 로고 버튼 바로 위 (양손 어느 쪽으로도 조작하기 쉽게)
+        Place(pad, new Vector2(0.5f, 0f), new Vector2(0f, 470f), new Vector2(260f, 260f));
+        pad.pivot = new Vector2(0.5f, 0.5f);
         Image ring = UIKit.Image(pad, "Ring", new Color(1f, 1f, 1f, 0.7f));
         ring.sprite = HudIcons.GlowRing;
         UIKit.Stretch(ring.rectTransform);
@@ -216,8 +225,8 @@ public class VirtualWalk : MonoBehaviour
         fastLabel = speed.GetComponentInChildren<Text>();
         fastLabel.color = Ink;
         fastLabel.fontStyle = FontStyle.Bold;
-        Place((RectTransform)speed.transform, new Vector2(0f, 0f), new Vector2(60f, 600f), new Vector2(260f, 70f));
-        ((RectTransform)speed.transform).pivot = Vector2.zero;
+        Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(300f, 470f), new Vector2(220f, 70f));   // 조이스틱 오른쪽
+        ((RectTransform)speed.transform).pivot = new Vector2(0.5f, 0.5f);
         UIInputBlocker.Register((RectTransform)speed.transform);
         controls.SetActive(false);
 
