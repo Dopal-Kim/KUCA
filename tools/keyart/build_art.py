@@ -94,6 +94,7 @@ def main():
     counts = nature.plant_all(layer, ground, buildings, rng, landmarks.NO_DETAILS)
     print('plants', counts, f'({time.time() - t0:.0f}s)')
     print('props', nature.place_props(layer, ground, rng))
+    print('pond stones', nature.pond_stones(layer, ground, rng))
 
     ground.paint(os.path.join(OUT, 'CampusGround.jpg'), os.path.join(OUT, 'GrassDetail.png'))
     ground.paint_lights(os.path.join(OUT, 'KeyArtLights.png'), nature.LIGHTS)

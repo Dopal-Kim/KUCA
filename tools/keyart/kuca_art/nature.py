@@ -153,17 +153,18 @@ def plant_all(layer, ground, buildings, rng, skip_ids):
                 for k in range(rng.randint(1, 3)):
                     a = rng.uniform(0, 6.28)
                     p.add(x + math.cos(a) * 2.2 * k, z + math.sin(a) * 2.2 * k,
-                          rng.choices(['small_cone', 'cone', 'shrub'], [0.55, 0.25, 0.2])[0], scale=rng.uniform(0.8, 1.1))
+                          rng.choices(['small_cone', 'cone', 'shrub'], [0.3, 0.15, 0.55])[0], scale=rng.uniform(0.8, 1.1))   # 실사: 둥근 회양목 위주
 
     # 4) 숲, 공원, 그 밖의 잔디
     deep = _deep_forest(g)
-    p.scatter(11, lambda x, z: forest(x, z) and not g.has(deep, x, z), 0.85, [0.65, 0.3, 0.05])
-    p.scatter(11, lambda x, z: g.has(deep, x, z), 0.85, [0.7, 0.3], kinds=('cone_lo', 'round_lo'))
+    # 실사: 캠퍼스 숲은 활엽수가 짙고 소나무가 섞인다 → 둥근 나무 위주
+    p.scatter(11, lambda x, z: forest(x, z) and not g.has(deep, x, z), 0.85, [0.3, 0.65, 0.05])
+    p.scatter(11, lambda x, z: g.has(deep, x, z), 0.85, [0.35, 0.65], kinds=('cone_lo', 'round_lo'))
     # 숲 가장자리 층: 바깥 0~5 m 에 관목·작은 원뿔을 촘촘히
     edge = _forest_edge(g)
     p.scatter(4.5, lambda x, z: g.has(edge, x, z), 0.55, [0.55, 0.45], kinds=('shrub', 'small_cone'))
-    p.scatter(13, park, 0.5, [0.35, 0.25, 0.4])
-    p.scatter(20, other, 0.28, [0.45, 0.25, 0.3])
+    p.scatter(13, park, 0.5, [0.2, 0.5, 0.3])
+    p.scatter(20, other, 0.28, [0.2, 0.55, 0.25])
 
     # 5) 관목: 길가와 공원에 작은 덤불
     p.scatter(6, lambda x, z: (park(x, z) or other(x, z)) and _near(g, x, z), 0.5, [0.7, 0.3], kinds=('shrub', 'small_cone'))
@@ -241,6 +242,40 @@ def draw_bench(mb, x, z, face_yaw):
     mb.box(m, (0, 0.47, 0.02), (1.9, 0.08, 0.58), WOOD)
     mb.box(m, (0, 0.78, -0.28), (1.9, 0.32, 0.07), shade(WOOD, 0.95))
     mb.ao_strength = 0.25
+
+
+ROCK = (0.62, 0.60, 0.56)
+
+
+def pond_stones(layer, ground, rng, step=2.6):
+    """연못 가장자리 자연석 (실사: 노천극장 앞 연못의 자연석 호안 · 폭포석). 사색의 광장 호수는 석재 테가 따로 있어 뺀다."""
+    from scipy import ndimage
+    g = ground
+    pond = g.water.copy()
+    if getattr(g, 'lake_poly', None):
+        from .geo import point_in_poly
+        lab, n = ndimage.label(pond)
+        for k in range(1, n + 1):
+            ys, xs = np.nonzero(lab == k)
+            x, z = g.r.world(xs.mean(), ys.mean())
+            if point_in_poly(x, z, g.lake_poly):
+                pond &= lab != k
+    edge = np.argwhere(pond & ~ndimage.binary_erosion(pond, iterations=2))
+    rng.shuffle(pts := [tuple(q) for q in edge[::3]])
+    taken, count = [], 0
+    for (py, px) in pts:
+        x, z = g.r.world(px, py)
+        if any((x - qx) ** 2 + (z - qz) ** 2 < step * step for qx, qz in taken):
+            continue
+        if g.has(g.road, x, z) or g.has(g.walk, x, z) or g.has(g.buildings, x, z):
+            continue
+        taken.append((x, z))
+        m = layer.at(x, z)
+        r = rng.uniform(0.6, 1.4)
+        m.ao_floor, m.ao_height, m.ao_strength = 0.0, 1.0, 0.3
+        m.ico(Frame((x, 0.0, z)), (0.0, r * 0.25, 0.0), (r, r * 0.6, r * 0.85), shade(ROCK, rng.uniform(0.85, 1.1)))
+        count += 1
+    return count
 
 
 def place_props(layer, ground, rng):

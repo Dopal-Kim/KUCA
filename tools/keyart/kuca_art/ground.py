@@ -13,14 +13,14 @@ from scipy import ndimage
 from .geo import Raster, to_world
 
 # 키아트 아이콘에서 뽑은 색 (sRGB)
-GRASS = np.array([140, 182, 56], np.float32)       # 햇빛 받은 잔디가 이 색이 되게
+GRASS = np.array([124, 166, 64], np.float32)       # 햇빛 받은 잔디가 이 색이 되게 (실사 비교: 형광 연두 → 차분한 여름 잔디)
 ASPHALT = np.array([122, 125, 131], np.float32)
 CURB = np.array([229, 223, 211], np.float32)
 PAVING = np.array([226, 213, 199], np.float32)
 PLAZA = np.array([232, 220, 204], np.float32)
 PARKING = np.array([206, 203, 197], np.float32)
-WATER_EDGE = np.array([118, 214, 236], np.float32)
-WATER_DEEP = np.array([44, 162, 214], np.float32)
+WATER_EDGE = np.array([128, 200, 212], np.float32)   # 실사 연못: 수영장 같은 청록 → 차분한 물빛
+WATER_DEEP = np.array([60, 140, 170], np.float32)
 STONE_RIM = np.array([224, 214, 198], np.float32)
 TRACK = np.array([200, 104, 82], np.float32)
 LINE = np.array([248, 246, 238], np.float32)
@@ -74,6 +74,8 @@ class Ground:
         self.parking = self._area(lambda t: t.get('amenity') == 'parking' or t.get('landuse') == 'construction')
         self.paved = self._area(lambda t: bool(t.get('area:highway')) or (t.get('highway') == 'pedestrian' and t.get('area') == 'yes'))
         self.water = self._area(lambda t: t.get('natural') == 'water' or t.get('landuse') in ('reservoir', 'basin'))
+        # OSM 연못은 꼭짓점이 적어 모난 육각형으로 보인다 → 4 m 정도로 둥글린다 (실사: 자연석 호안의 둥근 연못)
+        self.water = ndimage.gaussian_filter(self.water.astype(np.float32), 4.0 * self.ppm) > 0.5
 
         self.road_lines = list(self._lines(ROAD_W))   # (kind, [(x,z)...]) 월드 좌표
         self.walk_lines = list(self._lines(WALK_W))
