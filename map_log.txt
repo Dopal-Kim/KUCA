@@ -1,0 +1,98 @@
+﻿
+C:\Users\admin\KUCA-check\map.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
+C:\Users\admin\KUCA-check\map.log:53:UiCapture.RunMap
+C:\Users\admin\KUCA-check\map.log:184:			LogAssemblyErrors (4ms)
+C:\Users\admin\KUCA-check\map.log:307:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:327:			LogAssemblyErrors (5ms)
+C:\Users\admin\KUCA-check\map.log:436:[UiCapture] 버튼 없음: 확인하고 시작
+C:\Users\admin\KUCA-check\map.log:443:UiCapture:Click (string) (at Assets/Editor/UiCapture.cs:319)
+C:\Users\admin\KUCA-check\map.log:444:UiCapture/<MapScript>d__20:MoveNext () (at Assets/Editor/UiCapture.cs:230)
+C:\Users\admin\KUCA-check\map.log:445:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:90)
+C:\Users\admin\KUCA-check\map.log:448:(Filename: Assets/Editor/UiCapture.cs Line: 319)
+C:\Users\admin\KUCA-check\map.log:487:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:488:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:489:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:490:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:491:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:492:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:493:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:494:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:495:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:500:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\map.log:501:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
+ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
+HTTP error code 403
+C:\Users\admin\KUCA-check\map.log:506:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\map.log:507:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
+ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
+HTTP error code 403
+C:\Users\admin\KUCA-check\map.log:509:Project ID request failed, Reason: The requested URL returned error: 403 (403).
+C:\Users\admin\KUCA-check\map.log:510:Unknown Unity Connect error (400). Please contact support at support@unity.com wh
+ile processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0036aa", 
+HTTP error code 403
+C:\Users\admin\KUCA-check\map.log:512:[UiCapture] 끝 (380장) → C:\Users\admin\KUCA-check\Builds\MapShots
+C:\Users\admin\KUCA-check\map.log:519:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:118)
+C:\Users\admin\KUCA-check\map.log:520:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:102)
+C:\Users\admin\KUCA-check\map.log:523:(Filename: Assets/Editor/UiCapture.cs Line: 118)
+C:\Users\admin\KUCA-check\map.log:552:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:553:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:554:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:555:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:556:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:557:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:558:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:559:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:560:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:561:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:562:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:563:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:564:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:565:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:566:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:567:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:568:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:569:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:570:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:571:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:572:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:573:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:574:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:575:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map.log:577:[Licensing::Client] Error: Code 404 while processing request (status: Found 0 ent
+itlement groups and 0 free entitlements matching requested entitlement ids)
+
+
