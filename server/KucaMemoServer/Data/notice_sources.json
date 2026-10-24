@@ -1,0 +1,14 @@
+[
+ {"id": "eng", "name": "공과대학", "kind": "khu", "listUrl": "https://eng.khu.ac.kr/eng_kor/user/bbs/BMSR00040/list.do?menuNo=17100020", "buildingIds": ["way-455725718", "way-455728922"]},
+ {"id": "ee", "name": "전자공학부", "kind": "khu", "listUrl": "https://ee.khu.ac.kr/ee25/user/bbs/BMSR00040/list.do?menuNo=21700022", "buildingIds": ["way-474085540"]},
+ {"id": "bme", "name": "생체의공학과", "kind": "khu", "listUrl": "https://bme.khu.ac.kr/bme25/user/bbs/BMSR00040/list.do?menuNo=21800017", "buildingIds": ["way-474085540"]},
+ {"id": "ce", "name": "컴퓨터공학부", "kind": "khu", "listUrl": "https://ce.khu.ac.kr/ce25/user/bbs/BMSR00040/list.do?menuNo=21600019", "buildingIds": ["way-474085540"]},
+ {"id": "swcon", "name": "소프트웨어융합학과", "kind": "khu", "listUrl": "https://swcon.khu.ac.kr/swcon/user/bbs/BMSR00040/list.do?menuNo=21300017", "buildingIds": ["way-474085540"]},
+ {"id": "cls", "name": "생명과학대학", "kind": "khu", "listUrl": "https://cls.khu.ac.kr/cls/user/bbs/BMSR00040/list.do?menuNo=11600041", "buildingIds": ["way-474521121", "way-474521122"]},
+ {"id": "kic", "name": "국제대학", "kind": "khu", "listUrl": "https://kic.khu.ac.kr/kic_kor/user/bbs/BMSR00040/list.do?menuNo=5000030", "buildingIds": ["way-474085539", "way-474085542"]},
+ {"id": "foreign", "name": "외국어대학", "kind": "khu", "listUrl": "https://foreign.khu.ac.kr/foreign_kor/user/bbs/BMSR00040/list.do?menuNo=16500028", "buildingIds": ["way-585696507"]},
+ {"id": "and", "name": "예술·디자인대학", "kind": "khu", "listUrl": "https://and.khu.ac.kr/and_kor/user/bbs/BMSR00040/list.do?menuNo=14900112", "buildingIds": ["way-474085536", "way-474521123"]},
+ {"id": "hc", "name": "후마니타스칼리지", "kind": "khu", "listUrl": "https://hc.khu.ac.kr/hc_kor/user/bbs/BMSR00040/list.do?menuNo=4300048", "buildingIds": ["way-474085537", "way-474085538"]},
+ {"id": "sports", "name": "체육대학", "kind": "gnuboard", "listUrl": "http://sports.khu.ac.kr/bbs/board.php?bo_table=05_01", "buildingIds": ["way-455726113"]},
+ {"id": "library", "name": "중앙도서관", "kind": "library", "listUrl": "https://lib.khu.ac.kr/bbs/list/1", "buildingIds": ["way-474085534"]}
+]
