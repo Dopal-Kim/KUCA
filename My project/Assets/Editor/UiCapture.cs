@@ -183,6 +183,27 @@ public static class UiCapture
                     yield return Shot($"꾸미기_스타일_{(g == 0 ? "남" : "여")}{st + 1}");
                 }
             }
+            // 옆모습 + 걷는 자세 (상의 밑단 · 바지 사이 틈, 걸을 때 후드 · 소매 겹침 — REVIEW_v18 에서 정면만 있어 못 봤음)
+            Component body = Get(customizer, "character") as Component;
+            Animator anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
+            foreach (int st in new[] { 1, 2, 3 })
+            {
+                Call(customizer, "SetStyle", st);
+                Set(customizer, "previewYaw", 90f);
+                yield return 1f;
+                yield return Shot($"꾸미기_옆_여{st + 1}");
+                if (anim != null)
+                {
+                    ((Behaviour)body).enabled = false;   // 속도를 이동량으로 다시 계산하지 않게
+                    anim.enabled = true;
+                    anim.SetFloat("Speed", 1.4f);
+                    yield return 0.7f;
+                    yield return Shot($"꾸미기_걷기_여{st + 1}");
+                    anim.SetFloat("Speed", 0f);
+                    ((Behaviour)body).enabled = true;
+                }
+                Set(customizer, "previewYaw", 0f);
+            }
             Call(customizer, "SetOpen", false);
             yield return 0.5f;
         }
