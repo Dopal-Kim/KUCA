@@ -275,13 +275,16 @@ public static class UiCapture
             Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), "Spring"));
         }
         yield return 0.5f;
-        var done = new HashSet<string>();
+        var count = new Dictionary<string, int>();   // 같은 이름 여러 동(실험연구동 북 · 남 등)은 _2, _3 로 모두 찍는다 (한 동만 찍혀 태양광이 없는 쪽만 보였음, M8)
         foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
         {
             string name = Get(info, "buildingName") as string;
             Collider col = info.GetComponentInChildren<Collider>(true);
-            if (string.IsNullOrEmpty(name) || col == null || !done.Add(name))
+            if (string.IsNullOrEmpty(name) || col == null)
                 continue;
+            count[name] = count.TryGetValue(name, out int n) ? n + 1 : 1;
+            if (count[name] > 1)
+                name += "_" + count[name];
             Bounds b = col.bounds;
             float size = Mathf.Max(b.size.x, b.size.z, b.size.y * 1.5f);
             float dist = size * 1.4f + 40f;
