@@ -1170,7 +1170,7 @@ def atrium(mb, b, f):
 
 def _library_roof(mb, b, f):
     """M10: 박공 둘레 밖 넓은 평지붕이 민짜 베이지였음 → 안쪽 낮은 난간 띠(트림) + 날개마다 기계실 · 실외기 묶음"""
-    from .buildings import ROOF_RESERVED
+    from .buildings import FAN, ROOF_RESERVED, ROOF_UNIT
     from .geo import dist_to_poly_edge, point_in_poly
     from .mesh import offset_polygon, rect_poly
     H = b.h
@@ -1188,11 +1188,11 @@ def _library_roof(mb, b, f):
             if not point_in_poly(px, pz, b.poly) or dist_to_poly_edge(px, pz, b.poly) < 7:
                 continue
             m = Frame.yaw((px, H, pz), yaw)
-            mb.box(m, (0, 1.1, 0), (5.0, 2.2, 7.0), (0.88, 0.88, 0.86), top=(0.93, 0.93, 0.91))   # 기계실
-            mb.box(m, (0, 2.35, 0), (5.4, 0.3, 7.4), COLUMN)
-            for k in (-1, 1):   # 실외기 + 팬
-                mb.box(m, (k * 1.3, 2.9, 0), (1.8, 0.8, 1.8), (0.80, 0.81, 0.83))
-                mb.prism(m, (k * 1.3, 3.3, 0), 0.7, 0.06, 12, (0.30, 0.33, 0.37), caps=True)
+            # M28: 기계실(5 × 7 m) 위 실외기 두 대가 천창 양 끝 실외기(M27)보다 커 위(T)에서 크기 규칙이 두 가지였음 (REVIEW_v33)
+            #      → 기계실을 빼고 천창 쪽과 같은 실외기 한 쌍(2.2 × 1.6 m, 4 m 간격)을 지붕에 바로. 막는 자리는 그대로 (공용 rng 순서 유지)
+            for k in (-1, 1):
+                mb.box(m, (k * 2.0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
+                mb.box(m, (k * 2.0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
             ROOF_RESERVED.setdefault(b.id, []).append((rect_poly((px, pz), u, v, 5.0, 4.0), H + 3.4))
     mb.ao_floor = 0.0
 
@@ -1694,6 +1694,7 @@ def _arts_wings(mb, b, pc, width, fh, ground, front):
 def _corner_towers(mb, b, front, pal, fh):
     """예술대 본동 정면 양 모서리 탑 (실사: 모서리가 탑처럼 솟고 아치창 · 코니스). 지붕 위로 1.5층"""
     from .geo import point_in_poly
+    from .buildings import HUT_CAP
     fp = Footprint(b.poly, b.h)
     H = b.h
     corners = [(fp.center[0] + fp.u[0] * su * fp.half_u + fp.v[0] * sv * fp.half_v,
@@ -1713,9 +1714,12 @@ def _corner_towers(mb, b, front, pal, fh):
             continue
         m = Frame.yaw((qx, 0.0, qz), yaw)
         top = H + fh * 2.6   # 양 끝 파빌리온(H + 1층)보다 한 층 반 더
-        mb.box(m, (0, (H + top) / 2, 0), (8.0, top - H + 0.4, 8.0), pal['wall'], top=shade(pal['trim'], 0.97))
-        mb.box(m, (0, top - 0.3, 0), (8.8, 0.6, 8.8), pal['trim'])
-        mb.box(m, (0, top + 0.5, 0), (7.4, 1.0, 7.4), shade(pal['trim'], 0.98))
+        # M28: 흰 벽(0.92) · 흰 갓(0.95)이 M27 청회색 톱날 지붕보다 밝아 E · W 에서 지붕 모서리 흰 계단실 둘이 튀었음 (REVIEW_v33)
+        #      → 몸체를 지붕 베이지 쪽으로 한 단계 낮추고 갓 윗면은 다른 계단실과 같은 회색 갓(HUT_CAP), 코니스 띠만 한 톤 밝게 남겨 테로
+        body = shade(pal['wall'], 0.86)
+        mb.box(m, (0, (H + top) / 2, 0), (8.0, top - H + 0.4, 8.0), body, top=body)
+        mb.box(m, (0, top - 0.3, 0), (8.8, 0.6, 8.8), shade(pal['trim'], 0.92))
+        mb.box(m, (0, top + 0.5, 0), (7.4, 1.0, 7.4), body, top=HUT_CAP)
         for k in range(4):
             fm = Frame.yaw((qx, 0.0, qz), yaw + 90 * k)
             mb.arch_panel(fm, (0, H + 0.6, 4.02), 2.0, 3.0, (0.50, 0.60, 0.70))

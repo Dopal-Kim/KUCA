@@ -333,7 +333,9 @@ def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
                 else clip_half_plane(b.poly, fp.center, axis, hu * 0.64)
             if len(part) >= 3:
                 top = H + fh * 0.5
-                extrude_poly(shell, part, H - 0.1, top, roof_col=roof_tint(b))
+                # M28: 외국어대 원통 지붕이 본 동과 같은 베이지라 위(T)에서 흰 테 한 줄로만 갈렸음 (REVIEW_v33)
+                #      → 원통만 가운데 블록처럼 한 톤 다른 파스텔(연하늘, roof_tint 2). 예술대 · 체육대 · 공학관 양 끝은 그대로
+                extrude_poly(shell, part, H - 0.1, top, roof_col=roof_tint(b, 2 if b.id in CYLINDER_ENDS else 0))
                 mb.band(part, top - 0.05, top + 0.8, 0.1, 0.4, pal['trim'], top_col=shade(pal['trim'], 1.04),
                         inner_col=shade(pal['wall'], 0.86))
                 blocks.append((part, top))
@@ -507,6 +509,8 @@ NO_STAIR_HUT = {'way-474521123', 'relation-8269760'}
 FLUSH_BAY = {'way-585696507'}
 # M27: 낱개 실외기를 흩지 않고 가운데 블록 양 끝에 한 쌍씩 대칭으로 둘 건물 (중앙도서관 — 가운데 블록 위 아트리움 천창)
 PAIRED_UNITS = {'way-474085534'}
+# M28: 낱개 실외기를 흩지 않고 지붕 양 끝 두 곳에 세 대씩 모을 건물 (체육대학관 — 지붕 가운데 옥상 트랙 둘레에 고르게 흩어져 장식처럼 보였음)
+CLUSTER_UNITS = {'way-455726113'}
 
 
 def _hut_box(mb, m, sx, sz):
@@ -709,6 +713,18 @@ def _rooftop(mb, b, style, blocks, rng):
             pts = [at(s * d, a) if long_u else at(a, s * d) for s in (-1, 1) for a in (-2.0, 2.0)]
             if all(free(x, z, 1.6) for x, z in pts):
                 placed = pts
+                break
+    if b.id in CLUSTER_UNITS:
+        # M28: 체육대학관은 흩은 실외기 · 환기구가 옥상 트랙 둘레에 고르게 놓여 위(T)에서 테두리 장식처럼 보였음 (REVIEW_v33)
+        #      → rng 자리는 버리고 트랙 양 끝 너머 두 곳에 세 대씩 한 줄로, 서로 반대 옆으로 비켜 (점대칭 — 테두리처럼 안 읽히게)
+        long_u = fp.half_u >= fp.half_v
+        hs = min(fp.half_u, fp.half_v)
+        for d in range(4, int(max(fp.half_u, fp.half_v))):
+            pts = [at(s * d, s * hs * 0.45 + j * 3.2) if long_u else at(s * hs * 0.45 + j * 3.2, s * d)
+                   for s in (-1, 1) for j in (-1, 0, 1)]
+            if all(free(x, z, 1.6) for x, z in pts):
+                placed = pts   # 자리가 없으면 흩은 자리 그대로
+                print('rooftop: 체육대학관 실외기 두 무리', d)
                 break
     for x, z in placed:
         m = Frame.yaw((x, H, z), yaw)
