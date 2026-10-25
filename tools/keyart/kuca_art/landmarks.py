@@ -266,7 +266,8 @@ def drum_roof(mb, b, f):
     dome = Frame((f.center[0], H + 0.4, f.center[1]), (ax * L * k, 0.0, az * L * k), (0.0, min(L, Wd) * 0.16, 0.0),
                  (-az * Wd * k, 0.0, ax * Wd * k))
     # M11: 칸마다 밝기를 번갈아 칠하던 체커(타일 반복처럼 보였음, REVIEW_v15)를 끄고 고리를 늘려 면 경계를 부드럽게 — 결은 리브가 맡는다
-    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 48, 12, DOME_GRAY, checker=False)
+    # M13: 단색 진회색 덩어리가 무거웠음 (PC v16 · M12 다음 후보) → 밑동은 그대로, 꼭대기로 갈수록 하늘이 비친 듯 밝게
+    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 48, 12, DOME_GRAY, checker=False, top_shade=1.25)
     # 금속판 이음 리브 16줄 (결 따라 밝기 변화: 단색 덩어리로 안 보이게)
     rib = shade(DOME_GRAY, 1.22)
 
@@ -346,7 +347,8 @@ def observatory(mb, b, f):
     mb.prism(IDENT, (cx, b.h + 0.5, cz), r, 3.2, 20, STONE)
     # M12: 칸마다 밝기를 번갈아 칠하던 체커(선승관과 같은 문제, Unity v15 사방 모두 바둑판)를 끄고 칸을 늘려 매끈하게,
     #      결은 금속판 이음 리브 12줄이 맡는다 (관측 창 자리는 비움)
-    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 40, 10, DOME, checker=False)
+    # M13: 40 × 10 칸은 빛에 따라 작은 다각형 면이 보였음 (MAP_REVIEW_v18) → 64 × 16
+    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 64, 16, DOME, checker=False)
     rib = shade(DOME, 0.88)
     for i in range(12):
         th = 2 * math.pi * (i + 0.5) / 12
@@ -368,7 +370,8 @@ def observatory(mb, b, f):
     n = 12
     for k in range(n):
         a0, a1 = math.radians(4 + k * 92 / n), math.radians(4 + (k + 1) * 92 / n)
-        for x0, x1, col, off in ((-0.8, 0.8, DARK, 0.06), (-1.2, -0.8, COLUMN, 0.1), (0.8, 1.2, COLUMN, 0.1)):
+        # M13: 위(T)에서 돔 가운데를 가르는 굵은 막대로 보였음 (MAP_REVIEW_v18) → 창 1.6 → 1.1 m, 레일 포함 2.4 → 1.6 m (약 2/3)
+        for x0, x1, col, off in ((-0.55, 0.55, DARK, 0.06), (-0.8, -0.55, COLUMN, 0.1), (0.55, 0.8, COLUMN, 0.1)):
             rr = r + off
             p0 = (x0, math.sin(a0) * rr, math.cos(a0) * rr)
             p1 = (x1, math.sin(a0) * rr, math.cos(a0) * rr)

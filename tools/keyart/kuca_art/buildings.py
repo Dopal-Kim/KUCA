@@ -253,6 +253,7 @@ MASSING = {
     'way-455726113': 'ends',      # 체육대학관: 긴 몸체 + 양 끝 높은 파빌리온 (키아트)
     'relation-8269760': 'core',   # 우정원: 가운데 유리 계단탑 + 옥상 설비 (키아트)
     'way-474085540': 'court',     # 전자정보대학관: 실제 ㅁ자 → 가운데 중정 (옥상에서 내려다보는 정원)
+    'way-455728922': 'none',      # 공학실험동: 실제 지상 2층인데 기본 규칙의 가운데 2층 블록이 회베이지 납작 상자 + 3~4층처럼 보였음 (M13) → 덩어리 없이 유리 천창만
 }
 
 
@@ -465,7 +466,16 @@ ROOF_FEATURE = {
     'way-801815069': 'solar',       # 실험연구동 남쪽 동: RunMap 은 같은 이름 중 이 동을 찍는다 (M8)
     'way-585696420': 'solar',       # 실습농장동: 흰 상자 하나뿐이라 단조로웠음 (MAP_REVIEW_v8)
     'way-474085538': 'solar',       # 글로벌관: v8 의 태양광 6장이 M8 시드 변경으로 사라졌음 (MAP_REVIEW_v9)
+    # M13 (MAP_REVIEW_v18): 지붕이 계단실 · 실외기뿐이라 비어 보이던 건물. 실제 옥상 설비는 확인 못 함 — 추정
+    'way-455728922': 'skylight',    # 공학실험동: 가운데 덩어리 대신 유리 천창 줄 (v6 에서 맞다고 본 모습)
+    'way-474521123': 'skylight',    # 도예관: 작업실 천창 (키아트 '지붕면 납작한 천창'), 계단실 상자는 뺌 (아래 NO_STAIR_HUT)
+    'way-474085542': 'solar',       # 국제학관: 흰 계단실 하나만 덩그러니
+    'way-474085535': 'solar',       # 학생회관: M11 탑 삭제 후 넓은 지붕에 실외기만
 }
+
+# 옥상 계단실 상자를 두지 않을 건물: 지붕 위로 올라온 계단실이 따로 있다
+#   도예관: 입구 모서리 유리 계단실(ceramics_stair)이 이미 지붕 위 반 층 — 흰 상자가 붉은 지붕 가운데서 튀었음 (MAP_REVIEW_v9 · v18)
+NO_STAIR_HUT = {'way-474521123'}
 
 
 def _rooftop(mb, b, style, blocks, rng):
@@ -489,7 +499,7 @@ def _rooftop(mb, b, style, blocks, rng):
         return fp.center[0] + u[0] * su + v[0] * sv, fp.center[1] + u[1] * su + v[1] * sv
 
     # 계단실: 긴 축 끝 쪽에, 지붕 면적의 4% 이하 (M8: 국제학관 · 도예관에서 가운데 큰 흰 상자가 장난감 블록처럼 보였음)
-    if fp.half_u > 7 and fp.half_v > 5:
+    if fp.half_u > 7 and fp.half_v > 5 and b.id not in NO_STAIR_HUT:
         long_u = fp.half_u >= fp.half_v
         hl, hs = (fp.half_u, fp.half_v) if long_u else (fp.half_v, fp.half_u)
         off = rng.choice((-1, 1)) * rng.uniform(0.5, 0.68) * hl
@@ -513,7 +523,9 @@ def _rooftop(mb, b, style, blocks, rng):
         feature = rng.choices(['skylight', 'solar', 'garden', None], [0.4, 0.3, 0.2, 0.1] if style != 'Classical' else [0.2, 0.0, 0.5, 0.3])[0]
     if feature == 'skylight':
         rows = max(1, min(4, int(fp.half_v / 5)))
-        length = min(fp.half_u * 0.9, 16.0)
+        # 줄 끝(가운데 + 2.5 + length)이 난간 3 m 안쪽에 들어오게: 예전 0.9 × half_u 는 긴 반축 22 m 미만 지붕에선 늘 밖으로 나가
+        # 천창이 하나도 안 생겼음 (M13 도예관). 22.5 m 이상 지붕은 예전과 같은 16 m
+        length = min(fp.half_u - 6.5, 16.0)
         for k in range(rows):
             sv = (k - (rows - 1) / 2) * 4.5
             for sgn in (-1, 1):
@@ -526,12 +538,18 @@ def _rooftop(mb, b, style, blocks, rng):
         # 남쪽(-Z)을 향해 기운 패널 줄
         nx = max(1, min(5, int(fp.half_u / 4)))
         nz = max(1, min(4, int(fp.half_v / 4)))
-        for i in range(nx):
-            for j in range(nz):
-                x, z = at((i - (nx - 1) / 2) * 5.5, (j - (nz - 1) / 2) * 4.0)
-                if free(x, z, 2.2):
-                    m = Frame.yaw((x, H, z), 180)
-                    _solar_panel(mb, m)
+
+        def grid(cu, cv):
+            pts = [at(cu + (i - (nx - 1) / 2) * 5.5, cv + (j - (nz - 1) / 2) * 4.0) for i in range(nx) for j in range(nz)]
+            return [p for p in pts if free(p[0], p[1], 2.2)]
+        # M13: 十자 · ㄱ자 지붕(학생회관)은 외접 사각형 가운데가 오목한 곳이라 패널이 들쭉날쭉 빠졌음 → 가장 많이 들어가는 자리로 옮긴다
+        #      (가운데를 먼저 보고 같으면 가운데 — 다 들어가던 건물은 그대로)
+        offs = [(0.0, 0.0)] + [(a * fp.half_u, c * fp.half_v) for a in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)
+                               for c in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)]
+        spots = max((grid(*o) for o in offs), key=len)
+        for x, z in spots:
+            _solar_panel(mb, Frame.yaw((x, H, z), 180))
+        blocks = blocks + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 2.3, 1.2), 0) for p in spots]   # 실외기가 패널 위에 놓이지 않게
     elif feature == 'garden':
         gw, gd = min(fp.half_u * 0.6, 14.0), min(fp.half_v * 0.6, 9.0)
         # 가운데가 지붕 덩어리에 막히면 옆 자리를 차례로 (우정원: 가운데 긴 덩어리)
