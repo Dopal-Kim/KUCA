@@ -16,7 +16,7 @@ public class HatchScreen : MonoBehaviour
 
     GameObject root;
     RectTransform egg, creature, rays;
-    Image cardBg, rootBg;   // 흔들리는 동안은 숨겨 티켓만 띄운다 (큰 빈 카드가 휑했음, UI_REVIEW_v5 F)
+    Image cardBg, rootBg, titleBack;   // 흔들리는 동안은 숨겨 티켓만 띄운다 (큰 빈 카드가 휑했음, UI_REVIEW_v5 F)
     RawImage creatureImage;
     Image flash;
     Text title, nameText, tierText, info;
@@ -70,7 +70,9 @@ public class HatchScreen : MonoBehaviour
         skip = false;
         cardBg.enabled = false;
         title.color = Color.white;
-        title.rectTransform.anchoredPosition = new Vector2(0f, -620f);   // 티켓(가운데 -420, 아래끝 -600) 바로 아래: 위쪽은 뒤 화면 "11장" 숫자와 겹쳤음 (UI_REVIEW_v9)
+        title.rectTransform.anchoredPosition = new Vector2(0f, -640f);
+        titleBack.rectTransform.anchoredPosition = new Vector2(0f, -640f + 14f);
+        titleBack.enabled = true;   // 뒤 화면 글자 위에서도 읽히게 진한 알약 바탕 (배경을 어둡게 해도 뒤 카드 부제에 붙어 보였음, UI_REVIEW_v10)   // 티켓(가운데 -420, 아래끝 -600) 바로 아래: 위쪽은 뒤 화면 "11장" 숫자와 겹쳤음 (UI_REVIEW_v9)
         rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.94f);   // 카드 없이 흰 제목만: 뒤 뽑기 화면 글자가 거의 안 보이게
         flash.color = new Color(1f, 1f, 1f, 0f);
 
@@ -87,6 +89,7 @@ public class HatchScreen : MonoBehaviour
         cardBg.enabled = true;
         title.color = InkQuiet;
         title.rectTransform.anchoredPosition = new Vector2(0f, -56f);
+        titleBack.enabled = false;
         rootBg.color = KucaTheme.Scrim;
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
@@ -145,6 +148,11 @@ public class HatchScreen : MonoBehaviour
         cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(0.5f, 0.5f);
         cr.sizeDelta = new Vector2(940f, 1320f);
 
+        titleBack = UIKit.Image(cr, "TitleBack", KucaTheme.Ink);   // 제목보다 먼저 만들어 뒤에 그려지게
+        titleBack.sprite = HudIcons.Pill;
+        titleBack.type = Image.Type.Sliced;
+        Place(titleBack.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -42f), new Vector2(620f, 100f));
+        titleBack.enabled = false;
         title = UIKit.Bold(UIKit.Text(cr, "", KucaTheme.Heading, TextAnchor.MiddleCenter, InkQuiet));
         Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -56f), new Vector2(860f, 72f));
 
