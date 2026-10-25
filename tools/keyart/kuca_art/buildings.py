@@ -172,6 +172,12 @@ def plan_entrances(buildings, ground, skip_ids):
             ground.add_apron((mx + nx * 1.0, mz + nz * 1.0), end, 5.0)
         else:
             ground.add_apron((mx + nx * 1.0, mz + nz * 1.0), (mx + nx * 9, mz + nz * 9), 5.0)
+        # M26: M24 에서 넓힌 현관(화단 없는 8.8 m 넘는 기본 현관) 앞 포장이 5 m 라 현관보다 좁아 보였음 (REVIEW_v31 국제학관 S)
+        #      → 현관 앞 9 m 까지는 현관 폭만큼 (계단 끝 4.7 m 너머 약 4 m). 칠하기만: 막기에 넣으면 공용 rng 로 캠퍼스 나무 · 가로등이 통째로 바뀜
+        if 'bay' not in (MASSING.get(b.id) or ()) and b.id != 'way-585696506':
+            w = _porch_width(b, out[b.id], style_of(b))
+            if w > 8.8:
+                ground.add_apron((mx + nx * 1.0, mz + nz * 1.0), (mx + nx * 9, mz + nz * 9), w, block=False)
     return out
 
 
@@ -496,6 +502,19 @@ ROOF_FEATURE = {
 #   도예관: 입구 모서리 유리 계단실(ceramics_stair)이 이미 지붕 위 반 층 — 흰 상자가 붉은 지붕 가운데서 튀었음 (MAP_REVIEW_v9 · v18)
 #   우정원: 앞뒤 유리 계단탑이 지붕 위 한 층 — 따로 선 흰 상자가 지붕 가운데 덩그러니 남았음 (M16)
 NO_STAIR_HUT = {'way-474521123', 'relation-8269760'}
+# M26: 정면 돌출 동을 지붕 높이로 낮추고 한 층 위 덩어리 대신 계단실을 지붕 안쪽에 둘 건물
+#   외국어대학관: 입구가 폭 20 m · 깊이 8 m 혀 모양 돌출부 끝이라 한 층 위 상자가 양옆 홈 사이에 끼어 보였음 (REVIEW_v31 T)
+FLUSH_BAY = {'way-585696507'}
+
+
+def _hut_box(mb, m, sx, sz):
+    """옥상 계단실 상자 (로컬 x 폭 sx, z 깊이 sz, +x 면에 유리문)"""
+    # M20: 갓 윗면(0.99)이 Unity 에서 254 로 하얗게 날아가 위(T)에서 면 · 테두리 없이 떠 보였음 (REVIEW_v25, 생명과학대)
+    #      → 갓을 0.76 으로 낮추고(웹 T 에서 0.86 도 250 으로 날아감) 밑동에 어두운 굽(0.4 m)을 둘러 지붕에 앉은 선이 보이게. 높이는 원래도 지붕 면(H)에 붙어 있음
+    mb.box(m, (0, 0.2, 0), (sx + 0.3, 0.4, sz + 0.3), (0.70, 0.69, 0.66))
+    mb.box(m, (0, 1.7, 0), (sx, 3.4, sz), (0.95, 0.93, 0.88))
+    mb.box(m, (0, 3.55, 0), (sx + 0.4, 0.3, sz + 0.4), HUT_CAP)
+    mb.box(m, (sx / 2 + 0.03, 1.1, sz * 0.25), (0.06, 2.2, 1.2), GLASS_DOOR, top=GLASS_DOOR)
 
 
 def _rooftop(mb, b, style, blocks, rng):
@@ -558,13 +577,7 @@ def _rooftop(mb, b, style, blocks, rng):
         if free(px, pz, max(w, d) / 2):
             hut, hut_half = (px, pz), (w / 2, d / 2)
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
-            m = Frame.yaw((px, H, pz), yaw)
-            # M20: 갓 윗면(0.99)이 Unity 에서 254 로 하얗게 날아가 위(T)에서 면 · 테두리 없이 떠 보였음 (REVIEW_v25, 생명과학대)
-            #      → 갓을 0.76 으로 낮추고(웹 T 에서 0.86 도 250 으로 날아감) 밑동에 어두운 굽(0.4 m)을 둘러 지붕에 앉은 선이 보이게. 높이는 원래도 지붕 면(H)에 붙어 있음
-            mb.box(m, (0, 0.2, 0), (d + 0.3, 0.4, w + 0.3), (0.70, 0.69, 0.66))
-            mb.box(m, (0, 1.7, 0), (d, 3.4, w), (0.95, 0.93, 0.88))
-            mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), HUT_CAP)
-            mb.box(m, (d / 2 + 0.03, 1.1, w * 0.25), (0.06, 2.2, 1.2), GLASS_DOOR, top=GLASS_DOOR)
+            _hut_box(mb, Frame.yaw((px, H, pz), yaw), d, w)
 
     # 큰 지붕: 하나를 골라 천창 / 태양광 / 옥상정원
     big = b.area > 900 and fp.half_u > 12 and fp.half_v > 9
@@ -835,14 +848,15 @@ def _front_bay(mb, shell, b, ent, style, pal):
     nx, nz = ent['n']
     tx, tz = -nz, nx
     width = max(9.0, min(elen * 0.42, 20.0))
-    proj, back = 2.4, 3.0
+    flush = b.id in FLUSH_BAY
+    proj, back = 2.4, (0.4 if flush else 3.0)
     fh = floor_height(style)
-    top = b.h + fh
+    top = b.h - 0.02 if flush else b.h + fh   # 낮춘 동은 지붕 면 바로 아래 (겹친 0.4 m 에서 본 지붕이 이기게)
     mx, mz = ent['x'], ent['z']
     pc = (mx + nx * (proj - back) / 2, mz + nz * (proj - back) / 2)
     rect = round_corners(rect_poly(pc, (nx, nz), (tx, tz), (proj + back) / 2, width / 2), radius=1.2)
     shell.ao_strength = 0.0
-    extrude_poly(shell, rect, 0.0, top, roof_col=roof_tint(b, 3))
+    extrude_poly(shell, rect, 0.0, top, roof_col=roof_tint(b, 0 if flush else 3))   # 낮춘 동은 본 지붕과 같은 색
     mb.ao_floor, mb.ao_strength = 0.0, 0.25
     mb.band(rect, 0.0, 0.9, 0.35, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
     mb.ao_strength = 0.0
@@ -873,7 +887,34 @@ def _front_bay(mb, shell, b, ent, style, pal):
         for k in range(3):
             mb.ico(m, (x0 - 0.9 + 0.9 * k, 1.55, 1.8 + (k % 2 - 0.5) * 0.6), (0.35, 0.28, 0.35), FLOWERS[(k + (sgn > 0)) % 3])
     mb.ao_strength = 0.25
+    if not flush:
+        return [(rect, top)]
+    # 계단실은 입구 뒤 지붕 안쪽, 난간에서 6 m 넘는 첫 자리로 (M18 의 4 m 로는 혀 모양 돌출부 바로 뒤 홈 가장자리에 붙었음)
+    hw, hd = 6.0, 4.5
+    for k in range(4, 40):
+        px, pz = mx - nx * k, mz - nz * k
+        hut = rect_poly((px, pz), (nx, nz), (tx, tz), hd / 2, hw / 2)
+        if _rect_inside(b.poly, hut, 6.0):
+            mb.ao_floor, mb.ao_height, mb.ao_strength = b.h, 1.2, 0.22
+            _hut_box(mb, Frame.look((px, b.h, pz), (nx, 0.0, nz)), hw, hd)
+            mb.ao_floor, mb.ao_strength = 0.0, 0.25
+            return [(rect, top), (hut, 0)]
     return [(rect, top)]
+
+
+def _porch_width(b, ent, style):
+    """현관 폭 (_entrance 와 입구 앞 포장 plan_entrances 가 같이 쓴다)"""
+    x, z, (nx, nz) = ent['x'], ent['z'], ent['n']
+    w = 8.0 if b.area > 600 else 6.0
+    if style not in ('Classical', 'Modern', 'Glass'):
+        # M24: 기본 현관이 모든 건물에서 8 m 라 큰 건물(국제학관 S)엔 작아 보였음 (REVIEW_v29) → 정면 폭의 1/4 (최대 14 m).
+        #      정면 폭 = 입구 앞 12 m 띠 안 꼭짓점을 입구 방향으로 잰 너비 (꺾인 정면은 변 하나보다 넓다, ujeongwon_front 와 같은 방식).
+        #      화단까지 입구 변 안에 들게 변 길이 - 8 m 를 넘지 않음
+        a, c = b.poly[ent['edge']], b.poly[(ent['edge'] + 1) % len(b.poly)]
+        seg = math.hypot(c[0] - a[0], c[1] - a[1])
+        front = [(px - x) * nz - (pz - z) * nx for px, pz in b.poly if -12.0 <= (px - x) * nx + (pz - z) * nz <= 1.5]
+        w = max(w, min(14.0, (max(front) - min(front)) * 0.25, seg - 8.0))
+    return w
 
 
 def _entrance(mb, b, ent, pal, style='Default'):
@@ -905,14 +946,7 @@ def _entrance(mb, b, ent, pal, style='Default'):
         mb.ao_strength = 0.25
         return
     m = Frame.look((x, 0.0, z), (nx, 0.0, nz))
-    w = 8.0 if b.area > 600 else 6.0
-    if style not in ('Classical', 'Modern', 'Glass'):
-        # M24: 기본 현관이 모든 건물에서 8 m 라 큰 건물(국제학관 S)엔 작아 보였음 (REVIEW_v29) → 정면 폭의 1/4 (최대 14 m).
-        #      정면 폭 = 입구 앞 12 m 띠 안 꼭짓점을 입구 방향으로 잰 너비 (꺾인 정면은 변 하나보다 넓다, ujeongwon_front 와 같은 방식).
-        #      화단까지 입구 변 안에 들게 변 길이 - 8 m 를 넘지 않음
-        loc = [((px - x) * m.x[0] + (pz - z) * m.x[2], (px - x) * m.z[0] + (pz - z) * m.z[2]) for px, pz in b.poly]
-        front = [lx for lx, lz in loc if -12.0 <= lz <= 1.5]
-        w = max(w, min(14.0, (max(front) - min(front)) * 0.25, seg - 8.0))
+    w = _porch_width(b, ent, style)
     # 문틀과 유리문 (벽에서 살짝 앞으로)
     mb.box(m, (0, 1.75, 0.18), (w * 0.62, 3.5, 0.36), trim)
     from .nature import LIGHTS

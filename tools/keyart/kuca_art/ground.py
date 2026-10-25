@@ -87,6 +87,7 @@ class Ground:
         self.road = self._stroke(self.road_lines, ROAD_W)
 
         self.apron = np.zeros((self.H, self.W), bool)
+        self.apron_paint = np.zeros((self.H, self.W), bool)   # 칠하기만 하는 포장 (나무 · 산울타리 자리는 그대로)
         self.campus = np.ones((self.H, self.W), bool)
         self.campus_soft = np.ones((self.H, self.W), np.float32)
         self.lake = np.zeros((self.H, self.W), bool)
@@ -226,13 +227,16 @@ class Ground:
             if hasattr(self, name):
                 setattr(self, name, getattr(self, name) | m)
 
-    def add_apron(self, p0, p1, width):
-        """건물 입구에서 길까지 포장 (월드 점 두 개)"""
+    def add_apron(self, p0, p1, width, block=True):
+        """건물 입구에서 길까지 포장 (월드 점 두 개). block=False 면 나무 · 산울타리 막기에 안 넣는다"""
         img = Image.new('L', (self.W, self.H), 0)
         d = ImageDraw.Draw(img)
         w = max(2, int(width * self.ppm))
         d.line([self.r.px(*p0), self.r.px(*p1)], fill=255, width=w)
-        self.apron |= np.asarray(img) > 127
+        if block:
+            self.apron |= np.asarray(img) > 127
+        else:
+            self.apron_paint |= np.asarray(img) > 127
 
     def finalize_blocking(self):
         """나무·산울타리가 들어가면 안 되는 곳"""
@@ -325,6 +329,7 @@ class Ground:
     def paint(self, out_path, detail_path=None):
         H, W, ppm = self.H, self.W, self.ppm
         print('ground: tiles', W, H)
+        self.apron = self.apron | self.apron_paint
         grass = _recolor(self._tile('grass', 34, median=7, blur=2.0), GRASS)
         # 큰 얼룩: 밝은 연두 / 짙은 초록이 넓게 번갈아 (키아트 잔디의 부드러운 결)
         n1 = _smooth_noise((H, W), 26, 1)[..., None]

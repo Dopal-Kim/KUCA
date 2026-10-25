@@ -35,7 +35,7 @@ UJEONGWON, FOREIGN, ENGINEERING, ELECTRONICS = 'relation-8269760', 'way-58569650
 STUDENT_UNION = 'way-474085535'
 TEAL_GLASS = (0.30, 0.66, 0.68)   # 실사 우정원 청록 유리 계단탑 · 캐노피
 # M20: 원통 계단탑 유리가 Unity 에서 채도 0.65 · 밝기 0.55 로 다른 건물 창(채도 약 0.33 · 밝기 0.72)보다 진해 튀었음 (REVIEW_v25)
-#      → 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로. 캐노피 · 외국어대 띠창은 지적 없어 그대로
+#      → 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로. 캐노피는 지적 없어 그대로 (학생회관 띠창은 M26 에서 같은 색으로)
 TOWER_GLASS = (0.56, 0.79, 0.84)
 WISTERIA = (0.70, 0.58, 0.86)
 VINE = (0.36, 0.56, 0.24)
@@ -227,7 +227,9 @@ def portico(mb, f, height, pediment, max_cols, grand=False, flags=False, width_f
     # 엔태블러처: 아키트레이브 + 프리즈 + 코니스
     mb.box(m, (0, col_top + 0.5, depth / 2 - 0.5), (width + 1.0, 1.0, depth + 0.8), STONE)
     mb.box(m, (0, col_top + 1.4, depth / 2 - 0.5), (width + 1.4, 0.8, depth + 1.1), shade(STONE, 1.03))
-    mb.box(m, (0, col_top + 2.0, depth / 2 - 0.5), (width + 2.0, 0.4, depth + 1.6), COLUMN)
+    # M26: 맨 위 코니스 윗면(폭 최대 96 m)이 위(T)에서 하얗게 날아간 긴 판이었음 (REVIEW_v31 Unity 중앙도서관 · 체육대학관 T)
+    #      → 윗면만 회색 한 단계 (M25 현관 캐노피와 같은 0.84), 옆 · 앞면은 흰색 그대로
+    mb.box(m, (0, col_top + 2.0, depth / 2 - 0.5), (width + 2.0, 0.4, depth + 1.6), COLUMN, top=shade(COLUMN, 0.84))
     if pediment:
         mb.gable(m, (0, col_top + 2.2, depth / 2 - 0.3), width + 1.6, depth + 1.4, 5.0, STONE, True,
                  end_col=shade(STONE, 0.93))
@@ -898,9 +900,11 @@ def union_canopy(mb, m, b, elen, ground):
     for k in range(6):
         mb.box(m, (0, 0.1 * (6 - k), 2.0 + k * 0.9), (w + 4 - k * 0.5, 0.2 * (6 - k), 0.9), STEP)
     # 실사: 정면 2층 위로 가로로 긴 청록 띠창
+    # M26: 진한 TEAL_GLASS 라 S 에서 다른 건물 창과 색이 달라 튀었음 (REVIEW_v31) — 실사 색은 다시 확인 못 함
+    #      → 우정원 계단탑(M20)과 같은 TOWER_GLASS: 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로 한 단계
     for y in (7.4, 10.6):
         if y + 1.0 < b.h:
-            mb.box(m, (0, y, 0.12), (elen * 0.86, 1.3, 0.24), TEAL_GLASS)
+            mb.box(m, (0, y, 0.12), (elen * 0.86, 1.3, 0.24), TOWER_GLASS)
     # M11: M5 의 '뒤쪽 4층 더 높은 매스'(지붕 위 청록 띠창 탑)는 근거 없음 — OSM 은 다각형 하나(building=college, 높이 ·
     # 층수 · building:part 없음)라 이미 기본 높이 18 m(5층대) 몸체인데 그 위에 4층을 더 얹어 9층 탑이 됐다.
     # 실사의 '앞 2~3층 / 뒤 고층' 은 몸체 높이로 이미 닮았으니 탑을 없애고 지붕은 다른 건물과 같은 옥상 규칙(작은 계단실 · 실외기)에 맡긴다.
@@ -1748,7 +1752,9 @@ def _atelier_roof(mb, b, pal):
     mb.ao_strength = 0.0
     pitch, th = 5.0, 2.4
     rows = max(2, int(half_v * 2 / pitch))
-    roof_c = shade(pal['trim'], 0.96)
+    # M26: 흰 지붕면(trim 0.96)이 남쪽 해를 받아 위(T)에서 줄 없는 흰 판이었음 (REVIEW_v31 Unity 예술디자인대학 T)
+    #      → 본부석 지붕과 같은 연한 청회색 금속판 (실제 지붕 재질은 확인 못 함 — 톱날 천창 자체가 키아트)
+    roof_c = STAND_ROOF
     x0, x1 = -half_u, half_u
     for k in range(rows):
         z0 = -half_v + k * (half_v * 2 / rows)
@@ -1767,6 +1773,9 @@ def _atelier_roof(mb, b, pal):
         for i in range(n_m + 1):
             x = x0 + (x1 - x0) * i / n_m
             mb.box(m, (x, y0 + th / 2, z1 + 0.05), (0.18, th, 0.1), COLUMN)
+            # M26: 금속 지붕면 이음 줄 (창살과 같은 자리, 본부석 지붕처럼 약 3 m 마다)
+            mb.quad(m, (x - 0.09, y0 + 0.03, z0), (x + 0.09, y0 + 0.03, z0), (x + 0.09, y0 + th + 0.03, z1), (x - 0.09, y0 + th + 0.03, z1),
+                    shade(roof_c, 0.86), inside)
         mb.box(m, (0, y0 + th + 0.08, z1), (x1 - x0 + 0.4, 0.16, 0.4), COLUMN)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     ROOF_RESERVED.setdefault(b.id, []).append((rect_poly(fp.center, u, v, half_u + 1.0, half_v + 1.0), H + 3.0))
