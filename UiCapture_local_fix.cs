@@ -227,7 +227,8 @@ public static class UiCapture
         if (Call(menus, "OpenMainMenu")) { yield return 1f; yield return Shot("경희펫_메뉴"); }
         Type menuTab = menus?.GetType().GetNestedType("Tab");
         foreach (string t in new[] { "Monsters", "Dex" })   // 도구(가방) 탭은 v2 에서 숨김 (결정 D4)
-            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희펫_" + t); }
+            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희펫_" + t);
+                if (t == "Dex") yield return ShotBottom("경희펫_Dex_아래"); }   // 로컬(KUCA-check): 아주 드묾 카드까지
         if (Call(menus, "OpenGacha")) { yield return 1f; yield return Shot("뽑기"); }
         if (Click("티켓 1장으로 만나기"))
         {
@@ -241,8 +242,7 @@ public static class UiCapture
         {
             Click("확인");
             yield return 1f;
-            object t0 = Get(progress, "tickets");
-            Debug.Log($"[UiCapture] 5장 만나기 전 티켓={t0}");
+            Debug.Log($"[UiCapture] 5장 만나기 전 티켓={Get(progress, "tickets")}");
             if (Click("티켓 5장으로 만나기"))
             {
                 yield return 1.0f;
