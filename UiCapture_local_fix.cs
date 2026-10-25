@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -297,8 +297,7 @@ public static class UiCapture
 
         object spots = Get(Find("KyungHeeSpots"), "Spots");
         if (spots is IList list && list.Count > 0 && Call(Find("MemoBoard"), "OpenSpot", list[0])) { yield return 2f; yield return Shot("장소_메모"); yield return ShotBottom("장소_메모_아래");
-            // 로컬(KUCA-check) 전용: "이곳 공지 보기" 를 누른 것처럼 공지 탭으로
-            if (Call(Find("MemoBoard"), "SetBoardTab", 1)) { yield return 1.5f; yield return Shot("장소_메모_공지"); } }
+            if (Call(Find("MemoBoard"), "SetBoardTab", 1)) { yield return 1.5f; yield return Shot("장소_메모_공지"); } }   // 로컬(KUCA-check): 공지 탭
         yield return CloseAll();
 
         if (progress != null && Call(Find("CatchCameraScreen"), "OpenPartnerPhoto", progress)) { yield return 2f; yield return Shot("파트너_사진"); }
