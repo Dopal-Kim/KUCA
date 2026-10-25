@@ -27,7 +27,10 @@ public static class WalkShare
         public string error;
     }
 
-    /// <summary>frame: 화면에 보이는 지도 칸. kind: "course" · "mate" · "free". done(에러 또는 null)</summary>
+    /// <summary>
+    /// frame: 화면에 보이는 지도 칸. kind: "course" · "mate" · "free".
+    /// done(에러 또는 null): 카카오톡을 연 순간 null 로 한 번, 카카오 쪽에서 나중에 오류가 나면 그 오류로 한 번 더 부를 수 있다
+    /// </summary>
     public static IEnumerator Share(RectTransform frame, string kind, int meters, int minutes, List<string> buildingIds, Action<string> done)
     {
         var board = UnityEngine.Object.FindAnyObjectByType<MemoBoard>();
@@ -66,7 +69,14 @@ public static class WalkShare
             yield break;
         }
         Result r = JsonUtility.FromJson<Result>(req.downloadHandler.text);
-        ExternalShare.Kakao(r.title, r.description, server + r.imageUrl, server + r.pageUrl, done, "산책 기록 보기");
+        // 카카오톡을 열면 이 앱은 뒤로 가서 "끝났어요" 신호가 돌아오지 않을 때가 있다: 열기를 부른 순간 끝난 것으로 본다
+        // (그 신호를 기다리면 버튼이 "공유 중" 에 묶여 두 번째부터 눌리지 않았다). 카카오 쪽 오류만 나중에 한 번 더 알린다
+        ExternalShare.Kakao(r.title, r.description, server + r.imageUrl, server + r.pageUrl, kakaoError =>
+        {
+            if (kakaoError != null && kakaoError != "cancelled")
+                done(kakaoError);
+        }, "산책 기록 보기");
+        done(null);
     }
 
     /// <summary>화면에서 frame 칸만 잘라 JPEG 로 (너비 MaxWidth 이하)</summary>
