@@ -519,6 +519,16 @@ def _rooftop(mb, b, style, blocks, rng):
             past = min(fp.half_u - 6.5, 16.0) + 5.0 + max(w, d) / 2
             off = math.copysign(max(abs(off), min(past, hl - max(w, d) / 2 - 3.0)), off)
         px, pz = at(off, side) if long_u else at(side, off)
+        # M18: 상자 모서리가 난간에서 4 m 안쪽이 아니면 가장 가까운 4 m 자리로 들인다 (4 m 안쪽이던 건물 · 계단실이 없던 건물은 예전과 같음)
+        #      생명과학대 동쪽 날개는 외접 사각형보다 좁아 계단실이 날개 남쪽 난간에 3 m 로 붙어 S 에서 벽 위로 튀어나와 보였음 (REVIEW_v22_day)
+        if free(px, pz, max(w, d) / 2) and not _rect_inside(b.poly, rect_poly((px, pz), u, v, w / 2, d / 2), 4.0):
+            cands = sorted(((off * f, side + k * 0.5) for f in (1.0, 0.9, 0.8, 0.7, 0.6) for k in range(-24, 25)),
+                           key=lambda c: abs(c[0] - off) + abs(c[1] - side))
+            for o, s in cands:
+                qx, qz = at(o, s) if long_u else at(s, o)
+                if _rect_inside(b.poly, rect_poly((qx, qz), u, v, w / 2, d / 2), 4.0) and free(qx, qz, max(w, d) / 2):
+                    px, pz = qx, qz
+                    break
         if free(px, pz, max(w, d) / 2):
             hut = (px, pz)
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
@@ -585,9 +595,13 @@ def _rooftop(mb, b, style, blocks, rng):
             # M11: 벽을 지붕과 다른 따뜻한 석재 · 1.3 m 로, 안쪽에 흙 띠 + 한 단 높인 가운데 둔덕 + 벽 따라 회양목 줄
             #      (REVIEW_v15: 옆에서 여전히 지붕 위에 얹힌 얇은 판)
             rim = (0.74, 0.68, 0.60)
+            # M18: 벽 윗면(shade 1.1)이 지붕색과 비슷해 위(T)에서 경계가 약했음 (REVIEW_v22_day) → 바깥으로 0.15 m 내민 밝은 갓돌
+            cap = (0.97, 0.95, 0.90)
             for s in (-1, 1):
                 mb.box(m, (s * (gd + 0.3), 0.65, 0), (0.6, 1.3, gw * 2 + 1.2), rim, top=shade(rim, 1.1))
                 mb.box(m, (0, 0.65, s * (gw + 0.3)), (gd * 2, 1.3, 0.6), rim, top=shade(rim, 1.1))
+                mb.box(m, (s * (gd + 0.3), 1.38, 0), (0.9, 0.16, gw * 2 + 1.5), shade(cap, 0.9), top=cap)
+                mb.box(m, (0, 1.38, s * (gw + 0.3)), (gd * 2 - 0.3, 0.16, 0.9), shade(cap, 0.9), top=cap)
             mb.box(m, (0, 0.5, 0), (gd * 2, 1.0, gw * 2), SOIL, top=SOIL)                                   # 흙 (벽 안쪽 띠로 보임)
             mb.box(m, (0, 0.55, 0), (gd * 2 - 1.4, 1.1, gw * 2 - 1.4), GARDEN, top=GARDEN)                 # 잔디
             mb.box(m, (0, 1.25, 0), (gd * 1.1, 0.5, gw * 1.1), shade(GARDEN, 0.94), top=shade(GARDEN, 1.04))   # 가운데 둔덕
@@ -607,7 +621,7 @@ def _rooftop(mb, b, style, blocks, rng):
     landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
     # M15: 태양광 지붕엔 실외기 묶음 · 환기구를 두지 않는다 — 학생회관이 패널 + 묶음 + 낱개 실외기 + 환기구로 어수선했음 (REVIEW_v20)
     if b.area > 2500 and not landmark_roof and feature != 'solar' and not any(top > H for _, top in blocks):
-        blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, rng, hut)
+        blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, hut)
 
     # 실외기
     n_units = int(min(8, b.area / 300))
@@ -628,8 +642,8 @@ def _rooftop(mb, b, style, blocks, rng):
     mb.ao_floor, mb.ao_height = 0.0, 2.0
 
 
-def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng, hut=None):
-    """넓은 평지붕(위 덩어리 없음): 받침 위 실외기 두 줄 + 둥근 환기구 몇 개.
+def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
+    """넓은 평지붕(위 덩어리 없음): 받침 위 실외기 두 줄 + 묶음 끝 둥근 환기구 한 쌍.
     M14: 공학실험동이 덩어리를 뺀 뒤 넓은 지붕에 천창 · 작은 실외기만 남아 비어 보였음 (REVIEW_v19)"""
     H = b.h
     pd = 3.0   # 받침 반폭 — 실외기 두 줄
@@ -670,15 +684,18 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng, hut=None):
                 mb.box(m, (lx, 1.0, lz), (1.8, 1.4, 2.0), ROOF_UNIT)
                 mb.box(m, (lx, 1.72, lz), (1.1, 0.06, 1.1), FAN, top=FAN)
         yards.append(rect_poly((x, z), fp.u, fp.v, pl + 0.6, pd + 0.6))
+    # M18: 둥근 환기구를 지붕 곳곳에 6개 흩던 것을 묶음마다 끝에 한 쌍으로 (REVIEW_v22_day: 공학실험동 옥상이 흩어져 보였음).
+    #      지붕 가운데 쪽 끝 먼저, 막히면 반대쪽 끝
     placed = []
-    for _ in range(40):
-        if len(placed) >= 6:
-            break
-        x, z = at(rng.uniform(-0.85, 0.85) * fp.half_u, rng.uniform(-0.85, 0.85) * fp.half_v)
-        on_yard = any(point_in_poly(x, z, y) or dist_to_poly_edge(x, z, y) < 1.9 for y in yards)   # free() 는 넘겨받기 전 blocks 만 본다
-        if not free(x, z, 0.9) or on_yard or any(math.hypot(x - p[0], z - p[1]) < 6.0 for p in placed):
-            continue
-        placed.append((x, z))
+    for (cu, cv), y in zip(spots, yards):
+        for sgn in ((-1, 1) if cu > 0 else (1, -1)):
+            pts = [at(cu + sgn * (pl + 1.6), cv + dv) for dv in (-1.5, 1.5)]
+            others = [o for o in yards if o is not y]   # free() 는 넘겨받기 전 blocks 만 본다
+            if all(free(x, z, 0.9) and not any(point_in_poly(x, z, o) or dist_to_poly_edge(x, z, o) < 1.0 for o in others)
+                   for x, z in pts):
+                placed += pts
+                break
+    for x, z in placed:
         mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
         mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓
     return blocks + [(y, 0) for y in yards] + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed]

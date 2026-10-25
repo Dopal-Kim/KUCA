@@ -323,10 +323,12 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float px = max(fwidth(qq.x), fwidth(qq.y));
   vec3 avg = mix(c * ao, mix(uWindow, uTrim, 0.35), clamp(uWinW * uWinH * 1.4, 0.0, 0.7));
   // M10: 층마다 가로 창 줄 먼저 (Unity 와 같은 값)
-  float py = fwidth(p.y);
+  // M18: 층 간격은 기울기 길이로 (fwidth 는 비스듬한 층 줄에서 √2 배까지 크게 잼), 창 줄은 0.45 → 1.2 m/px 에서 사라지게
+  //      (전자정보대 중정 옆벽처럼 거의 모로 보이는 벽이 0.3 → 0.8 에선 층 줄 없이 평균색 민짜였음, REVIEW_v22_day)
+  float py = length(vec2(dFdx(p.y), dFdy(p.y)));
   float rowIn = 1.0 - smoothstep(hb.y - py, hb.y + py, abs(qq.y));
   vec3 row = mix(c * ao, mix(uWindow * 0.82, uTrim, 0.12), rowIn * min(uWinW * 1.1, 0.92));
-  avg = mix(row, avg, clamp((py - 0.3) / 0.5, 0.0, 1.0));
+  avg = mix(row, avg, clamp((py - 0.45) / 0.75, 0.0, 1.0));
   float fade = clamp((px - 0.05) / 0.15, 0.0, 1.0);   // M10: Unity(M6) 값과 맞춤 — 예전 미리보기는 0.2 m/px 부터라 Unity 의 민짜 벽이 안 보였음
   kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * clamp(uWinW * uWinH * 1.4, 0.0, 0.7), fade);
   return mix(res, avg, fade);

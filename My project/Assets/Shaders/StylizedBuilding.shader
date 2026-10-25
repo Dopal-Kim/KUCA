@@ -83,6 +83,8 @@ Shader "KUCA/StylizedBuilding"
                 half3 c = _WallColor.rgb * lerp(0.93h, 1.04h, saturate(p.y / 24.0));
                 // 가는 가로선(벽돌 줄눈 · 층 띠)은 한 픽셀보다 가늘어지면 평균 농도로 바꾼다 (멀리서 무늬가 지글거리지 않게)
                 float py = fwidth(p.y);
+                // M18: 창 줄 대신 쓰는 층 줄은 기울기 길이로 (fwidth 는 비스듬한 층 줄에서 √2 배까지 크게 잼)
+                float pyRow = length(float2(ddx(p.y), ddy(p.y)));
                 if (_Brick > 0.5) c *= 1.0 - 0.06 * lerp(step(frac(p.y / 0.34), 0.12), 0.12, saturate((py - 0.02) / 0.04));
                 float fv = frac(p.y / _FloorHeight), fl = floor(p.y / _FloorHeight);
                 float trimW = (fv < 0.05 && p.y > 2.0) ? 0.55 : 0.0;
@@ -172,9 +174,11 @@ Shader "KUCA/StylizedBuilding"
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
                 // M10: 바로 평균색으로 가지 않고 먼저 층마다 가로 창 줄 (가로로만 평균, 층 높이는 아직 여러 픽셀).
                 // 큰 건물(공학관 캡처 거리 260 m) · 45° 돌아앉은 면(제2기숙사 남자동)은 창이 통째로 평균색이 되어 민짜 벽이었음
-                float rowIn = 1.0 - smoothstep(hb.y - py, hb.y + py, abs(qq.y));
+                // M18: 층 줄이 사라지는 구간 0.3 → 0.8 을 0.45 → 1.2 m/px 로 (전자정보대 중정 옆벽처럼 거의 모로 보이는 벽이
+                //      층 줄 없이 평균색 민짜였음, REVIEW_v22_day). 정면 벽은 층 줄이 수평이라 기울기 길이 = fwidth
+                float rowIn = 1.0 - smoothstep(hb.y - pyRow, hb.y + pyRow, abs(qq.y));
                 half3 row = lerp(c * ao, lerp(_WindowColor.rgb * 0.82, _TrimColor.rgb, 0.12), rowIn * min(_WindowWidth * 1.1, 0.92));
-                avg = lerp(row, avg, saturate((py - 0.3) / 0.5));
+                avg = lerp(row, avg, saturate((pyRow - 0.45) / 0.75));
                 // 창틀(0.16 m)이 한 픽셀보다 가늘어질 때부터 서서히 (예전 0.2 m/px 부터는 늦어 960×720 캡처에서 긴 면이 지글거렸음)
                 // M6: 0.07 → 0.05 시작, 폭 0.2 → 0.15 (Unity 캡처에 남은 얼룩무늬)
                 float fade = saturate((px - 0.05) / 0.15);
