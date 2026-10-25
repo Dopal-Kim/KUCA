@@ -1,0 +1,24 @@
+# Azure F1 서버(kuca-memo)는 요청이 한동안 없으면 잠들고, 다음 첫 요청이 20~30초 걸린다.
+# 공모전 심사 기간에 10분마다 /api/health 를 불러 깨워 둔다. 끝나면 이 파일을 지우면 된다.
+# (GitHub 예약 작업은 몇 분 늦게 돌 수 있다. 공지 수집은 /api/notices 에서만 시작되므로 이 요청으로는 돌지 않는다)
+name: Keep server awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /api/health
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://kuca-memo.azurewebsites.net/api/health) || code=000
+            echo "try $i: $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          exit 1
