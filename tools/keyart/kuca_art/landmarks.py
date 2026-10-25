@@ -391,10 +391,11 @@ def observatory(mb, b, f):
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
-    # 관측 창: 돔 밑동에서 꼭대기 너머까지 이어진 셔터 띠 + 양옆 셔터 레일
+    # 관측 창: 돔 밑동에서 꼭대기까지 이어진 셔터 띠 + 양옆 셔터 레일
+    # M24: 96° (꼭대기 너머)까지 가 위(T)에서 슬릿이 돔 반대편까지 이어져 보였음 (REVIEW_v29) → 88° 에서 끝 (캡도 꼭대기 앞에서)
     n = 12
     for k in range(n):
-        a0, a1 = math.radians(4 + k * 92 / n), math.radians(4 + (k + 1) * 92 / n)
+        a0, a1 = math.radians(4 + k * 84 / n), math.radians(4 + (k + 1) * 84 / n)
         # M13: 위(T)에서 돔 가운데를 가르는 굵은 막대로 보였음 (MAP_REVIEW_v18) → 창 1.6 → 1.1 m, 레일 포함 2.4 → 1.6 m (약 2/3)
         # M14: 1.1 m 도 위(T)에서 굵은 막대 (REVIEW_v19) — 굵기보다 흰 돔 위 짙은 남색 대비가 컸음 → 닫힌 셔터 색(청회색 금속) + 0.8 m
         for x0, x1, col, off in ((-0.4, 0.4, SHUTTER, 0.06), (-0.6, -0.4, COLUMN, 0.1), (0.4, 0.6, COLUMN, 0.1)):
@@ -408,7 +409,7 @@ def observatory(mb, b, f):
     # M21: 레일보다 넓은 짙은 캡(1.7 m × 16°)이 돔 꼭대기 한가운데라 위(T)에서 점처럼 튀었음 (REVIEW_v26)
     #      → 폭을 레일 바깥(1.2 m)에 맞추고 길이 16 → 10°, 색은 한 단계 덜 짙게. 옆에서 슬릿 끝 두께는 그대로 (높이 0.3 m)
     cap, cw, lo, hi = shade(SHUTTER, 0.9), 0.6, r + 0.02, r + 0.32
-    angs = [math.radians(a) for a in (88, 91, 94, 98)]
+    angs = [math.radians(a) for a in (79, 82, 85, 88)]
 
     def C(a, x, rr):
         return (x, math.sin(a) * rr, math.cos(a) * rr)
@@ -776,7 +777,11 @@ def stadium(layer, ground, buildings=()):
             #      → 앞쪽 굵은 기둥 5개 + 뒤 기둥 5개(바닥부터), 지붕 앞 처마 띠 · 어두운 밑면 (실제 본부석 구조는 확인 못 함 — 추정)
             r0, r1 = max(-length * 0.2, lo + 0.6), min(length * 0.2, hi - 0.6)   # 자른 스탠드 밖으로 나가지 않게 (M15)
             w, rc = r1 - r0, (r0 + r1) / 2
-            mb.box(m, (rc, 8.45, -1.6), (w + 1, 0.4, 10.0), (0.95, 0.95, 0.96))
+            # M24: 0.95 흰 지붕이 위(T) · 끝(N · S) · 여자동 E 에서 민짜 흰 판으로 튀었음 → 연한 청회색 금속판 + 3 m 마다 이음 줄 (추정)
+            roof = (0.78, 0.81, 0.85)
+            mb.box(m, (rc, 8.45, -1.6), (w + 1, 0.4, 10.0), roof, top=shade(roof, 1.04))
+            for k in range(1, int((w + 1) / 3.0)):
+                mb.box(m, (rc - (w + 1) / 2 + k * (w + 1) / int((w + 1) / 3.0), 8.69, -1.6), (0.18, 0.08, 10.0), shade(roof, 0.86))
             mb.box(m, (rc, 8.2, -1.6), (w + 0.6, 0.12, 9.6), (0.62, 0.64, 0.68))       # 밑면 그늘
             mb.box(m, (rc, 8.35, 3.45), (w + 1.2, 0.9, 0.35), shade(STEP, 1.02))       # 앞 처마 띠
             for s in (-1, -0.5, 0, 0.5, 1):
