@@ -416,8 +416,11 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
         mb.box(m, (0, 3.2, 1.2), (hw * 1.6, 0.4, 2.4), pal['trim'])
     # 옥상 설비 상자 두 개 (키아트: 지붕 위 네모난 기계실)
     huts = []
-    for su in (-1, 1):
-        px, pz = c[0] + u[0] * su * hu * 0.55, c[1] + u[1] * su * hu * 0.55
+    spots = [(c[0] + u[0] * su * hu * 0.55, c[1] + u[1] * su * hu * 0.55) for su in (-1, 1)]
+    if len(parts) == 2:
+        # M16: M12 에서 탑을 앞뒤로 나눈 뒤 상자 둘이 70 m 지붕 한가운데 덩그러니 남았음 (우정원 T) → 탑 안쪽에 붙여 한 묶음으로
+        spots = [(cc[0] + v[0] * sg * (half - 12.75), cc[1] + v[1] * sg * (half - 12.75)) for sg in (-1, 1)]
+    for px, pz in spots:
         if pip(px, pz, b.poly) and dist_to_poly_edge(px, pz, b.poly) > 5:
             m = Frame.yaw((px, H, pz), math.degrees(math.atan2(u[0], u[1])))
             mb.box(m, (0, 1.4, 0), (4.5, 2.8, 6.0), (0.93, 0.92, 0.89))
@@ -475,7 +478,8 @@ ROOF_FEATURE = {
 
 # 옥상 계단실 상자를 두지 않을 건물: 지붕 위로 올라온 계단실이 따로 있다
 #   도예관: 입구 모서리 유리 계단실(ceramics_stair)이 이미 지붕 위 반 층 — 흰 상자가 붉은 지붕 가운데서 튀었음 (MAP_REVIEW_v9 · v18)
-NO_STAIR_HUT = {'way-474521123'}
+#   우정원: 앞뒤 유리 계단탑이 지붕 위 한 층 — 따로 선 흰 상자가 지붕 가운데 덩그러니 남았음 (M16)
+NO_STAIR_HUT = {'way-474521123', 'relation-8269760'}
 
 
 def _rooftop(mb, b, style, blocks, rng):
@@ -626,8 +630,11 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng):
     H = b.h
     pl, pd = 5.2, 3.0   # 받침 반길이 (긴 축) · 반폭 — 실외기 두 줄
     yard = None
-    for su, sv in ((0.0, 0.6), (0.0, -0.6), (0.55, 0.55), (-0.55, 0.55), (0.55, -0.55), (-0.55, -0.55)):
-        cu, cv = su * fp.half_u, sv * fp.half_v
+    # M16: 비율 자리(0, 0.6)는 생명과학대 ㄱ자 지붕에서 한가운데에 덩그러니 놓였음 (REVIEW_v21) → 난간에서 2.5 m 안쪽 모서리 · 긴 변 먼저
+    eu, ev = fp.half_u - pl - 2.5, fp.half_v - pd - 2.5
+    edge = [(a * eu, c * ev) for a, c in ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (0, -1))]
+    for cu, cv in edge + [(su * fp.half_u, sv * fp.half_v) for su, sv in
+                          ((0.0, 0.6), (0.0, -0.6), (0.55, 0.55), (-0.55, 0.55), (0.55, -0.55), (-0.55, -0.55))]:
         if all(free(*at(cu + du, cv + dv), 0.3) for du in (-pl, 0.0, pl) for dv in (-pd, pd)):
             x, z = at(cu, cv)
             m = Frame.yaw((x, H, z), yaw)

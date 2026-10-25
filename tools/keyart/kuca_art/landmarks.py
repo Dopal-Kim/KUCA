@@ -394,6 +394,18 @@ def observatory(mb, b, f):
             p2 = (x1, math.sin(a1) * rr, math.cos(a1) * rr)
             p3 = (x0, math.sin(a1) * rr, math.cos(a1) * rr)
             mb.quad(slit, p0, p1, p2, p3, col, (0, 0, 0))
+    # M16: 꼭대기 너머 슬릿 끝이 리브와 같은 굵기라 셔터로 안 읽혔음 (REVIEW_v21) → 레일보다 넓고 두툼한 짙은 셔터 캡 (윗면 + 옆 + 끝면)
+    cap, cw, lo, hi = shade(SHUTTER, 0.8), 0.85, r + 0.02, r + 0.32
+    angs = [math.radians(a) for a in (84, 88, 92, 96, 100)]
+
+    def C(a, x, rr):
+        return (x, math.sin(a) * rr, math.cos(a) * rr)
+    for a0, a1 in zip(angs, angs[1:]):
+        mb.quad(slit, C(a0, -cw, hi), C(a0, cw, hi), C(a1, cw, hi), C(a1, -cw, hi), cap, (0, 0, 0))
+        for x in (-cw, cw):
+            mb.quad(slit, C(a0, x, lo), C(a0, x, hi), C(a1, x, hi), C(a1, x, lo), shade(cap, 0.9), C((a0 + a1) / 2, 0.0, hi))
+    for a, inn in ((angs[0], angs[1]), (angs[-1], angs[-2])):
+        mb.quad(slit, C(a, -cw, lo), C(a, cw, lo), C(a, cw, hi), C(a, -cw, hi), shade(cap, 0.85), C(inn, 0.0, (lo + hi) / 2))
     # 기본 공통 디테일 대신 난간만
     mb.ao_floor = 0.0
     mb.band(b.poly, b.h - 0.05, b.h + 0.7, 0.12, 0.4, COLUMN)
@@ -494,8 +506,10 @@ def amphitheater(mb, f, to_pond, ground):
     mb.box(m, (0, 0.6, 2), (18, 1.2, 10), STEP)
     mb.box(m, (0, 0.62, 2), (16, 1.2, 8.6), shade(STEP, 1.05))
     mb.box(m, (0, 3.8, 7.6), (22, 7.6, 1.4), STONE)
+    # M16: 아치 판이 +Z(연못 쪽)를 보고 벽 앞면(z 6.9) 안쪽에 묻혀 객석에서 민짜 벽으로 보였음 → 180° 돌린 틀로 객석 쪽을 보게
+    back = m.child((0, 0, 0), 180)
     for k in (-2, -1, 0, 1, 2):
-        mb.arch_panel(m, (k * 4.2, 1.2, 6.88), 2.4, 4.6, shade(STONE, 0.8))
+        mb.arch_panel(back, (k * 4.2, 1.2, -6.86), 2.4, 4.6, shade(STONE, 0.8))
     mb.box(m, (0, 7.9, 7.6), (23.5, 0.8, 2.2), STEP)
     mb.box(m, (0, 8.8, 7.6), (10, 1.2, 1.6), STONE)
     for s in (-1, 1):
