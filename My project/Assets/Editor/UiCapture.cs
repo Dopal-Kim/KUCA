@@ -213,7 +213,8 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
-            // 산책 완료는 열리자마자 서버에 완료 POST 를 보낸다 → 이 단계만 서버 주소를 비워 기기 계산으로 (prod 기록 오염 방지, REVIEW_v15)
+            // 지금은 walkId 가 비고 로그인 토큰이 없어 HttpWalkService 가 POST 없이 기기 판정한다. 나중에 캡처가 로그인하거나
+            // walkId 를 넣어도 prod 에 완료 기록이 쌓이지 않게 이 단계만 서버 주소를 비운다 (REVIEW_v15 지적)
             PlayerPrefs.SetString("memo_server_url", "");
             if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
