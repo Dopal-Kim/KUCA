@@ -307,7 +307,7 @@ public static class UiCapture
         yield return CloseAll();
         yield return Shot("지도_끝");
 
-        // 로컬(KUCA-check) 전용: 지도 홈 낮 · 밤 · 넓게 · 가까이 (학생 인형 · 밤 창 불빛 확인)
+        // 로컬(KUCA-check) 전용: 지도 홈 낮 · 밤 · 넓게 · 가까이 + 흔들림 비교(1.5초 간격 2장)
         object look = Find("KeyArtLook");
         Type lookMode = look?.GetType().GetNestedType("Mode");
         foreach (string mode in new[] { "Day", "Night" })
@@ -315,6 +315,7 @@ public static class UiCapture
             if (lookMode != null) Call(look, "SetMode", Enum.Parse(lookMode, mode));
             yield return 1.5f;
             yield return Shot("지도_홈_" + mode);
+            if (mode == "Day") { yield return 1.5f; yield return Shot("지도_홈_Day_1.5초뒤"); }
             Camera wide = Camera.main;
             if (wide == null) continue;
             Behaviour follow = wide.GetComponent("CameraFollow") as Behaviour;
