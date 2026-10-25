@@ -550,9 +550,10 @@ public class GameHUD : MonoBehaviour
         if (PlayerPrefs.GetInt(CoachKey, 0) == 1)
             return;
         RectTransform holder = UIKit.Rect(hud, "Coach");
-        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0.5f, 0f);
-        holder.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
-        holder.sizeDelta = new Vector2(1080f - 2f * KucaTheme.Gutter, 0f);
+        // 위쪽 상태 카드 아래 · 오른쪽 버튼 줄 왼쪽: 산책 시작 버튼 위에 두니 가운데 플레이어 캐릭터를 가렸음 (REVIEW_v24 · v26)
+        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0f, 1f);
+        holder.anchoredPosition = new Vector2(Margin, -(Margin + 156f + KucaTheme.Space2 + 104f + KucaTheme.Space4));
+        holder.sizeDelta = new Vector2(860f, 0f);
         UIKit.Vertical(holder, 0f);
         holder.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         RectTransform card = UIKit.CardBox(holder, "Card", KucaTheme.Space2);

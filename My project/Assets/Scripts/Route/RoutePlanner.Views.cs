@@ -125,6 +125,9 @@ public partial class RoutePlanner
             });
         }
         mealChip = Chip(TasteChoices.Length % 3 == 0 ? ChipRow(c) : row, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
+        // 마지막 줄도 3칸 격자 폭으로 (두 칩만 넓게 늘어나 더 중요해 보였음, REVIEW_v26)
+        for (Transform last = mealChip.transform.parent; last.childCount < 3;)
+            UIKit.Rect(last, "Spacer").gameObject.AddComponent<LayoutElement>().preferredWidth = 250f;
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
 
         UIKit.PrimaryButton(b, "AI 코스 3개 추천 받기", RequestRoutes);

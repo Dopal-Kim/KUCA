@@ -683,29 +683,25 @@ public partial class MemoBoard : MonoBehaviour
         canWrite = CanWrite(out float d);
         bool open = canWrite && !locked;
         writeButton.gameObject.SetActive(boardTab == 0);
-        writeButtonFace.color = open ? KucaTheme.Primary : KucaTheme.Line;
+        // 아직 못 남길 때는 회색 죽은 버튼 대신 지금 할 수 있는 "공지 보기" (눌러도 반응 없어 당황했음, REVIEW_v26)
+        writeButtonFace.color = open ? KucaTheme.Primary : KucaTheme.PrimarySoft;
         Text label = writeButton.GetComponentInChildren<Text>();
-        label.color = open ? Color.white : KucaTheme.InkSoft;
-        label.text = open ? "메모 남기기" : "가까이 가서 들르면 남길 수 있어요";
+        label.color = open ? Color.white : KucaTheme.PrimaryDeep;
+        label.text = open ? "메모 남기기" : "이곳 공지 보기";
         writeHint.transform.parent.gameObject.SetActive((!canWrite || locked) && boardTab == 0);
         if (locked)
             writeHint.text = lockedCount > 0
-                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요\n이곳 소식은 위 공지 탭에서 지금 볼 수 있어요"
-                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m\n이곳 소식은 위 공지 탭에서 지금 볼 수 있어요";   // 잠겨 있어도 할 수 있는 일 (REVIEW_v22_day · v24)
+                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"
+                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m";   // 지금 할 수 있는 일은 아래 "이곳 공지 보기" 버튼
         else if (!canWrite)
             writeHint.text = $"경희스팟까지 {d:F0}m  ·  {spots.interactRadius:F0}m 안에서 사진을 남길 수 있어요";
     }
 
     void OnWriteButton()
     {
-        if (locked)
+        if (locked || !canWrite)
         {
-            ShowToast("이 경희스팟에 가 보면 메모를 남길 수 있어요");
-            return;
-        }
-        if (!canWrite)
-        {
-            ShowToast("경희스팟 가까이 가야 사진을 남길 수 있어요");
+            SetBoardTab(1);   // "이곳 공지 보기"
             return;
         }
         ShowWrite();
