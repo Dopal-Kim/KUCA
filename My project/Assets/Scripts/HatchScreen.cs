@@ -16,7 +16,7 @@ public class HatchScreen : MonoBehaviour
 
     GameObject root;
     RectTransform egg, creature, rays;
-    Image cardBg;   // 흔들리는 동안은 숨겨 티켓만 띄운다 (큰 빈 카드가 휑했음, UI_REVIEW_v5 F)
+    Image cardBg, rootBg;   // 흔들리는 동안은 숨겨 티켓만 띄운다 (큰 빈 카드가 휑했음, UI_REVIEW_v5 F)
     RawImage creatureImage;
     Image flash;
     Text title, nameText, tierText, info;
@@ -70,6 +70,7 @@ public class HatchScreen : MonoBehaviour
         skip = false;
         cardBg.enabled = false;
         title.color = Color.white;
+        rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.88f);   // 카드 없이 흰 제목만: 뒤 뽑기 화면 글자와 겹쳐 읽히지 않게 더 어둡게
         flash.color = new Color(1f, 1f, 1f, 0f);
 
         // 1) 점점 세게 흔들린다
@@ -84,6 +85,7 @@ public class HatchScreen : MonoBehaviour
         egg.gameObject.SetActive(false);
         cardBg.enabled = true;
         title.color = InkQuiet;
+        rootBg.color = KucaTheme.Scrim;
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
         title.text = "뽑았어요!";
@@ -124,7 +126,8 @@ public class HatchScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "HatchCanvas", 40);
-        root = UIKit.Image(canvas.transform, "Hatch", KucaTheme.Scrim, raycast: true).gameObject;
+        rootBg = UIKit.Image(canvas.transform, "Hatch", KucaTheme.Scrim, raycast: true);
+        root = rootBg.gameObject;
         BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다
         Button tapAnywhere = root.AddComponent<Button>();
         tapAnywhere.transition = Selectable.Transition.None;

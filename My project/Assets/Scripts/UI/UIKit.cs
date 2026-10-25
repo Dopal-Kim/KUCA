@@ -205,7 +205,19 @@ public static class UIKit
         area.offsetMax = new Vector2(0f, -headH);
         var pad = new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, (int)KucaTheme.Space3, (int)KucaTheme.Space8);
         if (scroll)
+        {
             page.content = ScrollList(area, KucaTheme.Space4, pad);
+            // 내용이 제목 밑으로 올라가면 제목 아래 구분선 (iOS 큰 제목 방식): 잘린 카드 윗부분이 제목에 붙어 보이지 않게
+            Image divider = Image(head, "Divider", KucaTheme.Line);
+            RectTransform dr = divider.rectTransform;
+            dr.anchorMin = Vector2.zero;
+            dr.anchorMax = new Vector2(1f, 0f);
+            dr.pivot = new Vector2(0.5f, 0f);
+            dr.offsetMin = Vector2.zero;
+            dr.offsetMax = new Vector2(0f, 2f);
+            divider.enabled = false;
+            area.GetComponent<ScrollRect>().onValueChanged.AddListener(v => divider.enabled = v.y < 0.995f && page.content.rect.height > area.rect.height);
+        }
         else
         {
             page.content = area;

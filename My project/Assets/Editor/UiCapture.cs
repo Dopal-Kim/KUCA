@@ -100,6 +100,9 @@ public static class UiCapture
             Finish(1);
             return;
         }
+        // 프로젝트는 runInBackground 0 → 에디터 창이 뒤에 가면 플레이 모드가 멈춰 Game 화면이 옛 프레임으로 찍힌다 (실행 중에만, 저장 안 됨)
+        if (EditorApplication.isPlaying)
+            Application.runInBackground = true;
         if (!EditorApplication.isPlaying || now < waitUntil)
             return;
         IEnumerator top = steps.Peek();
@@ -450,7 +453,14 @@ public static class UiCapture
         Debug.Log($"[UiCapture] {shotIndex:00}_{name}");
         double until = EditorApplication.timeSinceStartup + 5;
         while (!File.Exists(path) && EditorApplication.timeSinceStartup < until)
+        {
+            // 에디터 창이 뒤에 있으면 Game 화면이 다시 그려지지 않아 스크린샷이 안 써진다 → 강제로 다시 그리기
+            EditorApplication.QueuePlayerLoopUpdate();
+            UnityEditorInternal.InternalEditorUtility.RepaintAllViews();
             yield return 0.1f;
+        }
+        if (!File.Exists(path))
+            Debug.LogWarning($"[UiCapture] 저장 실패(5초): {Path.GetFileName(path)}");
         yield return 0.2f;
     }
 

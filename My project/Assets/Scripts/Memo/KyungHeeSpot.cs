@@ -105,12 +105,14 @@ public class KyungHeeSpot : MonoBehaviour
 
         // 떠다니기 (두 물결을 섞어 기계적이지 않게) + 가까우면 조금 더 위로
         float bob = Mathf.Sin(t * 1.3f) * 1.0f + Mathf.Sin(t * 0.71f) * 0.45f;
-        Vector3 center = new Vector3(0f, PoleHeight + BadgeSize / 2f + bob + near * 3f, 0f);
+        // 카메라가 가까우면 배지를 줄인다 (캠퍼스 전체 보기에선 그대로, 플레이어 가까이선 건물 · 산책 시작 버튼을 가리지 않게)
+        Camera cam = Camera.main;
+        float size = BadgeSize * (cam != null ? Mathf.Clamp(Vector3.Distance(cam.transform.position, transform.position) / 320f, 0.4f, 1f) : 1f);
+        Vector3 center = new Vector3(0f, PoleHeight + size / 2f + bob + near * 3f, 0f);
         badge.localPosition = center;
-        badge.localScale = Vector3.one * BadgeSize * (1f + 0.28f * EaseOutBack(near));
+        badge.localScale = Vector3.one * size * (1f + 0.28f * EaseOutBack(near));
 
         // 카메라 쪽으로 부드럽게 돌아보고, 가까우면 천천히 회전 (멀어지면 앞면으로 부드럽게 돌아옴)
-        Camera cam = Camera.main;
         float camYaw = cam != null ? cam.transform.eulerAngles.y : 0f;
         float camPitch = cam != null ? cam.transform.eulerAngles.x : 0f;
         if (camPitch > 180f) camPitch -= 360f;
@@ -124,9 +126,9 @@ public class KyungHeeSpot : MonoBehaviour
         {
             halo.localPosition = center;
             halo.rotation = cam != null ? cam.transform.rotation : Quaternion.identity;
-            halo.position += (cam != null ? cam.transform.forward : Vector3.forward) * (BadgeSize * 0.3f);   // 배지 뒤
+            halo.position += (cam != null ? cam.transform.forward : Vector3.forward) * (size * 0.3f);   // 배지 뒤
             float breathe = 0.5f + 0.5f * Mathf.Sin(t * 2.4f);
-            halo.localScale = Vector3.one * BadgeSize * (1.75f + 0.25f * near + 0.08f * breathe * near);
+            halo.localScale = Vector3.one * size * (1.75f + 0.25f * near + 0.08f * breathe * near);
             haloProps.SetFloat(IntensityId, 0.28f + 0.55f * near * (0.7f + 0.3f * breathe));
             haloRenderer.SetPropertyBlock(haloProps);
         }
