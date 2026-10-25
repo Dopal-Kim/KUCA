@@ -322,7 +322,12 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
   float px = max(fwidth(qq.x), fwidth(qq.y));
   vec3 avg = mix(c * ao, mix(uWindow, uTrim, 0.35), clamp(uWinW * uWinH * 1.4, 0.0, 0.7));
-  float fade = clamp(px * 3.0 - 0.6, 0.0, 1.0);
+  // M10: 층마다 가로 창 줄 먼저 (Unity 와 같은 값)
+  float py = fwidth(p.y);
+  float rowIn = 1.0 - smoothstep(hb.y - py, hb.y + py, abs(qq.y));
+  vec3 row = mix(c * ao, mix(uWindow * 0.82, uTrim, 0.12), rowIn * min(uWinW * 1.1, 0.92));
+  avg = mix(row, avg, clamp((py - 0.3) / 0.5, 0.0, 1.0));
+  float fade = clamp((px - 0.05) / 0.15, 0.0, 1.0);   // M10: Unity(M6) 값과 맞춤 — 예전 미리보기는 0.2 m/px 부터라 Unity 의 민짜 벽이 안 보였음
   kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * clamp(uWinW * uWinH * 1.4, 0.0, 0.7), fade);
   return mix(res, avg, fade);
 }`;

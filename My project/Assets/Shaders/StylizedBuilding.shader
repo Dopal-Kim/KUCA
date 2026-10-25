@@ -168,6 +168,11 @@ Shader "KUCA/StylizedBuilding"
 
                 // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
+                // M10: 바로 평균색으로 가지 않고 먼저 층마다 가로 창 줄 (가로로만 평균, 층 높이는 아직 여러 픽셀).
+                // 큰 건물(공학관 캡처 거리 260 m) · 45° 돌아앉은 면(제2기숙사 남자동)은 창이 통째로 평균색이 되어 민짜 벽이었음
+                float rowIn = 1.0 - smoothstep(hb.y - py, hb.y + py, abs(qq.y));
+                half3 row = lerp(c * ao, lerp(_WindowColor.rgb * 0.82, _TrimColor.rgb, 0.12), rowIn * min(_WindowWidth * 1.1, 0.92));
+                avg = lerp(row, avg, saturate((py - 0.3) / 0.5));
                 // 창틀(0.16 m)이 한 픽셀보다 가늘어질 때부터 서서히 (예전 0.2 m/px 부터는 늦어 960×720 캡처에서 긴 면이 지글거렸음)
                 // M6: 0.07 → 0.05 시작, 폭 0.2 → 0.15 (Unity 캡처에 남은 얼룩무늬)
                 float fade = saturate((px - 0.05) / 0.15);

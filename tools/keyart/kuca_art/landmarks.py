@@ -14,6 +14,7 @@ ROOF = (0.74, 0.76, 0.79)
 DOME = (0.97, 0.97, 0.98)
 DARK = (0.24, 0.30, 0.38)
 GLASS = (0.30, 0.42, 0.52)
+SKY_GLASS = (0.66, 0.82, 0.93)   # 하늘이 비친 유리 (M10 도서관 천창)
 GOLD = (0.86, 0.72, 0.40)
 POLE = (0.62, 0.64, 0.66)
 LAMP = (1.0, 0.98, 0.88)
@@ -438,12 +439,18 @@ def amphitheater(mb, f, to_pond, ground):
     max_r = min(f.half_u, f.half_v) * 1.6
     tiers = max(4, min(int((max_r - 12) / 3), 9))
     center, spread = -math.pi / 2, math.radians(80)
+    # M10 실사: 회백 화강석 계단 객석 (예전 석재 · 잔디 단 번갈이는 초록 · 흰 줄무늬 잔디 계단처럼 보였음).
+    # 한 단(3 m)을 낮은 두 칸으로 나누고 두 돌 색을 번갈아 → 촘촘한 돌계단, 통로 계단 3줄로 객석을 나눈다
+    seat = (0.80, 0.78, 0.73)
     for i in range(tiers):
         r0 = 12 + i * 3.0
-        col = STONE if i % 2 == 0 else (0.52, 0.74, 0.28)   # 석재 단과 잔디 단을 번갈아 (컨셉아트)
-        mb.arc_tier(m, (0, 0, 0), r0, r0 + 3, center - spread, center + spread, 0.6 * (i + 1), 24, col)
-        # 가운데 통로 계단 (어두운 줄)
-        mb.box(m, (0, 0.6 * (i + 1) + 0.01, -(r0 + 1.5)), (1.6, 0.04, 3.0), shade(STEP, 0.8), top=shade(STEP, 0.8))
+        for k in range(2):
+            mb.arc_tier(m, (0, 0, 0), r0 + 1.5 * k, r0 + 1.5 * (k + 1), center - spread, center + spread,
+                        0.6 * i + 0.3 * (k + 1), 24, seat if k == 0 else shade(seat, 0.92))
+            for deg in (-45, 0, 45):   # 통로 계단 (어두운 줄)
+                a, rm = center + math.radians(deg), r0 + 1.5 * k + 0.75
+                am = m.child((math.cos(a) * rm, 0, math.sin(a) * rm), 90 - math.degrees(a))
+                mb.box(am, (0, 0.6 * i + 0.3 * (k + 1) + 0.01, 0), (1.6, 0.04, 1.5), shade(STEP, 0.72), top=shade(STEP, 0.72))
     outer = 12 + tiers * 3.0
     # 뒤쪽 둘레 벽
     mb.arc_tier(m, (0, 0, 0), outer, outer + 1.0, center - spread, center + spread, 0.6 * tiers + 1.0, 24, COLUMN)
@@ -1009,8 +1016,47 @@ def atrium(mb, b, f):
     (ax, az), L, Wd = f.long_axis()
     m = Frame.look((f.center[0], top, f.center[1]), (ax, 0.0, az))
     mb.ao_floor = top
-    mb.box(m, (0, 0.3, 0), (Wd * 0.28 + 0.8, 0.6, L * 0.3 + 0.8), COLUMN)
-    mb.gable(m, (0, 0.6, 0), Wd * 0.28, L * 0.3, 2.6, GLASS, True, end_col=COLUMN)
+    gw, gl, gh = Wd * 0.28, L * 0.3, 2.6
+    mb.box(m, (0, 0.3, 0), (gw + 0.8, 0.6, gl + 0.8), COLUMN)
+    # M10: 짙은 남색(GLASS)은 위 · 옆에서 지붕에 뚫린 구멍처럼 보였음 → 하늘이 비친 밝은 유리 + 흰 살 · 용마루
+    mb.gable(m, (0, 0.6, 0), gw, gl, gh, SKY_GLASS, True, end_col=COLUMN)
+    seg = math.hypot(gw / 2, gh)
+    tx, ty = (gw / 2) / seg, gh / seg
+    for k in range(-4, 5):
+        for sx in (-1, 1):   # 경사면을 따라 내려오는 살 (지붕 위로 살짝 띄움)
+            o = m.p((sx * gw / 4, 0.6 + gh / 2 + 0.06, k * gl / 9))
+            mb.box(Frame(o, m.dir((-sx * tx, ty, 0.0)), m.dir((sx * ty, tx, 0.0)), m.dir((0.0, 0.0, -sx))), (0, 0, 0), (seg, 0.12, 0.28), COLUMN)   # z 는 오른손 좌표가 되게
+    mb.box(m, (0, 0.6 + gh + 0.1, 0), (0.6, 0.3, gl + 0.4), COLUMN)   # 용마루
+    mb.ao_floor = 0.0
+    _library_roof(mb, b, f)
+
+
+def _library_roof(mb, b, f):
+    """M10: 박공 둘레 밖 넓은 평지붕이 민짜 베이지였음 → 안쪽 낮은 난간 띠(트림) + 날개마다 기계실 · 실외기 묶음"""
+    from .buildings import ROOF_RESERVED
+    from .geo import dist_to_poly_edge, point_in_poly
+    from .mesh import offset_polygon, rect_poly
+    H = b.h
+    mb.ao_floor = H
+    inner = offset_polygon(b.poly, -4.5)
+    if len(inner) >= 3:
+        mb.band(inner, H, H + 0.45, 0.18, 0.18, shade(COLUMN, 0.97), top_col=COLUMN)   # 낮은 안쪽 난간 (지붕 테두리 트림)
+    (ax, az), L, Wd = f.long_axis()
+    u, v = (ax, az), (-az, ax)
+    yaw = math.degrees(math.atan2(ax, az))
+    for su in (-1, 1):
+        for sv in (-1, 1):
+            px = f.center[0] + u[0] * su * L * 0.36 + v[0] * sv * Wd * 0.22
+            pz = f.center[1] + u[1] * su * L * 0.36 + v[1] * sv * Wd * 0.22
+            if not point_in_poly(px, pz, b.poly) or dist_to_poly_edge(px, pz, b.poly) < 7:
+                continue
+            m = Frame.yaw((px, H, pz), yaw)
+            mb.box(m, (0, 1.1, 0), (5.0, 2.2, 7.0), (0.88, 0.88, 0.86), top=(0.93, 0.93, 0.91))   # 기계실
+            mb.box(m, (0, 2.35, 0), (5.4, 0.3, 7.4), COLUMN)
+            for k in (-1, 1):   # 실외기 + 팬
+                mb.box(m, (k * 1.3, 2.9, 0), (1.8, 0.8, 1.8), (0.80, 0.81, 0.83))
+                mb.prism(m, (k * 1.3, 3.3, 0), 0.7, 0.06, 12, (0.30, 0.33, 0.37), caps=True)
+            ROOF_RESERVED.setdefault(b.id, []).append((rect_poly((px, pz), u, v, 5.0, 4.0), H + 3.4))
     mb.ao_floor = 0.0
 
 
