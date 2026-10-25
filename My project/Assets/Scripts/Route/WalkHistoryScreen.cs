@@ -20,6 +20,10 @@ public class WalkHistoryScreen : MonoBehaviour
     RawImage detailMap;
     RectTransform detailOverlay;
     RenderTexture detailTexture;
+    RectTransform detailFrame;
+    Button detailShare;
+    WalkHistory.Entry detailEntry;
+    bool sharing;
 
     public static void Show()
     {
@@ -129,8 +133,23 @@ public class WalkHistoryScreen : MonoBehaviour
         done.rectTransform.anchorMin = new Vector2(0.7f, 1f);
     }
 
+    void ShareToKakao()
+    {
+        WalkHistory.Entry e = detailEntry;
+        if (sharing || e == null)
+            return;
+        sharing = true;
+        StartCoroutine(WalkShare.Share(detailFrame, WalkShare.KindOf(e.kind, e.stopsTotal, 0), e.meters, e.minutes, e.visitedBuildingIds, error =>
+        {
+            sharing = false;
+            var hud = FindAnyObjectByType<GameHUD>();
+            if (hud != null && error != null) hud.Toast(error);
+        }));
+    }
+
     void OpenDetail(WalkHistory.Entry e)
     {
+        detailEntry = e;
         detailTitle.text = e.title;
         detailStats.text = $"{When(e.EndedAt)}\n{Stats(e)}" + (e.completed ? "  ·  <color=#2E9E5C>완료</color>" : "");
         detail.SetActive(true);
@@ -138,6 +157,7 @@ public class WalkHistoryScreen : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         List<Vector3> track = e.Track;
         TopMap.Clear(detailOverlay);
+        detailShare.gameObject.SetActive(track.Count >= 2);
         if (track.Count >= 2)
             WalkCompleteScreen.DrawTrack(detailMap, ref detailTexture, detailOverlay, track, WalkCompleteScreen.LineColor(e.kind, e.stopsTotal, 0));
         else
@@ -192,7 +212,10 @@ public class WalkHistoryScreen : MonoBehaviour
         detailStats.lineSpacing = 1.15f;
         Box(detailStats.rectTransform, 50f, 110f, 50f, 90f);
         Image frame = TopMap.Frame(cr, "Map", out detailMap, out detailOverlay);
-        Box(frame.rectTransform, 40f, 220f, 40f, 1040f);
+        Box(frame.rectTransform, 40f, 220f, 40f, 920f);
+        detailFrame = frame.rectTransform;
+        detailShare = WalkCompleteScreen.KakaoButton(cr, () => ShareToKakao());
+        Box((RectTransform)detailShare.transform, 40f, 1166f, 40f, 104f);
         detail.SetActive(false);
         root.SetActive(false);
     }

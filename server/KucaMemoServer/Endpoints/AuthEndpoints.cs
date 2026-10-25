@@ -96,13 +96,15 @@ public static partial class AuthEndpoints
             return Results.Ok(store.Find(user.Id));
         });
 
-        // 회원 탈퇴: 계정 · 로그인 토큰 · 인증번호, 매칭 기록 · 차단 · 신고, 산책 · 경험치 · 리뷰를 지운다.
-        me.MapDelete("/", (HttpRequest req, AccountStore store, MatchService matches, WalkStore walks) =>
+        // 회원 탈퇴: 계정 · 로그인 토큰 · 인증번호, 매칭 기록 · 차단 · 신고, 산책 · 경험치 · 리뷰, 공유한 산책 기록을 지운다.
+        me.MapDelete("/", (HttpRequest req, AccountStore store, MatchService matches, WalkStore walks, WalkShareStore shares, PhotoStore photos) =>
         {
             if (Current(req, store) is not { } user)
                 return Unauthorized();
             matches.ForgetAccount(user.Id);
             walks.Forget(user.Id);
+            foreach (string image in shares.Forget(user.Id))   // 공유한 산책 기록과 지도 그림도 지운다
+                photos.Delete(image);
             store.DeleteAccount(user.Id);
             return Results.NoContent();
         });
