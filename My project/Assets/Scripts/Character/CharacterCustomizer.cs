@@ -462,7 +462,8 @@ public class CharacterCustomizer : MonoBehaviour
             var dotImage = dot.GetComponent<Image>();
             dotImage.sprite = HudIcons.Circle;
             dotImage.color = swatches[i].color;
-            dotImage.raycastTarget = false;
+            // 색 점이 터치를 받는다: 고르지 않은 칸은 테두리(ring)를 꺼 두므로, 테두리만 받으면 고른 칸 말고는 눌리지 않는다
+            dotImage.raycastTarget = true;
             var button = cell.GetComponent<Button>();
             button.targetGraphic = dotImage;
             button.onClick.AddListener(() => { set(index); ApplyLook(); });
