@@ -183,6 +183,10 @@ public class HatchScreen : MonoBehaviour
         UIKit.Stretch(tierText.rectTransform);
         nameText = UIKit.Bold(UIKit.Text(cr, "", KucaTheme.Title, TextAnchor.MiddleCenter, Ink));
         Place(nameText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -792f), new Vector2(860f, 96f));
+        // "국제·경영대학관 여우" 처럼 긴 이름은 두 줄로 넘치지 않게 한 줄 안에서 글자를 줄인다 (REVIEW_v14)
+        nameText.resizeTextForBestFit = true;
+        nameText.resizeTextMinSize = KucaTheme.Heading;
+        nameText.resizeTextMaxSize = KucaTheme.Title;
         info = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.UpperCenter, InkQuiet);
         Place(info.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -900f), new Vector2(860f, 150f));
 

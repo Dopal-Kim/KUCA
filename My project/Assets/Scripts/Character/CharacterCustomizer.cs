@@ -472,6 +472,9 @@ public class CharacterCustomizer : MonoBehaviour
         for (int i = clothesContent.childCount - 1; i >= 0; i--)
             Destroy(clothesContent.GetChild(i).gameObject);
 
+        // 썸네일 대신: 이름만 있는 칩을 눌러 보면 위 캐릭터가 바로 바뀐다는 것을 먼저 알린다 (REVIEW_v14 · v15)
+        Text hint = UIKit.Text(clothesContent, "누르면 위 캐릭터에 바로 입혀 봐요. 마음에 들면 완료", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        UIKit.Size(hint, 56f);
         Label(clothesContent, "성별");
         RectTransform genders = ChipGrid(clothesContent, 3);
         for (int g = 0; g < Db.genders.Count; g++)
