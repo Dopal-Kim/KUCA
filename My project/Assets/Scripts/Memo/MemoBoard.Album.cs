@@ -13,6 +13,7 @@ public partial class MemoBoard
     GameObject album;
     RectTransform albumGrid;
     Text albumCount, albumEmpty;
+    Button albumEmptyAction;   // 사진이 없을 때: 가까운 경희스팟 메모판 열기 (빈 화면이 막다른 길이 되지 않게)
     bool albumMode;
     int albumRequest;
 
@@ -117,6 +118,7 @@ public partial class MemoBoard
         int request = ++albumRequest;
         albumCount.text = "";
         albumEmpty.text = ids.Count == 0 ? "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요" : "불러오는 중…";
+        albumEmptyAction.gameObject.SetActive(ids.Count == 0);
         if (ids.Count == 0)
             return;
 
@@ -156,6 +158,7 @@ public partial class MemoBoard
                 albumEmpty.text = currentMemos.Count > 0 ? ""
                     : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
                     : "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요";
+                albumEmptyAction.gameObject.SetActive(currentMemos.Count == 0 && failed == 0);
                 if (currentMemos.Count > 0)
                 {
                     SaveSeen(currentMemos);
@@ -214,7 +217,38 @@ public partial class MemoBoard
         albumGrid = BuildGrid(area);
         albumEmpty = UIKit.Text(area, "", 34, TextAnchor.UpperCenter, InkQuiet);
         UIKit.Stretch(albumEmpty.rectTransform, 40f, 120f);
+        albumEmptyAction = UIKit.Button(area, "가까운 경희스팟 메모판 열기", OpenNearestSpot, ShareBlue, 36);
+        RectTransform ar = (RectTransform)albumEmptyAction.transform;
+        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 1f);
+        ar.anchoredPosition = new Vector2(0f, -250f);
+        ar.sizeDelta = new Vector2(640f, 110f);
+        albumEmptyAction.GetComponentInChildren<Text>().color = Color.white;
+        albumEmptyAction.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
+        Image aimg = albumEmptyAction.GetComponent<Image>();
+        aimg.sprite = HudIcons.Pill;
+        aimg.type = Image.Type.Sliced;
+        aimg.pixelsPerUnitMultiplier = 120f / 110f;
+        albumEmptyAction.gameObject.SetActive(false);
 
         album.SetActive(false);
+    }
+
+    /// <summary>지금 위치에서 가장 가까운 경희스팟의 메모판을 연다</summary>
+    void OpenNearestSpot()
+    {
+        Transform player = collectController != null && collectController.campusMap != null ? collectController.campusMap.player : null;
+        if (spots == null || player == null)
+            return;
+        KyungHeeSpot best = null;
+        float bestD = float.MaxValue;
+        foreach (KyungHeeSpot s in spots.Spots)
+        {
+            if (s == null || s.Building == null) continue;
+            Vector3 c = s.BuildingBounds.center;
+            float d = new Vector2(c.x - player.position.x, c.z - player.position.z).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        if (best != null)
+            OpenSpot(best);
     }
 }

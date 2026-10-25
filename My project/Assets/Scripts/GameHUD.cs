@@ -445,13 +445,13 @@ public class GameHUD : MonoBehaviour
 
     void BuildSideButtons()
     {
-        const float size = 120f, gap = 26f;
-        var buttons = new (string name, Sprite icon, UnityEngine.Events.UnityAction action)[]
+        const float size = 120f, gap = 58f;   // 버튼 아래 이름표 자리만큼 띄운다
+        var buttons = new (string name, string label, Sprite icon, UnityEngine.Events.UnityAction action)[]
         {
-            ("Route", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
-            ("Match", HudIcons.Partner, MatchScreen.Open), // 산책메이트 매칭 (v2 에서 도구 버튼 자리)
-            ("Album", HudIcons.Photos, OpenAlbum),
-            ("Settings", HudIcons.Gear, OpenSettings),
+            ("Route", "산책 추천", HudIcons.Route, RoutePlanner.Open), // 산책 추천·장소 공지 (북쪽 맞추기는 지도 두 번 탭)
+            ("Match", "산책메이트", HudIcons.Partner, MatchScreen.Open), // 산책메이트 매칭 (v2 에서 도구 버튼 자리)
+            ("Album", "사진첩", HudIcons.Photos, OpenAlbum),
+            ("Settings", "설정", HudIcons.Gear, OpenSettings),
         };
         for (int i = 0; i < buttons.Length; i++)
         {
@@ -479,6 +479,20 @@ public class GameHUD : MonoBehaviour
                 compassNeedle = icon.rectTransform;
             }
             Place(icon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+
+            // 이름표: 아이콘만으로는 산책 추천 · 산책메이트를 구분하기 어렵다 (디자인 평가 10/25)
+            Image tag = UIKit.Image(face, "Label", new Color(Navy.r, Navy.g, Navy.b, 0.78f));
+            tag.sprite = HudIcons.Pill;
+            tag.type = Image.Type.Sliced;
+            tag.pixelsPerUnitMultiplier = 3f;
+            tag.raycastTarget = false;
+            Place(tag.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, -8f));
+            tag.rectTransform.pivot = new Vector2(0.5f, 1f);
+            tag.rectTransform.sizeDelta = new Vector2(150f, 40f);
+            Text t = UIKit.Text(tag.transform, buttons[i].label, 24, TextAnchor.MiddleCenter, Color.white);
+            t.fontStyle = FontStyle.Bold;
+            t.raycastTarget = false;
+            UIKit.Stretch(t.rectTransform);
         }
     }
 
@@ -868,8 +882,10 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(save, 110f, 200f);
         UIKit.Text(nickCard.transform, "메모를 남길 때도 이 이름이 쓰여요.", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
 
-        // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버)
+        // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버). 개발용이라 에디터 · 개발 빌드에서만 보인다
+        // (일반 사용자가 잘못 바꾸면 서버와 끊긴다, 디자인 평가 10/25)
         Image serverCard = Card(settingsList, "ServerCard");
+        serverCard.gameObject.SetActive(Application.isEditor || Debug.isDebugBuild);
         UIKit.Vertical(serverCard, 18f, new RectOffset(40, 40, 32, 36));
         UIKit.Text(serverCard.transform, "메모 서버", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
         RectTransform srow = UIKit.Rect(serverCard.transform, "Row");
@@ -905,9 +921,16 @@ public class GameHUD : MonoBehaviour
         UIKit.Size(virtualWalkButton, 110f);
         logoutButton = UIKit.Button(optCard.transform, "로그아웃", () =>
         {
-            CloseSettings();
-            StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+            bool guest = AuthService.Current != null && AuthService.Current.isGuest;
+            ConfirmDialog.Show(guest ? "체험을 끝내고 로그인할까요?" : "로그아웃할까요?",
+                guest ? "경희몬 · 걸은 기록은 이 기기에 남아 로그인한 뒤에도 이어져요." : "다시 로그인하면 이어서 쓸 수 있어요.",
+                guest ? "로그인하기" : "로그아웃", () =>
+                {
+                    CloseSettings();
+                    StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+                });
         }, UIKit.ButtonGray, 38);
+        logoutButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);   // 되돌리기 어려운 동작은 빨간 글자
         UIKit.Size(logoutButton, 110f);
         deleteAccountButton = UIKit.Button(optCard.transform, "회원 탈퇴", DeleteAccount, UIKit.ButtonGray, 38);
         deleteAccountButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);
