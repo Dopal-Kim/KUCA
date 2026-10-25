@@ -244,6 +244,12 @@ const BUILDING_GLSL = `
 varying vec2 vWall; varying vec3 vWN; varying vec3 vRoofTint;
 uniform vec3 uWall, uTrim, uWindow, uRoof;
 uniform float uFloorH, uSpacing, uWinW, uWinH, uPilEvery, uBrick, uArch;
+// M30: 밤에 켜질 창 — 벽(길이 seed) · 층마다 켜진 비율을 달리 (StylizedBuilding.shader KucaWindowLit 과 같음)
+float kucaWindowLit(float col, float fl, float seed) {
+  float hf = fract(sin(dot(vec2(fl, seed), vec2(39.346, 11.135))) * 43758.5453);
+  float h = fract(sin(dot(vec2(col + seed * 7.0, fl), vec2(12.9898, 78.233))) * 43758.5453);
+  return step(h, uLitWindows * mix(0.25, 1.35, hf));
+}
 float sdRoundBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r; }
 vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float ao = mix(0.86, 1.0, clamp(p.y / 4.0, 0.0, 1.0));
@@ -257,6 +263,7 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float fv = fract(p.y / uFloorH), fl = floor(p.y / uFloorH);
   if (fv < 0.05 && p.y > 2.0) c = mix(c, uTrim, 0.55);
   float wl = floor(wall.y * 10.0 + 0.5) * 0.1, wu = wall.x;   // M11: 보간 오차 되돌림 (Unity 와 같음)
+  float seed = fract(wl * 0.618) * 97.0;
   if (wl < 0.5) { vec2 side = normalize(vec2(-n.z, n.x) + 1e-5); wu = dot(p.xz, side); wl = 100000.0; }
   bool infinite = wl > 99999.0;
   // 벽 버텍스 색 R = 벽 종류: 1 보통 창, 0.5 커튼월(전면 유리), 0 석재 + 세로 슬릿 창 (멀티미디어·글로벌관)
@@ -270,27 +277,31 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
       if (lu2 < 0.0 || lu2 >= nS) return s * ao;
       float ci = floor(lu2), qx = (fract(lu2) - 0.5) * sp;
       vec3 res = s * ao;
+      vec3 glowS = uGlowColor * uGlowStrength * uNight * 0.8 * kucaWindowLit(ci, fl, seed);
       if (abs(qx) < 0.42 && fv > 0.1) {
-        float h = fract(sin(dot(vec2(ci, fl), vec2(12.9898, 78.233))) * 43758.5453);
         vec3 gl = mix(uWindow * 0.7, mix(uWindow, vec3(0.88, 0.95, 1.0), 0.5), fv) * mix(1.0, 0.45, uNight);
-        if (h < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * 0.8;
+        kEmit = glowS;
         res = gl;
       } else if (abs(qx) < 0.58) res = uTrim;
-      float fadeS = clamp(fwidth(qx) * 3.0 - 0.6, 0.0, 1.0);
-      kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.25, fadeS);
+      float pxS = fwidth(qx);
+      float fadeS = clamp(pxS * 3.0 - 0.6, 0.0, 1.0);
+      kEmit = mix(kEmit, glowS * step(abs(qx), max(0.42, pxS * 0.75)) * step(0.1, fv), fadeS);
+      kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.25, clamp((pxS - 0.8) / 0.8, 0.0, 1.0));
       return mix(res, mix(s * ao, uWindow, 0.25), fadeS);
     }
     if (min(wu, wl - wu) < 0.7) return uTrim * ao;
     float mu = fract(wu / 1.6), cg = floor(wu / 1.6);
-    float hg = fract(sin(dot(vec2(cg, fl), vec2(12.9898, 78.233))) * 43758.5453);
+    vec3 glowG = uGlowColor * uGlowStrength * uNight * kucaWindowLit(cg, fl, seed);
     vec3 gl = mix(uWindow * 0.62, mix(uWindow, vec3(0.86, 0.94, 1.0), 0.6), fv);
     gl = mix(gl, vec3(0.96, 0.99, 1.0), 0.22 * step(0.88, fract((wu * 0.5 + p.y) * 0.035)));
     gl *= mix(1.0, 0.45, uNight);
-    if (hg < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * (0.6 + 0.4 * fv);
+    kEmit = glowG * (0.6 + 0.4 * fv);
     vec3 resG = gl;
     if (abs(mu - 0.5) > 0.46 || fv < 0.06) resG = uTrim * 0.94;
-    float fadeG = clamp(fwidth(wu) * 2.0 - 0.6, 0.0, 1.0);
-    kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.7, fadeG);
+    float pxG = fwidth(wu);
+    float fadeG = clamp(pxG * 2.0 - 0.6, 0.0, 1.0);
+    kEmit = mix(kEmit, glowG * 0.8 * step(0.06, fv), fadeG);
+    kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * 0.7, clamp((pxG - 0.6) / 0.6, 0.0, 1.0));
     return mix(resG, mix(gl, uTrim, 0.15), fadeG);
   }
   float margin = infinite ? 0.0 : clamp(wl * 0.12, 1.8, 3.2);
@@ -299,6 +310,7 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   float lu = (wu - (infinite ? 0.0 : (wl - nWin * uSpacing) * 0.5)) / uSpacing;
   if (lu < 0.0 || lu >= nWin) return mix(c, uTrim, 0.22) * ao;                       // 모서리 기둥 (창 없음)
   float colI = floor(lu), fu = fract(lu);
+  vec3 glowW = uGlowColor * uGlowStrength * uNight * kucaWindowLit(colI, fl, seed);
   if (uPilEvery > 0.5 && mod(colI, uPilEvery) > uPilEvery - 1.5) return mix(c, uTrim, 0.3) * ao;   // 창 묶음 사이 벽
   vec2 qq = vec2((fu - 0.5) * uSpacing, (fv - 0.55) * uFloorH);
   vec2 hb = vec2(uWinW * uSpacing * 0.5, uWinH * uFloorH * 0.5);
@@ -315,7 +327,7 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
     if (h > 0.8 && t > 0.5) gl = mix(gl, vec3(1.0, 0.93, 0.84), 0.55);
     if (uWinW > 0.8 && abs(qq.x) < 0.06) gl = uTrim * 0.95;
     gl *= mix(1.0, 0.45, uNight);
-    if (h < uLitWindows) kEmit = uGlowColor * uGlowStrength * uNight * (0.65 + 0.35 * t);
+    kEmit = glowW * (0.65 + 0.35 * t);
     res = gl;
   }
   else if (d < 0.16) res = uTrim;
@@ -330,7 +342,10 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   vec3 row = mix(c * ao, mix(uWindow * 0.82, uTrim, 0.12), rowIn * min(uWinW * 1.1, 0.92));
   avg = mix(row, avg, clamp((py - 0.45) / 0.75, 0.0, 1.0));
   float fade = clamp((px - 0.05) / 0.15, 0.0, 1.0);   // M10: Unity(M6) 값과 맞춤 — 예전 미리보기는 0.2 m/px 부터라 Unity 의 민짜 벽이 안 보였음
-  kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * clamp(uWinW * uWinH * 1.4, 0.0, 0.7), fade);
+  // M30: 불빛은 창 사각형(최소 1.5 px)째로 켜고 끄다가 1 ~ 2 m/px 에서야 벽 평균으로 (Unity 와 같음)
+  vec2 eb = max(hb, vec2(px * 0.75));
+  kEmit = mix(kEmit, glowW * 0.8 * step(abs(qq.x), eb.x) * step(abs(qq.y), eb.y), fade);
+  kEmit = mix(kEmit, uGlowColor * uGlowStrength * uNight * uLitWindows * clamp(uWinW * uWinH * 1.4, 0.0, 0.7), clamp((px - 1.0) / 1.0, 0.0, 1.0));
   return mix(res, avg, fade);
 }`;
 

@@ -1926,3 +1926,5 @@ def _rooftop_court(mb, b):
             mb.box(m, (x, 0.75, sz * (hw + 0.5)), (0.12, 1.4, 0.12), POLE)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     ROOF_RESERVED.setdefault(b.id, []).append((rect_poly(fp.center, u, v, hl + 1.5, hw + 1.5), H + 2.0))
+    from .people import ROOF_COURTS
+    ROOF_COURTS.append((m, hl, hw))   # M30: 옥상 운동장에 선 학생 인형 자리
