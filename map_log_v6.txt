@@ -1,0 +1,164 @@
+﻿
+C:\Users\admin\KUCA-check\map_090302.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
+C:\Users\admin\KUCA-check\map_090302.log:53:UiCapture.RunMap
+C:\Users\admin\KUCA-check\map_090302.log:1195:Assets\Editor\UiCapture.cs(267,111): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:1197:Assets\Editor\UiCapture.cs(267,41): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:1199:Assets\Editor\UiCapture.cs(279,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:1201:Assets\Editor\UiCapture.cs(279,36): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:1203:Assets\Editor\UiCapture.cs(367,104): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:1205:Assets\Editor\UiCapture.cs(367,30): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:1207:Assets\Editor\UiCapture.cs(470,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:1209:Assets\Editor\UiCapture.cs(470,34): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:1211:Assets\Editor\UiCapture.cs(381,9): warning UAC0005: AppDomain.GetAssembli
+es() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cu
+rrentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map_090302.log:2917:Assets\Editor\UiCapture.cs(267,111): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:2918:Assets\Editor\UiCapture.cs(267,41): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:2919:Assets\Editor\UiCapture.cs(279,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:2920:Assets\Editor\UiCapture.cs(279,36): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:2921:Assets\Editor\UiCapture.cs(367,104): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:2922:Assets\Editor\UiCapture.cs(367,30): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:2923:Assets\Editor\UiCapture.cs(470,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:2924:Assets\Editor\UiCapture.cs(470,34): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:2925:Assets\Editor\UiCapture.cs(381,9): warning UAC0005: AppDomain.GetAssembli
+es() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cu
+rrentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map_090302.log:2939:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:2959:			LogAssemblyErrors (3ms)
+C:\Users\admin\KUCA-check\map_090302.log:3871:Assets\Editor\UiCapture.cs(267,111): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:3873:Assets\Editor\UiCapture.cs(267,41): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:3875:Assets\Editor\UiCapture.cs(279,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:3877:Assets\Editor\UiCapture.cs(279,36): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:3879:Assets\Editor\UiCapture.cs(367,104): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:3881:Assets\Editor\UiCapture.cs(367,30): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:3883:Assets\Editor\UiCapture.cs(470,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:3885:Assets\Editor\UiCapture.cs(470,34): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:3887:Assets\Editor\UiCapture.cs(381,9): warning UAC0005: AppDomain.GetAssembli
+es() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cu
+rrentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map_090302.log:5593:Assets\Editor\UiCapture.cs(267,111): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:5594:Assets\Editor\UiCapture.cs(267,41): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:5595:Assets\Editor\UiCapture.cs(279,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:5596:Assets\Editor\UiCapture.cs(279,36): warning CS0618: 'Object.FindObjectsBy
+Type(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode paramete
+r has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID 
+will be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:5597:Assets\Editor\UiCapture.cs(367,104): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:5598:Assets\Editor\UiCapture.cs(367,30): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:5599:Assets\Editor\UiCapture.cs(470,112): warning CS0618: 'FindObjectsSortMode
+' is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObj
+ectsSortMode parameter.'
+C:\Users\admin\KUCA-check\map_090302.log:5600:Assets\Editor\UiCapture.cs(470,34): warning CS0618: 'Object.FindObjectsBy
+Type<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter h
+as been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be
+ replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\map_090302.log:5601:Assets\Editor\UiCapture.cs(381,9): warning UAC0005: AppDomain.GetAssembli
+es() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cu
+rrentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\map_090302.log:5634:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5654:			LogAssemblyErrors (6ms)
+C:\Users\admin\KUCA-check\map_090302.log:5860:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5861:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5862:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5863:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5864:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5865:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5866:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5867:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5868:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5869:[Licensing::Client] Error: Code 404 while processing request (status: Fou
+nd 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\map_090302.log:5870:[UiCapture] 끝 (380장) → C:\Users\admin\KUCA-check\Builds\MapShots
+C:\Users\admin\KUCA-check\map_090302.log:5877:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:140)
+C:\Users\admin\KUCA-check\map_090302.log:5878:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:124)
+C:\Users\admin\KUCA-check\map_090302.log:5881:(Filename: Assets/Editor/UiCapture.cs Line: 140)
+C:\Users\admin\KUCA-check\map_090302.log:5909:Project ID request failed, Reason: The requested URL returned error: 403 
+(403).
+C:\Users\admin\KUCA-check\map_090302.log:5910:Unknown Unity Connect error (400). Please contact support at support@unit
+y.com while processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b0
+036aa", HTTP error code 403
+
+
