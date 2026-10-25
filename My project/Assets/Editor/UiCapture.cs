@@ -199,6 +199,8 @@ public static class UiCapture
                 else
                 {
                     object frozen = Get(body, "freezePose");   // 대기 자세에서 Animator 를 멈추는 캐릭터면 잠시 풀기
+                    // 풀면 서 있을 때 지도 카메라 쪽으로 돌아서는 동작도 켜져 몸 방향이 바뀐 채 남아, 햇빛 받는 면이 달라져 뒤 장들이 어두웠음 (REVIEW_v20)
+                    Quaternion facing = body.transform.localRotation;
                     Set(body, "freezePose", false);
                     anim.enabled = true;
                     Set(body, "speedOverride", 1.4f);
@@ -206,6 +208,7 @@ public static class UiCapture
                     yield return Shot($"꾸미기_걷기_여{st + 1}");
                     Set(body, "speedOverride", -1f);
                     Set(body, "freezePose", frozen ?? false);
+                    body.transform.localRotation = facing;
                 }
                 Set(customizer, "previewYaw", 0f);
             }
