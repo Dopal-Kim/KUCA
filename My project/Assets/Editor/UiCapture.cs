@@ -299,6 +299,8 @@ public static class UiCapture
                 Quaternion rot = default;
                 float d = dist;
                 bool blocked = true;
+                // 끝까지 못 넘으면 마지막(80°) 대신 가장 덜 가려진 단계로: 고층 이웃 사이(글로벌관 E)는 58° 가 80° 보다 나았음 (MAP_REVIEW_v12)
+                (Quaternion rot, float d, float score) best = (default, 0f, float.MaxValue);
                 // 작은 건물(가로 40 m 미만)은 35° 에서 앞 건물 지붕에 가려지기 쉬워 50° 부터 (원자로센터 · 온실, v9)
                 float first = Mathf.Max(b.size.x, b.size.z) < 40f ? Mathf.Max(pitch, 50f) : pitch;
                 foreach (var (p, k) in new[] { (first, 1f), (Mathf.Max(pitch, 58f), 1f), (Mathf.Max(pitch, 70f), 1.6f), (Mathf.Max(pitch, 80f), 1.6f) })
@@ -308,12 +310,17 @@ public static class UiCapture
                     Vector3 camPos = target - rot * Vector3.forward * d;
                     int hits = BlockedRays(b, camPos, info, infoType, others, out string by);
                     float front = Foreground(camPos, rot, cam.fieldOfView, Vector3.Distance(camPos, b.center), info, infoType);
-                    // 1/3: 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, v9). 전경 30%: 건물은 다 보여도 화면 아래를 앞 지붕이 채움 (원자로센터 E · 온실 S, v11)
-                    blocked = hits * 3 >= ProbeCount || front >= 0.3f;
+                    // 1/3: 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, v9). 전경 55%: 답답한 사진은 57~80%, 멀쩡한 첫 단계는 37~43% 였음 (30% 는 너무 민감, v12)
+                    blocked = hits * 3 >= ProbeCount || front >= 0.55f;
+                    float score = front + (float)hits / ProbeCount;
+                    if (score < best.score)
+                        best = (rot, d, score);
                     Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 전경={front:P0} 맞은 것={by}");
                     if (!blocked)
                         break;
                 }
+                if (blocked)
+                    (rot, d) = (best.rot, best.d);
                 ShotFrom(cam, target - rot * Vector3.forward * d, rot, $"{Safe(name)}_{tag}" + (blocked ? "_막힘" : ""));
             }
             yield return 0.05f;
