@@ -237,6 +237,21 @@ public static class UiCapture
             yield return 1.5f;
             yield return Shot("뽑기_결과_2");
         }
+        // 로컬(KUCA-check) 전용: 5장으로 만나기를 실제로 눌러 티켓이 5장 줄어드는지
+        {
+            Click("확인");
+            yield return 1f;
+            object t0 = Get(progress, "tickets");
+            Debug.Log($"[UiCapture] 5장 만나기 전 티켓={t0}");
+            if (Click("티켓 5장으로 만나기"))
+            {
+                yield return 1.0f;
+                Set(Find("HatchScreen"), "skip", true);
+                yield return 1.5f;
+                yield return Shot("뽑기_5장_결과");
+                Debug.Log($"[UiCapture] 5장 만나기 뒤 티켓={Get(progress, "tickets")}");
+            }
+        }
         yield return CloseAll();
         if (Call(menus, "OpenProfile")) { yield return 1f; yield return Shot("프로필"); yield return ShotBottom("프로필_아래"); }
         yield return CloseAll();
