@@ -32,7 +32,11 @@ public static class AuthService
     const int Timeout = 40; // 무료 요금제 서버가 깨어나는 시간까지
 
     [Serializable] class LoginBody { public string token; public KucaAccount user; }
-    [Serializable] class ErrorBody { public string error; public string devCode; }
+    [Serializable] class ErrorBody { public string error; public string devCode; public bool existing; }
+    [Serializable] class LinkedBody { public string token; public KucaAccount user; public bool linked; }
+
+    /// <summary>마지막으로 인증번호를 보낸 메일이 이미 다른 계정(예: 카카오로 가입)이 인증한 메일인지. 인증하면 그 계정으로 이어진다</summary>
+    public static bool LastEmailExisting { get; private set; }
 
     public static string Token => PlayerPrefs.GetString(TokenKey, "");
     public static bool HasToken => Token.Length > 0;
@@ -133,12 +137,38 @@ public static class AuthService
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success) { done(ErrorOf(req), null); yield break; }
         string dev = null;
-        try { dev = JsonUtility.FromJson<ErrorBody>(req.downloadHandler.text)?.devCode; } catch (ArgumentException) { }
+        LastEmailExisting = false;
+        try
+        {
+            var body = JsonUtility.FromJson<ErrorBody>(req.downloadHandler.text);
+            dev = body?.devCode;
+            LastEmailExisting = body != null && body.existing;
+        }
+        catch (ArgumentException) { }
         done(null, string.IsNullOrEmpty(dev) ? null : dev);
     }
 
-    public static IEnumerator VerifyEmail(string code, Action<KucaAccount, string> done) =>
-        SendForAccount("POST", "/api/me/email/verify", JsonUtility.ToJson(new CodeBody { code = code }), done);
+    /// <summary>
+    /// 인증번호 확인. 같은 메일로 이미 가입한 계정이 있으면 서버가 지금 로그인 방법을 그 계정에 이어 붙이고 새 토큰을 준다
+    /// (카카오로 가입한 사람이 Apple 로 로그인한 경우) → 토큰을 바꿔 끼우고 그 계정으로 계속한다.
+    /// </summary>
+    public static IEnumerator VerifyEmail(string code, Action<KucaAccount, string> done)
+    {
+        using var req = Request("POST", "/api/me/email/verify", JsonUtility.ToJson(new CodeBody { code = code }));
+        yield return req.SendWebRequest();
+        if (req.result != UnityWebRequest.Result.Success) { done(null, ErrorOf(req)); yield break; }
+        string text = req.downloadHandler.text;
+        LinkedBody linked = null;
+        try { linked = JsonUtility.FromJson<LinkedBody>(text); } catch (ArgumentException) { }
+        if (linked != null && linked.linked && !string.IsNullOrEmpty(linked.token) && linked.user != null)
+        {
+            SaveToken(linked.token);
+            Current = linked.user;
+        }
+        else
+            Current = JsonUtility.FromJson<KucaAccount>(text);
+        done(Current, null);
+    }
 
     public static IEnumerator SetNickname(string nickname, Action<KucaAccount, string> done) =>
         SendForAccount("PUT", "/api/me/nickname", JsonUtility.ToJson(new NickBody { nickname = nickname }), done);

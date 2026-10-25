@@ -190,15 +190,57 @@ public class AuthApiTests : IDisposable
     }
 
     [Fact]
-    public async Task 다른_계정이_인증한_메일은_409()
+    public async Task 같은_학교_메일로_Apple_로그인하면_카카오_계정에_이어진다()
+    {
+        // 카카오로 가입: 메일 인증 · 닉네임 · 성별까지
+        var (kakao, kakaoUser) = await KakaoLogin("k1");
+        await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/start", kakao, new { email = "same@khu.ac.kr" })));
+        await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/verify", kakao, new { code = mail.LastCode })));
+        await Ok(await client.SendAsync(Req(HttpMethod.Put, "/api/me/nickname", kakao, new { nickname = "원준" })));
+        await Ok(await client.SendAsync(Req(HttpMethod.Put, "/api/me/gender", kakao, new { gender = "male" })));
+        string kakaoId = kakaoUser.GetProperty("id").GetString()!;
+
+        // 같은 사람이 Apple 로 로그인 → 새 계정이 생기고, 같은 메일로 인증하면 카카오 계정으로 이어진다
+        JsonElement apple = await Ok(await client.PostAsJsonAsync("/api/auth/apple", new { identityToken = "apple-ok" }));
+        string appleToken = apple.GetProperty("token").GetString()!;
+        JsonElement start = await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/start", appleToken, new { email = "same@khu.ac.kr" })));
+        Assert.True(start.GetProperty("existing").GetBoolean());   // 앱이 "기존 계정으로 이어져요" 안내
+        JsonElement linked = await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/verify", appleToken, new { code = mail.LastCode })));
+        Assert.True(linked.GetProperty("linked").GetBoolean());
+        Assert.Equal(kakaoId, linked.GetProperty("user").GetProperty("id").GetString());
+        Assert.True(linked.GetProperty("user").GetProperty("ready").GetBoolean());   // 닉네임 · 성별 단계를 다시 하지 않는다
+
+        // 새 토큰은 카카오 계정, 방금 만든 Apple 계정의 토큰은 더 못 쓴다
+        string newToken = linked.GetProperty("token").GetString()!;
+        JsonElement me = await Ok(await client.SendAsync(Req(HttpMethod.Get, "/api/me", newToken)));
+        Assert.Equal(kakaoId, me.GetProperty("id").GetString());
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.SendAsync(Req(HttpMethod.Get, "/api/me", appleToken))).StatusCode);
+
+        // 다음부터 Apple 로그인하면 바로 카카오 계정
+        JsonElement again = await Ok(await client.PostAsJsonAsync("/api/auth/apple", new { identityToken = "apple-ok" }));
+        Assert.Equal(kakaoId, again.GetProperty("user").GetProperty("id").GetString());
+
+        // 탈퇴하면 이어 붙인 로그인도 지워져 Apple 로그인은 새 계정이 된다
+        string t = again.GetProperty("token").GetString()!;
+        Assert.Equal(HttpStatusCode.NoContent, (await client.SendAsync(Req(HttpMethod.Delete, "/api/me", t))).StatusCode);
+        JsonElement fresh = await Ok(await client.PostAsJsonAsync("/api/auth/apple", new { identityToken = "apple-ok" }));
+        Assert.NotEqual(kakaoId, fresh.GetProperty("user").GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public async Task 인증번호가_틀리면_이어_붙이지_않는다()
     {
         var (a, _) = await KakaoLogin("a");
         await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/start", a, new { email = "same@khu.ac.kr" })));
         await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/verify", a, new { code = mail.LastCode })));
 
-        var (b, _) = await KakaoLogin("b");
-        var res = await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/start", b, new { email = "same@khu.ac.kr" }));
-        Assert.Equal(HttpStatusCode.Conflict, res.StatusCode);
+        var (b, bUser) = await KakaoLogin("b");
+        await Ok(await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/start", b, new { email = "same@khu.ac.kr" })));
+        string wrong = mail.LastCode == "000000" ? "111111" : "000000";
+        var res = await client.SendAsync(Req(HttpMethod.Post, "/api/me/email/verify", b, new { code = wrong }));
+        Assert.Equal(HttpStatusCode.BadRequest, res.StatusCode);
+        JsonElement me = await Ok(await client.SendAsync(Req(HttpMethod.Get, "/api/me", b)));
+        Assert.Equal(bUser.GetProperty("id").GetString(), me.GetProperty("id").GetString());   // b 계정은 그대로
     }
 
     [Fact]

@@ -50,6 +50,15 @@ public class AccountStore
                 expires_at INTEGER NOT NULL
             );
 
+            -- 한 사람이 여러 로그인 방법을 쓸 때 (예: 카카오로 만든 계정에 Apple 로그인을 이음).
+            -- users 의 provider · provider_user_id 는 처음 만든 방법, 나머지는 여기에
+            CREATE TABLE IF NOT EXISTS user_logins (
+                provider         TEXT NOT NULL,
+                provider_user_id TEXT NOT NULL,
+                user_id          TEXT NOT NULL,
+                PRIMARY KEY (provider, provider_user_id)
+            );
+
             CREATE TABLE IF NOT EXISTS email_codes (
                 user_id    TEXT PRIMARY KEY,
                 email      TEXT NOT NULL,
@@ -93,6 +102,8 @@ public class AccountStore
     /// <summary>제공자 계정으로 찾고, 없으면 새로 만든다.</summary>
     public Account FindOrCreate(string provider, string providerUserId)
     {
+        if (FindLinked(provider, providerUserId) is { } linked)
+            return linked;
         using var conn = Open();
         using (var find = conn.CreateCommand())
         {
@@ -139,11 +150,23 @@ public class AccountStore
     }
 
     /// <summary>계정과 그 계정의 로그인 토큰 · 인증번호를 지운다 (회원 탈퇴)</summary>
+    /// <summary>이어 붙인 로그인 방법으로 찾은 계정 (없으면 null)</summary>
+    Account? FindLinked(string provider, string providerUserId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT user_id FROM user_logins WHERE provider = $p AND provider_user_id = $u";
+        cmd.Parameters.AddWithValue("$p", provider);
+        cmd.Parameters.AddWithValue("$u", providerUserId);
+        return cmd.ExecuteScalar() is string id ? Find(id) : null;
+    }
+
     public void DeleteAccount(string userId)
     {
         using var conn = Open();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "DELETE FROM sessions WHERE user_id = $u; DELETE FROM email_codes WHERE user_id = $u; DELETE FROM users WHERE id = $u";
+        cmd.CommandText = "DELETE FROM sessions WHERE user_id = $u; DELETE FROM email_codes WHERE user_id = $u; " +
+                          "DELETE FROM user_logins WHERE user_id = $u; DELETE FROM users WHERE id = $u";
         cmd.Parameters.AddWithValue("$u", userId);
         cmd.ExecuteNonQuery();
     }
@@ -224,6 +247,26 @@ public class AccountStore
         return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
     }
 
+    /// <summary>이 메일을 인증한 다른 계정 ID (없으면 null)</summary>
+    public string? OwnerOf(string email, string exceptUserId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id FROM users WHERE khu_email = $e AND email_verified = 1 AND id <> $id";
+        cmd.Parameters.AddWithValue("$e", email);
+        cmd.Parameters.AddWithValue("$id", exceptUserId);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    string? ProviderUserId(string userId)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT provider_user_id FROM users WHERE id = $u";
+        cmd.Parameters.AddWithValue("$u", userId);
+        return cmd.ExecuteScalar() as string;
+    }
+
     /// <summary>다시 보내기까지 남은 시간 (바로 보낼 수 있으면 Zero)</summary>
     public TimeSpan ResendWait(string userId)
     {
@@ -253,11 +296,18 @@ public class AccountStore
         cmd.ExecuteNonQuery();
     }
 
-    public enum VerifyResult { Ok, NoCode, Expired, TooManyTries, Wrong, EmailTaken }
+    public enum VerifyResult { Ok, NoCode, Expired, TooManyTries, Wrong, EmailTaken, Linked }
 
-    /// <summary>인증번호를 확인하고, 맞으면 계정에 그 메일을 인증된 메일로 기록한다.</summary>
-    public VerifyResult VerifyCode(string userId, string code)
+    /// <summary>
+    /// 인증번호를 확인하고, 맞으면 계정에 그 메일을 인증된 메일로 기록한다.
+    /// 그 메일을 이미 다른 계정이 인증했으면 (예: 카카오로 가입한 사람이 Apple 로 로그인) 메일 주인임이 확인된 것이므로
+    /// 지금 로그인 방법을 그 계정에 이어 붙이고 방금 만든 빈 계정은 지운다 → Linked, linkedTo = 이어진 계정.
+    /// </summary>
+    public VerifyResult VerifyCode(string userId, string code) => VerifyCode(userId, code, out _);
+
+    public VerifyResult VerifyCode(string userId, string code, out string? linkedTo)
     {
+        linkedTo = null;
         using var conn = Open();
         string email, hash;
         long expires;
@@ -283,8 +333,28 @@ public class AccountStore
             bump.ExecuteNonQuery();
             return VerifyResult.Wrong;
         }
-        if (EmailTakenByOther(userId, email))
-            return VerifyResult.EmailTaken;
+        if (OwnerOf(email, userId) is { } owner)
+        {
+            Account? me = Find(userId);
+            if (me == null || me.IsGuest)
+                return VerifyResult.EmailTaken;
+            string? providerUserId = ProviderUserId(userId);
+            if (providerUserId == null)
+                return VerifyResult.EmailTaken;
+            using (var link = conn.CreateCommand())
+            {
+                link.CommandText = "INSERT OR REPLACE INTO user_logins (provider, provider_user_id, user_id) VALUES ($p, $pu, $owner); " +
+                                   "UPDATE user_logins SET user_id = $owner WHERE user_id = $u";   // 지울 계정에 이어져 있던 것도 옮긴다
+                link.Parameters.AddWithValue("$p", me.Provider);
+                link.Parameters.AddWithValue("$pu", providerUserId);
+                link.Parameters.AddWithValue("$owner", owner);
+                link.Parameters.AddWithValue("$u", userId);
+                link.ExecuteNonQuery();
+            }
+            DeleteAccount(userId);
+            linkedTo = owner;
+            return VerifyResult.Linked;
+        }
         using (var ok = conn.CreateCommand())
         {
             ok.CommandText = "UPDATE users SET khu_email = $e, email_verified = 1 WHERE id = $u; DELETE FROM email_codes WHERE user_id = $u";

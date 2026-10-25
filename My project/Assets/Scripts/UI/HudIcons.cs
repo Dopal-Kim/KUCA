@@ -121,6 +121,10 @@ public static class HudIcons
         p.Erase(q => q.BoxD(64, 40, 10f, 3.5f, 3.5f, 0f));
     });
 
+    /// <summary>Apple 로그인 버튼의 사과 로고 (Resources/KUCA/AppleLogo.png, 흰색 · 투명 바탕이라 색을 입혀 쓴다)</summary>
+    public static Sprite AppleLogo => appleLogo != null ? appleLogo : appleLogo = Resources.Load<Sprite>("KUCA/AppleLogo");
+    static Sprite appleLogo;
+
     public static Sprite Footprints => Cached("foot", 128, p =>
     {
         p.Box(42, 58, 15f, 26f, 15f, -10f);
