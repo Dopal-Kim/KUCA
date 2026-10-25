@@ -52,6 +52,9 @@ ROOF_UNIT = (0.80, 0.81, 0.83)
 FAN = (0.30, 0.33, 0.37)
 # 계단실 갓 (M20 0.76): 베이지 지붕(국제학관 · 공학실험동 · 생명과학대 T)에서 지붕과 밝기가 같아 묻혔음 (REVIEW_v26) → 한 단계 진한 회색
 HUT_CAP = (0.62, 0.61, 0.59)
+# M23: 우정원 나눈 탑 지붕 판 — HUT_CAP 의 따뜻한 기운이 Unity 채도 보정으로 (191, 173, 162) 분홍빛이 됐음 (REVIEW_v28 N)
+#      → 푸른 기 조금 넣은 중성 밝은 회색 (기계실 갓 0.50 ~ 0.57 보다 한 단계 밝게 남김)
+TOWER_CAP = (0.64, 0.65, 0.67)
 STEP = (0.86, 0.84, 0.79)
 HEDGE = (0.30, 0.55, 0.19)
 FLOWERS = [(0.98, 0.62, 0.76), (1.0, 0.92, 0.94), (0.99, 0.84, 0.34), (0.40, 0.66, 0.24)]
@@ -409,7 +412,7 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
             # M21: 나눈 탑(우정원) 지붕만 분홍(건물 지붕색)이라 회색 갓 계단실 규칙과 달라 위(T)에서 혼자 튀었음 (REVIEW_v26) — 실사 근거 없음
             #      → 난간 안 지붕면을 계단실 갓 회색으로 덮는다. 흰 난간 테는 남겨 바로 옆 회색 기계실(M19)과 한 덩어리로 안 보이게
             mb.box(Frame.yaw((pc[0], top, pc[1]), math.degrees(math.atan2(u[0], u[1]))), (0, 0.1, 0),
-                   (ph * 2 - 0.9, 0.2, hw * 2 - 0.9), HUT_CAP)   # 로컬 z = u (hw)
+                   (ph * 2 - 0.9, 0.2, hw * 2 - 0.9), TOWER_CAP)   # 로컬 z = u (hw)
     for sgn in (-1, 1):
         nrm = (v[0] * sgn, 0.0, v[1] * sgn)
         face_c = (cc[0] + v[0] * sgn * half, 0.0, cc[1] + v[1] * sgn * half)
@@ -527,8 +530,11 @@ def _rooftop(mb, b, style, blocks, rng):
         if ROOF_FEATURE.get(b.id) == 'skylight' and long_u:
             # M14: 공학실험동 천창 4줄 중 2줄이 계단실에 막혀 한쪽 토막만 남았음 → 계단실을 천창 줄 끝 너머로 (rng 순서는 그대로)
             # M22: 줄 끝에서 2.3 m 라 남쪽 계단실 그림자가 천창 줄에 걸렸음 (REVIEW_v27) → 줄 끝 너머 5 → 8 m (틈 약 5 m)
-            past = min(fp.half_u - 6.5, 16.0) + 8.0 + max(w, d) / 2
-            off = math.copysign(max(abs(off), min(past, hl - max(w, d) / 2 - 3.0)), off)
+            # M23: 3 m 옮긴 뒤 남쪽 끝 난간 · 꺾인 테두리에 가까워 W 에서 벽 위로 보였음 (REVIEW_v28)
+            #      → 계단실 짧은 변(4.5 m)을 긴 축으로 돌리고 줄 끝 너머 8 → 7 m: 바깥 끝 30 → 27.5 m (난간 여유 +2.5 m), 천창 줄과 틈 약 4.3 m
+            w, d = min(w, d), max(w, d)
+            past = min(fp.half_u - 6.5, 16.0) + 7.0 + w / 2
+            off = math.copysign(max(abs(off), min(past, hl - w / 2 - 3.0)), off)
         if ROOF_FEATURE.get(b.id) == 'solar' and hl < 20:
             # M22: 실습농장동(긴 반축 17 m)은 패널 4 × 2 (폭 21 m) + 계단실 + 6 m 틈이 지붕 길이에 다 안 들어가 M21 의 '떨어진 자리'가
             #      하나도 없어 예전 자리(틈 2.8 m) 그대로였음 (REVIEW_v27) → 짧은 태양광 지붕은 계단실 짧은 변을 긴 축으로 돌리고 난간 4.5 m 앞 끝까지 민다
@@ -746,8 +752,11 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
             #      → 환기구 너머로 묶음 축을 따라 낱개 실외기 세 대를 한 줄로 (흩지 않고 묶음에 이어지게)
             # M22: 묶음과 같은 줄이라 위(T)에서 묶음 · 환기구 · 세 대가 21 m 한 줄로 이어져 보였음 (REVIEW_v27)
             #      → 환기구에서 2 m 더 띄우고, 줄을 묶음 축에서 옆으로 3.5 m 어긋나게 (지붕 가운데 쪽 먼저)
-            for dv in sorted((-3.5, 3.5), key=lambda t: abs(cv + t)):
-                row = [at(cu + sgn * (pl + 6.8 + k * 3.2), cv + dv) for k in range(3)]
+            # M23: E 에서 세 대 줄이 묶음 앞으로 길게 놓여 위아래 두 줄처럼 보였음 (REVIEW_v28)
+            #      → 한 줄 대신 작은 세모 무리로, 묶음에서 대각선 쪽(옆으로 6 m)에 — 어느 방향에서도 줄로 안 읽히게
+            for dv in sorted((-6.0, 6.0), key=lambda t: abs(cv + t)):
+                a0 = cu + sgn * (pl + 7.5)
+                row = [at(a0, cv + dv - 1.6), at(a0, cv + dv + 1.6), at(a0 + sgn * 2.8, cv + dv)]
                 if all(free(x, z, 1.6) for x, z in row):
                     units += row
                     break
@@ -876,8 +885,15 @@ def _entrance(mb, b, ent, pal, style='Default'):
             mb.box(m, (k * w / 4, 3.85, 2.0), (0.08, 0.12, 4.2), steel)
     else:
         mb.box(m, (0, 3.95, 1.9), (w, 0.5, 3.8), trim, top=shade(trim, 1.02))
+        # M23: 0.22 m 육각 기둥이 캐노피 밑에 숨어 흰 상자 하나로 보였음 (REVIEW_v28 실습농장동 S)
+        #      → 앞 끝에 굵은 둥근 기둥 두 개 (주춧돌 · 머리 받침, 한 톤 어둡게) + 캐노피 앞면 띠
+        mb.box(m, (0, 3.95, 3.82), (w + 0.04, 0.2, 0.06), shade(trim, 0.86))
+        col = shade(trim, 0.93)
         for sgn in (-1, 1):
-            mb.prism(m, (sgn * (w / 2 - 0.5), 0.3, 3.4), 0.22, 3.4, 6, trim)
+            xx = sgn * (w / 2 - 0.7)
+            mb.box(m, (xx, 0.45, 3.2), (1.0, 0.3, 1.0), STEP)
+            mb.prism(m, (xx, 0.6, 3.2), 0.36, 2.95, 10, col)
+            mb.box(m, (xx, 3.6, 3.2), (0.95, 0.2, 0.95), col)
     # 계단 2단
     mb.box(m, (0, 0.15, 2.4), (w + 0.6, 0.3, 4.6), STEP)
     mb.box(m, (0, 0.38, 1.6), (w * 0.8, 0.16, 3.0), shade(STEP, 1.04))

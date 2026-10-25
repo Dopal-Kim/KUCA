@@ -377,14 +377,17 @@ def observatory(mb, b, f):
         def P(ph, w, rr):
             cp, sp = math.cos(ph), math.sin(ph)
             return (cx + cp * ct * rr - st * w, b.h + 3.7 + sp * rr, cz + cp * st * rr + ct * w)
-        n = 22
+        # M23: 81° 까지 간 리브 10줄이 꼭대기 캡 둘레(축에서 1.7 m)에 몰려 위(T)에서 별 모양으로 진했음 (REVIEW_v28)
+        #      → 72° 에서 끝내고 (축에서 약 3.4 m) 끝으로 갈수록 반 폭까지 가늘게
+        n, top = 20, (math.pi / 2) * 0.8
         for j in range(n):
-            a0, a1 = j / n * (math.pi / 2) * 0.9, (j + 1) / n * (math.pi / 2) * 0.9
+            a0, a1 = j / n * top, (j + 1) / n * top
+            w0, w1 = rw * (1 - 0.5 * j / n), rw * (1 - 0.5 * (j + 1) / n)
             mid = P((a0 + a1) / 2, 0.0, r)
-            mb.quad(IDENT, P(a0, -rw, r + 0.1), P(a0, rw, r + 0.1), P(a1, rw, r + 0.1), P(a1, -rw, r + 0.1), rib, mid)
-            for w in (-rw, rw):
-                mb.quad(IDENT, P(a0, w, r - 0.03), P(a0, w, r + 0.1), P(a1, w, r + 0.1), P(a1, w, r - 0.03), shade(rib, 0.94),
-                        P((a0 + a1) / 2, 0.0, r + 0.03))
+            mb.quad(IDENT, P(a0, -w0, r + 0.1), P(a0, w0, r + 0.1), P(a1, w1, r + 0.1), P(a1, -w1, r + 0.1), rib, mid)
+            for sw in (-1, 1):
+                mb.quad(IDENT, P(a0, sw * w0, r - 0.03), P(a0, sw * w0, r + 0.1), P(a1, sw * w1, r + 0.1), P(a1, sw * w1, r - 0.03),
+                        shade(rib, 0.94), P((a0 + a1) / 2, 0.0, r + 0.03))
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
