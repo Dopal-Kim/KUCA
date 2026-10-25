@@ -183,6 +183,30 @@ public static class UiCapture
                     yield return Shot($"꾸미기_스타일_{(g == 0 ? "남" : "여")}{st + 1}");
                 }
             }
+            // 옆모습 + 걷는 자세 (상의 밑단 · 바지 사이 틈, 걸을 때 후드 · 소매 겹침 — REVIEW_v18 에서 정면만 있어 못 봤음)
+            Component body = Get(customizer, "character") as Component;
+            Animator anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
+            foreach (int st in new[] { 1, 2, 3 })
+            {
+                Call(customizer, "SetStyle", st);
+                Set(customizer, "previewYaw", 90f);
+                yield return 1f;
+                yield return Shot($"꾸미기_옆_여{st + 1}");
+                // 로컬(KUCA-check) 수정: SetStyle → Build 가 Animator 를 새로 붙여 루프 밖에서 잡은 anim 이 파괴됨 → 매번 다시 잡는다
+                anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
+                if (anim == null) Debug.LogWarning("[UiCapture] 건너뜀: 걷기 Animator 없음");
+                if (anim != null)
+                {
+                    ((Behaviour)body).enabled = false;   // 속도를 이동량으로 다시 계산하지 않게
+                    anim.enabled = true;
+                    anim.SetFloat("Speed", 1.4f);
+                    yield return 0.7f;
+                    yield return Shot($"꾸미기_걷기_여{st + 1}");
+                    anim.SetFloat("Speed", 0f);
+                    ((Behaviour)body).enabled = true;
+                }
+                Set(customizer, "previewYaw", 0f);
+            }
             Call(customizer, "SetOpen", false);
             yield return 0.5f;
         }
@@ -313,16 +337,24 @@ public static class UiCapture
         // 막힘 판정용: 건물마다 (정보, 콜라이더 경계상자). 콜라이더 모양이 보이는 건물과 달라도(공학관 날개) 경계상자로 잡는다 (MAP_REVIEW_v10)
         var others = UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>()
             .Select(o => (info: o, col: o.GetComponentInChildren<Collider>())).Where(o => o.col != null).Select(o => (o.info, o.col.bounds)).ToList();   // 같은 이름 여러 동(실험연구동 북 · 남 등)은 _2, _3 로 모두 찍는다 (한 동만 찍혀 태양광이 없는 쪽만 보였음, M8)
-        foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
+        var targets = new List<(string name, Component info, Bounds b)>();
+        foreach (Component i in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
         {
-            string name = Get(info, "buildingName") as string;
-            Collider col = info.GetComponentInChildren<Collider>(true);
-            if (string.IsNullOrEmpty(name) || col == null)
+            string nm = Get(i, "buildingName") as string;
+            Collider c = i.GetComponentInChildren<Collider>(true);
+            if (string.IsNullOrEmpty(nm) || c == null)
                 continue;
-            count[name] = count.TryGetValue(name, out int n) ? n + 1 : 1;
-            if (count[name] > 1)
-                name += "_" + count[name];
-            Bounds b = col.bounds;
+            count[nm] = count.TryGetValue(nm, out int n) ? n + 1 : 1;
+            if (count[nm] > 1)
+                nm += "_" + count[nm];
+            targets.Add((nm, i, c.bounds));
+        }
+        // 건물 정보가 없는 랜드마크도 찍는다: 대운동장 본부석 (M12 를 MAP_REVIEW_v18 에서 볼 사진이 없었음).
+        // 중심은 CreatureLibrary 의 진돗개 구역 (-198, -20), 땅 높이는 위에서 쏜 광선으로
+        float ground = Physics.Raycast(new Vector3(-198f, 1000f, -20f), Vector3.down, out RaycastHit gh, 2000f) ? gh.point.y : 0f;
+        targets.Add(("대운동장", null, new Bounds(new Vector3(-198f, ground + 8f, -20f), new Vector3(180f, 16f, 180f))));
+        foreach (var (name, info, b) in targets)
+        {
             float size = Mathf.Max(b.size.x, b.size.z, b.size.y * 1.5f);
             float dist = size * 1.4f + 40f;
             Vector3 target = new Vector3(b.center.x, b.min.y + b.size.y * 0.35f, b.center.z);
