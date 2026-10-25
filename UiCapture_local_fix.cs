@@ -229,7 +229,7 @@ public static class UiCapture
         foreach (string t in new[] { "Monsters", "Dex" })   // 도구(가방) 탭은 v2 에서 숨김 (결정 D4)
             if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희펫_" + t); }
         if (Call(menus, "OpenGacha")) { yield return 1f; yield return Shot("뽑기"); }
-        if (Click("1장 뽑기"))
+        if (Click("티켓 1장으로 만나기"))
         {
             yield return 1.0f;
             yield return Shot("뽑기_결과_1");
