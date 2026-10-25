@@ -54,8 +54,31 @@ public partial class RoutePlanner : MonoBehaviour
         public List<int> legEnds = new List<int>();          // path 에서 장소마다 닿는 점의 번호 (stops 와 같은 순서)
         public int meters, walkMinutes;
         public bool returns;                                 // 마지막 장소가 출발지로 돌아오기인지 (한 바퀴 코스)
+        public bool hasEnd;                                  // 마지막 장소가 고른 도착지 · 돌아오기인지 (모든 코스에 같음)
         public string Key => string.Join(",", result.stops.ConvertAll(s => s.buildingId));
+
+        /// <summary>들르는 곳 (도착지 · 돌아오기 빼고)</summary>
+        public HashSet<string> Places
+        {
+            get
+            {
+                var set = new HashSet<string>();
+                for (int i = 0; i < result.stops.Count - (hasEnd ? 1 : 0); i++)
+                    set.Add(result.stops[i].buildingId);
+                return set;
+            }
+        }
+
+        /// <summary>
+        /// 같은 코스로 볼지: 순서만 다르거나, 한쪽이 다른 쪽 장소를 모두 포함하면 (A→B→C 와 A→C) 같은 코스.
+        /// 사용자 눈에는 같은 길이라 코스 3개 중 하나가 낭비된다.
+        /// </summary>
+        public bool SameAs(Option other) => SamePlaces(Places, other.Places);
     }
+
+    /// <summary>두 코스가 같은 곳을 도는지: 순서만 다르거나 한쪽이 다른 쪽 장소를 모두 포함하면 같다</summary>
+    public static bool SamePlaces(HashSet<string> a, HashSet<string> b) =>
+        a.Count <= b.Count ? a.IsSubsetOf(b) : b.IsSubsetOf(a);
 
     CollectController collect;
     KyungHeeSpots spots;
@@ -241,19 +264,19 @@ public partial class RoutePlanner : MonoBehaviour
     }
 
     /// <summary>
-    /// 받은 코스를 모은다. 똑같은 장소 조합은 한 번만 보이고, retry 면 겹친 코스만 이미 나온 장소를 빼고 한 번 더 요청한다
+    /// 받은 코스를 모은다. 같은 코스 (SameAs) 는 한 번만 보이고, retry 면 겹친 코스만 이미 나온 장소를 빼고 한 번 더 요청한다
     /// (서버가 세 요청에 같은 곳을 골라 코스가 2개 이하로 줄어드는 것을 막는다).
     /// </summary>
     void CollectOptions(int id, Option[] made, string error, bool retry)
     {
         options.Clear();
-        var seen = new HashSet<string>();
         var again = new List<int>();
         for (int v = 0; v < made.Length; v++)
         {
             if (made[v] == null) continue;
-            if (seen.Add(made[v].Key)) options.Add(made[v]);
-            else again.Add(v);
+            Option o = made[v];
+            if (options.Exists(x => x.SameAs(o))) again.Add(v);
+            else options.Add(o);
         }
         if (retry && again.Count > 0 && options.Count > 0)
         {
@@ -395,7 +418,7 @@ public partial class RoutePlanner : MonoBehaviour
         result.stops = kept;
         Trace(o);
         // 시간 안에 못 걸으면 (목적지를 빼고) 뒤쪽 장소부터 줄인다
-        bool hasEnd = destSpot != null || o.returns;
+        bool hasEnd = o.hasEnd = destSpot != null || o.returns;
         int minStops = o.returns ? 2 : 1;   // 한 바퀴 코스는 들를 곳 1 + 돌아오기
         while (o.meters > Budget(mins) * 1.25f && result.stops.Count > minStops)
         {
