@@ -213,8 +213,11 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
+            // 산책 완료는 열리자마자 서버에 완료 POST 를 보낸다 → 이 단계만 서버 주소를 비워 기기 계산으로 (prod 기록 오염 방지, REVIEW_v15)
+            PlayerPrefs.SetString("memo_server_url", "");
             if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
+            PlayerPrefs.DeleteKey("memo_server_url");
         }
 
         if (CallStatic("EvolutionScreen", "Show", "library_owl", 0, 1) || CallStatic("EvolutionScreen", "Show", "pigeon", 0, 1))

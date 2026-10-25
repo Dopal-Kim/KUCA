@@ -232,24 +232,32 @@ public static class UIKit
             dr.offsetMin = Vector2.zero;
             dr.offsetMax = new Vector2(0f, 2f);
             divider.enabled = false;
-            // 아래로 더 있으면 아래 끝을 바탕색으로 흐리게: 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14 산책 완료)
-            RawImage fade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            fade.transform.SetParent(safe, false);
-            fade.texture = FadeUp;
-            fade.color = KucaTheme.Surface;
-            fade.raycastTarget = false;
-            RectTransform fr = fade.rectTransform;
-            fr.anchorMin = Vector2.zero;
-            fr.anchorMax = new Vector2(1f, 0f);
-            fr.pivot = new Vector2(0.5f, 0f);
-            fr.offsetMin = new Vector2(0f, bottomH);
-            fr.offsetMax = new Vector2(0f, bottomH + 120f);
-            fade.enabled = false;
+            // 아래로 더 있으면 아래 끝에 구분선 + 위로 옅어지는 그림자: 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14).
+            // 바탕색으로 흐리게 하던 v15 는 흰 카드 → #F2F4F6 라 눈에 안 띄었음
+            RawImage shade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+            shade.transform.SetParent(safe, false);
+            shade.texture = FadeUp;
+            shade.color = new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.22f);
+            shade.raycastTarget = false;
+            RectTransform sr = shade.rectTransform;
+            sr.anchorMin = Vector2.zero;
+            sr.anchorMax = new Vector2(1f, 0f);
+            sr.pivot = new Vector2(0.5f, 0f);
+            sr.offsetMin = new Vector2(0f, bottomH);
+            sr.offsetMax = new Vector2(0f, bottomH + 48f);
+            Image line = Image(shade.transform, "Line", KucaTheme.InkSoft);
+            RectTransform lr = line.rectTransform;
+            lr.anchorMin = Vector2.zero;
+            lr.anchorMax = new Vector2(1f, 0f);
+            lr.pivot = new Vector2(0.5f, 0f);
+            lr.offsetMin = Vector2.zero;
+            lr.offsetMax = new Vector2(0f, 2f);
+            shade.gameObject.SetActive(false);
             area.GetComponent<ScrollRect>().onValueChanged.AddListener(v =>
             {
                 bool longer = page.content.rect.height > area.rect.height + 1f;
                 divider.enabled = longer && v.y < 0.995f;
-                fade.enabled = longer && v.y > 0.005f;
+                shade.gameObject.SetActive(longer && v.y > 0.005f);
             });
         }
         else

@@ -298,6 +298,7 @@ public class CharacterCustomizer : MonoBehaviour
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         BuildPreview(bg.rectTransform);
+        safe.SetAsLastSibling();   // 제목 · 안내가 미리보기 흰 원 위에 그려지게 (원에 덮여 "나를 닮은 ㄷ" 로 잘렸음, REVIEW_v15)
 
         // 위: ‹ 뒤로 (저장 안 하고 닫기) + 제목
         UIKit.IconButton(safe, HudIcons.Chevron, () => SetOpen(false), KucaTheme.Ink, new Vector2(KucaTheme.Gutter - 30f, -12f), flip: true);
