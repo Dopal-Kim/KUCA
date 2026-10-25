@@ -110,7 +110,7 @@ public static class HudIcons
         p.Erase(q => q.BoxD(74, 40, 8f, 16f, 3f, 0f));
     });
 
-    /// <summary>경희몬 (귀가 쫑긋한 동그란 몬스터)</summary>
+    /// <summary>경희펫 (귀가 쫑긋한 동그란 펫)</summary>
     public static Sprite Monster => Cached("monster", 128, p =>
     {
         p.Polygon(Color.white, new Vector2(30, 66), new Vector2(26, 120), new Vector2(60, 82));

@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 꾸미기 (A-3 최소 버전): 도감 › 경희몬 상세 › 꾸미기. 머리띠·목걸이·선글라스·귀걸이를 부위마다 하나씩 고른다.
-/// 고른 것은 그 경희몬(GameProgress.Caught.accessories)에 저장되고, 파트너면 지도·프로필의 피규어에 바로 씌워진다.
+/// 꾸미기 (A-3 최소 버전): 도감 › 경희펫 상세 › 꾸미기. 머리띠·목걸이·선글라스·귀걸이를 부위마다 하나씩 고른다.
+/// 고른 것은 그 경희펫(GameProgress.Caught.accessories)에 저장되고, 파트너면 지도·프로필의 피규어에 바로 씌워진다.
 /// 지금은 12종 모두 처음부터 쓸 수 있다 (퀘스트 보상으로 얻는 흐름은 다음 단계).
 /// </summary>
 public partial class KhuMenus

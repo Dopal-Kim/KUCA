@@ -132,7 +132,7 @@ public class GachaRulesTests
     }
 
     [Test]
-    public void 옛_저장은_레벨을_초기화하고_경희몬은_남긴다()
+    public void 옛_저장은_레벨을_초기화하고_경희펫은_남긴다()
     {
         var p = new GameProgress { dataVersion = 0, score = 1234, rewardedLevel = 7 };
         GameProgress.Caught c = p.AddCreature(GachaRules.SpeciesOf(GachaRules.Grade.B)[0]);

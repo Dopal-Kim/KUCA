@@ -1,4 +1,4 @@
-// 플레이어 캐릭터: 경희몬(CreatureToy)과 같은 비닐 토이 조명. 색은 버텍스 색 대신 재질 색(_BaseColor).
+// 플레이어 캐릭터: 경희펫(CreatureToy)과 같은 비닐 토이 조명. 색은 버텍스 색 대신 재질 색(_BaseColor).
 // ModularCharacter 가 FBX 재질 색을 파스텔로 바꿔 이 셰이더 재질로 갈아 끼운다.
 Shader "KUCA/PlayerToy"
 {

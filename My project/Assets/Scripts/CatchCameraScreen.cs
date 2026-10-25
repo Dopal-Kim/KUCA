@@ -10,18 +10,18 @@ using UnityEngine.Android;
 #endif
 
 /// <summary>
-/// 경희몬 잡기 화면. 경희몬(동물 피규어)은 늘 화면 가운데에 서서 통통 뛴다.
+/// 경희펫 잡기 화면. 경희펫(동물 피규어)은 늘 화면 가운데에 서서 통통 뛴다.
 /// - AR 켬: 뒤에 후면 카메라 영상이 그대로 보인다 (바닥을 찾지 않으니 경사지에서도 바로 나온다).
-/// - AR 끔: 잔디밭과 나무 두 그루가 있는 배경에 경희몬이 서 있다.
-/// 오른쪽 위 스위치로 바꾸고, 고른 값은 기억한다. 화면을 좌우로 끌면 경희몬을 돌려 볼 수 있다.
-/// 셔터를 누르면 사진을 찍고, 그 사진과 함께 경희몬을 얻는다 (사진은 스크랩북에 저장).
+/// - AR 끔: 잔디밭과 나무 두 그루가 있는 배경에 경희펫이 서 있다.
+/// 오른쪽 위 스위치로 바꾸고, 고른 값은 기억한다. 화면을 좌우로 끌면 경희펫을 돌려 볼 수 있다.
+/// 셔터를 누르면 사진을 찍고, 그 사진과 함께 경희펫을 얻는다 (사진은 스크랩북에 저장).
 /// v2 (A-V4): OpenPartnerPhoto 로 열면 잡기 없이 파트너(진화 단계·액세서리 그대로)와 사진만 찍는다.
 /// </summary>
 public class CatchCameraScreen : MonoBehaviour
 {
     [Tooltip("에디터에서도 컴퓨터 웹캠을 켤지 (끄면 대신 배경 그림을 보여 준다)")]
     public bool useWebcamInEditor = false;
-    [Tooltip("경희몬 키 (받침 포함, m)")]
+    [Tooltip("경희펫 키 (받침 포함, m)")]
     public float monsterHeight = 1.1f;
     public float cameraFov = 45f;
     [Tooltip("저장할 사진의 긴 변 최대 픽셀")]
@@ -91,11 +91,11 @@ public class CatchCameraScreen : MonoBehaviour
         type = target.Type;
         partnerProgress = null;
         Begin(target.SpeciesId, target.DisplayName, body);
-        title.text = $"야생의 {displayName}{Josa(displayName, "이", "가")} 나타났다!";
+        title.text = $"{displayName}{Josa(displayName, "이", "가")} 나타났어요!";
     }
 
     /// <summary>
-    /// v2 (A-V4): 파트너 경희몬과 사진 찍기. 잡기·점수 없이 찍어 스크랩북에 저장하고 앨범 저장도 고를 수 있다.
+    /// v2 (A-V4): 파트너 경희펫과 사진 찍기. 잡기·점수 없이 찍어 스크랩북에 저장하고 앨범 저장도 고를 수 있다.
     /// 산책 완료 화면의 "파트너와 사진 찍기" (WalkCompleteScreen.PartnerPhoto) 가 부른다.
     /// </summary>
     public void OpenPartnerPhoto(GameProgress progress)
@@ -279,13 +279,13 @@ public class CatchCameraScreen : MonoBehaviour
         // AR 끔: 위는 맑은 하늘, 지평선 쪽은 밝게 (잔디밭은 3D 로 그린다)
         skyBg = FullImage("Sky", VerticalGradient(new Color(0.38f, 0.64f, 0.96f), new Color(0.86f, 0.94f, 1f)));
 
-        // 3D 경희몬 (+ AR 끔이면 잔디밭과 나무), 투명 배경 렌더 텍스처
+        // 3D 경희펫 (+ AR 끔이면 잔디밭과 나무), 투명 배경 렌더 텍스처
         stageView = new GameObject("Stage", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         stageView.transform.SetParent(root.transform, false);
         stageView.raycastTarget = false;
         UIKit.Stretch(stageView.rectTransform);
 
-        // 좌우로 끌면 경희몬을 돌려 본다
+        // 좌우로 끌면 경희펫을 돌려 본다
         Image dragArea = UIKit.Image(root.transform, "Drag", new Color(0f, 0f, 0f, 0f), raycast: true);
         UIKit.Stretch(dragArea.rectTransform);
         dragArea.gameObject.AddComponent<CatchDragArea>().onDrag = d => spin -= d.x * 0.4f;
@@ -442,7 +442,7 @@ public class CatchCameraScreen : MonoBehaviour
     // ---------- 3D 무대 ----------
 
     /// <summary>
-    /// 경희몬은 원점(발밑)에 서고, 카메라는 앞쪽 조금 위에서 내려다본다 → 늘 화면 가운데.
+    /// 경희펫은 원점(발밑)에 서고, 카메라는 앞쪽 조금 위에서 내려다본다 → 늘 화면 가운데.
     /// AR 끔 배경(잔디밭·나무)은 scenery 아래에 두고 켬/끔에 따라 보이거나 숨긴다.
     /// </summary>
     void BuildStage(Mesh body)
@@ -461,7 +461,7 @@ public class CatchCameraScreen : MonoBehaviour
         stageCam.nearClipPlane = 0.05f;
         stageCam.farClipPlane = 200f;
         float h = monsterHeight;
-        // 경희몬이 화면 높이의 약 42%, 가로의 약 60% 를 넘지 않는 거리 (세로 폰 화면은 가로가 좁다)
+        // 경희펫이 화면 높이의 약 42%, 가로의 약 60% 를 넘지 않는 거리 (세로 폰 화면은 가로가 좁다)
         float tanV = Mathf.Tan(cameraFov * 0.5f * Mathf.Deg2Rad);
         float aspect = (float)Mathf.Max(1, Screen.width) / Mathf.Max(1, Screen.height);
         float fitHeight = h * 0.5f / tanV / 0.42f;
@@ -557,8 +557,8 @@ public class CatchCameraScreen : MonoBehaviour
         // 잔디밭: 가까운 쪽은 진하고 지평선 쪽은 옅은 큰 원판
         AddMesh(sceneryRoot.transform, "Ground", DiscMesh(80f, 48, Grass, GrassFar), Vector3.zero, Vector3.one, layer);
 
-        // 나무 두 그루 (경희몬 뒤 왼쪽·오른쪽, 지도 나무처럼 각진 원뿔 잎).
-        // 세로 폰 화면은 가로로 좁으므로(화각 약 ±11°) 경희몬 가까이 둔다.
+        // 나무 두 그루 (경희펫 뒤 왼쪽·오른쪽, 지도 나무처럼 각진 원뿔 잎).
+        // 세로 폰 화면은 가로로 좁으므로(화각 약 ±11°) 경희펫 가까이 둔다.
         AddTree(sceneryRoot.transform, new Vector3(-0.95f, 0f, 2.6f), 0.95f, layer);
         AddTree(sceneryRoot.transform, new Vector3(1.25f, 0f, 4.4f), 1.2f, layer);
         return sceneryRoot;
@@ -753,7 +753,7 @@ public class CatchCameraScreen : MonoBehaviour
         }
         else
         {
-            resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 잡았다!";
+            resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 만났어요!";
             resultSub.text = caught != null
                 ? $"힘 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
                 : "사진을 저장했어요";

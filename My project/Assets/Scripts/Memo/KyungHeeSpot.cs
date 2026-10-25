@@ -2,8 +2,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 경희스팟 표지 하나: 지붕 위에 선 얼굴 핀. 둥근 테 안에 그 건물의 경희몬 얼굴, 아래에 건물 이름 리본.
-/// (예전 기둥 + 도는 원판은 포켓스탑과 너무 닮아 바꿈 — 10/25 시안 C 선택. 경희몬이 없는 건물은 학교 배지)
+/// 경희스팟 표지 하나: 지붕 위에 선 얼굴 핀. 둥근 테 안에 그 건물의 경희펫 얼굴, 아래에 건물 이름 리본.
+/// (예전 기둥 + 도는 원판은 포켓스탑과 너무 닮아 바꿈 — 10/25 시안 C 선택. 경희펫이 없는 건물은 학교 배지)
 /// - 멀리 있을 때: 흰 테 · 검은 리본, 카메라를 향한 채 천천히 떠다닌다. 뒤에 은은한 후광.
 /// - 가까이(InRange) 있을 때: 살짝 튀어 오르며 커지고, 테는 금색 · 리본은 초록, 후광이 숨 쉬듯 밝아진다 → 메모를 남길 수 있다는 신호.
 /// 월드 공간 캔버스지만 깊이 검사 없이 그려 늘 건물 위에 보인다 (지도 이름표처럼). 탭하면 CollectController 가 SpotTapped 로 알려 준다.
@@ -85,7 +85,7 @@ public class KyungHeeSpot : MonoBehaviour
         spot.face.transform.SetParent(disc.transform, false);
         spot.face.raycastTarget = false;
         UIKit.Stretch(spot.face.rectTransform);
-        spot.face.texture = badgeMat != null ? badgeMat.mainTexture : null;   // 경희몬이 없거나 아직 못 그렸으면 학교 배지
+        spot.face.texture = badgeMat != null ? badgeMat.mainTexture : null;   // 경희펫이 없거나 아직 못 그렸으면 학교 배지
 
         spot.ribbon = UIKit.Image(pin, "Ribbon", KucaTheme.Ink);
         spot.ribbon.sprite = HudIcons.Pill;
@@ -128,7 +128,7 @@ public class KyungHeeSpot : MonoBehaviour
         r.sizeDelta = size;
     }
 
-    /// <summary>그 건물의 경희몬: 만남 스팟 표 → 없으면 중심이 건물 안에 있는 황금 구역. 둘 다 없으면 null (학교 배지)</summary>
+    /// <summary>그 건물의 경희펫: 만남 스팟 표 → 없으면 중심이 건물 안에 있는 황금 구역. 둘 다 없으면 null (학교 배지)</summary>
     static string SpeciesOf(CampusBuildingInfo building, Bounds bounds)
     {
         string s = MeetSpotCatalog.SpeciesAt(building.buildingId);

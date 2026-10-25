@@ -13,7 +13,7 @@ public class CollectibleSpawner : MonoBehaviour
     public Transform buildingsRoot;
 
     [Header("Spawn")]
-    [Tooltip("v2: 경희몬은 뽑기로 얻는다. 지도 위 자연 출현 · 탭 잡기는 끈다 (코드는 남김, A-V1). 켜면 v1 처럼 나온다")]
+    [Tooltip("v2: 경희펫은 뽑기로 얻는다. 지도 위 자연 출현 · 탭 잡기는 끈다 (코드는 남김, A-V1). 켜면 v1 처럼 나온다")]
     public bool naturalSpawn = false;
     public int targetCount = 25;
     [Tooltip("Player로부터 이 거리(m) 안에 스폰")]

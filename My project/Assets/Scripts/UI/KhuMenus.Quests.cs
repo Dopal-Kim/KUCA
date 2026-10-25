@@ -91,7 +91,7 @@ public partial class KhuMenus
         title.verticalOverflow = VerticalWrapMode.Truncate;
         title.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-        string reward = d.egg ? $"보상: 경희몬 알 + {d.xp} XP" : $"보상: {d.xp} XP";
+        string reward = d.egg ? $"보상: 경희펫 알 + {d.xp} XP" : $"보상: {d.xp} XP";
         Text rw = T(card.transform, reward, 28, TextAnchor.UpperLeft, QuestOrange, bold: true);
         Box(rw.rectTransform, 40f, 92f, 300f, 40f);
 

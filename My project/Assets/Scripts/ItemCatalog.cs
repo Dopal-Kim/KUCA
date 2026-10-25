@@ -13,17 +13,17 @@ public static class ItemCatalog
 
     public static readonly List<Item> All = new List<Item>
     {
-        new Item { id = "khball", name = "경희볼", description = "경희몬을 담는 공이에요. 포획 기능과 함께 쓸 수 있게 될 거예요." },
-        new Item { id = "potion", name = "회복 음료", description = "지친 경희몬의 기운을 되찾아 주는 음료예요. (사용 기능 준비 중)" },
-        new Item { id = "berry", name = "황금 열매", description = "경희몬이 좋아하는 열매예요. 파트너에게 줄 수 있게 될 거예요." },
-        new Item { id = "incense", name = "탐험 향로", description = "주변에 경희몬을 불러 모으는 향로예요. (사용 기능 준비 중)" },
+        new Item { id = "khball", name = "산책 목줄", description = "경희펫과 산책할 때 매는 목줄이에요. (사용 기능 준비 중)" },
+        new Item { id = "potion", name = "회복 음료", description = "지친 경희펫의 기운을 되찾아 주는 음료예요. (사용 기능 준비 중)" },
+        new Item { id = "berry", name = "황금 열매", description = "경희펫이 좋아하는 열매예요. 파트너에게 줄 수 있게 될 거예요." },
+        new Item { id = "incense", name = "탐험 향로", description = "경희펫이 좋아하는 향이 나는 향로예요. (사용 기능 준비 중)" },
     };
 
     /// <summary>퀘스트 보상 액세서리(A-3)도 도구 목록에 넣는다 (id = CreatureAccessories 의 id)</summary>
     static ItemCatalog()
     {
         foreach (CreatureAccessories.Accessory a in CreatureAccessories.All)
-            All.Add(new Item { id = a.id, name = a.name, description = "경희몬에게 씌워 꾸밀 수 있는 액세서리예요." });
+            All.Add(new Item { id = a.id, name = a.name, description = "경희펫에게 씌워 꾸밀 수 있는 액세서리예요." });
     }
 
     public static Item Get(string id) => All.Find(i => i.id == id);

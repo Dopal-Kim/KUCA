@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 뽑기 결과 연출 (B-V1, 예전 알 부화 화면을 고쳐 씀). 티켓이 흔들리다 번쩍 열리고, 나온 경희몬 · 등급 · 진화 경험치를 보여 준다.
+/// 뽑기 결과 연출 (B-V1, 예전 알 부화 화면을 고쳐 씀). 티켓이 흔들리다 번쩍 열리고, 나온 경희펫 · 등급 · 진화 경험치를 보여 준다.
 /// 메모판·산책 길잡이 위에서도 보이도록 자기 캔버스(순서 40)를 쓴다.
 /// 디자인 v4 (참조: 포켓몬 슬립 보상 · 듀오링고 보상): 흰 카드 가운데 큰 캐릭터 + 등급 알약 + 큰 이름, 아래 꽉 찬 "확인" 하나.
 /// </summary>
@@ -50,9 +50,9 @@ public class HatchScreen : MonoBehaviour
         nameText.text = CreatureLibrary.NameOf(r.species);
         tierText.text = $"{GachaRules.Label(r.grade)} 등급";
         tierChip.color = GachaRules.ColorOf(r.grade);
-        string what = r.isNew ? "새 경희몬!  도감에 등록됐어요"
+        string what = r.isNew ? "새 경희펫!  도감에 등록됐어요"
             : r.evolved ? $"진화 경험치 +{r.growthAdded}\n{KhuMenus.EvolvedMessage(r.species, r.stage)}"
-            : $"이미 있는 경희몬  ·  진화 경험치 +{r.growthAdded}";
+            : $"이미 있는 경희펫  ·  진화 경험치 +{r.growthAdded}";
         info.text = $"{what}\n남은 티켓 {ticketsLeft}장";
         UIInputBlocker.SetModal(this, true);
         StartCoroutine(Animate());

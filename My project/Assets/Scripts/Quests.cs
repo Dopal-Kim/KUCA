@@ -24,8 +24,8 @@ public static class Quests
         new Def { id = "d_like3", kind = "like_other", title = "다른 사람 사진에 좋아요 3번", target = 3, xp = 60 },
         new Def { id = "d_newspot", kind = "visit_new", title = "처음 가는 경희스팟 1곳 방문", target = 1, xp = 100 },
         new Def { id = "d_course", kind = "course_done", title = "산책 추천 코스 완주하기", target = 1, xp = 120 },
-        new Def { id = "d_catch5", kind = "catch", title = "경희몬 5마리 잡기", target = 5, xp = 80 },
-        new Def { id = "d_blue", kind = "catch_blue", title = "파랑 이상 경희몬 1마리 잡기", target = 1, xp = 90 },
+        new Def { id = "d_catch5", kind = "catch", title = "경희펫 5마리 만나기", target = 5, xp = 80 },
+        new Def { id = "d_blue", kind = "catch_blue", title = "파랑 이상 경희펫 1마리 만나기", target = 1, xp = 90 },
         new Def { id = "d_walk1k", kind = "walk", title = "1km 걷기", target = 1000, xp = 70 },
     };
 
@@ -34,7 +34,7 @@ public static class Quests
         new Def { id = "w_spots5", kind = "visit_spot", title = "경희스팟 5곳 들르기", target = 5, xp = 200, egg = true },
         new Def { id = "w_walk5k", kind = "walk", title = "5km 걷기", target = 5000, xp = 200, egg = true },
         new Def { id = "w_like15", kind = "like_other", title = "다른 사람 사진에 좋아요 15번", target = 15, xp = 200, egg = true },
-        new Def { id = "w_catch25", kind = "catch", title = "경희몬 25마리 잡기", target = 25, xp = 200, egg = true },
+        new Def { id = "w_catch25", kind = "catch", title = "경희펫 25마리 만나기", target = 25, xp = 200, egg = true },
     };
 
     public const int DailyCount = 3;

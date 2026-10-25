@@ -4,7 +4,7 @@ using System.IO;
 using UnityEngine;
 
 /// <summary>
-/// 점수(경험치), 가진 경희몬(한 마리씩), 파트너, 티켓 · 진화, 도구, 활동 기록을 기기에 JSON으로 저장한다.
+/// 점수(경험치), 가진 경희펫(한 마리씩), 파트너, 티켓 · 진화, 도구, 활동 기록을 기기에 JSON으로 저장한다.
 /// v2 (B-V1): 알 대신 티켓 → 뽑기, 종마다 진화 경험치. 규칙 값은 GachaRules.
 /// 경로: Application.persistentDataPath/progress.json
 /// </summary>
@@ -18,7 +18,7 @@ public class GameProgress
         public int count;
     }
 
-    /// <summary>잡은 경희몬 한 마리</summary>
+    /// <summary>잡은 경희펫 한 마리</summary>
     [Serializable]
     public class Caught
     {
@@ -28,7 +28,7 @@ public class GameProgress
         public long caughtAt; // DateTime.Ticks (현지 시각)
         /// <summary>잡을 때 찍은 사진 파일 이름 (스크랩북 폴더 안, 없으면 빈 문자열)</summary>
         public string photo = "";
-        /// <summary>동물 캐릭터 id (CreatureLibrary), 일반 경희몬이면 빈 문자열</summary>
+        /// <summary>동물 캐릭터 id (CreatureLibrary), 일반 경희펫이면 빈 문자열</summary>
         public string speciesId = "";
         /// <summary>쓰고 있는 액세서리 id (CreatureAccessories, 부위마다 하나)</summary>
         public List<string> accessories = new List<string>();
@@ -49,7 +49,7 @@ public class GameProgress
     public List<Entry> collected = new List<Entry>();
     /// <summary>동물별 획득 수 (도감)</summary>
     public List<Entry> species = new List<Entry>();
-    /// <summary>지금 가지고 있는 경희몬</summary>
+    /// <summary>지금 가지고 있는 경희펫</summary>
     public List<Caught> caught = new List<Caught>();
     public string partnerUid = "";
     public List<PartnerRecord> partnerHistory = new List<PartnerRecord>();
@@ -204,7 +204,7 @@ public class GameProgress
         return true;
     }
 
-    /// <summary>뽑기 · 첫 파트너로 얻은 경희몬 (경험치 없이 도감과 가방에만)</summary>
+    /// <summary>뽑기 · 첫 파트너로 얻은 경희펫 (경험치 없이 도감과 가방에만)</summary>
     public Caught AddCreature(string species)
     {
         string tier = CreatureLibrary.TierOf(species) ?? "sprout";
@@ -340,8 +340,8 @@ public class GameProgress
     }
 
     /// <summary>
-    /// 예전 저장 파일 맞추기: 종류별 개수만 있으면 모자란 만큼 경희몬을 채워 넣고 (CP 는 순서로 정해지는 값이라 매번 같다),
-    /// 동물 기록이 없는 경희몬에는 동물을 정해 준다.
+    /// 예전 저장 파일 맞추기: 종류별 개수만 있으면 모자란 만큼 경희펫을 채워 넣고 (CP 는 순서로 정해지는 값이라 매번 같다),
+    /// 동물 기록이 없는 경희펫에는 동물을 정해 준다.
     /// </summary>
     void Migrate()
     {
@@ -377,7 +377,7 @@ public class GameProgress
             }
         }
 
-        // 동물 피규어가 들어오기 전에 잡은 경희몬은 어떤 동물인지 기록이 없다.
+        // 동물 피규어가 들어오기 전에 잡은 경희펫은 어떤 동물인지 기록이 없다.
         // 등급에 맞는 동물을 uid 로 하나 정해(늘 같은 결과) 도감에도 올린다.
         foreach (Caught c in caught)
         {
@@ -391,7 +391,7 @@ public class GameProgress
 
     /// <summary>
     /// v2 로 한 번 옮기기 (결정 D1 · D9): 알은 버리고 (예전 필드는 읽지 않음), 레벨 · 경험치는 0 부터,
-    /// 퀘스트는 숨기므로 비운다. 가진 경희몬 · 도감 · 파트너는 그대로.
+    /// 퀘스트는 숨기므로 비운다. 가진 경희펫 · 도감 · 파트너는 그대로.
     /// </summary>
     public void MigrateToV2()
     {

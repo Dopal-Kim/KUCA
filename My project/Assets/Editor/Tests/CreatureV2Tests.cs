@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 
-/// <summary>A-V1 경희몬 v2 값 테스트 (등급표 · 확률 · 단계 이름 · 뽑기 가중치). Test Runner › EditMode.</summary>
+/// <summary>A-V1 경희펫 v2 값 테스트 (등급표 · 확률 · 단계 이름 · 뽑기 가중치). Test Runner › EditMode.</summary>
 public class CreatureV2Tests
 {
     [TearDown]
