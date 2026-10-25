@@ -135,7 +135,8 @@ public class GameHUD : MonoBehaviour
         toastBg.pixelsPerUnitMultiplier = 1.2f;
         RectTransform tr = toastBg.rectTransform;
         tr.anchorMin = tr.anchorMax = tr.pivot = new Vector2(0.5f, 0f);
-        tr.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space6);
+        // 버튼에서 한 칸 더 띄우고 글 길이만큼만 넓혀, 시작 버튼과 한 덩어리로 보이지 않게 (REVIEW_v14)
+        tr.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space8 + KucaTheme.Space6);
         tr.sizeDelta = new Vector2(980f, 120f);
         toastText = UIKit.Text(toastBg.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter);
         UIKit.Stretch(toastText.rectTransform, 36f, 10f);
@@ -243,6 +244,7 @@ public class GameHUD : MonoBehaviour
         if (toastText == null)
             return;
         toastText.text = message;
+        toastBg.rectTransform.sizeDelta = new Vector2(Mathf.Min(980f, toastText.preferredWidth + 2f * 36f + 8f), 120f);
         toastBg.gameObject.SetActive(true);
         toastTimer = toastDuration;
     }

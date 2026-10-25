@@ -147,6 +147,22 @@ public static class UIKit
     /// v4 화면 틀. content 에 카드 · 목록을 쌓는다 (세로 레이아웃, 좌우 Gutter). bottomButtons &gt; 0 이면 아래 고정 칸(bottom)에
     /// 주요 버튼을 넣을 자리가 생기고 내용은 그 위에서 끝난다. onBack 은 ‹ 버튼과 안드로이드 뒤로 가기 둘 다.
     /// </summary>
+    static Texture2D fadeUp;
+    /// <summary>아래는 불투명 · 위로 갈수록 투명한 세로 띠 (색은 RawImage.color 로)</summary>
+    static Texture2D FadeUp
+    {
+        get
+        {
+            if (fadeUp != null)
+                return fadeUp;
+            fadeUp = new Texture2D(1, 16, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, name = "FadeUp" };
+            for (int y = 0; y < 16; y++)
+                fadeUp.SetPixel(0, y, new Color(1f, 1f, 1f, 1f - Mathf.SmoothStep(0f, 1f, y / 15f)));
+            fadeUp.Apply();
+            return fadeUp;
+        }
+    }
+
     public static Page CreatePage(Transform parent, string name, string title, UnityAction onBack, string subtitle = null, int bottomButtons = 0, bool scroll = true)
     {
         var page = new Page();
@@ -216,7 +232,25 @@ public static class UIKit
             dr.offsetMin = Vector2.zero;
             dr.offsetMax = new Vector2(0f, 2f);
             divider.enabled = false;
-            area.GetComponent<ScrollRect>().onValueChanged.AddListener(v => divider.enabled = v.y < 0.995f && page.content.rect.height > area.rect.height);
+            // 아래로 더 있으면 아래 끝을 바탕색으로 흐리게: 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14 산책 완료)
+            RawImage fade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+            fade.transform.SetParent(safe, false);
+            fade.texture = FadeUp;
+            fade.color = KucaTheme.Surface;
+            fade.raycastTarget = false;
+            RectTransform fr = fade.rectTransform;
+            fr.anchorMin = Vector2.zero;
+            fr.anchorMax = new Vector2(1f, 0f);
+            fr.pivot = new Vector2(0.5f, 0f);
+            fr.offsetMin = new Vector2(0f, bottomH);
+            fr.offsetMax = new Vector2(0f, bottomH + 120f);
+            fade.enabled = false;
+            area.GetComponent<ScrollRect>().onValueChanged.AddListener(v =>
+            {
+                bool longer = page.content.rect.height > area.rect.height + 1f;
+                divider.enabled = longer && v.y < 0.995f;
+                fade.enabled = longer && v.y > 0.005f;
+            });
         }
         else
         {

@@ -308,6 +308,14 @@ public class CharacterCustomizer : MonoBehaviour
         tr.pivot = new Vector2(0.5f, 1f);
         tr.offsetMin = new Vector2(KucaTheme.Gutter + 110f, -144f);
         tr.offsetMax = new Vector2(-KucaTheme.Gutter, -12f);
+        // 첫 실행에 무엇을 하는 화면인지 한 줄 (REVIEW_v14: "꾸미기" 제목뿐이었음)
+        Text lead = UIKit.Text(safe, "나를 닮은 탐험가를 만들어요", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        RectTransform lr = lead.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = Vector2.one;
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(KucaTheme.Gutter + 110f, -208f);
+        lr.offsetMax = new Vector2(-KucaTheme.Gutter, -144f);
 
         // 아래 흰 시트 (위 모서리만 둥글게: 아래는 화면 밖으로)
         Image sheet = UIKit.Image(bg.transform, "Panel", KucaTheme.Card, raycast: true);

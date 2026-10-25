@@ -506,6 +506,9 @@ public partial class KhuMenus : MonoBehaviour
                 else if (shown == 0)
                     UIKit.EmptyState(grid, "아직 경희몬이 없어요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 만나요", "뽑기 하러 가기",
                         () => { Show(collection, false); OpenGacha(); });
+                else if (shown < 4 && q.Length == 0)   // 한두 마리면 화면 대부분이 비어 보였음 (REVIEW_v14)
+                    UIKit.EmptyState(grid, "산책하며 더 만나요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 새 경희몬을 만나요", "뽑기 하러 가기",
+                        () => { Show(collection, false); OpenGacha(); });
                 break;
 
             case Tab.Items:

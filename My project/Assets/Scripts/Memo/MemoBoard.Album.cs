@@ -10,7 +10,7 @@ using UnityEngine.UI;
 /// </summary>
 public partial class MemoBoard
 {
-    GameObject album, albumEmptyCard;
+    GameObject album, albumEmptyCard, albumEmptyAction;
     RectTransform albumGrid;
     Text albumCount, albumEmptyTitle, albumEmptyBody;
 
@@ -128,7 +128,8 @@ public partial class MemoBoard
         ids.Reverse(); // 나중에 올린 것이 앞에
         int request = ++albumRequest;
         albumCount.text = "";
-        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요" : "불러오는 중…";
+        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n지도의 경희스팟 깃발을 누르면\n그곳 메모판에 사진을 남길 수 있어요" : "불러오는 중…";
+        albumEmptyAction.SetActive(ids.Count == 0);
         if (ids.Count == 0)
             return;
 
@@ -167,7 +168,8 @@ public partial class MemoBoard
                 albumCount.text = $"내가 남긴 사진 {currentMemos.Count}장";
                 AlbumEmpty = currentMemos.Count > 0 ? ""
                     : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
-                    : "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요";
+                    : "아직 올린 사진이 없어요\n지도의 경희스팟 깃발을 누르면\n그곳 메모판에 사진을 남길 수 있어요";
+                albumEmptyAction.SetActive(currentMemos.Count == 0 && failed == 0);
                 if (currentMemos.Count > 0)
                 {
                     SaveSeen(currentMemos);
@@ -208,8 +210,10 @@ public partial class MemoBoard
         album = page.root;
         albumCount = page.subtitle;
 
-        RectTransform empty = UIKit.EmptyState(page.content, " ", " ");
+        // 빈 상태에서 할 일: 지도로 돌아가 경희스팟 찾기 (REVIEW_v14: 안내만 있고 버튼이 없었음)
+        RectTransform empty = UIKit.EmptyState(page.content, " ", " ", "지도에서 경희스팟 찾기", Close);
         albumEmptyCard = empty.gameObject;
+        albumEmptyAction = empty.GetComponentInChildren<Button>(true).gameObject;
         Text[] texts = empty.GetComponentsInChildren<Text>(true);
         albumEmptyTitle = texts[0];
         albumEmptyBody = texts[1];
