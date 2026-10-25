@@ -168,7 +168,7 @@ public class MatchScreen : MonoBehaviour
                 ShowPage(waitPage);
                 if (waitPartner.texture == null)
                 {
-                    // 기다리는 동안 내 파트너 경희몬이 통통 뛴다
+                    // 기다리는 동안 내 파트너 경희펫이 통통 뛴다
                     var collect = FindAnyObjectByType<CollectController>();
                     GameProgress.Caught partner = collect != null && collect.Progress != null ? collect.Progress.Partner : null;
                     try { waitPartner.texture = partner != null ? MonsterThumbnails.Get(partner.speciesId) : null; }
@@ -294,7 +294,7 @@ public class MatchScreen : MonoBehaviour
         if (spot != null && !string.IsNullOrEmpty(spot.species))
         {
             try { tex = MonsterThumbnails.Get(spot.species); }
-            catch (System.Exception e) { Debug.LogWarning("[Match] 경희몬 그림 실패: " + e.Message); }
+            catch (System.Exception e) { Debug.LogWarning("[Match] 경희펫 그림 실패: " + e.Message); }
         }
         meetCreature.texture = tex;
         meetCreature.enabled = tex != null;
@@ -404,7 +404,7 @@ public class MatchScreen : MonoBehaviour
     /// <summary>지금 위치에서 가장 가까운 경희스팟 (대기열에 보내는 건물 ID)</summary>
     MeetSpot NearestSpot() => Nearest(false);
 
-    /// <summary>가장 가까운 만남 스팟과 그 앞의 경희몬 (A-V3 MeetSpotCatalog, 가상 상대가 쓴다)</summary>
+    /// <summary>가장 가까운 만남 스팟과 그 앞의 경희펫 (A-V3 MeetSpotCatalog, 가상 상대가 쓴다)</summary>
     MeetSpot NearestMeetSpot() => Nearest(true);
 
     MeetSpot Nearest(bool meetSpotsOnly)
@@ -728,7 +728,7 @@ public class MatchScreen : MonoBehaviour
         return b.GetComponent<Image>();
     }
 
-    /// <summary>경희몬 그림 칸 (가로로 늘어나지 않게 정사각 그림을 왼쪽에)</summary>
+    /// <summary>경희펫 그림 칸 (가로로 늘어나지 않게 정사각 그림을 왼쪽에)</summary>
     static RawImage Picture(Transform parent, float size)
     {
         RectTransform holder = UIKit.Rect(parent, "PictureHolder");

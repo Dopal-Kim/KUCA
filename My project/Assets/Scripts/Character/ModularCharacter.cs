@@ -5,7 +5,7 @@ using UnityEngine;
 /// 선택한 부위 FBX들을 하나의 뼈대로 합쳐 캐릭터를 만든다.
 /// 상의(Body) 파트의 뼈대를 기준으로 쓰고, 나머지 파트의 SkinnedMeshRenderer 뼈를 이름으로 다시 연결한다.
 /// 이동 속도에 따라 Animator의 Speed 값을 넣어 Idle / Walk / Run 을 재생한다.
-/// 경희몬과 어울리게 머리를 키우고 (headScale), 재질을 파스텔 비닐 토이(KUCA/PlayerToy)로 바꾼다.
+/// 경희펫과 어울리게 머리를 키우고 (headScale), 재질을 파스텔 비닐 토이(KUCA/PlayerToy)로 바꾼다.
 /// </summary>
 public class ModularCharacter : MonoBehaviour
 {

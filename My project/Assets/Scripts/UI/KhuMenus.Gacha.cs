@@ -99,7 +99,7 @@ public partial class KhuMenus
             }
             sb.Append('\n');
         }
-        sb.Append("같은 경희몬이 또 나오면 그 경희몬의 진화 경험치가 올라요\n");
+        sb.Append("같은 경희펫이 또 나오면 그 경희펫의 진화 경험치가 올라요\n");
         sb.Append($"C +{GachaRules.DuplicateGrowth(GachaRules.Grade.C)} · B +{GachaRules.DuplicateGrowth(GachaRules.Grade.B)} · A +{GachaRules.DuplicateGrowth(GachaRules.Grade.A)} · S +{GachaRules.DuplicateGrowth(GachaRules.Grade.S)}");
         oddsText.text = sb.ToString();
         SetActive(oddsPanel, true);
@@ -108,7 +108,7 @@ public partial class KhuMenus
     /// <summary>뽑기: 가진 티켓을 크게 (카드), 뽑기 카드 2장 (1장 · 5장, 가격 알약), 확률표는 글자 버튼</summary>
     void BuildGacha()
     {
-        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Gacha", "뽑기", () => Show(gachaScreen, false), "걸어서 모은 티켓으로 새 경희몬을 만나요");
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Gacha", "뽑기", () => Show(gachaScreen, false), "걸어서 모은 티켓으로 새 경희펫을 만나요");
         gachaScreen = page.root;
 
         // 가진 티켓
@@ -126,7 +126,7 @@ public partial class KhuMenus
         UIKit.Size(gachaNext, 60f);
 
         singleButton = DrawCard(page.content, "1장 뽑기", "C · B · A 등급이 나와요", KucaTheme.Primary, () => Draw(false));
-        premiumButton = DrawCard(page.content, "5장 뽑기", "B · A · S 등급 · 더 귀한 경희몬", KucaTheme.Gold, () => Draw(true));
+        premiumButton = DrawCard(page.content, "5장 뽑기", "B · A · S 등급 · 더 귀한 경희펫", KucaTheme.Gold, () => Draw(true));
 
         Button odds = UIKit.Button(page.content, "확률표 보기", ToggleOdds, new Color(1f, 1f, 1f, 0f), KucaTheme.Label);
         odds.GetComponentInChildren<Text>(true).color = KucaTheme.PrimaryDeep;
@@ -238,11 +238,11 @@ public partial class KhuMenus
     /// <summary>첫 파트너: 큰 제목 + 설명, 세로로 큰 카드 3장 (누르면 고른다). 꼭 골라야 해서 뒤로 가기는 없다</summary>
     void BuildStarter()
     {
-        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Starter", "첫 파트너를 골라 주세요", null, "골라 준 경희몬이 늘 옆에서 함께 걸어요");
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Starter", "첫 파트너를 골라 주세요", null, "골라 준 경희펫이 늘 옆에서 함께 걸어요");
         starterScreen = page.root;
         starterRow = UIKit.Rect(page.content, "Choices");
         UIKit.Vertical(starterRow, KucaTheme.Space3);
-        UIKit.Paragraph(page.content, "함께 걸을수록 진화해요. 나중에 뽑기로 만난 경희몬으로 바꿀 수도 있어요.", KucaTheme.Label);
+        UIKit.Paragraph(page.content, "함께 걸을수록 진화해요. 나중에 뽑기로 만난 경희펫으로 바꿀 수도 있어요.", KucaTheme.Label);
     }
 
 }

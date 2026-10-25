@@ -31,7 +31,7 @@ public static class CreatureLibrary
         { "business_fox", "국제·경영대학관 여우" }, { "multimedia_meerkat", "멀티미디어·글로벌관 미어캣" },
     };
 
-    // ---------- v2 경희몬: 등급 · 뽑기 확률 · 진화 (A-V1 확정 값, GachaRules 가 읽는다) ----------
+    // ---------- v2 경희펫: 등급 · 뽑기 확률 · 진화 (A-V1 확정 값, GachaRules 가 읽는다) ----------
 
     /// <summary>
     /// v2 등급. 초록 4종 C · 파랑 4종 B · 랜드마크 16종은 A 8 · S 8.

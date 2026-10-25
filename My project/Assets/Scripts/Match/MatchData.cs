@@ -32,7 +32,7 @@ public class MeetSpot
     public string buildingId;
     public string name;
     public double lat, lon;
-    /// <summary>그 스팟에 서 있는 경희몬 (CreatureLibrary id)</summary>
+    /// <summary>그 스팟에 서 있는 경희펫 (CreatureLibrary id)</summary>
     public string species;
 }
 

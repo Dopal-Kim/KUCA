@@ -5,10 +5,10 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 경희몬 전체 화면들 (디자인 v4, docs/디자인_v4.md: 회색 바탕 · 흰 카드 · 큰 왼쪽 제목 · 왼쪽 위 ‹ 뒤로).
-/// - 메인 메뉴 (가운데 경희 로고를 누르면): 도감 · 경희몬 · 도구
-/// - 컬렉션 (탭 3개): 도감(종류별 발견), 경희몬(잡은 개체, CP), 도구(가방)
-/// - 경희몬 상세: 파트너로 지정
+/// 경희펫 전체 화면들 (디자인 v4, docs/디자인_v4.md: 회색 바탕 · 흰 카드 · 큰 왼쪽 제목 · 왼쪽 위 ‹ 뒤로).
+/// - 메인 메뉴 (가운데 경희 로고를 누르면): 도감 · 경희펫 · 도구
+/// - 컬렉션 (탭 3개): 도감(종류별 발견), 경희펫(잡은 개체, CP), 도구(가방)
+/// - 경희펫 상세: 파트너로 지정
 /// - 프로필 (프로필 사진을 누르면): 캐릭터와 파트너, 레벨, 메뉴 4개, 활동 기록
 /// 걷은 거리와 방문한 경희스팟도 여기서 기록한다. GameHUD 가 같은 캔버스에 만든다.
 /// </summary>
@@ -64,7 +64,7 @@ public partial class KhuMenus : MonoBehaviour
     GameObject sortButton;
     Button sortChip;
     int sortMode; // 0 최근, 1 CP, 2 이름
-    static readonly string[] SortNames = { "최근 잡은 순", "힘 센 순", "이름 순" };
+    static readonly string[] SortNames = { "최근 만난 순", "힘 센 순", "이름 순" };
 
     // 상세 / 목록 팝업
     GameObject detail;
@@ -299,20 +299,20 @@ public partial class KhuMenus : MonoBehaviour
     }
 
     /// <summary>
-    /// 경희몬 허브 (참조: 토스 전체 탭 · 포켓몬 GO 메뉴). 원형 아이콘 4개 대신 큰 카드 목록:
+    /// 경희펫 허브 (참조: 토스 전체 탭 · 포켓몬 GO 메뉴). 원형 아이콘 4개 대신 큰 카드 목록:
     /// 아이콘 · 이름 · 한 줄 설명 · 오른쪽 숫자 알약 (마리 수 · 가진 티켓 · 도감 진행).
     /// v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
     /// </summary>
     void BuildMainMenu()
     {
-        UIKit.Page page = UIKit.CreatePage(canvasRoot, "MainMenu", "경희몬", () => Show(mainMenu, false), "걸어서 만나고, 함께 걸으며 키워요");
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "MainMenu", "경희펫", () => Show(mainMenu, false), "걸어서 만나고, 함께 걸으며 키워요");
         mainMenu = page.root;
-        hubMonsters = HubCard(page.content, HudIcons.Monster, "내 경희몬", "파트너 정하기 · 꾸미기", KucaTheme.Fill, KucaTheme.Ink,
+        hubMonsters = HubCard(page.content, HudIcons.Monster, "내 경희펫", "파트너 정하기 · 꾸미기", KucaTheme.Fill, KucaTheme.Ink,
             () => OpenCollection(Tab.Monsters)).GetComponentInChildren<Text>(true);
-        gachaMenuBadge = HubCard(page.content, HudIcons.Ticket, "뽑기", "티켓으로 새 경희몬 만나기", KucaTheme.Primary, Color.white, OpenGacha);
+        gachaMenuBadge = HubCard(page.content, HudIcons.Ticket, "뽑기", "티켓으로 새 경희펫 만나기", KucaTheme.Primary, Color.white, OpenGacha);
         gachaMenuBadgeText = gachaMenuBadge.GetComponentInChildren<Text>(true);
         gachaMenuBadge.gameObject.SetActive(false);
-        hubDex = HubCard(page.content, HudIcons.Dex, "도감", "만난 경희몬 모아 보기", KucaTheme.Fill, KucaTheme.Ink,
+        hubDex = HubCard(page.content, HudIcons.Dex, "도감", "만난 경희펫 모아 보기", KucaTheme.Fill, KucaTheme.Ink,
             () => OpenCollection(Tab.Dex)).GetComponentInChildren<Text>(true);
         HubCard(page.content, HudIcons.Footprints, "산책 기록", "지금까지 걸은 길", KucaTheme.Fill, KucaTheme.Ink,
             () => { Show(mainMenu, false); WalkHistoryScreen.Show(); }).gameObject.SetActive(false);   // 숫자 칸 없음
@@ -377,7 +377,7 @@ public partial class KhuMenus : MonoBehaviour
         return n;
     }
 
-    // ---------- 컬렉션 (도감 / 내 경희몬 / 도구) ----------
+    // ---------- 컬렉션 (도감 / 내 경희펫 / 도구) ----------
 
     public void OpenCollection(Tab which)
     {
@@ -388,8 +388,8 @@ public partial class KhuMenus : MonoBehaviour
     }
 
     /// <summary>
-    /// 도감 · 내 경희몬 (참조: 포켓몬 HOME 박스 · 도감): 큰 제목 + 진행 한 줄, 세그먼트 탭, 검색 · 정렬, 3열 흰 카드 격자.
-    /// 못 만난 경희몬은 실루엣, 비었으면 다음 행동(뽑기 하러 가기)이 있는 빈 상태.
+    /// 도감 · 내 경희펫 (참조: 포켓몬 HOME 박스 · 도감): 큰 제목 + 진행 한 줄, 세그먼트 탭, 검색 · 정렬, 3열 흰 카드 격자.
+    /// 못 만난 경희펫은 실루엣, 비었으면 다음 행동(뽑기 하러 가기)이 있는 빈 상태.
     /// </summary>
     void BuildCollection()
     {
@@ -399,9 +399,9 @@ public partial class KhuMenus : MonoBehaviour
         gridScroll = content.GetComponentInParent<ScrollRect>(true);
 
         // 탭 (v2: 도구 탭은 숨김, 결정 D4)
-        Segmented(content, new[] { "도감", "내 경희몬", "도구" }, 2, i => SelectTab((Tab)i), tabLabels, tabCounts, tabSegs);
+        Segmented(content, new[] { "도감", "내 경희펫", "도구" }, 2, i => SelectTab((Tab)i), tabLabels, tabCounts, tabSegs);
 
-        // 검색 + 정렬 (정렬은 내 경희몬 탭에서만)
+        // 검색 + 정렬 (정렬은 내 경희펫 탭에서만)
         RectTransform tools = UIKit.Rect(content, "Tools");
         UIKit.Size(tools, KucaTheme.TouchMin);
         HorizontalLayoutGroup h = UIKit.Horizontal(tools, KucaTheme.Space2);
@@ -423,7 +423,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         tab = which;
         PaintSegments((int)which, tabLabels, tabCounts, tabSegs);
-        collectionPage.title.text = which == Tab.Dex ? "도감" : which == Tab.Monsters ? "내 경희몬" : "가방";
+        collectionPage.title.text = which == Tab.Dex ? "도감" : which == Tab.Monsters ? "내 경희펫" : "가방";
         sortButton.SetActive(which == Tab.Monsters);
         gridScroll.verticalNormalizedPosition = 1f;
         FillCollection();
@@ -479,7 +479,7 @@ public partial class KhuMenus : MonoBehaviour
                     }
                 }
                 if (shown == 0)
-                    UIKit.EmptyState(grid, "검색 결과가 없어요", "만난 경희몬의 이름으로 찾아보세요");
+                    UIKit.EmptyState(grid, "검색 결과가 없어요", "만난 경희펫의 이름으로 찾아보세요");
                 break;
 
             case Tab.Monsters:
@@ -501,10 +501,10 @@ public partial class KhuMenus : MonoBehaviour
                 if (shown == 0 && q.Length > 0)
                     UIKit.EmptyState(grid, "검색 결과가 없어요", "다른 이름으로 찾아보세요");
                 else if (shown == 0)
-                    UIKit.EmptyState(grid, "아직 경희몬이 없어요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 만나요", "뽑기 하러 가기",
+                    UIKit.EmptyState(grid, "아직 경희펫이 없어요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 만나요", "뽑기 하러 가기",
                         () => { Show(collection, false); OpenGacha(); });
                 else if (shown < 4 && q.Length == 0)   // 한두 마리면 화면 대부분이 비어 보였음 (REVIEW_v14)
-                    UIKit.EmptyState(grid, "산책하며 더 만나요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 새 경희몬을 만나요", "뽑기 하러 가기",
+                    UIKit.EmptyState(grid, "산책하며 더 만나요", "1km 걸을 때마다 티켓 1장.\n티켓으로 뽑기에서 새 경희펫을 만나요", "뽑기 하러 가기",
                         () => { Show(collection, false); OpenGacha(); });
                 break;
 
@@ -591,7 +591,7 @@ public partial class KhuMenus : MonoBehaviour
                 ShowList(CreatureLibrary.NameOf(species), DexRows(species));
             else
                 hud?.Toast(grade >= GachaRules.Grade.B ? $"아직 만나지 못한 {GachaRules.Label(grade)} 등급이에요. 5장 뽑기에서 나와요"
-                                                       : "아직 만나지 못한 경희몬이에요. 1장 뽑기에서 나와요");
+                                                       : "아직 만나지 못한 경희펫이에요. 1장 뽑기에서 나와요");
         }).transform;
         Text no = T(cell, $"No.{number:000}", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft, bold: true);
         TopBox(no.rectTransform, 24f, 48f);
@@ -662,9 +662,9 @@ public partial class KhuMenus : MonoBehaviour
         BottomBox(name.rectTransform, 40f, 60f);
     }
 
-    // ---------- 경희몬 상세 ----------
+    // ---------- 경희펫 상세 ----------
 
-    /// <summary>경희몬 상세 카드: 큰 그림 · 이름 · 힘 · 등급/단계, 아래 "파트너로 지정" 하나 + 꾸미기 · 닫기</summary>
+    /// <summary>경희펫 상세 카드: 큰 그림 · 이름 · 힘 · 등급/단계, 아래 "파트너로 지정" 하나 + 꾸미기 · 닫기</summary>
     void BuildDetail()
     {
         detail = Overlay(collection.transform, "Detail", new Vector2(940f, 1420f), out RectTransform card);
@@ -905,7 +905,7 @@ public partial class KhuMenus : MonoBehaviour
             BottomBox(date.rectTransform, 2f, 36f);
             shown++;
         }
-        scrapEmpty.text = shown == 0 ? "아직 사진이 없어요\n경희몬을 잡을 때 찍은 사진이 여기에 모여요" : "";
+        scrapEmpty.text = shown == 0 ? "아직 사진이 없어요\n경희펫과 함께 찍은 사진이 여기에 모여요" : "";
         SetActive(scrapbook, true);
     }
 
@@ -1055,7 +1055,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         RectTransform card = UIKit.CardBox(parent, "Stats", KucaTheme.Space2);
         UIKit.SectionTitle(card, "활동");
-        RectTransform row = UIKit.StatRow(card, ("0 m", "걸은 거리"), ("0", "잡은 경희몬"), ("0", "들른 경희스팟"));
+        RectTransform row = UIKit.StatRow(card, ("0 m", "걸은 거리"), ("0", "함께하는 경희펫"), ("0", "들른 경희스팟"));
         statWalk = row.GetChild(0).GetComponentInChildren<Text>(true);
         statCaught = row.GetChild(1).GetComponentInChildren<Text>(true);
         statSpots = row.GetChild(2).GetComponentInChildren<Text>(true);
@@ -1086,7 +1086,7 @@ public partial class KhuMenus : MonoBehaviour
         {
             var r = progress.partnerHistory[i];
             GameProgress.Caught c = progress.Find(r.uid);
-            string name = c != null ? $"{NameOf(c)} (힘 {c.cp})" : "떠나간 경희몬";
+            string name = c != null ? $"{NameOf(c)} (힘 {c.cp})" : "떠나간 경희펫";
             rows.Add((name, new DateTime(r.since).ToString("yyyy.MM.dd") + (r.uid == progress.partnerUid ? " ~ 지금" : "")));
         }
         ShowList("역대 파트너", rows);
@@ -1163,7 +1163,7 @@ public partial class KhuMenus : MonoBehaviour
 
     CollectibleType TypeOf(string id) => spawner != null ? spawner.TypeOf(id) : null;
 
-    static string NameOf(GameProgress.Caught c) => string.IsNullOrEmpty(c.speciesId) ? "경희몬" : CreatureLibrary.NameOf(c.speciesId);
+    static string NameOf(GameProgress.Caught c) => string.IsNullOrEmpty(c.speciesId) ? "경희펫" : CreatureLibrary.NameOf(c.speciesId);
 
     static Texture ThumbOf(string species) => MonsterThumbnails.Get(species);
 

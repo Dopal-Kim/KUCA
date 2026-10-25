@@ -372,10 +372,10 @@ public class LoginScreen : MonoBehaviour
         UIKit.Stretch((RectTransform)loginPage.transform);
         Text welcome = UIKit.Bold(UIKit.Text(loginPage.transform, "경희대 국제캠퍼스,\n오늘은 어디로 걸어 볼까요?", KucaTheme.Title, TextAnchor.UpperLeft, Ink));
         Box(welcome.rectTransform, G, 180f, G, 190f);
-        Text sub = UIKit.Text(loginPage.transform, "파트너 경희몬과 함께 걷고, 장소마다 메모를 남겨요.\n로그인한 뒤 경희대 메일 인증을 한 번 해요.", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        Text sub = UIKit.Text(loginPage.transform, "파트너 경희펫과 함께 걷고, 장소마다 메모를 남겨요.\n로그인한 뒤 경희대 메일 인증을 한 번 해요.", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
         Box(sub.rectTransform, G, 390f, G, 130f);
 
-        // 가운데: 경희몬 셋 (문구와 버튼 사이가 통째로 비어 있었음 — 무슨 앱인지 그림으로 바로 보이게)
+        // 가운데: 경희펫 셋 (문구와 버튼 사이가 통째로 비어 있었음 — 무슨 앱인지 그림으로 바로 보이게)
         RectTransform heroRow = UIKit.Rect(loginPage.transform, "Hero");
         Box(heroRow, G, 560f, G, 310f);   // 칸 너비 (960 - 32) / 3 ≈ 310: 정사각 썸네일이 늘어나지 않게
         UIKit.Horizontal(heroRow, KucaTheme.Space2);

@@ -7,7 +7,7 @@ using UnityEngine.UI;
 /// 지도 홈 HUD (디자인 v4 · docs/디자인_v4.md, 참조: 피크민 블룸 · 포켓몬 GO 지도 홈 + 네이버지도 아래 탭).
 /// - 지도는 화면 끝까지. 위 왼쪽: 흰 상태 카드 (얼굴 · 닉네임 · 레벨 · 경험치 막대, 누르면 프로필) + 티켓 칩.
 /// - 위 오른쪽: 흰 원형 버튼 세로 줄 (공지 · 사진첩 · 설정).
-/// - 아래: 흰 탭 막대 (지도 · 기록 · 경희몬 · 함께 · 나) 와 그 위 가운데 큰 초록 "산책 시작" (산책 중이면 숨기고 산책 카드가 그 자리).
+/// - 아래: 흰 탭 막대 (지도 · 기록 · 경희펫 · 함께 · 나) 와 그 위 가운데 큰 초록 "산책 시작" (산책 중이면 숨기고 산책 카드가 그 자리).
 /// 캔버스와 화면은 실행 시 코드로 만든다. 경험치는 GameProgress.score 를 그대로 쓴다.
 /// </summary>
 public class GameHUD : MonoBehaviour
@@ -489,7 +489,7 @@ public class GameHUD : MonoBehaviour
         {
             ("지도", HudIcons.Pin, () => { if (cameraFollow != null) cameraFollow.ResetNorthUp(); }),   // 이미 지도: 북쪽 위로 되돌리기
             ("기록", HudIcons.Footprints, WalkHistoryScreen.Show),
-            ("경희몬", HudIcons.Monster, () => menus.OpenMainMenu()),
+            ("경희펫", HudIcons.Monster, () => menus.OpenMainMenu()),
             ("함께", HudIcons.Partner, MatchScreen.Open),
             ("나", HudIcons.Person, () => menus.OpenProfile()),
         };
@@ -543,7 +543,7 @@ public class GameHUD : MonoBehaviour
 
     /// <summary>
     /// 첫 실행 안내 카드 (한 번만): 지도 홈에서 무엇을 하면 되는지가 토스트 한 줄뿐이라 사라지면 단서가 없었음 (REVIEW_v22_day P0).
-    /// 할 일 셋 — 산책 시작(AI 코스) · 경희몬 얼굴 핀(메모) · 함께 탭(산책메이트). "알겠어요" 를 누르면 다시 안 뜬다.
+    /// 할 일 셋 — 산책 시작(AI 코스) · 경희펫 얼굴 핀(메모) · 함께 탭(산책메이트). "알겠어요" 를 누르면 다시 안 뜬다.
     /// </summary>
     void BuildCoach()
     {
@@ -561,7 +561,7 @@ public class GameHUD : MonoBehaviour
         UIInputBlocker.Register(holder);
         UIKit.Bold(UIKit.Text(card, "이렇게 시작해요", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
         UIKit.Paragraph(card, "산책 시작  ·  AI 가 지금 걷기 좋은 코스 3개를 골라 줘요", KucaTheme.Label, KucaTheme.InkMuted);
-        UIKit.Paragraph(card, "경희몬 얼굴 핀  ·  그 건물에 가까이 가서 누르면 메모를 보고 남겨요", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(card, "경희펫 얼굴 핀  ·  그 건물에 가까이 가서 누르면 메모를 보고 남겨요", KucaTheme.Label, KucaTheme.InkMuted);
         UIKit.Paragraph(card, "아래 함께 탭  ·  근처에서 같이 걸을 산책메이트를 찾아요", KucaTheme.Label, KucaTheme.InkMuted);
         UIKit.PrimaryButton(card, "알겠어요", () =>
         {
@@ -665,7 +665,7 @@ public class GameHUD : MonoBehaviour
     {
         if (nearbyBuffer.Count == 0)
         {
-            Toast($"{nearbyRadius:F0}m 안에 경희몬이 없어요");
+            Toast($"{nearbyRadius:F0}m 안에 경희펫이 없어요");
             return;
         }
         Collectible c = nearbyBuffer[0];
@@ -741,7 +741,7 @@ public class GameHUD : MonoBehaviour
     Image albumBadge, menuBadge;
 
 
-    /// <summary>아래 탭 "경희몬" 의 "받을 보상 · 뽑을 티켓 있음" 점</summary>
+    /// <summary>아래 탭 "경희펫" 의 "받을 보상 · 뽑을 티켓 있음" 점</summary>
     public void SetMenuBadge(bool on)
     {
         if (menuBadge == null) return;

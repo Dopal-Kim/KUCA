@@ -2,7 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 /// <summary>
-/// 3D 미리보기 카메라(경희몬 썸네일 · 진화 · 프로필 · 꾸미기 · HUD 얼굴)에 붙인다.
+/// 3D 미리보기 카메라(경희펫 썸네일 · 진화 · 프로필 · 꾸미기 · HUD 얼굴)에 붙인다.
 /// 지도의 파란 하늘 주변광 대신 이 카메라가 그리는 동안만 중립 흰 주변광 · 카메라 기준 앞 위의 흰 햇빛 · 안개 없음으로 그려서,
 /// 미리보기가 탁하거나 보랏빛 · 노을색으로 나오지 않게 한다 (저녁 캡처에서 꾸미기 피부색까지 분홍이었음, REVIEW_v16).
 /// </summary>
@@ -43,7 +43,7 @@ public class NeutralAmbient : MonoBehaviour
         fog = RenderSettings.fog;
         RenderSettings.fog = false;
         if (look == null) look = FindAnyObjectByType<KeyArtLook>();
-        if (look != null) look.ApplyShaderGlobals(look.day);   // 캐릭터 · 경희몬 셰이더가 읽는 하늘 · 땅 빛 · 밤 정도도 낮으로
+        if (look != null) look.ApplyShaderGlobals(look.day);   // 캐릭터 · 경희펫 셰이더가 읽는 하늘 · 땅 빛 · 밤 정도도 낮으로
         sun = RenderSettings.sun;
         if (sun == null) return;
         sunColor = sun.color;

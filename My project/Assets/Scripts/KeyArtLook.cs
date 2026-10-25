@@ -234,7 +234,7 @@ public class KeyArtLook : MonoBehaviour
     }
 
     /// <summary>
-    /// 3D 미리보기(NeutralAmbient)가 그리는 동안만 낮 값으로 바꿨다가 되돌릴 때 쓴다: 캐릭터 · 경희몬 셰이더(PlayerToy · CreatureToy)는
+    /// 3D 미리보기(NeutralAmbient)가 그리는 동안만 낮 값으로 바꿨다가 되돌릴 때 쓴다: 캐릭터 · 경희펫 셰이더(PlayerToy · CreatureToy)는
     /// 주변광 프로브가 아니라 이 전역 값을 읽어, 밤 캡처 미리보기가 낮보다 약 20% 어두웠음 (REVIEW_v22_day)
     /// </summary>
     public void ApplyShaderGlobals(Preset p)

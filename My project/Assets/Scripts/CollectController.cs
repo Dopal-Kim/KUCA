@@ -57,7 +57,7 @@ public class CollectController : MonoBehaviour
             catchScreen = gameObject.AddComponent<CatchCameraScreen>();
         // v2 (A-V4): 산책 완료 화면의 "파트너와 사진 찍기"
         WalkCompleteScreen.PartnerPhoto = () => catchScreen.OpenPartnerPhoto(Progress);
-        // v2 (A-V3): 만남 스팟 지붕 위 경희몬
+        // v2 (A-V3): 만남 스팟 지붕 위 경희펫
         if (!TryGetComponent(out MeetSpotFigures _))
             gameObject.AddComponent<MeetSpotFigures>();
         if (hud != null)
@@ -170,7 +170,7 @@ public class CollectController : MonoBehaviour
             return;
         }
 
-        // 바로 얻지 않고, 카메라 화면에서 경희몬과 함께 사진을 찍어야 잡힌다.
+        // 바로 얻지 않고, 카메라 화면에서 경희펫과 함께 사진을 찍어야 잡힌다.
         if (catchScreen != null)
             catchScreen.Open(target, this);
         else
@@ -179,7 +179,7 @@ public class CollectController : MonoBehaviour
 
     /// <summary>사진을 찍어 잡았을 때 (CatchCameraScreen 이 부른다). target 은 그사이 사라졌으면 null.
     /// speciesId: 동물 캐릭터면 그 id (도감 기록용), 아니면 null.</summary>
-    /// <param name="countForQuests">알에서 깨어난 경희몬은 "잡기" 퀘스트에 세지 않는다</param>
+    /// <param name="countForQuests">알에서 깨어난 경희펫은 "잡기" 퀘스트에 세지 않는다</param>
     public GameProgress.Caught CompleteCatch(CollectibleType type, Collectible target, string photoFile, string speciesId = null, bool countForQuests = true)
     {
         speciesId ??= target != null ? target.SpeciesId : null;

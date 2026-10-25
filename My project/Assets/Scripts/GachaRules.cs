@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// v2 경희몬 규칙 (B-V1): 걸어서 티켓 → 뽑기 → 중복·함께 걷기로 진화.
+/// v2 경희펫 규칙 (B-V1): 걸어서 티켓 → 뽑기 → 중복·함께 걷기로 진화.
 /// 화면이 없는 계산만 모아 EditMode 테스트로 확인한다 (Assets/Editor/Tests/GachaRulesTests.cs).
 ///
 /// 등급표 · 확률 · 진화 기준은 A 가 정한 값 (CreatureLibrary, A-V1) 을 그대로 읽는다. 값을 바꿀 때는 CreatureLibrary 에서.
