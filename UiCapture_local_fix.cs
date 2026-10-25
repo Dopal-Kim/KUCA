@@ -146,6 +146,10 @@ public static class UiCapture
 
     static IEnumerator Script()
     {
+        // 로컬(KUCA-check) 전용: 밤에 찍어도 낮 화면으로 — 시작할 때 낮으로 고정, 끝나면 자동(시계)으로 되돌림
+        object dayLook = Find("KeyArtLook");
+        Type dayMode = dayLook?.GetType().GetNestedType("Mode");
+        if (dayMode != null) Call(dayLook, "SetMode", Enum.Parse(dayMode, "Day"));
         yield return Shot("개인정보_안내");
         Click("확인하고 시작");   // 저장 폴더를 지우고 시작하므로 동의 화면이 먼저 뜬다
         yield return 1.5f;
@@ -184,26 +188,31 @@ public static class UiCapture
                 }
             }
             // 옆모습 + 걷는 자세 (상의 밑단 · 바지 사이 틈, 걸을 때 후드 · 소매 겹침 — REVIEW_v18 에서 정면만 있어 못 봤음)
+            // 걷기: 캐릭터를 끄지 않고 걷기 속도만 덮어쓴다 (끄면 머리 1.8배 · 다리 0.68배 비율 조정도 멈춰 크게 찍혔음, REVIEW_v19)
             Component body = Get(customizer, "character") as Component;
-            Animator anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
             foreach (int st in new[] { 1, 2, 3 })
             {
                 Call(customizer, "SetStyle", st);
                 Set(customizer, "previewYaw", 90f);
                 yield return 1f;
                 yield return Shot($"꾸미기_옆_여{st + 1}");
-                // 로컬(KUCA-check) 수정: SetStyle → Build 가 Animator 를 새로 붙여 루프 밖에서 잡은 anim 이 파괴됨 → 매번 다시 잡는다
-                anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
-                if (anim == null) Debug.LogWarning("[UiCapture] 건너뜀: 걷기 Animator 없음");
-                if (anim != null)
+                // Animator 는 SetStyle(→ Build) 마다 새로 붙으므로 매번 다시 잡는다 (밖에서 한 번 잡으면 파괴돼 걷기 3장이 빠졌음, REVIEW_v19)
+                Animator anim = body != null ? body.GetComponentInChildren<Animator>(true) : null;
+                if (anim == null)
+                    Debug.LogWarning("[UiCapture] 건너뜀: 걷기 Animator 없음");
+                else
                 {
-                    ((Behaviour)body).enabled = false;   // 속도를 이동량으로 다시 계산하지 않게
+                    object frozen = Get(body, "freezePose");   // 대기 자세에서 Animator 를 멈추는 캐릭터면 잠시 풀기
+                    // 풀면 서 있을 때 지도 카메라 쪽으로 돌아서는 동작도 켜져 몸 방향이 바뀐 채 남아, 햇빛 받는 면이 달라져 뒤 장들이 어두웠음 (REVIEW_v20)
+                    Quaternion facing = body.transform.localRotation;
+                    Set(body, "freezePose", false);
                     anim.enabled = true;
-                    anim.SetFloat("Speed", 1.4f);
+                    Set(body, "speedOverride", 1.4f);
                     yield return 0.7f;
                     yield return Shot($"꾸미기_걷기_여{st + 1}");
-                    anim.SetFloat("Speed", 0f);
-                    ((Behaviour)body).enabled = true;
+                    Set(body, "speedOverride", -1f);
+                    Set(body, "freezePose", frozen ?? false);
+                    body.transform.localRotation = facing;
                 }
                 Set(customizer, "previewYaw", 0f);
             }
@@ -281,25 +290,7 @@ public static class UiCapture
         if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; yield return Shot("취향_설문"); }
         yield return CloseAll();
         yield return Shot("지도_끝");
-
-        // 로컬(KUCA-check) 전용: 경희스팟 핀 여러 개가 보이게 지도 홈 카메라를 잠깐 높이 · 뒤로 (UI 그대로)
-        Camera wide = Camera.main;
-        if (wide != null)
-        {
-            Behaviour follow = wide.GetComponent("CameraFollow") as Behaviour;
-            bool followOn = follow != null && follow.enabled;
-            if (follow != null) follow.enabled = false;
-            Vector3 oldPos = wide.transform.position;
-            Quaternion oldRot = wide.transform.rotation;
-            foreach (var (tag, h, back) in new[] { ("넓게_1", 420f, 380f), ("넓게_2", 700f, 600f) })
-            {
-                wide.transform.SetPositionAndRotation(new Vector3(oldPos.x, h, oldPos.z - back), Quaternion.Euler(50f, oldRot.eulerAngles.y, 0f));
-                yield return 1f;
-                yield return Shot("지도_" + tag);
-            }
-            wide.transform.SetPositionAndRotation(oldPos, oldRot);
-            if (follow != null) follow.enabled = followOn;
-        }
+        if (dayMode != null) Call(dayLook, "SetMode", Enum.Parse(dayMode, "Auto"));   // 시계 기준으로 되돌림
     }
 
     // ---------- 구조물 사방 ----------
