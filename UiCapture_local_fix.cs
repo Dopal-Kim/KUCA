@@ -224,10 +224,10 @@ public static class UiCapture
         object progress = Get(Find("CollectController"), "Progress");
         if (progress != null)
             Set(progress, "tickets", 12);   // 뽑기 화면 · 결과를 보이게
-        if (Call(menus, "OpenMainMenu")) { yield return 1f; yield return Shot("경희몬_메뉴"); }
+        if (Call(menus, "OpenMainMenu")) { yield return 1f; yield return Shot("경희펫_메뉴"); }
         Type menuTab = menus?.GetType().GetNestedType("Tab");
         foreach (string t in new[] { "Monsters", "Dex" })   // 도구(가방) 탭은 v2 에서 숨김 (결정 D4)
-            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희몬_" + t); }
+            if (menuTab != null && Call(menus, "OpenCollection", Enum.Parse(menuTab, t))) { yield return 1f; yield return Shot("경희펫_" + t); }
         if (Call(menus, "OpenGacha")) { yield return 1f; yield return Shot("뽑기"); }
         if (Click("1장 뽑기"))
         {
@@ -309,7 +309,7 @@ public static class UiCapture
             yield break;
         // 플레이 모드에서만 바꾸므로 끝나면 저절로 되돌아간다:
         // 건물 위 위치 표지(배지 + 막대)는 건물 앞을 가려 끄고, 한낮 · 봄으로 고정해 웹 미리보기(tools/keyart/preview)와 같은 조건으로 찍는다
-        // 플레이어 · 파트너 · 야생 경희몬도 끈다 (체육대학관 옆에 건물 3층 높이 캐릭터가 찍혔음, MAP_REVIEW M5)
+        // 플레이어 · 파트너 · 야생 경희펫도 끈다 (체육대학관 옆에 건물 3층 높이 캐릭터가 찍혔음, MAP_REVIEW M5)
         foreach (string hide in new[] { "KyungHeeSpot", "ModularCharacter", "PartnerBuddy", "Collectible" })
         {
             Type ht = TypeOf(hide);
