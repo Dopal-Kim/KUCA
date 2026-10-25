@@ -510,6 +510,11 @@ def amphitheater(mb, f, to_pond, ground):
     back = m.child((0, 0, 0), 180)
     for k in (-2, -1, 0, 1, 2):
         mb.arch_panel(back, (k * 4.2, 1.2, -6.86), 2.4, 4.6, shade(STONE, 0.8))
+    # M17: 뒷면(연못 쪽, z 8.3)이 민짜 흰 벽으로 보였음 (REVIEW_v22 N · E) → 아래 굽 + 한 톤 어두운 돌 띠 둘
+    #      (0.14 m 줄눈은 지도 거리에서 점선처럼 깨졌음)
+    mb.box(m, (0, 0.45, 8.36), (22.1, 0.9, 0.16), shade(STONE, 0.86))
+    for y in (2.6, 4.9):
+        mb.box(m, (0, y, 8.37), (22.0, 0.4, 0.14), shade(STONE, 0.84))
     mb.box(m, (0, 7.9, 7.6), (23.5, 0.8, 2.2), STEP)
     mb.box(m, (0, 8.8, 7.6), (10, 1.2, 1.6), STONE)
     for s in (-1, 1):

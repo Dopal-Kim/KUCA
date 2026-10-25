@@ -328,8 +328,8 @@ def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
                 blocks.append((part, top))
         return blocks
     if mode == 'core':
-        huts = _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal) or []
-        return [(rect_poly(fp.center, u, v, 5.5, hv), H + fh)] + huts   # 기계실 상자도 막아 옥상정원이 덮지 않게
+        # 탑 · 기계실 상자를 막아 옥상정원이 덮지 않게 (계단탑 자리를 못 찾으면 예전 가운데 띠)
+        return _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal) or [(rect_poly(fp.center, u, v, 5.5, hv), H + fh)]
     if mode == 'court':
         _courtyard(mb, b, fp, u, v, hu, hv, pal, rng)
         return [(rect_poly(fp.center, u, v, hu * 0.40, hv * 0.40), H)]
@@ -415,7 +415,8 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
         mb.emissive = False
         mb.box(m, (0, 3.2, 1.2), (hw * 1.6, 0.4, 2.4), pal['trim'])
     # 옥상 설비 상자 두 개 (키아트: 지붕 위 네모난 기계실)
-    huts = []
+    # 막는 자리: 탑 자체 (M17: 탑을 앞뒤로 나눈 우정원은 가운데가 비었는데 예전처럼 긴 띠를 막아 옥상정원이 지붕 오른쪽으로 밀렸음, REVIEW_v22)
+    huts = [(rect_poly(pc, u, v, hw, ph), top) for pc in parts] if len(parts) == 2 else [(rect_poly(c, u, v, 5.5, hv), top)]
     spots = [(c[0] + u[0] * su * hu * 0.55, c[1] + u[1] * su * hu * 0.55) for su in (-1, 1)]
     if len(parts) == 2:
         # M16: M12 에서 탑을 앞뒤로 나눈 뒤 상자 둘이 70 m 지붕 한가운데 덩그러니 남았음 (우정원 T) → 탑 안쪽에 붙여 한 묶음으로
@@ -502,6 +503,7 @@ def _rooftop(mb, b, style, blocks, rng):
     def at(su, sv):
         return fp.center[0] + u[0] * su + v[0] * sv, fp.center[1] + u[1] * su + v[1] * sv
 
+    hut = None
     # 계단실: 긴 축 끝 쪽에, 지붕 면적의 4% 이하 (M8: 국제학관 · 도예관에서 가운데 큰 흰 상자가 장난감 블록처럼 보였음)
     if fp.half_u > 7 and fp.half_v > 5 and b.id not in NO_STAIR_HUT:
         long_u = fp.half_u >= fp.half_v
@@ -518,6 +520,7 @@ def _rooftop(mb, b, style, blocks, rng):
             off = math.copysign(max(abs(off), min(past, hl - max(w, d) / 2 - 3.0)), off)
         px, pz = at(off, side) if long_u else at(side, off)
         if free(px, pz, max(w, d) / 2):
+            hut = (px, pz)
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
             mb.box(m, (0, 1.7, 0), (d, 3.4, w), (0.95, 0.93, 0.88))
@@ -569,7 +572,8 @@ def _rooftop(mb, b, style, blocks, rng):
         gw, gd = min(fp.half_u * 0.6, 14.0), min(fp.half_v * 0.6, 9.0)
         # 가운데가 지붕 덩어리에 막히면 옆 자리를 차례로 (우정원: 가운데 긴 덩어리)
         gw, gd = min(gw, fp.half_u * 0.4), min(gd, fp.half_v * 0.4)
-        spots = [(rng.uniform(-0.2, 0.2) * fp.half_u, 0.0)] + [(s * k * fp.half_u, t * j * fp.half_v)
+        # M17: 정중앙 먼저 (우정원 T 에서 가운데가 비었는데도 흔든 자리로 7 m 비켜 있었음, REVIEW_v22)
+        spots = [(0.0, 0.0), (rng.uniform(-0.2, 0.2) * fp.half_u, 0.0)] + [(s * k * fp.half_u, t * j * fp.half_v)
                                                                 for k in (0.35, 0.55) for j in (0.0, 0.45) for s in (1, -1) for t in (1, -1)]
         spot = next(((su, sv) for su, sv in spots
                      if all(free(*at(su + du, sv + dv), 0.5) for du in (-gw, gw) for dv in (-gd, gd)) and free(*at(su, sv), 1.0)), None)
@@ -603,7 +607,7 @@ def _rooftop(mb, b, style, blocks, rng):
     landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
     # M15: 태양광 지붕엔 실외기 묶음 · 환기구를 두지 않는다 — 학생회관이 패널 + 묶음 + 낱개 실외기 + 환기구로 어수선했음 (REVIEW_v20)
     if b.area > 2500 and not landmark_roof and feature != 'solar' and not any(top > H for _, top in blocks):
-        blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, rng)
+        blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, rng, hut)
 
     # 실외기
     n_units = int(min(8, b.area / 300))
@@ -624,40 +628,60 @@ def _rooftop(mb, b, style, blocks, rng):
     mb.ao_floor, mb.ao_height = 0.0, 2.0
 
 
-def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng):
+def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng, hut=None):
     """넓은 평지붕(위 덩어리 없음): 받침 위 실외기 두 줄 + 둥근 환기구 몇 개.
     M14: 공학실험동이 덩어리를 뺀 뒤 넓은 지붕에 천창 · 작은 실외기만 남아 비어 보였음 (REVIEW_v19)"""
     H = b.h
-    pl, pd = 5.2, 3.0   # 받침 반길이 (긴 축) · 반폭 — 실외기 두 줄
-    yard = None
-    # M16: 비율 자리(0, 0.6)는 생명과학대 ㄱ자 지붕에서 한가운데에 덩그러니 놓였음 (REVIEW_v21) → 난간에서 2.5 m 안쪽 모서리 · 긴 변 먼저
-    eu, ev = fp.half_u - pl - 2.5, fp.half_v - pd - 2.5
-    edge = [(a * eu, c * ev) for a, c in ((1, 1), (-1, 1), (1, -1), (-1, -1), (0, 1), (0, -1))]
-    for cu, cv in edge + [(su * fp.half_u, sv * fp.half_v) for su, sv in
-                          ((0.0, 0.6), (0.0, -0.6), (0.55, 0.55), (-0.55, 0.55), (0.55, -0.55), (-0.55, -0.55))]:
-        if all(free(*at(cu + du, cv + dv), 0.3) for du in (-pl, 0.0, pl) for dv in (-pd, pd)):
-            x, z = at(cu, cv)
-            m = Frame.yaw((x, H, z), yaw)
-            mb.box(m, (0, 0.15, 0), (pd * 2, 0.3, pl * 2), shade(ROOF_UNIT, 0.9))
-            for lx in (-1.4, 1.4):
-                for k in range(4):
-                    lz = -pl + 1.3 + k * (pl * 2 - 2.6) / 3
-                    mb.box(m, (lx, 1.0, lz), (1.8, 1.4, 2.0), ROOF_UNIT)
-                    mb.box(m, (lx, 1.72, lz), (1.1, 0.06, 1.1), FAN, top=FAN)
-            yard = rect_poly((x, z), fp.u, fp.v, pl + 0.6, pd + 0.6)
+    pd = 3.0   # 받침 반폭 — 실외기 두 줄
+    # M16: 비율 자리(0, 0.6)는 생명과학대 ㄱ자 지붕에서 한가운데에 덩그러니 놓였음 (REVIEW_v21) → 모서리 · 긴 변 먼저
+    # M17 (REVIEW_v22): 모서리 하나에 몰려 균형이 약했음 → 계단실에서 먼 모서리부터, 3000 m² 넘는 지붕(공학실험동)은
+    #      반 묶음 둘을 마주 보는 모서리에. 난간 안쪽 여유 2.5 → 4 m (전자정보대 N 에서 묶음이 난간 위로 튀어나와 보였음)
+    dist = (lambda s: math.dist(at(*s), hut)) if hut else (lambda s: 0.0)
+    spots = []
+    for n in ((2, 4) if b.area > 3000 else (4,)):   # 한 줄 실외기 수
+        pl = 1.3 * n   # 받침 반길이 (긴 축)
+        eu, ev = fp.half_u - pl - 4.0, fp.half_v - pd - 4.0
+
+        def fits(cu, cv):
+            return all(free(*at(cu + du, cv + dv), 0.3) for du in (-pl, 0.0, pl) for dv in (-pd, pd))
+
+        def corner(a, c):   # 외접 사각형 모서리가 지붕 밖이면 (생명과학대 서쪽 벽은 외곽보다 3 ~ 4 m 안쪽) 2 m 씩 안으로
+            return next(((a * (eu - k), c * (ev - k)) for k in (0.0, 2.0, 4.0) if fits(a * (eu - k), c * (ev - k))), None)
+        corners = [s for s in (corner(a, c) for a, c in ((1, 1), (-1, 1), (1, -1), (-1, -1))) if s]
+        if n == 2:
+            pairs = [(corner(a, c), corner(-a, -c)) for a, c in ((1, 1), (-1, 1))]
+            pairs = sorted((p for p in pairs if all(p)), key=lambda p: -min(dist(p[0]), dist(p[1])))
+            spots = list(pairs[0]) if pairs else []
+        else:
+            cand = sorted(corners, key=lambda s: -dist(s)) + [(0.0, ev), (0.0, -ev)] + \
+                [(su * fp.half_u, sv * fp.half_v) for su, sv in
+                 ((0.0, 0.6), (0.0, -0.6), (0.55, 0.55), (-0.55, 0.55), (0.55, -0.55), (-0.55, -0.55))]
+            spots = next(([s] for s in cand if fits(*s)), [])
+        if spots:
             break
+    yards = []
+    for cu, cv in spots:
+        x, z = at(cu, cv)
+        m = Frame.yaw((x, H, z), yaw)
+        mb.box(m, (0, 0.15, 0), (pd * 2, 0.3, pl * 2), shade(ROOF_UNIT, 0.9))
+        for lx in (-1.4, 1.4):
+            for k in range(n):
+                lz = -pl + 1.3 + k * 2.6
+                mb.box(m, (lx, 1.0, lz), (1.8, 1.4, 2.0), ROOF_UNIT)
+                mb.box(m, (lx, 1.72, lz), (1.1, 0.06, 1.1), FAN, top=FAN)
+        yards.append(rect_poly((x, z), fp.u, fp.v, pl + 0.6, pd + 0.6))
     placed = []
     for _ in range(40):
         if len(placed) >= 6:
             break
         x, z = at(rng.uniform(-0.85, 0.85) * fp.half_u, rng.uniform(-0.85, 0.85) * fp.half_v)
-        on_yard = yard and (point_in_poly(x, z, yard) or dist_to_poly_edge(x, z, yard) < 1.9)   # free() 는 넘겨받기 전 blocks 만 본다
+        on_yard = any(point_in_poly(x, z, y) or dist_to_poly_edge(x, z, y) < 1.9 for y in yards)   # free() 는 넘겨받기 전 blocks 만 본다
         if not free(x, z, 0.9) or on_yard or any(math.hypot(x - p[0], z - p[1]) < 6.0 for p in placed):
             continue
         placed.append((x, z))
         mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
         mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓
-    return blocks + [(yard, 0)] * bool(yard) + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed]
+    return blocks + [(y, 0) for y in yards] + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed]
 
 
 def _solar_panel(mb, m):
