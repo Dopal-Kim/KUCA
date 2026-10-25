@@ -275,7 +275,10 @@ public static class UiCapture
             Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), "Spring"));
         }
         yield return 0.5f;
-        var count = new Dictionary<string, int>();   // 같은 이름 여러 동(실험연구동 북 · 남 등)은 _2, _3 로 모두 찍는다 (한 동만 찍혀 태양광이 없는 쪽만 보였음, M8)
+        var count = new Dictionary<string, int>();
+        // 막힘 판정용: 건물마다 (정보, 콜라이더 경계상자). 콜라이더 모양이 보이는 건물과 달라도(공학관 날개) 경계상자로 잡는다 (MAP_REVIEW_v10)
+        var others = UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>()
+            .Select(o => (info: o, col: o.GetComponentInChildren<Collider>())).Where(o => o.col != null).Select(o => (o.info, o.col.bounds)).ToList();   // 같은 이름 여러 동(실험연구동 북 · 남 등)은 _2, _3 로 모두 찍는다 (한 동만 찍혀 태양광이 없는 쪽만 보였음, M8)
         foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
         {
             string name = Get(info, "buildingName") as string;
@@ -302,7 +305,7 @@ public static class UiCapture
                 {
                     rot = Quaternion.Euler(p, yaw, 0f);
                     d = dist * k;
-                    int hits = BlockedRays(b, -(rot * Vector3.forward), d, info, infoType, out string by);
+                    int hits = BlockedRays(b, target - rot * Vector3.forward * d, info, infoType, others, out string by);
                     blocked = hits * 3 >= ProbeCount;   // 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, MAP_REVIEW_v9) → 1/3
                     Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 맞은 것={by}");
                     if (!blocked)
@@ -317,11 +320,11 @@ public static class UiCapture
     const int ProbeCount = 10;
 
     /// <summary>
-    /// 건물의 열 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽, 네 벽 가운데 높이)에서 카메라 쪽으로 광선을 쏴 자기 건물 아닌 것에 막힌 수.
-    /// RaycastAll: 건물 안에서 출발한 광선이 자기 벽에 먼저 맞아 끝나면 막혀도 안 막힌 것으로 나왔음 (MAP_REVIEW_v8 U6).
-    /// 건물 정보(CampusBuildingInfo)가 없는 콜라이더도 막힘으로 센다: 원자로센터 E · S 가 앞 지붕에 가렸는데 0/6 이었음 (v9). by = 맞은 것 이름
+    /// 건물의 열 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽, 네 벽 가운데 높이)으로 카메라에서 광선을 쏴, 그 점보다 앞에서 다른 건물에 막힌 수. by = 막은 건물 이름.
+    /// - 카메라 → 건물 방향 + 뒷면도 맞게: 건물 → 카메라 방향은 메시 콜라이더 앞면만 맞아 가리는 건물을 지나쳤음 (원자로센터 0/10, MAP_REVIEW_v10)
+    /// - 다른 건물 경계상자도 본다: 공학관처럼 콜라이더가 보이는 모양과 다르면 광선이 비켜 감 (경계상자는 L 자 건물에서 조금 넉넉하게 막힘으로 셈)
     /// </summary>
-    static int BlockedRays(Bounds b, Vector3 toCam, float dist, Component self, Type infoType, out string by)
+    static int BlockedRays(Bounds b, Vector3 camPos, Component self, Type infoType, List<(Component info, Bounds bounds)> others, out string by)
     {
         var names = new HashSet<string>();
         Vector3 c = b.center, e = b.extents * 0.8f;
@@ -334,17 +337,30 @@ public static class UiCapture
             new Vector3(c.x - e.x, mid, c.z), new Vector3(c.x + e.x, mid, c.z),
             new Vector3(c.x, mid, c.z - e.z), new Vector3(c.x, mid, c.z + e.z),
         };
+        bool backfaces = Physics.queriesHitBackfaces;
+        Physics.queriesHitBackfaces = true;
         int blocked = 0;
         foreach (Vector3 p in points)
         {
-            RaycastHit[] others = Physics.RaycastAll(p, toCam, dist)
-                .Where(h => !(h.collider is TerrainCollider) && h.collider.GetComponentInParent(infoType) != self).ToArray();
-            if (others.Length == 0)
+            Vector3 dir = p - camPos;
+            float len = dir.magnitude - 1f;   // 점 바로 앞까지
+            var ray = new Ray(camPos, dir.normalized);
+            var hitBy = new List<string>();
+            foreach (RaycastHit h in Physics.RaycastAll(ray, len))
+            {
+                Component o = h.collider.GetComponentInParent(infoType);
+                if (!(h.collider is TerrainCollider) && o != self)
+                    hitBy.Add(h.collider.name);
+            }
+            foreach (var (info, bounds) in others)
+                if (info != self && !bounds.Contains(p) && bounds.IntersectRay(ray, out float at) && at < len)
+                    hitBy.Add(info.name);
+            if (hitBy.Count == 0)
                 continue;
             blocked++;
-            foreach (RaycastHit h in others)
-                names.Add(h.collider.name);
+            names.UnionWith(hitBy);
         }
+        Physics.queriesHitBackfaces = backfaces;
         by = names.Count == 0 ? "없음" : string.Join(",", names.Take(4));
         return blocked;
     }
