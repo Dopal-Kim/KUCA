@@ -41,9 +41,24 @@ public class WalkHistoryScreen : MonoBehaviour
         int weekCount = 0, weekMeters = 0;
         foreach (WalkHistory.Entry e in all)
             if (e.EndedAt >= monday) { weekCount++; weekMeters += e.meters; }
-        summary.text = all.Count == 0 ? "" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요";
+        summary.text = all.Count == 0 ? "" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요   " +
+            $"<size=24><color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Course, 3, 1))}>■</color> 코스  " +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(FreeWalk.TrackColor)}>■</color> 자유  " +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Mate, 0, 0))}>■</color> 산책메이트</size>";
         if (all.Count == 0)
+        {
             UIKit.Size(UIKit.Text(list, "아직 기록이 없어요.\n코스를 걷거나 자유 산책을 끝내면 여기에 남아요.", 32, TextAnchor.MiddleCenter, InkQuiet), 260f);
+            // 빈 화면이 막다른 길이 되지 않게 바로 산책을 시작할 수 있게
+            Button go = UIKit.Button(list, "산책 시작하기", () => { Close(); RoutePlanner.Open(); }, new Color(0.16f, 0.42f, 0.95f), 36);
+            Image gi = go.GetComponent<Image>();
+            gi.sprite = HudIcons.Pill;
+            gi.type = Image.Type.Sliced;
+            gi.pixelsPerUnitMultiplier = 120f / 110f;
+            Text gt = go.GetComponentInChildren<Text>();
+            gt.color = Color.white;
+            gt.fontStyle = FontStyle.Bold;
+            UIKit.Size(go, 110f);
+        }
         foreach (WalkHistory.Entry e in all)
             Row(e);
         detail.SetActive(false);

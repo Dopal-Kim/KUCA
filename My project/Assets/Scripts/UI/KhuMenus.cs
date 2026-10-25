@@ -30,7 +30,6 @@ public partial class KhuMenus : MonoBehaviour
     static readonly Color PGold = new Color(0.96f, 0.79f, 0.45f);
     static readonly Color PCircle = new Color(0.84f, 0.64f, 0.32f);
 
-    const int MonsterStorage = 300;
     const int ItemStorage = 350;
 
     GameHUD hud;
@@ -61,8 +60,9 @@ public partial class KhuMenus : MonoBehaviour
     ScrollRect gridScroll;
     Text emptyText;
     GameObject sortButton;
-    int sortMode; // 0 최근, 1 CP, 2 이름
-    static readonly string[] SortNames = { "최근 잡은 순", "쿠옹력 높은 순", "이름 순" };
+    int sortMode; // 0 최근, 1 등급, 2 이름
+    // v3 에는 잡기 · 쿠옹력(CP)이 없다: 화면에는 등급 · 진화 단계만 보인다 (값은 저장에 남김, 디자인 평가 10/25)
+    static readonly string[] SortNames = { "최근 만난 순", "등급 높은 순", "이름 순" };
 
     // 상세 / 목록 팝업
     GameObject detail;
@@ -477,7 +477,7 @@ public partial class KhuMenus : MonoBehaviour
             if (progress.SpeciesCountOf(id) > 0)
                 found++;
         tabCounts[0].text = $"{found} / {all.Count}";
-        tabCounts[1].text = $"{progress.caught.Count} / {MonsterStorage}";
+        tabCounts[1].text = $"{progress.caught.Count}마리";
         tabCounts[2].text = $"{progress.TotalItems} / {ItemStorage}";
 
         int shown = 0;
@@ -513,7 +513,7 @@ public partial class KhuMenus : MonoBehaviour
             case Tab.Monsters:
                 var list = new List<GameProgress.Caught>(progress.caught);
                 if (sortMode == 0) list.Sort((x, y) => y.caughtAt.CompareTo(x.caughtAt));
-                else if (sortMode == 1) list.Sort((x, y) => y.cp.CompareTo(x.cp));
+                else if (sortMode == 1) list.Sort((x, y) => GachaRules.GradeOf(y.speciesId).CompareTo(GachaRules.GradeOf(x.speciesId)));
                 else list.Sort((x, y) => string.CompareOrdinal(NameOf(x), NameOf(y)));
                 // 파트너는 항상 맨 앞
                 int pi = list.FindIndex(c => c.uid == progress.partnerUid);
@@ -585,7 +585,8 @@ public partial class KhuMenus : MonoBehaviour
         Button b = InvisibleButton(parent, c.uid, () => OpenDetail(c), Vector2.zero);
         Transform cell = b.transform;
 
-        Text cp = T(cell, $"<size=30>쿠옹력</size> {c.cp}", 58, TextAnchor.MiddleCenter, Gray, bold: true);
+        GachaRules.Grade grade = GachaRules.GradeOf(c.speciesId);
+        Text cp = T(cell, $"<color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(grade))}>{GachaRules.Label(grade)}</color> <size=30>등급</size>", 52, TextAnchor.MiddleCenter, Gray, bold: true);
         TopBox(cp.rectTransform, 0f, 74f);
         Thumb(cell, c.speciesId, true, 190f, new Vector2(0f, -172f));
         Text name = T(cell, NameOf(c), 38, TextAnchor.MiddleCenter, Gray);
@@ -664,13 +665,9 @@ public partial class KhuMenus : MonoBehaviour
     List<(string, string)> DexRows(string species)
     {
         var mine = progress.caught.FindAll(c => c.speciesId == species);
-        int best = 0;
         long first = long.MaxValue;
         foreach (var c in mine)
-        {
-            best = Mathf.Max(best, c.cp);
             first = Math.Min(first, c.caughtAt);
-        }
         GachaRules.Grade grade = GachaRules.GradeOf(species);
         int growth = progress.GrowthOf(species);
         int next = GachaRules.NextThreshold(growth);
@@ -680,7 +677,6 @@ public partial class KhuMenus : MonoBehaviour
             ("진화 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
             ("만난 수", $"{progress.SpeciesCountOf(species)}마리"),
             ("가지고 있는 수", $"{mine.Count}마리"),
-            ("최고 쿠옹력", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
             ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
         };
@@ -743,7 +739,8 @@ public partial class KhuMenus : MonoBehaviour
     {
         detailTarget = c;
         detailThumb.texture = ThumbOf(c.speciesId);
-        detailCp.text = $"<size=40>쿠옹력</size> {c.cp}";
+        GachaRules.Grade dg = GachaRules.GradeOf(c.speciesId);
+        detailCp.text = $"<color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(dg))}>{GachaRules.Label(dg)}</color> <size=40>등급</size>";
         detailName.text = string.IsNullOrEmpty(c.speciesId) ? NameOf(c) : CreatureLibrary.StageName(c.speciesId, progress.StageOf(c.speciesId));
         int growth = progress.GrowthOf(c.speciesId);
         int next = GachaRules.NextThreshold(growth);
@@ -764,7 +761,7 @@ public partial class KhuMenus : MonoBehaviour
         progress.SetPartner(detailTarget.uid);
         progress.Save();
         RefreshBuddy();
-        hud?.Toast($"{NameOf(detailTarget)}(쿠옹력 {detailTarget.cp}){CatchCameraScreen.Josa(NameOf(detailTarget), "과", "와")} 함께 다녀요!");
+        hud?.Toast($"{NameOf(detailTarget)}{CatchCameraScreen.Josa(NameOf(detailTarget), "과", "와")} 함께 다녀요!");
         OpenDetail(detailTarget);
         FillCollection();
     }
@@ -960,7 +957,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         scrapPhoto.texture = tex;
         scrapFitter.aspectRatio = (float)tex.width / tex.height;
-        scrapCaption.text = $"{NameOf(c)}  ·  쿠옹력 {c.cp}  ·  {c.CaughtAt:yyyy.MM.dd HH:mm}";
+        scrapCaption.text = $"{NameOf(c)}  ·  {c.CaughtAt:yyyy.MM.dd HH:mm}";
         SetActive(scrapViewer, true);
     }
 
@@ -1015,14 +1012,22 @@ public partial class KhuMenus : MonoBehaviour
         tabs.pivot = new Vector2(0.5f, 1f);
         tabs.offsetMin = tabs.offsetMax = Vector2.zero;
         tabs.sizeDelta = new Vector2(0f, 190f);
-        string[] names = { "나", "프렌드", "소셜" };
+        string[] names = { "내 프로필", "프렌드", "소셜" };
         for (int i = 0; i < 3; i++)
         {
+            // 프렌드 · 소셜은 아직 없어 탭을 숨긴다 (제출용 앱에 "준비 중" 화면을 두지 않음). 코드는 남김
+            if (i > 0)
+            {
+                profileTabs[i] = T(tabs, "", 1, TextAnchor.MiddleCenter, PText);
+                profileTabs[i].gameObject.SetActive(false);
+                profileLines[i] = UIKit.Rect(tabs, "HiddenLine");
+                continue;
+            }
             int idx = i;
             Button b = InvisibleButton(tabs, names[i], () => SelectProfileTab(idx), Vector2.zero);
             RectTransform br = (RectTransform)b.transform;
-            br.anchorMin = new Vector2(i / 3f, 0f);
-            br.anchorMax = new Vector2((i + 1) / 3f, 1f);
+            br.anchorMin = new Vector2(0f, 0f);   // 탭이 하나뿐이라 가운데 제목처럼
+            br.anchorMax = new Vector2(1f, 1f);
             br.offsetMin = br.offsetMax = Vector2.zero;
             profileTabs[i] = T(br, names[i], 42, TextAnchor.MiddleCenter, PText, bold: true);
             SetBox(profileTabs[i].rectTransform, 0f, 0.3f, 0.8f, 0f);
@@ -1066,6 +1071,8 @@ public partial class KhuMenus : MonoBehaviour
         profileView = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(ProfileDragArea)).GetComponent<RawImage>();
         profileView.transform.SetParent(s, false);
         UIKit.Stretch(profileView.rectTransform);
+        // 위쪽 이름 · 파트너 · "파트너 정하기" 자리는 비워 둔다 (캐릭터 모자가 이름을 가리던 것, 디자인 평가 10/25)
+        profileView.rectTransform.offsetMax = new Vector2(0f, -270f);
         var drag = profileView.GetComponent<ProfileDragArea>();
         drag.scroll = scroll;
         drag.onDragX = dx => profileYaw += dx * 0.4f;
@@ -1133,7 +1140,7 @@ public partial class KhuMenus : MonoBehaviour
             ("역대\n파트너", HudIcons.Partner, ShowPartnerHistory),
             ("스크랩북", HudIcons.Scrapbook, ShowScrapbook),
             ("모험노트", HudIcons.Notebook, ShowAdventureNote),
-            ("갈아입는다", HudIcons.Hanger, () => { if (customizer != null) customizer.SetOpen(true); }),
+            ("꾸미기", HudIcons.Hanger, () => { if (customizer != null) customizer.SetOpen(true); }),
         };
         for (int i = 0; i < items.Length; i++)
         {
@@ -1172,7 +1179,7 @@ public partial class KhuMenus : MonoBehaviour
         UIKit.Stretch(dt.rectTransform);
 
         statWalk = StatRow(content, HudIcons.Footprints, "걸은 거리");
-        statCaught = StatRow(content, HudIcons.Monster, "잡은 경희몬");
+        statCaught = StatRow(content, HudIcons.Monster, "모은 경희몬");
         statSpots = StatRow(content, HudIcons.Pin, "방문한 경희스팟");
     }
 
@@ -1231,7 +1238,7 @@ public partial class KhuMenus : MonoBehaviour
         {
             var r = progress.partnerHistory[i];
             GameProgress.Caught c = progress.Find(r.uid);
-            string name = c != null ? $"{NameOf(c)} (쿠옹력 {c.cp})" : "떠나간 경희몬";
+            string name = c != null ? NameOf(c) : "떠나간 경희몬";
             rows.Add((name, new DateTime(r.since).ToString("yyyy.MM.dd") + (r.uid == progress.partnerUid ? " ~ 지금" : "")));
         }
         ShowList("역대 파트너", rows);
@@ -1243,7 +1250,7 @@ public partial class KhuMenus : MonoBehaviour
         list.Sort((a, b) => b.caughtAt.CompareTo(a.caughtAt));
         var rows = new List<(string, string)>();
         for (int i = 0; i < list.Count && i < 50; i++)
-            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"쿠옹력 {list[i].cp}"));
+            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"{GachaRules.Label(GachaRules.GradeOf(list[i].speciesId))} 등급"));
         ShowList("모험노트", rows);
     }
 
@@ -1274,7 +1281,7 @@ public partial class KhuMenus : MonoBehaviour
 
         // 화면 영역 비율에 맞는 렌더 텍스처
         Canvas.ForceUpdateCanvases();
-        Rect r = profileHero.rect;
+        Rect r = profileView.rectTransform.rect;
         float aspect = r.height > 1f ? r.width / r.height : 1f;
         int h = 900, w = Mathf.Clamp(Mathf.RoundToInt(h * aspect), 256, 2048);
         if (profileTexture == null || profileTexture.width != w || profileTexture.height != h)

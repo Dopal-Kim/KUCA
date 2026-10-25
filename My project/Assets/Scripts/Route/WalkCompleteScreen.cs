@@ -131,11 +131,26 @@ public class WalkCompleteScreen : MonoBehaviour
             result = r;
             if (saved != null) WalkHistory.SetCompleted(saved.id, r.completed);
             title.text = r.completed ? (mate ? "함께 산책 완료!" : "산책 완료!") : "산책을 마쳤어요";
-            reason.text = r.reason;
-            reason.color = r.completed ? Green : InkQuiet;
+            reason.text = r.completed ? r.reason : AlmostThere(walk);
+            reason.color = r.completed ? Green : Ink;
             ApplyReward(r.xp, r.tickets, r.growth);
             StartCoroutine(FillLevel(score, r));
         }));
+    }
+
+    /// <summary>완료를 못 했을 때: 얼마나 더 했으면 됐는지 (다음에 다시 걷게)</summary>
+    static string AlmostThere(WalkCompleteRequest w)
+    {
+        if (w.kind == WalkSession.Mate || w.stopsTotal <= 0 && w.plannedMeters <= 0)
+        {
+            int left = Mathf.Max(0, LocalWalkService.MateMeters - w.meters);
+            return $"{left}m만 더 걸었으면 완료였어요";
+        }
+        int stops = Mathf.Max(0, w.stopsTotal - w.stopsDone);
+        int meters = Mathf.Max(0, Mathf.RoundToInt(w.plannedMeters * LocalWalkService.CourseRatio) - w.meters);
+        return stops > 0 && meters > 0 ? $"{stops}곳 더 들르거나 {RouteMath.Distance(meters)} 더 걸었으면 완료였어요"
+             : stops > 0 ? $"{stops}곳 더 들렀으면 완료였어요"
+             : $"{RouteMath.Distance(meters)} 더 걸었으면 완료였어요";
     }
 
     /// <summary>산책 종류별 길 색 (자유 산책 · 코스 · 산책메이트)</summary>
@@ -207,7 +222,12 @@ public class WalkCompleteScreen : MonoBehaviour
         if (parts.Count > 0)
             rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts);
         else if (rewardText.text.Length == 0)
-            rewardText.text = "이번 산책은 보상이 없어요";
+        {
+            // 완료 보상은 없어도 걸은 거리는 티켓 · 경험치에 이미 쌓였다는 것을 보여 준다 (실망만 주지 않게)
+            int toTicket = Mathf.Max(0, Mathf.RoundToInt(GachaRules.TicketMeters - p.ticketMeters));
+            string next = toTicket > 0 ? $"다음 티켓까지 {RouteMath.Distance(toTicket)}" : "오늘 받을 티켓은 다 받았어요";
+            rewardText.text = $"완료 보상은 다음 기회에! 걸은 거리는 그대로 쌓였어요\n<size=28>{next}</size>";
+        }
     }
 
     /// <summary>레벨 막대가 보상 전 값에서 보상 뒤 값으로 차오른다</summary>
@@ -332,9 +352,6 @@ public class WalkCompleteScreen : MonoBehaviour
         reason = Line(list, "", 32, InkQuiet, 50f, true);
         reason.alignment = TextAnchor.MiddleCenter;
 
-        Button photo = Pill(list, "파트너와 사진 찍기", Ink, Color.white, TakePhoto);
-        UIKit.Size(photo, 116f);
-
         // 보상
         rewardCard = Card(list, "Reward", out RectTransform rc);
         Line(rc, "이번 산책 보상", 34, Ink, 50f, true);
@@ -353,6 +370,10 @@ public class WalkCompleteScreen : MonoBehaviour
         levelFill.anchorMin = Vector2.zero;
         levelFill.anchorMax = new Vector2(0f, 1f);
         levelFill.offsetMin = levelFill.offsetMax = Vector2.zero;
+
+        // 보상 다음에 사진 (보상을 먼저 보여 준다)
+        Button photo = Pill(list, "파트너와 사진 찍기", Ink, Color.white, TakePhoto);
+        UIKit.Size(photo, 116f);
 
         // 리뷰
         reviewCard = Card(list, "Review", out RectTransform vc);

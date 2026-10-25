@@ -351,7 +351,12 @@ public class MatchScreen : MonoBehaviour
                 Toast(s.message);
         }));
     }
-    void EndWalk() { if (!busy) Call(service.End(state.matchId, Apply)); }
+    void EndWalk()
+    {
+        if (busy) return;
+        ConfirmDialog.Show("함께 산책을 끝낼까요?", $"지금까지 {RouteMath.Distance(WalkSession.WalkedMeters)} 같이 걸었어요.", "끝내기",
+            () => { if (!busy) Call(service.End(state.matchId, Apply)); }, "계속 걷기");
+    }
 
     void CancelMatch()
     {
@@ -527,8 +532,8 @@ public class MatchScreen : MonoBehaviour
             ChipAt(p, "동성만", () => { sameGender = true; RefreshChips(); }, 60f, 520f, 300f),
             ChipAt(p, "상관없어요", () => { sameGender = false; RefreshChips(); }, 380f, 520f, 300f),
         };
-        Note(p, "위치는 건물 단위로만 쓰고, 매칭이 끝나면 지워요. 성별은 상대에게 보이지 않아요.", 660f);
-        serviceLabel = Note(p, "", 740f);
+        HowItWorks(p, 650f);
+        serviceLabel = Note(p, "", 1330f);
         PrimaryAtBottom(p, "산책메이트 찾기", Accent, Join);
     }
 
@@ -694,6 +699,51 @@ public class MatchScreen : MonoBehaviour
         Button cancel = Pill(c, "닫기", ChipOff, Ink, () => reportPanel.SetActive(false));
         BottomBox((RectTransform)cancel.transform, 40f);
         reportPanel.SetActive(false);
+    }
+
+    /// <summary>
+    /// 처음 보는 학생과 만나는 기능이라, 찾기 전에 흐름과 안전장치를 먼저 보여 준다 (디자인 평가 10/25:
+    /// 기획서의 안전 설계가 화면에서는 회색 두 줄뿐이었다)
+    /// </summary>
+    static void HowItWorks(Transform parent, float top)
+    {
+        Image card = UIKit.Image(parent, "HowItWorks", ChipOff);
+        card.sprite = HudIcons.Rounded;
+        card.type = Image.Type.Sliced;
+        card.pixelsPerUnitMultiplier = 0.6f;
+        Box(card.rectTransform, 48f, top, 48f, 650f);
+        Text head = UIKit.Text(card.transform, "이렇게 만나요", 34, TextAnchor.MiddleLeft, Ink);
+        head.fontStyle = FontStyle.Bold;
+        Box(head.rectTransform, 40f, 30f, 40f, 52f);
+        string[] steps =
+        {
+            "근처에서 같은 시간에 걷고 싶은 학생과 짝을 지어요",
+            "둘 다 수락하면, 누구나 오가는 만남 스팟에서 만나요",
+            "인상착의로 서로 알아보고, AI 대화 주제로 걷기 시작",
+        };
+        for (int i = 0; i < steps.Length; i++)
+        {
+            Image n = UIKit.Image(card.transform, "Step", Accent);
+            n.sprite = HudIcons.Circle;
+            Place(n.rectTransform, new Vector2(0f, 1f), new Vector2(66f, -128f - i * 88f));
+            n.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+            n.rectTransform.sizeDelta = new Vector2(52f, 52f);
+            Text num = UIKit.Text(n.transform, (i + 1).ToString(), 28, TextAnchor.MiddleCenter, Color.white);
+            num.fontStyle = FontStyle.Bold;
+            UIKit.Stretch(num.rectTransform);
+            Text t = UIKit.Text(card.transform, steps[i], 30, TextAnchor.MiddleLeft, Ink);
+            Box(t.rectTransform, 112f, 100f + i * 88f, 30f, 56f);
+        }
+        Text safeHead = UIKit.Text(card.transform, "안심하고 걸어요", 30, TextAnchor.MiddleLeft, Ink);
+        safeHead.fontStyle = FontStyle.Bold;
+        Box(safeHead.rectTransform, 40f, 390f, 40f, 48f);
+        Text safe = UIKit.Text(card.transform,
+            "· 공개된 만남 스팟에서만 만나요 · 동성만 고를 수 있어요\n" +
+            "· 위치는 건물 단위로만 쓰고, 인상착의는 끝나면 지워요\n" +
+            "· 언제든 신고 · 차단, 10분 안에 못 만나면 자동으로 끝나요",
+            27, TextAnchor.UpperLeft, InkQuiet);
+        safe.lineSpacing = 1.25f;
+        Box(safe.rectTransform, 40f, 446f, 30f, 180f);
     }
 
     // ---------- 작은 도우미 ----------
