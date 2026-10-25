@@ -34,6 +34,9 @@ public class ModularCharacter : MonoBehaviour
 
     public CharacterAppearance Appearance { get; private set; }
 
+    /// <summary>0 이상이면 이동량 대신 이 걷기 속도를 쓴다 (캡처 도구가 꾸미기 미리보기에서 걷는 자세를 찍을 때)</summary>
+    [System.NonSerialized] public float speedOverride = -1f;
+
     static readonly int SpeedId = Animator.StringToHash("Speed");
 
     GameObject model;
@@ -248,7 +251,7 @@ public class ModularCharacter : MonoBehaviour
         d.y = 0f;
         lastPos = p;
 
-        float target = d.magnitude * metersPerUnit / Time.deltaTime;
+        float target = speedOverride >= 0f ? speedOverride : d.magnitude * metersPerUnit / Time.deltaTime;
         speed = Mathf.Lerp(speed, target, 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.01f, speedDamping)));
         animator.SetFloat(SpeedId, speed);
         FaceCameraWhenIdle();
