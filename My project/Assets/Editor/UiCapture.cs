@@ -305,9 +305,12 @@ public static class UiCapture
                 {
                     rot = Quaternion.Euler(p, yaw, 0f);
                     d = dist * k;
-                    int hits = BlockedRays(b, target - rot * Vector3.forward * d, info, infoType, others, out string by);
-                    blocked = hits * 3 >= ProbeCount;   // 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, MAP_REVIEW_v9) → 1/3
-                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 맞은 것={by}");
+                    Vector3 camPos = target - rot * Vector3.forward * d;
+                    int hits = BlockedRays(b, camPos, info, infoType, others, out string by);
+                    float front = Foreground(camPos, rot, cam.fieldOfView, Vector3.Distance(camPos, b.center), info, infoType);
+                    // 1/3: 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, v9). 전경 30%: 건물은 다 보여도 화면 아래를 앞 지붕이 채움 (원자로센터 E · 온실 S, v11)
+                    blocked = hits * 3 >= ProbeCount || front >= 0.3f;
+                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 전경={front:P0} 맞은 것={by}");
                     if (!blocked)
                         break;
                 }
@@ -363,6 +366,32 @@ public static class UiCapture
         Physics.queriesHitBackfaces = backfaces;
         by = names.Count == 0 ? "없음" : string.Join(",", names.Take(4));
         return blocked;
+    }
+
+    /// <summary>
+    /// 전경 점유율: 사진(960×720) 아래 절반 격자 7×5 광선 중 대상 건물보다 앞에서 다른 건물 콜라이더(뒷면 포함)에 맞는 비율.
+    /// 건물 점 판정은 대상이 보이는지만 봐서, 대상은 다 보이는데 화면 아래를 앞 건물 지붕이 채우는 사진을 못 잡았음 (MAP_REVIEW_v11 2절)
+    /// </summary>
+    static float Foreground(Vector3 camPos, Quaternion rot, float fov, float targetDist, Component self, Type infoType)
+    {
+        float tanY = Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad), tanX = tanY * 960f / 720f;
+        bool backfaces = Physics.queriesHitBackfaces;
+        Physics.queriesHitBackfaces = true;
+        int hit = 0, total = 0;
+        for (int ix = 0; ix < 7; ix++)
+            for (int iy = 0; iy < 5; iy++)
+            {
+                float vx = 0.1f + 0.8f * ix / 6f, vy = 0.05f + 0.4f * iy / 4f;   // 화면 아래 절반
+                Vector3 dir = rot * new Vector3((2f * vx - 1f) * tanX, (2f * vy - 1f) * tanY, 1f);
+                total++;
+                foreach (RaycastHit h in Physics.RaycastAll(camPos, dir.normalized, targetDist))
+                {
+                    Component o = h.collider.GetComponentInParent(infoType);
+                    if (o != null && o != self) { hit++; break; }
+                }
+            }
+        Physics.queriesHitBackfaces = backfaces;
+        return (float)hit / total;
     }
 
     static string Safe(string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Replace(' ', '_');
