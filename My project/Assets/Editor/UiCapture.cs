@@ -296,13 +296,15 @@ public static class UiCapture
                 Quaternion rot = default;
                 float d = dist;
                 bool blocked = true;
-                foreach (var (p, k) in new[] { (pitch, 1f), (Mathf.Max(pitch, 58f), 1f), (Mathf.Max(pitch, 70f), 1.6f), (Mathf.Max(pitch, 80f), 1.6f) })
+                // 작은 건물(가로 40 m 미만)은 35° 에서 앞 건물 지붕에 가려지기 쉬워 50° 부터 (원자로센터 · 온실, v9)
+                float first = Mathf.Max(b.size.x, b.size.z) < 40f ? Mathf.Max(pitch, 50f) : pitch;
+                foreach (var (p, k) in new[] { (first, 1f), (Mathf.Max(pitch, 58f), 1f), (Mathf.Max(pitch, 70f), 1.6f), (Mathf.Max(pitch, 80f), 1.6f) })
                 {
                     rot = Quaternion.Euler(p, yaw, 0f);
                     d = dist * k;
-                    int hits = BlockedRays(b, -(rot * Vector3.forward), d, info, infoType);
-                    blocked = hits * 2 >= ProbeCount;
-                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount}");
+                    int hits = BlockedRays(b, -(rot * Vector3.forward), d, info, infoType, out string by);
+                    blocked = hits * 3 >= ProbeCount;   // 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, MAP_REVIEW_v9) → 1/3
+                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 맞은 것={by}");
                     if (!blocked)
                         break;
                 }
@@ -312,26 +314,38 @@ public static class UiCapture
         }
     }
 
-    const int ProbeCount = 6;
+    const int ProbeCount = 10;
 
     /// <summary>
-    /// 건물의 여섯 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽)에서 카메라 쪽으로 광선을 쏴 다른 건물에 막힌 수.
-    /// RaycastAll: 건물 안에서 출발한 광선이 자기 벽에 먼저 맞아 끝나면 막혀도 안 막힌 것으로 나왔음 (MAP_REVIEW_v8 U6)
+    /// 건물의 열 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽, 네 벽 가운데 높이)에서 카메라 쪽으로 광선을 쏴 자기 건물 아닌 것에 막힌 수.
+    /// RaycastAll: 건물 안에서 출발한 광선이 자기 벽에 먼저 맞아 끝나면 막혀도 안 막힌 것으로 나왔음 (MAP_REVIEW_v8 U6).
+    /// 건물 정보(CampusBuildingInfo)가 없는 콜라이더도 막힘으로 센다: 원자로센터 E · S 가 앞 지붕에 가렸는데 0/6 이었음 (v9). by = 맞은 것 이름
     /// </summary>
-    static int BlockedRays(Bounds b, Vector3 toCam, float dist, Component self, Type infoType)
+    static int BlockedRays(Bounds b, Vector3 toCam, float dist, Component self, Type infoType, out string by)
     {
+        var names = new HashSet<string>();
         Vector3 c = b.center, e = b.extents * 0.8f;
-        float lo = b.min.y + b.size.y * 0.35f, hi = b.min.y + b.size.y * 0.9f;
+        float lo = b.min.y + b.size.y * 0.35f, mid = b.min.y + b.size.y * 0.55f, hi = b.min.y + b.size.y * 0.9f;
         var points = new[]
         {
             new Vector3(c.x, lo, c.z), new Vector3(c.x, hi, c.z),
             new Vector3(c.x - e.x, hi, c.z - e.z), new Vector3(c.x + e.x, hi, c.z - e.z),
             new Vector3(c.x - e.x, hi, c.z + e.z), new Vector3(c.x + e.x, hi, c.z + e.z),
+            new Vector3(c.x - e.x, mid, c.z), new Vector3(c.x + e.x, mid, c.z),
+            new Vector3(c.x, mid, c.z - e.z), new Vector3(c.x, mid, c.z + e.z),
         };
         int blocked = 0;
         foreach (Vector3 p in points)
-            if (Physics.RaycastAll(p, toCam, dist).Any(h => { Component o = h.collider.GetComponentInParent(infoType); return o != null && o != self; }))
-                blocked++;
+        {
+            RaycastHit[] others = Physics.RaycastAll(p, toCam, dist)
+                .Where(h => !(h.collider is TerrainCollider) && h.collider.GetComponentInParent(infoType) != self).ToArray();
+            if (others.Length == 0)
+                continue;
+            blocked++;
+            foreach (RaycastHit h in others)
+                names.Add(h.collider.name);
+        }
+        by = names.Count == 0 ? "없음" : string.Join(",", names.Take(4));
         return blocked;
     }
 

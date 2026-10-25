@@ -70,8 +70,8 @@ public class HatchScreen : MonoBehaviour
         skip = false;
         cardBg.enabled = false;
         title.color = Color.white;
-        title.rectTransform.anchoredPosition = new Vector2(0f, -150f);   // 티켓 위끝(-240) 바로 위 · 카드 없이: 티켓 바로 위에 붙여 한 덩어리로 (뒤 화면 카드 줄과 겹쳐 보였음, UI_REVIEW_v8)
-        rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.88f);   // 카드 없이 흰 제목만: 뒤 뽑기 화면 글자와 겹쳐 읽히지 않게 더 어둡게
+        title.rectTransform.anchoredPosition = new Vector2(0f, -620f);   // 티켓(가운데 -420, 아래끝 -600) 바로 아래: 위쪽은 뒤 화면 "11장" 숫자와 겹쳤음 (UI_REVIEW_v9)
+        rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.94f);   // 카드 없이 흰 제목만: 뒤 뽑기 화면 글자가 거의 안 보이게
         flash.color = new Color(1f, 1f, 1f, 0f);
 
         // 1) 점점 세게 흔들린다

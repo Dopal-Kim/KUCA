@@ -432,6 +432,7 @@ ROOF_FEATURE = {
     'way-778946313': 'solar',       # 실험연구동 태양광 (M5 리뷰 ✅)
     'way-801815069': 'solar',       # 실험연구동 남쪽 동: RunMap 은 같은 이름 중 이 동을 찍는다 (M8)
     'way-585696420': 'solar',       # 실습농장동: 흰 상자 하나뿐이라 단조로웠음 (MAP_REVIEW_v8)
+    'way-474085538': 'solar',       # 글로벌관: v8 의 태양광 6장이 M8 시드 변경으로 사라졌음 (MAP_REVIEW_v9)
 }
 
 
@@ -462,8 +463,9 @@ def _rooftop(mb, b, style, blocks, rng):
         off = rng.choice((-1, 1)) * rng.uniform(0.5, 0.68) * hl
         side = rng.uniform(-0.2, 0.2) * hs
         px, pz = at(off, side) if long_u else at(side, off)
-        w, d = min(9.0, fp.half_u * 0.5), min(6.0, fp.half_v * 0.7)
-        k = min(1.0, math.sqrt(0.04 * b.area / (w * d)))
+        # 실제 계단실 크기(약 6 × 4.5 m)를 넘지 않게, 지붕 3% 이하 (4% · 9 × 6 은 도예관에서 여전히 컸음, MAP_REVIEW_v9)
+        w, d = min(6.0, fp.half_u * 0.5), min(4.5, fp.half_v * 0.7)
+        k = min(1.0, math.sqrt(0.03 * b.area / (w * d)))
         w, d = w * k, d * k
         if free(px, pz, max(w, d) / 2):
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
