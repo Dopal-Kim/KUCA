@@ -53,7 +53,7 @@ public class HatchScreen : MonoBehaviour
         string what = r.isNew ? "새 친구가 생겼어요!  도감에 적었어요"
             : r.evolved ? $"성장 경험치 +{r.growthAdded}\n{KhuMenus.EvolvedMessage(r.species, r.stage)}"
             : $"이미 있는 경희펫  ·  성장 경험치 +{r.growthAdded}";
-        info.text = $"{what}\n남은 티켓 {ticketsLeft}장";
+        info.text = $"{what}\n<b><color=#{ColorUtility.ToHtmlStringRGB(KucaTheme.Ink)}>남은 티켓 {ticketsLeft}장</color></b>";   // 다시 만나러 갈지 정하는 정보라 진하게 (REVIEW_v32)
         UIInputBlocker.SetModal(this, true);
         StartCoroutine(Animate());
     }

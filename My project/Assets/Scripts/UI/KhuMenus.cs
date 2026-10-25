@@ -602,7 +602,7 @@ public partial class KhuMenus : MonoBehaviour
             known ? KucaTheme.Ink : KucaTheme.InkSoft, bold: true);
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
-        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  성장 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "아직 만나지 않은 친구", KucaTheme.Caption, TextAnchor.MiddleCenter,
+        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  성장 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "", KucaTheme.Caption, TextAnchor.MiddleCenter,
             known ? KucaTheme.PrimaryDeep : KucaTheme.InkSoft);
         BottomBox(cnt.rectTransform, 40f, 44f);
         FitOneLine(cnt, KucaTheme.Caption);
