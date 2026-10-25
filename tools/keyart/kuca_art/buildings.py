@@ -8,6 +8,7 @@
 import json
 import math
 import random
+import zlib
 
 from .geo import Footprint, dist_to_poly_edge, point_in_poly
 from .mesh import Frame, IDENT, extrude_poly, glass_mix_cols, offset_polygon, outward_normal, rect_poly, round_corners, shade
@@ -219,7 +220,8 @@ def build_details(buildings, layer, shells, entrances, skip_ids, rng):
         elif ent:
             _entrance(mb, b, ent, pal, style)
         if not small:
-            _rooftop(mb, b, style, blocks, rng)
+            # 건물마다 고정 시드: 공용 rng 를 쓰면 다른 건물 하나만 바뀌어도 옥상 설비가 통째로 뒤바뀜 (M6 에서 실험연구동 태양광이 사라짐)
+            _rooftop(mb, b, style, blocks, random.Random(zlib.crc32(b.id.encode())))
 
 
 def _eave_cap(mb, poly, top, pal):
@@ -324,8 +326,8 @@ def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
                 blocks.append((part, top))
         return blocks
     if mode == 'core':
-        _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal)
-        return [(rect_poly(fp.center, u, v, 5.5, hv), H + fh)]
+        huts = _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal) or []
+        return [(rect_poly(fp.center, u, v, 5.5, hv), H + fh)] + huts   # 기계실 상자도 막아 옥상정원이 덮지 않게
     if mode == 'court':
         _courtyard(mb, b, fp, u, v, hu, hv, pal, rng)
         return [(rect_poly(fp.center, u, v, hu * 0.40, hv * 0.40), H)]
@@ -380,12 +382,15 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
         mb.emissive = False
         mb.box(m, (0, 3.2, 1.2), (hw * 1.6, 0.4, 2.4), pal['trim'])
     # 옥상 설비 상자 두 개 (키아트: 지붕 위 네모난 기계실)
+    huts = []
     for su in (-1, 1):
         px, pz = c[0] + u[0] * su * hu * 0.55, c[1] + u[1] * su * hu * 0.55
         if pip(px, pz, b.poly) and dist_to_poly_edge(px, pz, b.poly) > 5:
             m = Frame.yaw((px, H, pz), math.degrees(math.atan2(u[0], u[1])))
             mb.box(m, (0, 1.4, 0), (4.5, 2.8, 6.0), (0.93, 0.92, 0.89))
             mb.box(m, (0, 2.95, 0), (4.9, 0.3, 6.4), (0.99, 0.98, 0.95))
+            huts.append((rect_poly((px, pz), u, v, 3.2, 2.45), H + 3.1))
+    return huts
 
 
 def _courtyard(mb, b, fp, u, v, hu, hv, pal, rng):
@@ -416,8 +421,17 @@ def _courtyard(mb, b, fp, u, v, hu, hv, pal, rng):
                 lx = sv * gd * (0.35 + 0.3 * k)
                 lz = su * gw * (0.55 - 0.25 * k)
                 p = m.p((lx, 0, lz))
-                draw_tree(mb, 'cherry' if (k + (su > 0)) % 2 else 'round', p[0], p[2], rng.uniform(0.9, 1.1), rng.uniform(0, 360), rng)
+                # M7: 7층 깊이 중정이라 옆(35°)에선 바닥이 안 보임 → 나무를 3~4층 높이로 키워 옆에서도 정원이 보이게
+                draw_tree(mb, 'cherry' if (k + (su > 0)) % 2 else 'round', p[0], p[2], rng.uniform(1.8, 2.1), rng.uniform(0, 360), rng)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
+
+
+# 리뷰에서 맞다고 본 옥상을 고정 (나머지는 건물마다 고정 시드로 고른다)
+ROOF_FEATURE = {
+    'relation-8269760': 'garden',   # 우정원 옥상정원
+    'way-778946313': 'solar',       # 실험연구동 태양광 (M5 리뷰 ✅)
+    'way-801815069': 'solar',
+}
 
 
 def _rooftop(mb, b, style, blocks, rng):
@@ -446,6 +460,7 @@ def _rooftop(mb, b, style, blocks, rng):
         px, pz = at(off, rng.uniform(-0.3, 0.3) * fp.half_v)
         w, d = min(9.0, fp.half_u * 0.5), min(6.0, fp.half_v * 0.7)
         if free(px, pz, max(w, d) / 2):
+            blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
             mb.box(m, (0, 1.7, 0), (d, 3.4, w), (0.95, 0.93, 0.88))
             mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), (0.99, 0.98, 0.95))
@@ -455,7 +470,7 @@ def _rooftop(mb, b, style, blocks, rng):
     big = b.area > 900 and fp.half_u > 12 and fp.half_v > 9
     feature = None
     if big:
-        feature = rng.choices(['skylight', 'solar', 'garden', None], [0.4, 0.3, 0.2, 0.1] if style != 'Classical' else [0.2, 0.0, 0.5, 0.3])[0]
+        feature = ROOF_FEATURE.get(b.id) or rng.choices(['skylight', 'solar', 'garden', None], [0.4, 0.3, 0.2, 0.1] if style != 'Classical' else [0.2, 0.0, 0.5, 0.3])[0]
     if feature == 'skylight':
         rows = max(1, min(4, int(fp.half_v / 5)))
         length = min(fp.half_u * 0.9, 16.0)
@@ -479,15 +494,31 @@ def _rooftop(mb, b, style, blocks, rng):
                     _solar_panel(mb, m)
     elif feature == 'garden':
         gw, gd = min(fp.half_u * 0.6, 14.0), min(fp.half_v * 0.6, 9.0)
-        x, z = at(rng.uniform(-0.2, 0.2) * fp.half_u, 0)
-        if all(free(*at(su, sv), 0.5) for su in (-gw, gw) for sv in (-gd, gd)) and free(x, z, 1.0):
+        # 가운데가 지붕 덩어리에 막히면 옆 자리를 차례로 (우정원: 가운데 긴 덩어리)
+        gw, gd = min(gw, fp.half_u * 0.4), min(gd, fp.half_v * 0.4)
+        spots = [(rng.uniform(-0.2, 0.2) * fp.half_u, 0.0)] + [(s * k * fp.half_u, t * j * fp.half_v)
+                                                                for k in (0.35, 0.55) for j in (0.0, 0.45) for s in (1, -1) for t in (1, -1)]
+        spot = next(((su, sv) for su, sv in spots
+                     if all(free(*at(su + du, sv + dv), 0.5) for du in (-gw, gw) for dv in (-gd, gd)) and free(*at(su, sv), 1.0)), None)
+        x, z = at(*(spot or (0.0, 0.0)))
+        if spot is not None:
+            blocks = blocks + [(rect_poly((x, z), u, v, gw + 0.8, gd + 0.8), 0)]   # 실외기가 화단에 걸치지 않게
             m = Frame.yaw((x, H, z), yaw)
-            mb.box(m, (0, 0.25, 0), (gd * 2 + 0.6, 0.5, gw * 2 + 0.6), (0.86, 0.84, 0.80))
-            mb.box(m, (0, 0.45, 0), (gd * 2, 0.2, gw * 2), GARDEN, top=GARDEN)
+            # 화단 벽(1 m) 으로 둘러 옆에서도 옥상정원으로 읽히게 (얇은 초록 판은 옆에서 떠 보였음, MAP_REVIEW_v6)
+            rim = (0.86, 0.84, 0.80)
+            for s in (-1, 1):
+                mb.box(m, (s * (gd + 0.3), 0.5, 0), (0.6, 1.0, gw * 2 + 1.2), rim, top=shade(rim, 1.06))
+                mb.box(m, (0, 0.5, s * (gw + 0.3)), (gd * 2, 1.0, 0.6), rim, top=shade(rim, 1.06))
+            mb.box(m, (0, 0.4, 0), (gd * 2, 0.8, gw * 2), GARDEN, top=GARDEN)
             for k in range(int(gw * gd / 12)):
                 lx, lz = rng.uniform(-gd + 1, gd - 1), rng.uniform(-gw + 1, gw - 1)
                 col = rng.choice([(0.34, 0.60, 0.20), (0.40, 0.66, 0.23), (0.98, 0.72, 0.82)])
-                mb.ico(m, (lx, 0.95, lz), (0.9, 0.6, 0.9), col)
+                mb.ico(m, (lx, 1.2, lz), (0.9, 0.7, 0.9), col)
+            # 낮은 나무 몇 그루 (줄기 + 둥근 수관): 지붕선 위로 살짝 솟아 멀리서도 보인다
+            for k in range(max(2, int(gw * gd / 40))):
+                lx, lz = rng.uniform(-gd + 2, gd - 2), rng.uniform(-gw + 2, gw - 2)
+                mb.prism(m, (lx, 0.8, lz), 0.25, 1.6, 6, (0.45, 0.33, 0.22))
+                mb.ico(m, (lx, 3.0, lz), (1.6, 1.4, 1.6), (0.36, 0.62, 0.24))
 
     # 실외기
     n_units = int(min(8, b.area / 300))

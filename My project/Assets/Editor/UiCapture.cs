@@ -288,12 +288,20 @@ public static class UiCapture
             Vector3 target = new Vector3(b.center.x, b.min.y + b.size.y * 0.35f, b.center.z);
             foreach (var (tag, yaw, pitch) in new[] { ("N", 180f, 35f), ("E", 270f, 35f), ("S", 0f, 35f), ("W", 90f, 35f), ("T", 0f, 80f) })
             {
-                // 북쪽(+z)에서 남쪽을 바라보면 yaw 180
-                Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
-                // 옆 건물에 막히면 (원자로센터 E·S, 도예관 S 등) 더 내려다보는 각도로
-                if (Physics.Raycast(target, -(rot * Vector3.forward), out RaycastHit hit, dist) && hit.collider.GetComponentInParent(infoType) != info)
-                    rot = Quaternion.Euler(Mathf.Max(pitch, 58f), yaw, 0f);
-                ShotFrom(cam, target - rot * Vector3.forward * dist, rot, $"{Safe(name)}_{tag}");
+                // 북쪽(+z)에서 남쪽을 바라보면 yaw 180. 옆 건물에 막히면 단계적으로 더 내려다보고 · 멀리서 (원자로센터 E·S, 글로벌관 E, 도예관 S)
+                // 58° 하나로는 여전히 막혔음 (MAP_REVIEW_v6 U6). 끝까지 막히면 파일 이름에 _막힘
+                Quaternion rot = default;
+                float d = dist;
+                bool blocked = true;
+                foreach (var (p, k) in new[] { (pitch, 1f), (Mathf.Max(pitch, 58f), 1f), (Mathf.Max(pitch, 70f), 1.6f), (Mathf.Max(pitch, 80f), 1.6f) })
+                {
+                    rot = Quaternion.Euler(p, yaw, 0f);
+                    d = dist * k;
+                    blocked = Physics.Raycast(target, -(rot * Vector3.forward), out RaycastHit hit, d) && hit.collider.GetComponentInParent(infoType) != info;
+                    if (!blocked)
+                        break;
+                }
+                ShotFrom(cam, target - rot * Vector3.forward * d, rot, $"{Safe(name)}_{tag}" + (blocked ? "_막힘" : ""));
             }
             yield return 0.05f;
         }

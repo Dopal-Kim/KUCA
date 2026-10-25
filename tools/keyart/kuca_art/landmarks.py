@@ -252,7 +252,7 @@ def arcade(mb, f, height):
 
 
 SPIRE_GREEN = (0.36, 0.56, 0.44)   # 선승관 시계탑 첨탑 (실사: 녹청 동판)
-DOME_GRAY = (0.44, 0.48, 0.54)     # 선승관 지붕 (실사: 짙은 회색 금속판). M6: Unity 한낮에 진회색 단색으로 무거워 청회색으로
+DOME_GRAY = (0.50, 0.56, 0.64)     # 선승관 지붕 (실사: 짙은 회색 금속판). M6 청회색 (0.44,0.48,0.54) 도 Unity 에선 진회색 → M7 한 단계 밝고 푸르게
 
 
 def drum_roof(mb, b, f):
@@ -496,7 +496,7 @@ def gate(mb, f, ground=None):
     #    예전 (통로 9 m · 기둥 5 m · 높은 아틱) 은 가운데가 좁고 높은 'I' 자처럼 보였다.
     D, pier, r, spring = 12.0, 4.5, 7.5, 8.0
     cw = 2 * r + 2 * pier
-    block_top = spring + r + 2.0
+    block_top = spring + r + 4.0   # M7 실사: 아치 꼭대기가 덩어리(코니스까지)의 약 4분의 3 — 2.0 은 아치 위 벽이 얇아 아치가 커 보였음
     for s in (-1, 1):
         px = s * (r + pier / 2)
         mb.box(m, (px, 0.4, 0), (pier + 1.2, 0.8, D + 1.2), STEP)
@@ -525,16 +525,18 @@ def gate(mb, f, ground=None):
         mb.box(m, (0, spring + r + 0.2, sz * (D / 2 + 0.15)), (1.4, 1.9, 0.5), COLUMN)
     mb.box(m, (0, spring + 0.3, 0), (2 * r + 0.6, 0.5, D + 0.3), COLUMN)   # 아치 시작선 (임포스트)
     mb.box(m, (0, block_top + 0.4, 0), (cw + 1.4, 0.8, D + 1.4), COLUMN)   # 엔태블러처 · 코니스
-    mb.box(m, (0, block_top + 1.6, 0), (cw - 1.0, 1.6, D - 0.6), STONE)   # 낮은 아틱
-    mb.box(m, (0, block_top + 2.55, 0), (cw - 0.4, 0.3, D - 0.2), COLUMN)
+    AT = 2.6   # 아틱 높이 (실사: 코니스 위 조각 띠가 뚜렷)
+    mb.box(m, (0, block_top + 0.8 + AT / 2, 0), (cw - 1.0, AT, D - 0.6), STONE)   # 아틱
+    mb.box(m, (0, block_top + 0.95 + AT, 0), (cw - 0.4, 0.3, D - 0.2), COLUMN)
     for side_yaw in (0, 180):   # 아틱 가운데 문장 (금색 원판)
         side = m.child((0, 0, 0), side_yaw)
-        mb.disc(side, (0, block_top + 1.6, (D - 0.6) / 2 + 0.06), 0.8, 0.1, 20, GOLD)
-    mb.box(m, (0, block_top + 3.1, 0), (4.4, 0.8, 2.4), COLUMN)   # 꼭대기 조각 무리 (낮게)
-    mb.ico(m, (0, block_top + 4.2, 0), (1.3, 1.3, 0.9), COLUMN, var=0.05)
+        mb.disc(side, (0, block_top + 0.8 + AT / 2, (D - 0.6) / 2 + 0.06), 1.0, 0.1, 20, GOLD)
+    top = block_top + 1.1 + AT
+    mb.box(m, (0, top + 0.5, 0), (5.0, 1.0, 2.6), COLUMN)   # 꼭대기 조각 무리
+    mb.ico(m, (0, top + 1.9, 0), (1.5, 1.6, 1.0), COLUMN, var=0.05)
     for s in (-1, 1):
-        mb.ico(m, (s * 1.8, block_top + 3.9, 0), (0.6, 0.9, 0.6), COLUMN, var=0.05)
-        mb.ico(m, (s * (cw / 2 - 0.6), block_top + 3.3, 0), (0.5, 0.8, 0.5), COLUMN, var=0.05)
+        mb.ico(m, (s * 2.0, top + 1.4, 0), (0.7, 1.1, 0.7), COLUMN, var=0.05)
+        mb.ico(m, (s * (cw / 2 - 0.6), top + 0.7, 0), (0.6, 1.0, 0.6), COLUMN, var=0.05)
     # 2) 좌우 낮은 회랑: 원기둥 2열 + 엔태블러처, 3) 양 끝 파일런 + 조각상
     pyl, Dc, col_h = 5.5, 7.0, 7.4   # 열주 위 = 가운데 덩어리의 약 0.55 (실사)
     x_in, x_out = cw / 2, W / 2 - pyl
