@@ -512,21 +512,28 @@ def _rooftop(mb, b, style, blocks, rng):
         if spot is not None:
             blocks = blocks + [(rect_poly((x, z), u, v, gw + 0.8, gd + 0.8), 0)]   # 실외기가 화단에 걸치지 않게
             m = Frame.yaw((x, H, z), yaw)
-            # 화단 벽(1 m) 으로 둘러 옆에서도 옥상정원으로 읽히게 (얇은 초록 판은 옆에서 떠 보였음, MAP_REVIEW_v6)
-            rim = (0.86, 0.84, 0.80)
+            # 화단 벽으로 둘러 옆에서도 옥상정원으로 읽히게 (얇은 초록 판은 옆에서 떠 보였음, MAP_REVIEW_v6)
+            # M11: 벽을 지붕과 다른 따뜻한 석재 · 1.3 m 로, 안쪽에 흙 띠 + 한 단 높인 가운데 둔덕 + 벽 따라 회양목 줄
+            #      (REVIEW_v15: 옆에서 여전히 지붕 위에 얹힌 얇은 판)
+            rim = (0.74, 0.68, 0.60)
             for s in (-1, 1):
-                mb.box(m, (s * (gd + 0.3), 0.5, 0), (0.6, 1.0, gw * 2 + 1.2), rim, top=shade(rim, 1.06))
-                mb.box(m, (0, 0.5, s * (gw + 0.3)), (gd * 2, 1.0, 0.6), rim, top=shade(rim, 1.06))
-            mb.box(m, (0, 0.4, 0), (gd * 2, 0.8, gw * 2), GARDEN, top=GARDEN)
+                mb.box(m, (s * (gd + 0.3), 0.65, 0), (0.6, 1.3, gw * 2 + 1.2), rim, top=shade(rim, 1.1))
+                mb.box(m, (0, 0.65, s * (gw + 0.3)), (gd * 2, 1.3, 0.6), rim, top=shade(rim, 1.1))
+            mb.box(m, (0, 0.5, 0), (gd * 2, 1.0, gw * 2), SOIL, top=SOIL)                                   # 흙 (벽 안쪽 띠로 보임)
+            mb.box(m, (0, 0.55, 0), (gd * 2 - 1.4, 1.1, gw * 2 - 1.4), GARDEN, top=GARDEN)                 # 잔디
+            mb.box(m, (0, 1.25, 0), (gd * 1.1, 0.5, gw * 1.1), shade(GARDEN, 0.94), top=shade(GARDEN, 1.04))   # 가운데 둔덕
+            for s in (-1, 1):   # 긴 벽 따라 낮은 회양목
+                for k in range(int(gw * 2 / 1.6)):
+                    mb.ico(m, (s * (gd - 1.2), 1.5, -gw + 1.0 + k * 1.6), (0.75, 0.6, 0.75), HEDGE, var=0.05)
             for k in range(int(gw * gd / 12)):
-                lx, lz = rng.uniform(-gd + 1, gd - 1), rng.uniform(-gw + 1, gw - 1)
+                lx, lz = rng.uniform(-gd * 0.5, gd * 0.5), rng.uniform(-gw * 0.5, gw * 0.5)
                 col = rng.choice([(0.34, 0.60, 0.20), (0.40, 0.66, 0.23), (0.98, 0.72, 0.82)])
-                mb.ico(m, (lx, 1.2, lz), (0.9, 0.7, 0.9), col)
+                mb.ico(m, (lx, 1.8, lz), (0.9, 0.7, 0.9), col)
             # 낮은 나무 몇 그루 (줄기 + 둥근 수관): 지붕선 위로 살짝 솟아 멀리서도 보인다
             for k in range(max(2, int(gw * gd / 40))):
                 lx, lz = rng.uniform(-gd + 2, gd - 2), rng.uniform(-gw + 2, gw - 2)
-                mb.prism(m, (lx, 0.8, lz), 0.25, 1.6, 6, (0.45, 0.33, 0.22))
-                mb.ico(m, (lx, 3.0, lz), (1.6, 1.4, 1.6), (0.36, 0.62, 0.24))
+                mb.prism(m, (lx, 1.1, lz), 0.25, 1.9, 6, (0.45, 0.33, 0.22))
+                mb.ico(m, (lx, 3.5, lz), (1.6, 1.4, 1.6), (0.36, 0.62, 0.24))
 
     # 실외기
     n_units = int(min(8, b.area / 300))

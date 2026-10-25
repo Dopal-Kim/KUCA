@@ -256,7 +256,7 @@ vec3 kucaBuilding(vec3 p, vec3 n, vec2 wall) {
   if (uBrick > 0.5) c *= 1.0 - 0.06 * step(fract(p.y / 0.34), 0.12);
   float fv = fract(p.y / uFloorH), fl = floor(p.y / uFloorH);
   if (fv < 0.05 && p.y > 2.0) c = mix(c, uTrim, 0.55);
-  float wl = wall.y, wu = wall.x;
+  float wl = floor(wall.y * 10.0 + 0.5) * 0.1, wu = wall.x;   // M11: 보간 오차 되돌림 (Unity 와 같음)
   if (wl < 0.5) { vec2 side = normalize(vec2(-n.z, n.x) + 1e-5); wu = dot(p.xz, side); wl = 100000.0; }
   bool infinite = wl > 99999.0;
   // 벽 버텍스 색 R = 벽 종류: 1 보통 창, 0.5 커튼월(전면 유리), 0 석재 + 세로 슬릿 창 (멀티미디어·글로벌관)

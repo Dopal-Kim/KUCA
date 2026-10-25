@@ -265,7 +265,8 @@ def drum_roof(mb, b, f):
     k = 0.47
     dome = Frame((f.center[0], H + 0.4, f.center[1]), (ax * L * k, 0.0, az * L * k), (0.0, min(L, Wd) * 0.16, 0.0),
                  (-az * Wd * k, 0.0, ax * Wd * k))
-    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 40, 7, DOME_GRAY)
+    # M11: 칸마다 밝기를 번갈아 칠하던 체커(타일 반복처럼 보였음, REVIEW_v15)를 끄고 고리를 늘려 면 경계를 부드럽게 — 결은 리브가 맡는다
+    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 48, 12, DOME_GRAY, checker=False)
     # 금속판 이음 리브 16줄 (결 따라 밝기 변화: 단색 덩어리로 안 보이게)
     rib = shade(DOME_GRAY, 1.22)
 
@@ -501,7 +502,8 @@ def gate(mb, f, ground=None):
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 3.0, 0.3
     # 1) 가운데 아치 (M6, 실사 비례): 넓은 반원 개구부(덩어리 폭의 약 2/3) + 날씬한 기둥, 덩어리 폭 ≥ 높이.
     #    예전 (통로 9 m · 기둥 5 m · 높은 아틱) 은 가운데가 좁고 높은 'I' 자처럼 보였다.
-    D, pier, r, spring = 12.0, 4.5, 7.5, 8.0
+    # M11: 깊이 12 → 16 m — 옆(W · E)에서 가운데 덩어리 · 끝 기둥탑이 얇은 탑 두 개처럼 보였음 (REVIEW_v15). 정면 모양(X · Y)은 그대로
+    D, pier, r, spring = 16.0, 4.5, 7.5, 8.0
     cw = 2 * r + 2 * pier
     block_top = spring + r + 4.0   # M7 실사: 아치 꼭대기가 덩어리(코니스까지)의 약 4분의 3 — 2.0 은 아치 위 벽이 얇아 아치가 커 보였음
     for s in (-1, 1):
@@ -545,7 +547,7 @@ def gate(mb, f, ground=None):
         mb.ico(m, (s * 2.0, top + 1.4, 0), (0.7, 1.1, 0.7), COLUMN, var=0.05)
         mb.ico(m, (s * (cw / 2 - 0.6), top + 0.7, 0), (0.6, 1.0, 0.6), COLUMN, var=0.05)
     # 2) 좌우 낮은 회랑: 원기둥 2열 + 엔태블러처, 3) 양 끝 파일런 + 조각상
-    pyl, Dc, col_h = 5.5, 7.0, 7.4   # 열주 위 = 가운데 덩어리의 약 0.55 (실사)
+    pyl, Dc, col_h = 5.5, 9.0, 7.4   # 열주 위 = 가운데 덩어리의 약 0.55 (실사). M11: 회랑 깊이 7 → 9, 끝 기둥탑 Dc + 3
     x_in, x_out = cw / 2, W / 2 - pyl
     run = x_out - x_in
     ncol = max(3, int(run / 3.0))
@@ -561,11 +563,14 @@ def gate(mb, f, ground=None):
         balustrade(mb, m, (mid, 0.6 + col_h + 1.5, 0), run - 1.0, 0.8)
         px = s * (W / 2 - pyl / 2)
         ph = 0.6 + col_h + 1.5   # 끝 기둥탑은 열주 높이까지 + 위 조각상 (예전 11 m 는 열주보다 높아 계단이 거꾸로였음)
-        mb.box(m, (px, 0.4, 0), (pyl + 1.0, 0.8, Dc + 2.0), STEP)
-        mb.box(m, (px, ph / 2, 0), (pyl, ph, Dc + 1.0), STONE)
-        mb.box(m, (px, ph + 0.3, 0), (pyl + 0.6, 0.6, Dc + 1.6), COLUMN)
+        PD = Dc + 3.0
+        mb.box(m, (px, 0.4, 0), (pyl + 1.0, 0.8, PD + 1.0), STEP)
+        mb.box(m, (px, ph / 2, 0), (pyl, ph, PD), STONE)
+        mb.box(m, (px, ph + 0.3, 0), (pyl + 0.6, 0.6, PD + 0.6), COLUMN)
         for sz in (-1, 1):
-            mb.box(m, (px, ph * 0.55, sz * ((Dc + 1.0) / 2 + 0.06)), (pyl - 1.6, ph * 0.5, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))   # 부조 판
+            mb.box(m, (px, ph * 0.55, sz * (PD / 2 + 0.06)), (pyl - 1.6, ph * 0.5, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))   # 부조 판
+        side = m.child((s * W / 2, 0, 0), 90 * s)   # 바깥 옆면 부조 판 (옆에서 민벽 대신 두께 있는 기둥탑으로)
+        mb.box(side, (0, ph * 0.55, 0.06), (PD - 2.4, ph * 0.5, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))
         mb.box(m, (px, ph + 1.1, 0), (2.0, 1.0, 2.0), STONE)
         mb.ico(m, (px, ph + 2.6, 0), (0.8, 1.4, 0.8), COLUMN, var=0.06)   # 조각상
     # 밤: 아치 밑 등
@@ -759,18 +764,9 @@ def union_canopy(mb, m, b, elen, ground):
     for y in (7.4, 10.6):
         if y + 1.0 < b.h:
             mb.box(m, (0, y, 0.12), (elen * 0.86, 1.3, 0.24), TEAL_GLASS)
-    # 실사: 정면은 2~3층, 뒤쪽에 7층까지 오르는 높은 매스 (동아리방 7F) → 뒤 절반에 덩어리 + 옥상 계단실
-    from .buildings import ROOF_RESERVED
-    fp = Footprint(b.poly, b.h)
-    half_d = fp.face((fp.center[0] + m.z[0] * 100, fp.center[1] + m.z[2] * 100))['depth'] / 2   # 앞뒤 반 깊이
-    bc = (fp.center[0] - m.z[0] * half_d * 0.35, fp.center[1] - m.z[2] * half_d * 0.35)
-    bm = Frame.look((bc[0], 0.0, bc[1]), (m.z[0], 0.0, m.z[2]))
-    bw, bd, top = min(elen * 0.55, 30.0), min(half_d * 0.9, 14.0), b.h + 3.3 * 4
-    mb.box(bm, (0, (b.h + top) / 2, 0), (bw, top - b.h + 0.2, bd), (0.90, 0.90, 0.88), top=shade(COLUMN, 0.94))
-    for k in range(1, 5):
-        mb.box(bm, (0, b.h + k * 3.3 - 1.4, bd / 2 + 0.06), (bw * 0.86, 1.2, 0.12), TEAL_GLASS)   # 뒤 매스 띠창
-    mb.box(bm, (0, top + 1.6, 0), (6.0, 3.2, 5.0), (0.92, 0.92, 0.90))   # 옥상 계단실
-    ROOF_RESERVED.setdefault(b.id, []).append(([bm.p((sx * (bw / 2 + 1), 0, sz * (bd / 2 + 1)))[::2] for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))], top))
+    # M11: M5 의 '뒤쪽 4층 더 높은 매스'(지붕 위 청록 띠창 탑)는 근거 없음 — OSM 은 다각형 하나(building=college, 높이 ·
+    # 층수 · building:part 없음)라 이미 기본 높이 18 m(5층대) 몸체인데 그 위에 4층을 더 얹어 9층 탑이 됐다.
+    # 실사의 '앞 2~3층 / 뒤 고층' 은 몸체 높이로 이미 닮았으니 탑을 없애고 지붕은 다른 건물과 같은 옥상 규칙(작은 계단실 · 실외기)에 맡긴다.
 
 
 def ceramics_stair(mb, m, b, elen):

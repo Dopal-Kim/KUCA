@@ -211,14 +211,14 @@ class Builder:
             k = 0.94 + var * ((f * 13) % 5) / 4 + 0.08 * ny
             self.tri(m, pts[0], pts[2], pts[1], shade(col, k), center)
 
-    def hemisphere(self, m, base, r, segments, rings, col):
+    def hemisphere(self, m, base, r, segments, rings, col, checker=True):
         def P(th, ph):
             return (base[0] + math.cos(th) * math.cos(ph) * r, base[1] + math.sin(th) * r, base[2] + math.cos(th) * math.sin(ph) * r)
         for ring in range(rings):
             t0, t1 = ring * math.pi / 2 / rings, (ring + 1) * math.pi / 2 / rings
             for s in range(segments):
                 p0, p1 = s * 2 * math.pi / segments, (s + 1) * 2 * math.pi / segments
-                sh = shade(col, 0.95 + 0.05 * ((s + ring) % 2))
+                sh = shade(col, 0.95 + 0.05 * ((s + ring) % 2)) if checker else col
                 if ring < rings - 1:
                     self.tri(m, P(t0, p0), P(t1, p0), P(t1, p1), sh, base)
                     self.tri(m, P(t0, p0), P(t1, p1), P(t0, p1), sh, base)

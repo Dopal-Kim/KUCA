@@ -88,7 +88,9 @@ Shader "KUCA/StylizedBuilding"
                 float trimW = (fv < 0.05 && p.y > 2.0) ? 0.55 : 0.0;
                 c = lerp(c, _TrimColor.rgb, lerp(trimW, 0.55 * 0.05, saturate((py - 0.06) / 0.12)));
 
-                float wl = wall.y, wu = wall.x;
+                // M11: 벽 길이는 0.1 m 단위로 저장되니 보간 오차를 되돌린다. 그대로 쓰면 (길이 - 여백)/창 간격이 딱 정수인 벽
+                // (생명과학대 S 40.6 m: (40.6 - 6.4)/3.8 = 9) 에서 floor 가 픽셀마다 8 · 9 로 뒤바뀌어 창 배치가 얼룩졌음
+                float wl = round(wall.y * 10.0) * 0.1, wu = wall.x;
                 bool infinite = wl < 0.5;
                 if (infinite)
                 {
