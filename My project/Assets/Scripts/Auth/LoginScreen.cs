@@ -400,9 +400,8 @@ public class LoginScreen : MonoBehaviour
         AddIcon(kakao, HudIcons.Bubble, KakaoInk);
         if (AuthConfig.AppleLoginEnabled)
             UIKit.BigButton(actions, "Apple로 계속하기", () => LoginWith("apple"), Color.black, Color.white).gameObject.AddComponent<PressScale>();
-        Button guest = UIKit.Button(actions, "로그인 없이 둘러보기", StartGuest, new Color(0f, 0f, 0f, 0f), KucaTheme.Body);
-        guest.GetComponentInChildren<Text>().color = Ink;
-        UIKit.Size(guest, KucaTheme.TouchMin);
+        // 보조 버튼 하나로 통일 (글자만 있어 눌리는지 애매했음, REVIEW_v14)
+        UIKit.SecondaryButton(actions, "로그인 없이 둘러보기", StartGuest);
         Text guestHint = UIKit.Text(actions, "체험 계정은 7일 뒤 지워져요. 나중에 로그인해도 진행은 이어져요.", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft);
         UIKit.Size(guestHint, 60f);
 #if UNITY_EDITOR

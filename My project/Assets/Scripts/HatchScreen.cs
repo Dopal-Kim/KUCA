@@ -90,7 +90,7 @@ public class HatchScreen : MonoBehaviour
         title.color = InkQuiet;
         title.rectTransform.anchoredPosition = new Vector2(0f, -56f);
         titleBack.enabled = false;
-        rootBg.color = KucaTheme.Scrim;
+        rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.85f);   // 연출(0.94)에서 결과로 넘어갈 때 확 밝아지지 않게 (리니어 색 공간이라 0.55 는 밝은 회색, REVIEW_v14)
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
         title.text = "뽑았어요!";

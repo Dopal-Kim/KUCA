@@ -394,8 +394,11 @@ public static class UIKit
         return card.rectTransform;
     }
 
-    /// <summary>목록 한 줄: 왼쪽 이름 + 오른쪽 화살표, 위에 옅은 구분선. danger 면 크림슨 글자 · 화살표 없음 (탈퇴 등)</summary>
-    public static Button ListRow(Transform group, string label, UnityAction onClick, bool danger = false)
+    /// <summary>
+    /// 목록 한 줄: 왼쪽 이름 + 오른쪽 화살표, 위에 옅은 구분선. danger 면 크림슨 글자 · 화살표 없음 (탈퇴 등).
+    /// chevron = false: 다른 화면으로 가지 않고 바로 실행하는 줄 (화살표가 있으면 화면이 넘어가는 것처럼 보였음, REVIEW_v14)
+    /// </summary>
+    public static Button ListRow(Transform group, string label, UnityAction onClick, bool danger = false, bool chevron = true)
     {
         bool first = group.childCount == 0;
         Image row = Image(group, label, new Color(1f, 1f, 1f, 0f), raycast: true);
@@ -406,7 +409,7 @@ public static class UIKit
         Text t = Text(row.transform, label, KucaTheme.Body, TextAnchor.MiddleLeft, danger ? KucaTheme.Crimson : KucaTheme.Ink);
         Stretch(t.rectTransform, 40f, 0f);
         t.rectTransform.offsetMax = new Vector2(-100f, 0f);
-        if (!danger)
+        if (!danger && chevron)
         {
             Image chev = Image(row.transform, "Chevron", KucaTheme.InkSoft);
             chev.sprite = HudIcons.Chevron;

@@ -789,7 +789,7 @@ public class GameHUD : MonoBehaviour
     void OpenSettings()
     {
         SetScreen(settingsScreen, true, null);
-        nicknameInput.text = PlayerPrefs.GetString(NicknameKey, "");
+        nicknameInput.text = Nickname;   // 저장 전에도 지금 쓰는 이름을 값으로 (연회색 안내 글자처럼 보였음, REVIEW_v14)
         RefreshServerStatus();
         bool guest = AuthService.Current != null && AuthService.Current.isGuest;
         UIKit.SetLabel(logoutButton, guest ? "로그인하기 (체험 끝내기)" : "로그아웃");
@@ -841,10 +841,10 @@ public class GameHUD : MonoBehaviour
         UIKit.ListRow(profileGroup, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); });
 
         RectTransform walkGroup = UIKit.ListGroup(settingsList, "지도 · 산책");
-        UIKit.ListRow(walkGroup, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); });
+        UIKit.ListRow(walkGroup, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); }, chevron: false);
         UIKit.ListRow(walkGroup, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); });
         // 체험 계정만: 캠퍼스 밖에서도 정문부터 가상으로 걸어 보기 (공모전 심사 설명용)
-        virtualWalkButton = UIKit.ListRow(walkGroup, "가상 산책 켜기 (체험 계정)", () =>
+        virtualWalkButton = UIKit.ListRow(walkGroup, "가상 산책 켜기 (체험 계정)", chevron: false, onClick: () =>
         {
             CloseSettings();
             var v = VirtualWalk.Instance;
@@ -855,7 +855,7 @@ public class GameHUD : MonoBehaviour
         // 화면: 강조색 계절 (자동 → 봄 → 여름 → 가을 → 겨울 → 자동)
         RectTransform screenGroup = UIKit.ListGroup(settingsList, "화면");
         Button season = null;
-        season = UIKit.ListRow(screenGroup, SeasonLabel(), () =>
+        season = UIKit.ListRow(screenGroup, SeasonLabel(), chevron: false, onClick: () =>
         {
             KucaTheme.Season? o = KucaTheme.Override;
             KucaTheme.Override = o == null ? KucaTheme.Season.Spring
@@ -866,7 +866,7 @@ public class GameHUD : MonoBehaviour
         RectTransform accountGroup = UIKit.ListGroup(settingsList, "계정");
         UIKit.ListRow(accountGroup, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); });
         // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
-        logoutButton = UIKit.ListRow(accountGroup, "로그아웃", () =>
+        logoutButton = UIKit.ListRow(accountGroup, "로그아웃", chevron: false, onClick: () =>
         {
             CloseSettings();
             StartCoroutine(AuthService.Logout(LoginScreen.Begin));

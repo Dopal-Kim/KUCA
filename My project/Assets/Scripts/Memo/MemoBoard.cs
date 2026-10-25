@@ -328,7 +328,7 @@ public partial class MemoBoard : MonoBehaviour
         UIKit.Stretch(paper.rectTransform);
         var b = paper.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        bool hide = locked; // 가 보지 않은 스팟: 흐리게만 보이고 열리지 않는다 (B-2)
+        bool hide = locked; // 가 보지 않은 스팟: 자물쇠 자리표시만, 열리지 않는다 (B-2)
         b.onClick.AddListener(() =>
         {
             if (hide) ShowToast("이 경희스팟에 가 보면 쪽지가 열려요");
@@ -337,7 +337,7 @@ public partial class MemoBoard : MonoBehaviour
         paper.gameObject.AddComponent<PressScale>();
 
         // 아래 줄: 작성자 · 좋아요
-        Text who = UIKit.Text(paper.transform, hide ? "잠긴 쪽지" : Escape(m.author), KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        Text who = UIKit.Text(paper.transform, hide ? (m.HasPhoto ? "사진 쪽지 · 잠김" : "글 쪽지 · 잠김") : Escape(m.author), KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         who.rectTransform.anchorMin = Vector2.zero;
         who.rectTransform.anchorMax = new Vector2(1f, 0f);
         who.rectTransform.pivot = new Vector2(0.5f, 0f);
@@ -393,6 +393,14 @@ public partial class MemoBoard : MonoBehaviour
             return holder;
         }
 
+        if (hide)
+        {
+            // 잠긴 사진은 내려받지도 않는다: 흐리게 줄여도 얼굴 윤곽 · 피부색이 보였음 (REVIEW_v14 P0)
+            frame.color = KucaTheme.PrimarySoft;
+            LockMark(frame.transform);
+            return holder;
+        }
+
         var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
         go.transform.SetParent(frame.transform, false);
         var raw = go.GetComponent<RawImage>();
@@ -401,8 +409,6 @@ public partial class MemoBoard : MonoBehaviour
         var fit = go.GetComponent<AspectRatioFitter>();
         fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
-        if (hide)
-            LockMark(frame.transform);
         if (m.IsPending)
         {
             // 검토 대기: 나에게만 보이는 사진이라는 표시
@@ -421,15 +427,7 @@ public partial class MemoBoard : MonoBehaviour
                 return;
             // 내려받은 사진만 나중에 지운다 (예시 사진은 에셋이라 지우면 안 됨)
             bool asset = m.photoUrl.StartsWith("resource://");
-            if (hide)
-            {
-                Texture2D blurred = Blurred(tex);
-                if (!asset) Destroy(tex);
-                tex = blurred;
-                loadedPhotos.Add(tex);
-                raw.color = new Color(0.85f, 0.85f, 0.85f);
-            }
-            else if (!asset) loadedPhotos.Add(tex);
+            if (!asset) loadedPhotos.Add(tex);
             raw.texture = tex;
             raw.enabled = true;
             fit.aspectRatio = (float)tex.width / Mathf.Max(1, tex.height);
