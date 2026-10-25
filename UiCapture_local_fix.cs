@@ -306,6 +306,25 @@ public static class UiCapture
         if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; yield return Shot("취향_설문"); }
         yield return CloseAll();
         yield return Shot("지도_끝");
+
+        // 로컬(KUCA-check) 전용: 지도 홈을 넓게 · 가장 가까이 (학생 인형 확인)
+        Camera wide = Camera.main;
+        if (wide != null)
+        {
+            Behaviour follow = wide.GetComponent("CameraFollow") as Behaviour;
+            bool followOn = follow != null && follow.enabled;
+            if (follow != null) follow.enabled = false;
+            Vector3 oldPos = wide.transform.position;
+            Quaternion oldRot = wide.transform.rotation;
+            foreach (var (tag, h, back, pitch) in new[] { ("넓게_1", 420f, 380f, 50f), ("넓게_2", 700f, 600f, 50f), ("가까이", 60f, 70f, 40f) })
+            {
+                wide.transform.SetPositionAndRotation(new Vector3(oldPos.x, h, oldPos.z - back), Quaternion.Euler(pitch, oldRot.eulerAngles.y, 0f));
+                yield return 1f;
+                yield return Shot("지도_" + tag);
+            }
+            wide.transform.SetPositionAndRotation(oldPos, oldRot);
+            if (follow != null) follow.enabled = followOn;
+        }
     }
 
     // ---------- 구조물 사방 ----------
