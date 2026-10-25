@@ -565,7 +565,7 @@ public partial class KhuMenus : MonoBehaviour
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
         // 진화 단계는 같은 줄에: 따로 둔 주황 글자가 카드 아래 끝에 걸려 대비 약하고 겹쳐 보였음 (REVIEW_v25)
-        Text cp = T(cell, $"힘 {c.cp}  ·  진화 {progress.StageOf(c.speciesId) + 1}/{GachaRules.MaxStage + 1}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+        Text cp = T(cell, $"힘 {c.cp}  ·  성장 {progress.StageOf(c.speciesId) + 1}/{GachaRules.MaxStage + 1}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         BottomBox(cp.rectTransform, 40f, 44f);
         FitOneLine(cp, KucaTheme.Caption);
 
@@ -602,7 +602,7 @@ public partial class KhuMenus : MonoBehaviour
             known ? KucaTheme.Ink : KucaTheme.InkSoft, bold: true);
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
-        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  진화 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "아직 못 만났어요", KucaTheme.Caption, TextAnchor.MiddleCenter,
+        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  성장 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "아직 만나지 않은 친구", KucaTheme.Caption, TextAnchor.MiddleCenter,
             known ? KucaTheme.PrimaryDeep : KucaTheme.InkSoft);
         BottomBox(cnt.rectTransform, 40f, 44f);
         FitOneLine(cnt, KucaTheme.Caption);
@@ -633,12 +633,12 @@ public partial class KhuMenus : MonoBehaviour
         var rows = new List<(string, string)>
         {
             ("등급", $"{GachaRules.Label(grade)} 등급"),
-            ("진화 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
+            ("성장 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
             ("만난 수", $"{progress.SpeciesCountOf(species)}마리"),
             ("가지고 있는 수", $"{mine.Count}마리"),
             ("가장 센 힘", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
-            ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
+            ("자라려면", "함께 걷기 또는 뽑기에서 또 만나기"),
         };
         return rows;
     }
@@ -700,7 +700,7 @@ public partial class KhuMenus : MonoBehaviour
         detailName.text = string.IsNullOrEmpty(c.speciesId) ? NameOf(c) : CreatureLibrary.StageName(c.speciesId, progress.StageOf(c.speciesId));
         int growth = progress.GrowthOf(c.speciesId);
         int next = GachaRules.NextThreshold(growth);
-        string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (진화 경험치 {growth}/{next})" : " (최종)");
+        string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (성장 경험치 {growth}/{next})" : " (최종)");
         detailInfo.text = $"{GachaRules.Label(GachaRules.GradeOf(c.speciesId))} 등급  ·  {stage}\n만난 날짜  {c.CaughtAt:yyyy.MM.dd HH:mm}";
         bool isPartner = c.uid == progress.partnerUid;
         detailPartner.text = isPartner ? "♥ 지금 함께 다니는 파트너예요" : "";
@@ -740,12 +740,12 @@ public partial class KhuMenus : MonoBehaviour
     /// <summary>파트너가 진화했을 때 (완료 화면 보상 등 메뉴 밖에서) 지도 위 파트너를 다시 그린다</summary>
     public void RefreshPartner() => RefreshBuddy();
 
-    /// <summary>"아기 비둘기가 함께 걸어서 비둘기로 진화했어요!" (단계 이름은 A 의 CreatureLibrary.StageName)</summary>
+    /// <summary>"아기 비둘기가 함께 걸어서 비둘기로 자랐어요!" (단계 이름은 A 의 CreatureLibrary.StageName)</summary>
     public static string EvolvedMessage(string species, int stage, string how = "")
     {
         string before = CreatureLibrary.StageName(species, stage - 1);
         string after = CreatureLibrary.StageName(species, stage);
-        return $"{before}{CatchCameraScreen.Josa(before, "이", "가")} {how}{after}{Ro(after)} 진화했어요!";
+        return $"{before}{CatchCameraScreen.Josa(before, "이", "가")} {how}{after}{Ro(after)} 자랐어요!";   // 펫은 "진화" 보다 "자라요" (REVIEW_v29)
     }
 
     /// <summary>"으로" / "로" (받침이 없거나 ㄹ 받침이면 "로")</summary>

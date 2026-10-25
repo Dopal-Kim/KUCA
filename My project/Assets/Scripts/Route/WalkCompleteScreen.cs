@@ -207,7 +207,7 @@ public class WalkCompleteScreen : MonoBehaviour
             FindAnyObjectByType<KhuMenus>()?.RefreshPartner();
         }
         // 파트너 진화 경험치는 내 경험치와 다른 것이라 따로 한 줄 (같은 줄이라 헷갈렸음, REVIEW_v22_day)
-        if (growth > 0 && partnerName != null) parts.Add($"\n파트너 {partnerName} 진화 경험치 +{growth}");
+        if (growth > 0 && partnerName != null) parts.Add($"\n파트너 {partnerName} 성장 경험치 +{growth}");
         if (parts.Count > 0)
             rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts).Replace("   \n", "\n");
         else if (rewardText.text.Length == 0)

@@ -97,7 +97,7 @@ public partial class KhuMenus
             string worn = c.accessories.Find(a => CreatureAccessories.Get(a)?.slot == pair.Key);
             int need = CreatureAccessories.UnlockStage(pair.Key);
             if (stage < need && locked == null)
-                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 진화하면 열려요";
+                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 자라면 열려요";
             foreach ((string id, Button b) in pair.Value)
             {
                 bool on = id == worn;

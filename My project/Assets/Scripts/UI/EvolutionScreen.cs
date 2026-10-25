@@ -135,7 +135,7 @@ public class EvolutionScreen : MonoBehaviour
         rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -time * 30f);
 
         captionGroup.alpha = after ? 1f : Smooth(0.2f, 0.8f, time);
-        if (after) caption.text = "축하해요! 진화했어요";
+        if (after) caption.text = "축하해요! 한 뼘 자랐어요";
         namesGroup.alpha = Smooth(RevealEnd, RevealEnd + 0.6f, time);
         for (int i = 0; i < dots.Length; i++)
             dots[i].color = i <= stage ? new Color(1f, 0.72f, 0.2f) : new Color(1f, 1f, 1f, 0.25f);

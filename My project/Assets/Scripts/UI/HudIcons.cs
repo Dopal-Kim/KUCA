@@ -110,15 +110,14 @@ public static class HudIcons
         p.Erase(q => q.BoxD(74, 40, 8f, 16f, 3f, 0f));
     });
 
-    /// <summary>경희펫 (귀가 쫑긋한 동그란 펫)</summary>
-    public static Sprite Monster => Cached("monster", 128, p =>
+    /// <summary>경희펫: 발바닥 (뾰족 귀 얼굴은 뿔 달린 몬스터처럼 보였음, REVIEW_v29)</summary>
+    public static Sprite Monster => Cached("paw", 128, p =>
     {
-        p.Polygon(Color.white, new Vector2(30, 66), new Vector2(26, 120), new Vector2(60, 82));
-        p.Polygon(Color.white, new Vector2(98, 66), new Vector2(68, 82), new Vector2(102, 120));
-        p.Circle(64, 54, 40f);
-        p.Erase(q => q.CircleD(50, 60, 6f));
-        p.Erase(q => q.CircleD(78, 60, 6f));
-        p.Erase(q => q.BoxD(64, 40, 10f, 3.5f, 3.5f, 0f));
+        p.Box(64, 42, 30f, 24f, 22f);   // 큰 볼록살
+        p.Circle(30, 76, 12f);
+        p.Circle(51, 98, 12.5f);
+        p.Circle(77, 98, 12.5f);
+        p.Circle(98, 76, 12f);
     });
 
     public static Sprite Footprints => Cached("foot", 128, p =>

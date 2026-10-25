@@ -99,7 +99,7 @@ public partial class KhuMenus
             }
             sb.Append('\n');
         }
-        sb.Append("같은 경희펫이 또 나오면 그 경희펫의 진화 경험치가 올라요\n");
+        sb.Append("같은 경희펫이 또 나오면 그 경희펫의 성장 경험치가 올라요\n");
         sb.Append($"C +{GachaRules.DuplicateGrowth(GachaRules.Grade.C)} · B +{GachaRules.DuplicateGrowth(GachaRules.Grade.B)} · A +{GachaRules.DuplicateGrowth(GachaRules.Grade.A)} · S +{GachaRules.DuplicateGrowth(GachaRules.Grade.S)}");
         oddsText.text = sb.ToString();
         SetActive(oddsPanel, true);
@@ -212,7 +212,7 @@ public partial class KhuMenus
             Text name = T(r, CreatureLibrary.NameOf(id), KucaTheme.Heading, TextAnchor.LowerLeft, KucaTheme.Ink, bold: true);
             FitOneLine(name, KucaTheme.Heading);
             Corners(name.rectTransform, new Vector2(0f, 0.55f), Vector2.one, new Vector2(330f, 0f), new Vector2(-110f, -24f));
-            Text sub = T(r, $"{GachaRules.Label(GachaRules.GradeOf(id))} 등급  ·  함께 걸으면 3단계까지 진화", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+            Text sub = T(r, $"{GachaRules.Label(GachaRules.GradeOf(id))} 등급  ·  함께 걸으면 3단계까지 자라요", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
             Corners(sub.rectTransform, Vector2.zero, new Vector2(1f, 0.55f), new Vector2(330f, 24f), new Vector2(-110f, -12f));
 
             Image chev = UIKit.Image(r, "Chevron", KucaTheme.InkSoft);
@@ -232,7 +232,7 @@ public partial class KhuMenus
         RefreshBuddy();
         hud?.ShowProgress(progress, types, popup: false);
         string name = CreatureLibrary.NameOf(species);
-        hud?.Toast($"{name}{CatchCameraScreen.Josa(name, "과", "와")} 함께 걸어요!  걸을수록 함께 진화해요");
+        hud?.Toast($"{name}{CatchCameraScreen.Josa(name, "과", "와")} 함께 걸어요!  걸을수록 함께 자라요");
     }
 
     /// <summary>첫 파트너: 큰 제목 + 설명, 세로로 큰 카드 3장 (누르면 고른다). 꼭 골라야 해서 뒤로 가기는 없다</summary>
@@ -242,7 +242,7 @@ public partial class KhuMenus
         starterScreen = page.root;
         starterRow = UIKit.Rect(page.content, "Choices");
         UIKit.Vertical(starterRow, KucaTheme.Space3);
-        UIKit.Paragraph(page.content, "함께 걸을수록 진화해요. 나중에 뽑기로 만난 경희펫으로 바꿀 수도 있어요.", KucaTheme.Label);
+        UIKit.Paragraph(page.content, "함께 걸을수록 자라요. 나중에 뽑기로 만난 경희펫으로 바꿀 수도 있어요.", KucaTheme.Label);
     }
 
 }
