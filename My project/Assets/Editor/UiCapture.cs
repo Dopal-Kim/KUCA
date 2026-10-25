@@ -297,7 +297,9 @@ public static class UiCapture
                 {
                     rot = Quaternion.Euler(p, yaw, 0f);
                     d = dist * k;
-                    blocked = Physics.Raycast(target, -(rot * Vector3.forward), out RaycastHit hit, d) && hit.collider.GetComponentInParent(infoType) != info;
+                    int hits = BlockedRays(b, -(rot * Vector3.forward), d, info, infoType);
+                    blocked = hits * 2 >= ProbeCount;
+                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount}");
                     if (!blocked)
                         break;
                 }
@@ -305,6 +307,29 @@ public static class UiCapture
             }
             yield return 0.05f;
         }
+    }
+
+    const int ProbeCount = 6;
+
+    /// <summary>
+    /// 건물의 여섯 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽)에서 카메라 쪽으로 광선을 쏴 다른 건물에 막힌 수.
+    /// RaycastAll: 건물 안에서 출발한 광선이 자기 벽에 먼저 맞아 끝나면 막혀도 안 막힌 것으로 나왔음 (MAP_REVIEW_v8 U6)
+    /// </summary>
+    static int BlockedRays(Bounds b, Vector3 toCam, float dist, Component self, Type infoType)
+    {
+        Vector3 c = b.center, e = b.extents * 0.8f;
+        float lo = b.min.y + b.size.y * 0.35f, hi = b.min.y + b.size.y * 0.9f;
+        var points = new[]
+        {
+            new Vector3(c.x, lo, c.z), new Vector3(c.x, hi, c.z),
+            new Vector3(c.x - e.x, hi, c.z - e.z), new Vector3(c.x + e.x, hi, c.z - e.z),
+            new Vector3(c.x - e.x, hi, c.z + e.z), new Vector3(c.x + e.x, hi, c.z + e.z),
+        };
+        int blocked = 0;
+        foreach (Vector3 p in points)
+            if (Physics.RaycastAll(p, toCam, dist).Any(h => { Component o = h.collider.GetComponentInParent(infoType); return o != null && o != self; }))
+                blocked++;
+        return blocked;
     }
 
     static string Safe(string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Replace(' ', '_');

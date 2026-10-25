@@ -208,7 +208,7 @@ public static class UIKit
         {
             page.content = ScrollList(area, KucaTheme.Space4, pad);
             // 내용이 제목 밑으로 올라가면 제목 아래 구분선 (iOS 큰 제목 방식): 잘린 카드 윗부분이 제목에 붙어 보이지 않게
-            Image divider = Image(head, "Divider", KucaTheme.Line);
+            Image divider = Image(head, "Divider", KucaTheme.InkSoft);   // Line 은 회색 바탕 위에서 거의 안 보였음 (UI_REVIEW_v8)
             RectTransform dr = divider.rectTransform;
             dr.anchorMin = Vector2.zero;
             dr.anchorMax = new Vector2(1f, 0f);

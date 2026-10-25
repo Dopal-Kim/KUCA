@@ -70,6 +70,7 @@ public class HatchScreen : MonoBehaviour
         skip = false;
         cardBg.enabled = false;
         title.color = Color.white;
+        title.rectTransform.anchoredPosition = new Vector2(0f, -150f);   // 티켓 위끝(-240) 바로 위 · 카드 없이: 티켓 바로 위에 붙여 한 덩어리로 (뒤 화면 카드 줄과 겹쳐 보였음, UI_REVIEW_v8)
         rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.88f);   // 카드 없이 흰 제목만: 뒤 뽑기 화면 글자와 겹쳐 읽히지 않게 더 어둡게
         flash.color = new Color(1f, 1f, 1f, 0f);
 
@@ -85,6 +86,7 @@ public class HatchScreen : MonoBehaviour
         egg.gameObject.SetActive(false);
         cardBg.enabled = true;
         title.color = InkQuiet;
+        title.rectTransform.anchoredPosition = new Vector2(0f, -56f);
         rootBg.color = KucaTheme.Scrim;
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);

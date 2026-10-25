@@ -106,8 +106,9 @@ public class KyungHeeSpot : MonoBehaviour
         // 떠다니기 (두 물결을 섞어 기계적이지 않게) + 가까우면 조금 더 위로
         float bob = Mathf.Sin(t * 1.3f) * 1.0f + Mathf.Sin(t * 0.71f) * 0.45f;
         // 카메라가 가까우면 배지를 줄인다 (캠퍼스 전체 보기에선 그대로, 플레이어 가까이선 건물 · 산책 시작 버튼을 가리지 않게)
+        // 지도 홈 기본 카메라는 표지판에서 약 430 m: 기준 320 이면 배율이 늘 1 이라 줄지 않았음 (UI_REVIEW_v8) → 900 이면 약 0.5 배
         Camera cam = Camera.main;
-        float size = BadgeSize * (cam != null ? Mathf.Clamp(Vector3.Distance(cam.transform.position, transform.position) / 320f, 0.4f, 1f) : 1f);
+        float size = BadgeSize * (cam != null ? Mathf.Clamp(Vector3.Distance(cam.transform.position, transform.position) / 900f, 0.4f, 1f) : 1f);
         Vector3 center = new Vector3(0f, PoleHeight + size / 2f + bob + near * 3f, 0f);
         badge.localPosition = center;
         badge.localScale = Vector3.one * size * (1f + 0.28f * EaseOutBack(near));
