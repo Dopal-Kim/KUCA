@@ -505,6 +505,8 @@ NO_STAIR_HUT = {'way-474521123', 'relation-8269760'}
 # M26: 정면 돌출 동을 지붕 높이로 낮추고 한 층 위 덩어리 대신 계단실을 지붕 안쪽에 둘 건물
 #   외국어대학관: 입구가 폭 20 m · 깊이 8 m 혀 모양 돌출부 끝이라 한 층 위 상자가 양옆 홈 사이에 끼어 보였음 (REVIEW_v31 T)
 FLUSH_BAY = {'way-585696507'}
+# M27: 낱개 실외기를 흩지 않고 가운데 블록 양 끝에 한 쌍씩 대칭으로 둘 건물 (중앙도서관 — 가운데 블록 위 아트리움 천창)
+PAIRED_UNITS = {'way-474085534'}
 
 
 def _hut_box(mb, m, sx, sz):
@@ -698,6 +700,17 @@ def _rooftop(mb, b, style, blocks, rng):
         if not free(x, z, 1.6) or any(math.hypot(x - p[0], z - p[1]) < 3.2 for p in placed):
             continue
         placed.append((x, z))
+    if b.id in PAIRED_UNITS:
+        # M27: 중앙도서관은 흩은 실외기가 천창 양옆에 북 셋 · 남 둘로 어긋나 보였음 (REVIEW_v32 T)
+        #      → 위 rng 자리는 버리고(공용 rng 순서를 그대로 두려고 뽑기는 그대로) 가운데 블록 양 끝 너머에 한 쌍씩, 긴 축으로 대칭
+        long_u = fp.half_u >= fp.half_v
+        placed = []
+        for d in range(4, int(max(fp.half_u, fp.half_v))):
+            pts = [at(s * d, a) if long_u else at(a, s * d) for s in (-1, 1) for a in (-2.0, 2.0)]
+            if all(free(x, z, 1.6) for x, z in pts):
+                placed = pts
+                break
+    for x, z in placed:
         m = Frame.yaw((x, H, z), yaw)
         mb.box(m, (0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
         mb.box(m, (0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
@@ -781,22 +794,25 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
                 # M25: 받침이 지붕 축(yaw)으로 놓여 비스듬한 날개 끝에선 모서리가 외곽에서 1.3 ~ 1.7 m — E 에서 난간 위로 튀어나와
                 #      보였음 (REVIEW_v30) → 날개 끝 냉각탑은 가장 가까운 외곽 변에 나란히 돌리고, 받침 네 모서리가 외곽에서 2.5 m 넘게
                 #      (폭 약 11 m 날개라 묶음 기준 4 m 는 못 씀 — 2.8 m 로 올리면 한쪽 날개 끝 자리가 없어져 가운데 블록으로 감)
-                cands = sorted(((su * fp.half_u / 40, sv * fp.half_v / 40) for su in range(-40, 41) for sv in range(-40, 41)),
+                # M27: 2.5 m 는 바깥 벽선에서 잰 값이라 난간 안쪽 면(0.45 m)에서는 약 2 m, 가장 먼 자리부터 고르니 날개 끝 쪽은 늘 딱 그 거리 —
+                #      Unity T 에서 날개 끝 테두리와 1 m 쯤으로 보였음 (REVIEW_v32). 날개 폭(10.2 ~ 11.6 m)이라 5.2 m 받침으로는 더 못 띄움
+                #      → 날개 끝 냉각탑만 0.75 배(받침 3.9 m)로 줄이고 받침 모서리가 난간 안쪽 면에서 2.5 m (벽선에서 2.95 m) 넘게, 자리 격자는 두 배로
+                cands = sorted(((su * fp.half_u / 80, sv * fp.half_v / 80) for su in range(-80, 81) for sv in range(-80, 81)),
                                key=lambda s: -math.dist(at(*s), yc))
                 for su, sv in cands:
                     p = at(su, sv)
                     if math.dist(p, yc) > 14.0 and free(*p, 3.0) and all(math.dist(p, q[:2]) > 30.0 for q in units):
                         ty = _edge_yaw(b.poly, *p)
                         tm = Frame.yaw((p[0], H, p[1]), ty)
-                        if all(dist_to_poly_edge(*tm.p((du, 0, dv))[::2], b.poly) >= 2.5 for du in (-2.6, 2.6) for dv in (-2.6, 2.6)):
-                            units.append((p[0], p[1], ty))
+                        if all(dist_to_poly_edge(*tm.p((du, 0, dv))[::2], b.poly) >= 2.95 for du in (-1.95, 1.95) for dv in (-1.95, 1.95)):
+                            units.append((p[0], p[1], ty, 0.75))
                             if len(units) == 2:
                                 break
     for x, z in placed:
         mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
         mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓
-    for x, z, ty in units:   # 냉각탑: 받침 + 4.4 m 몸체(어두운 루버 띠 둘) + 둥근 팬 테
-        m = Frame.yaw((x, H, z), ty)
+    for x, z, ty, *sc in units:   # 냉각탑: 받침 + 4.4 m 몸체(어두운 루버 띠 둘) + 둥근 팬 테 (날개 끝은 sc 배로 작게)
+        m = Frame.yaw((x, H, z), ty, *sc)
         mb.box(m, (0, 0.15, 0), (5.2, 0.3, 5.2), shade(ROOF_UNIT, 0.9))
         mb.box(m, (0, 1.6, 0), (4.4, 2.6, 4.4), ROOF_UNIT, top=shade(ROOF_UNIT, 1.03))
         for y in (0.9, 1.6):
@@ -889,16 +905,22 @@ def _front_bay(mb, shell, b, ent, style, pal):
     mb.ao_strength = 0.25
     if not flush:
         return [(rect, top)]
-    # 계단실은 입구 뒤 지붕 안쪽, 난간에서 6 m 넘는 첫 자리로 (M18 의 4 m 로는 혀 모양 돌출부 바로 뒤 홈 가장자리에 붙었음)
+    # 계단실은 입구 뒤 지붕 안쪽, 난간에서 6 m 넘는 자리로 (M18 의 4 m 로는 혀 모양 돌출부 바로 뒤 홈 가장자리에 붙었음)
+    # M27: 6 m 넘는 '첫' 자리는 안쪽 마당 쪽 벽 바로 위라 W 에서 계단실 · 그림자가 마당 벽에 걸쳐 한 칸 튀어나와 보였음 (REVIEW_v32)
+    #      → 6 m 넘는 자리 중 외곽에서 가장 먼 곳 (본 동 깊이 가운데)
     hw, hd = 6.0, 4.5
+    fits = []
     for k in range(4, 40):
         px, pz = mx - nx * k, mz - nz * k
         hut = rect_poly((px, pz), (nx, nz), (tx, tz), hd / 2, hw / 2)
         if _rect_inside(b.poly, hut, 6.0):
-            mb.ao_floor, mb.ao_height, mb.ao_strength = b.h, 1.2, 0.22
-            _hut_box(mb, Frame.look((px, b.h, pz), (nx, 0.0, nz)), hw, hd)
-            mb.ao_floor, mb.ao_strength = 0.0, 0.25
-            return [(rect, top), (hut, 0)]
+            fits.append((dist_to_poly_edge(px, pz, b.poly), px, pz, hut))
+    if fits:
+        _, px, pz, hut = max(fits, key=lambda t: t[0])
+        mb.ao_floor, mb.ao_height, mb.ao_strength = b.h, 1.2, 0.22
+        _hut_box(mb, Frame.look((px, b.h, pz), (nx, 0.0, nz)), hw, hd)
+        mb.ao_floor, mb.ao_strength = 0.0, 0.25
+        return [(rect, top), (hut, 0)]
     return [(rect, top)]
 
 

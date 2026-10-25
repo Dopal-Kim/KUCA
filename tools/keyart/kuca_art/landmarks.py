@@ -1754,7 +1754,9 @@ def _atelier_roof(mb, b, pal):
     rows = max(2, int(half_v * 2 / pitch))
     # M26: 흰 지붕면(trim 0.96)이 남쪽 해를 받아 위(T)에서 줄 없는 흰 판이었음 (REVIEW_v31 Unity 예술디자인대학 T)
     #      → 본부석 지붕과 같은 연한 청회색 금속판 (실제 지붕 재질은 확인 못 함 — 톱날 천창 자체가 키아트)
-    roof_c = STAND_ROOF
+    # M27: STAND_ROOF 도 Unity 에서 E · S · W · T 거의 흰색, N 유리 면만 진한 파랑이라 태양광처럼 보였음 (REVIEW_v32)
+    #      → 금속 면을 한 단계 더 청회색으로 (본부석 지붕은 지적 없어 그대로), 유리 면은 한 단계 덜 파랗게 (두 면 차이를 줄임)
+    roof_c, glass_c = (0.70, 0.74, 0.79), (0.62, 0.74, 0.82)
     x0, x1 = -half_u, half_u
     for k in range(rows):
         z0 = -half_v + k * (half_v * 2 / rows)
@@ -1764,7 +1766,7 @@ def _atelier_roof(mb, b, pal):
         # 남쪽으로 기운 지붕면, 북쪽 세로 유리면 (밤에는 불 켜진 작업실)
         mb.quad(m, (x0, y0, z0), (x1, y0, z0), (x1, y0 + th, z1), (x0, y0 + th, z1), roof_c, inside)
         mb.emissive = True
-        mb.quad(m, (x0, y0, z1), (x1, y0, z1), (x1, y0 + th, z1), (x0, y0 + th, z1), (0.55, 0.72, 0.86), inside)
+        mb.quad(m, (x0, y0, z1), (x1, y0, z1), (x1, y0 + th, z1), (x0, y0 + th, z1), glass_c, inside)
         mb.emissive = False
         for xx in (x0, x1):
             mb.tri(m, (xx, y0, z0), (xx, y0, z1), (xx, y0 + th, z1), shade(roof_c, 0.9), inside)
@@ -1800,7 +1802,8 @@ def _rooftop_court(mb, b):
         return
     H = b.h
     m = Frame((fp.center[0], H, fp.center[1]), (u[0], 0.0, u[1]), (0.0, 1.0, 0.0), (v[0], 0.0, v[1]))
-    track, court, line = (0.84, 0.45, 0.36), (0.38, 0.66, 0.46), (0.98, 0.98, 0.96)
+    # M27: 주황 트랙(0.84, 0.45, 0.36)이 위(T)에서 아주 진했음 (REVIEW_v32) → 대운동장 마사토 흙(ground.DIRT) 쪽으로 한 단계
+    track, court, line = (0.81, 0.56, 0.44), (0.38, 0.66, 0.46), (0.98, 0.98, 0.96)
     mb.ao_floor, mb.ao_height, mb.ao_strength = H, 1.0, 0.25
     mb.box(m, (0, 0.1, 0), (hl * 2 + 1.2, 0.2, hw * 2 + 1.2), shade(STEP, 1.02))
     mb.ao_strength = 0.0
