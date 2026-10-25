@@ -532,11 +532,15 @@ class Ground:
         acc = np.zeros((h, w), np.float32)
         img = Image.new('L', (w, h), 0)
         d = ImageDraw.Draw(img)
+        cover = np.zeros((h, w), np.float32)   # M32: 몇 개의 웅덩이가 덮는지 (겹침 판정)
         for x, z, r, s in lights:
             px, py = self.r.px(x, z)
             px, py = px * w / self.W, py * h / self.H
             rr = r * ppm
             d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=int(255 * min(1.0, s)))
+            y0, y1, x0, x1 = max(0, int(py - rr)), min(h, int(py + rr) + 2), max(0, int(px - rr)), min(w, int(px + rr) + 2)
+            yy, xx = np.ogrid[y0:y1, x0:x1]
+            cover[y0:y1, x0:x1] += (xx - px) ** 2 + (yy - py) ** 2 <= rr * rr
         pts = np.asarray(img).astype(np.float32) / 255
         # 등 아래 또렷한 웅덩이 + 25 m 에 걸쳐 넓게 번지는 따뜻한 빛 (등이 모인 곳일수록 밝은 동네 불빛)
         # M31: 웅덩이 가장자리 2.5 → 1.5 m, 번짐 0.45 → 0.25 — 24 m 마다 선 등의 웅덩이가 길을 따라 고른 띠로 이어져 Unity 에서
@@ -545,6 +549,11 @@ class Ground:
         wide = ndimage.gaussian_filter(pts, 14.0 * ppm)
         wide = wide / (np.percentile(wide[wide > 0.001], 95) + 1e-6) if (wide > 0.001).any() else wide
         acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.25, 0, 1) ** 0.85
+        # M32: 가로등이 몇 m 간격으로 모인 사색의 광장은 웅덩이가 겹쳐 가운데가 흰색으로 날아갔음 (REVIEW_v37 3절) — 지도 값이 1 에서
+        #      잘려 겹친 곳은 한 덩어리 1 판이 됨. 웅덩이가 겹치는 곳(3 m 로 흐린 겹침 비율)만 지도 값을 최대 0.88 배로 → 셰이더 곡선
+        #      (KucaNightLight, 1 근처 1.6 배)을 지나 밝기 약 2/3. 혼자 선 등(산책길)은 겹침이 없어 그대로
+        lap = ndimage.gaussian_filter((cover >= 2).astype(np.float32), 3.0 * ppm)
+        acc *= 1.0 - 0.12 * np.clip(lap / 0.35, 0, 1)
         Image.fromarray((acc * 255).astype(np.uint8)).save(path)
         print('lights', len(lights), path)
 

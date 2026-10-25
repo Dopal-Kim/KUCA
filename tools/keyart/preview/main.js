@@ -105,8 +105,8 @@ async function main() {
       { float a8 = floor(glowMask * 255.0 + 0.5);
         if (a8 > 127.5 && a8 < 239.5) {
           float k = a8 - 128.0, ph = floor(k / 16.0), h = (k - ph * 16.0) * 0.5;
-          float sway = sin(uTime * 6.2831853 / (2.6 + 0.2 * ph) + ph * 2.4) * 0.04 * h;
-          transformed += vec3(cos(ph * 0.9) * sway, sin(uTime * 2.6 + ph * 1.7) * 0.012 * h, -sin(ph * 0.9) * sway);
+          float tilt = sin(uTime * 6.2831853 / (2.6 + 0.2 * ph) + ph * 2.4) * 0.08, sway = tilt * h;   // M32: 0.04 → 0.08, 발 축 호
+          transformed += vec3(cos(ph * 0.9) * sway, sin(uTime * 2.6 + ph * 1.7) * 0.012 * h - 0.5 * tilt * tilt * h, -sin(ph * 0.9) * sway);
           kDoll = 1.0;
         } }`);
   };

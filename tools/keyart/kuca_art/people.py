@@ -183,7 +183,9 @@ def place_people(layer, ground, entrances, buildings, seed=29):
     #      둘 다 핀 가운데에서 SPOT_CLEAR 밖
     for m, hl, hw in ROOF_COURTS:
         north = 1.0 if m.x[2] >= 0 else -1.0   # 로컬 +x(긴 축)가 북쪽인지
-        rows = [[(north * (hl - 1.5 + dz), hw - 8.5 + 2.5 * k) for k, dz in enumerate((-0.4, 0.4, -0.4))]]
+        # M32: 북쪽 셋이 핀 얼굴 왼쪽에 한 사람 폭만 떨어져 붙어 보였음 (REVIEW_v37 1절) → 한 줄을 조금 촘촘히(2.5 → 2.2 m)
+        #      왼쪽 펜스 쪽으로: 가운데에서 옆으로 7.5 ~ 12.5 → 10 ~ 14.4 m (hw 16 m — 펜스 hw + 0.5 안, 핀에서 더 멀어짐)
+        rows = [[(north * (hl - 1.5 + dz), hw - 6.0 + 2.2 * k) for k, dz in enumerate((-0.4, 0.4, -0.4))]]
         a0 = rng.uniform(-0.3, 0.3)   # 둘이 옆(로컬 z)으로 나란히 — 앞뒤로 서면 화면에서 겹침
         rows.append([(-north * (hl - 3.0) + math.sin(a0 + math.pi * k) * 0.55 * K, -hw * 0.25 + math.cos(a0 + math.pi * k) * 0.55 * K)
                      for k in range(2)])
