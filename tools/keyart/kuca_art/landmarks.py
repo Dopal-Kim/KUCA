@@ -13,12 +13,13 @@ STEP = (0.87, 0.85, 0.79)
 ROOF = (0.74, 0.76, 0.79)
 DOME = (0.97, 0.97, 0.98)
 DARK = (0.24, 0.30, 0.38)
+SHUTTER = (0.55, 0.60, 0.67)   # 천문대 관측 창 닫힌 셔터 (M14)
+SEAT = (0.30, 0.42, 0.60)      # 대운동장 스탠드 좌석 줄 (M14, 추정)
 GLASS = (0.30, 0.42, 0.52)
 SKY_GLASS = (0.66, 0.82, 0.93)   # 하늘이 비친 유리 (M10 도서관 천창)
 GOLD = (0.86, 0.72, 0.40)
 POLE = (0.62, 0.64, 0.66)
 LAMP = (1.0, 0.98, 0.88)
-SEAT = (0.80, 0.82, 0.86)
 
 # 사색의 광장(OSM place=square) 중심, 노천극장 옆 연못 중심 (월드 m)
 PLAZA = (94.0, -352.0)
@@ -348,7 +349,8 @@ def observatory(mb, b, f):
     # M12: 칸마다 밝기를 번갈아 칠하던 체커(선승관과 같은 문제, Unity v15 사방 모두 바둑판)를 끄고 칸을 늘려 매끈하게,
     #      결은 금속판 이음 리브 12줄이 맡는다 (관측 창 자리는 비움)
     # M13: 40 × 10 칸은 빛에 따라 작은 다각형 면이 보였음 (MAP_REVIEW_v18) → 64 × 16
-    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 64, 16, DOME, checker=False)
+    # M14: 지도 메시는 면 법선(각진 음영)이라 64 × 16 도 N · W 에서 작은 사각 칸이 보였음 (REVIEW_v19) → 96 × 24 (이웃 면 각도 5.6° → 3.75°)
+    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 96, 24, DOME, checker=False)
     rib = shade(DOME, 0.88)
     for i in range(12):
         th = 2 * math.pi * (i + 0.5) / 12
@@ -366,12 +368,13 @@ def observatory(mb, b, f):
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
-    # 관측 창: 돔 밑동에서 꼭대기 너머까지 이어진 어두운 띠 + 양옆 셔터 레일
+    # 관측 창: 돔 밑동에서 꼭대기 너머까지 이어진 셔터 띠 + 양옆 셔터 레일
     n = 12
     for k in range(n):
         a0, a1 = math.radians(4 + k * 92 / n), math.radians(4 + (k + 1) * 92 / n)
         # M13: 위(T)에서 돔 가운데를 가르는 굵은 막대로 보였음 (MAP_REVIEW_v18) → 창 1.6 → 1.1 m, 레일 포함 2.4 → 1.6 m (약 2/3)
-        for x0, x1, col, off in ((-0.55, 0.55, DARK, 0.06), (-0.8, -0.55, COLUMN, 0.1), (0.55, 0.8, COLUMN, 0.1)):
+        # M14: 1.1 m 도 위(T)에서 굵은 막대 (REVIEW_v19) — 굵기보다 흰 돔 위 짙은 남색 대비가 컸음 → 닫힌 셔터 색(청회색 금속) + 0.8 m
+        for x0, x1, col, off in ((-0.4, 0.4, SHUTTER, 0.06), (-0.6, -0.4, COLUMN, 0.1), (0.4, 0.6, COLUMN, 0.1)):
             rr = r + off
             p0 = (x0, math.sin(a0) * rr, math.cos(a0) * rr)
             p1 = (x1, math.sin(a0) * rr, math.cos(a0) * rr)
@@ -677,11 +680,20 @@ def stadium(layer, ground):
         mb = layer.at(pos[0], pos[2])
         m = Frame.look(pos, face)
         # 계단 10단 (높이 5.5 m, 깊이 10 m): 6단은 멀리서 얇은 띠로만 보였음 (M4)
-        for i in range(10):
-            mb.box(m, (0, 0.55 * (i + 1) / 2, 3 - i * 1.0), (length, 0.55 * (i + 1), 1.0), STEP if i % 2 else shade(STEP, 1.06))
-        mb.box(m, (0, 3.2, -6.9), (length, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
-        # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
-        mb.box(m, (0, 6.5, -6.9), (length + 0.4, 0.3, 1.1), shade(STEP, 1.04))
+        # M14: 디딤 · 챌면이 거의 같은 흰색이라 계단 덩어리로만 보였음 (REVIEW_v19) → 챌면 한 톤 어둡게 + 단마다 좌석 줄
+        #      (14 m 블록마다 2 m 통로). 좌석 색은 실사 확인 못 함 — 흙 · 잔디와 갈리는 차분한 청회색 (추정)
+        #      계단 · 뒤 벽도 블록마다 끊는다: 150 m 상자 하나는 양 끝 정점만 지형 높이를 따라가 가운데 좌석을 덮었음
+        nb = max(1, round(length / 14))
+        bw = length / nb
+        for k in range(nb):
+            bx = -length / 2 + (k + 0.5) * bw
+            for i in range(10):
+                top = 0.55 * (i + 1)
+                mb.box(m, (bx, top / 2, 3 - i * 1.0), (bw, top, 1.0), shade(STEP, 0.82), top=STEP)
+                mb.box(m, (bx, top + 0.15, 3 - i * 1.0 - 0.05), (bw - 2.0, 0.3, 0.5), SEAT if i % 2 else shade(SEAT, 1.08))
+            mb.box(m, (bx, 3.2, -6.9), (bw, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
+            # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
+            mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), shade(STEP, 1.04))
         for k in range(int(length / 6) + 1):
             mb.box(m, (-length / 2 + k * length / int(length / 6), 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
         if main:

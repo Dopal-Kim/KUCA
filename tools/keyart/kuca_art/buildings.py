@@ -504,11 +504,15 @@ def _rooftop(mb, b, style, blocks, rng):
         hl, hs = (fp.half_u, fp.half_v) if long_u else (fp.half_v, fp.half_u)
         off = rng.choice((-1, 1)) * rng.uniform(0.5, 0.68) * hl
         side = rng.uniform(-0.2, 0.2) * hs
-        px, pz = at(off, side) if long_u else at(side, off)
         # 실제 계단실 크기(약 6 × 4.5 m)를 넘지 않게, 지붕 3% 이하 (4% · 9 × 6 은 도예관에서 여전히 컸음, MAP_REVIEW_v9)
         w, d = min(6.0, fp.half_u * 0.5), min(4.5, fp.half_v * 0.7)
         k = min(1.0, math.sqrt(0.03 * b.area / (w * d)))
         w, d = w * k, d * k
+        if ROOF_FEATURE.get(b.id) == 'skylight' and long_u:
+            # M14: 공학실험동 천창 4줄 중 2줄이 계단실에 막혀 한쪽 토막만 남았음 → 계단실을 천창 줄 끝 너머로 (rng 순서는 그대로)
+            past = min(fp.half_u - 6.5, 16.0) + 5.0 + max(w, d) / 2
+            off = math.copysign(max(abs(off), min(past, hl - max(w, d) / 2 - 3.0)), off)
+        px, pz = at(off, side) if long_u else at(side, off)
         if free(px, pz, max(w, d) / 2):
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
@@ -534,13 +538,20 @@ def _rooftop(mb, b, style, blocks, rng):
                     m = Frame.yaw((x, H, z), yaw)
                     mb.box(m, (0, 0.3, 0), (2.2, 0.6, length + 0.4), (0.92, 0.92, 0.90))
                     mb.gable(m, (0, 0.6, 0), 1.9, length, 0.8, GLASS, True, end_col=(0.92, 0.92, 0.90))
+                    blocks = blocks + [(rect_poly((x, z), u, v, length / 2 + 0.6, 1.5), 0)]   # M14: 실외기 · 환기구가 천창 위에 놓이지 않게
     elif feature == 'solar':
-        # 남쪽(-Z)을 향해 기운 패널 줄
+        # 패널 줄은 지붕 축을 따라, 기울기는 지붕 축 중 남쪽(-Z)에 가까운 쪽으로
+        # M14: 패널을 늘 정남향으로 돌려 놓아 비스듬한 지붕(실습농장동)에선 지붕 축 격자 위에 사선 계단식으로 보였음 (REVIEW_v19)
         nx = max(1, min(5, int(fp.half_u / 4)))
         nz = max(1, min(4, int(fp.half_v / 4)))
+        face_u = abs(u[1]) > abs(v[1])                 # u 가 남북에 더 가까우면 u 쪽으로 기울인다
+        su, sv = (4.0, 5.5) if face_u else (5.5, 4.0)   # 패널 폭(4.6 m) 방향 5.5 m, 깊이(2.4 m) 방향 4.0 m 간격
+        fwd = u if face_u else v
+        fwd = (-fwd[0], -fwd[1]) if fwd[1] > 0 else fwd
+        side_ax = (fwd[1], -fwd[0])
 
         def grid(cu, cv):
-            pts = [at(cu + (i - (nx - 1) / 2) * 5.5, cv + (j - (nz - 1) / 2) * 4.0) for i in range(nx) for j in range(nz)]
+            pts = [at(cu + (i - (nx - 1) / 2) * su, cv + (j - (nz - 1) / 2) * sv) for i in range(nx) for j in range(nz)]
             return [p for p in pts if free(p[0], p[1], 2.2)]
         # M13: 十자 · ㄱ자 지붕(학생회관)은 외접 사각형 가운데가 오목한 곳이라 패널이 들쭉날쭉 빠졌음 → 가장 많이 들어가는 자리로 옮긴다
         #      (가운데를 먼저 보고 같으면 가운데 — 다 들어가던 건물은 그대로)
@@ -548,8 +559,8 @@ def _rooftop(mb, b, style, blocks, rng):
                                for c in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)]
         spots = max((grid(*o) for o in offs), key=len)
         for x, z in spots:
-            _solar_panel(mb, Frame.yaw((x, H, z), 180))
-        blocks = blocks + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 2.3, 1.2), 0) for p in spots]   # 실외기가 패널 위에 놓이지 않게
+            _solar_panel(mb, Frame.look((x, H, z), (fwd[0], 0.0, fwd[1])))
+        blocks = blocks + [(rect_poly(p, side_ax, fwd, 2.3, 1.2), 0) for p in spots]   # 실외기가 패널 위에 놓이지 않게
     elif feature == 'garden':
         gw, gd = min(fp.half_u * 0.6, 14.0), min(fp.half_v * 0.6, 9.0)
         # 가운데가 지붕 덩어리에 막히면 옆 자리를 차례로 (우정원: 가운데 긴 덩어리)
@@ -585,6 +596,10 @@ def _rooftop(mb, b, style, blocks, rng):
                 mb.prism(m, (lx, 1.1, lz), 0.25, 1.9, 6, (0.45, 0.33, 0.22))
                 mb.ico(m, (lx, 3.5, lz), (1.6, 1.4, 1.6), (0.36, 0.62, 0.24))
 
+    landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
+    if b.area > 2500 and not landmark_roof and not any(top > H for _, top in blocks):
+        blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, rng)
+
     # 실외기
     n_units = int(min(8, b.area / 300))
     if b.area > 400:
@@ -600,6 +615,39 @@ def _rooftop(mb, b, style, blocks, rng):
         mb.box(m, (0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
         mb.box(m, (0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
     mb.ao_floor, mb.ao_height = 0.0, 2.0
+
+
+def _plant_yard(mb, b, fp, at, yaw, free, blocks, rng):
+    """넓은 평지붕(위 덩어리 없음): 받침 위 실외기 두 줄 + 둥근 환기구 몇 개.
+    M14: 공학실험동이 덩어리를 뺀 뒤 넓은 지붕에 천창 · 작은 실외기만 남아 비어 보였음 (REVIEW_v19)"""
+    H = b.h
+    pl, pd = 5.2, 3.0   # 받침 반길이 (긴 축) · 반폭 — 실외기 두 줄
+    yard = None
+    for su, sv in ((0.0, 0.6), (0.0, -0.6), (0.55, 0.55), (-0.55, 0.55), (0.55, -0.55), (-0.55, -0.55)):
+        cu, cv = su * fp.half_u, sv * fp.half_v
+        if all(free(*at(cu + du, cv + dv), 0.3) for du in (-pl, 0.0, pl) for dv in (-pd, pd)):
+            x, z = at(cu, cv)
+            m = Frame.yaw((x, H, z), yaw)
+            mb.box(m, (0, 0.15, 0), (pd * 2, 0.3, pl * 2), shade(ROOF_UNIT, 0.9))
+            for lx in (-1.4, 1.4):
+                for k in range(4):
+                    lz = -pl + 1.3 + k * (pl * 2 - 2.6) / 3
+                    mb.box(m, (lx, 1.0, lz), (1.8, 1.4, 2.0), ROOF_UNIT)
+                    mb.box(m, (lx, 1.72, lz), (1.1, 0.06, 1.1), FAN, top=FAN)
+            yard = rect_poly((x, z), fp.u, fp.v, pl + 0.6, pd + 0.6)
+            break
+    placed = []
+    for _ in range(40):
+        if len(placed) >= 6:
+            break
+        x, z = at(rng.uniform(-0.85, 0.85) * fp.half_u, rng.uniform(-0.85, 0.85) * fp.half_v)
+        on_yard = yard and (point_in_poly(x, z, yard) or dist_to_poly_edge(x, z, yard) < 1.9)   # free() 는 넘겨받기 전 blocks 만 본다
+        if not free(x, z, 0.9) or on_yard or any(math.hypot(x - p[0], z - p[1]) < 6.0 for p in placed):
+            continue
+        placed.append((x, z))
+        mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
+        mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓
+    return blocks + [(yard, 0)] * bool(yard) + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed]
 
 
 def _solar_panel(mb, m):
