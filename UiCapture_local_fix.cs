@@ -172,6 +172,17 @@ public static class UiCapture
                 yield return 1.5f;
                 yield return Shot("꾸미기_" + t);
             }
+            // 옷 스타일 5가지가 위아래 어울리는지 (남 · 여 각각, 10/25 스타일 정리)
+            for (int g = 0; g < 2; g++)
+            {
+                Call(customizer, "SetGender", g);
+                for (int st = 0; st < 5; st++)
+                {
+                    Call(customizer, "SetStyle", st);
+                    yield return 1f;
+                    yield return Shot($"꾸미기_스타일_{(g == 0 ? "남" : "여")}{st + 1}");
+                }
+            }
             Call(customizer, "SetOpen", false);
             yield return 0.5f;
         }
@@ -213,7 +224,8 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
-            // 로컬(KUCA-check) 전용: 산책 완료는 서버에 POST 하므로 이 단계만 기기 계산 (prod 서버는 GET 만)
+            // 지금은 walkId 가 비고 로그인 토큰이 없어 HttpWalkService 가 POST 없이 기기 판정한다. 나중에 캡처가 로그인하거나
+            // walkId 를 넣어도 prod 에 완료 기록이 쌓이지 않게 이 단계만 서버 주소를 비운다 (REVIEW_v15 지적)
             PlayerPrefs.SetString("memo_server_url", "");
             if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
@@ -245,6 +257,25 @@ public static class UiCapture
         if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; yield return Shot("취향_설문"); }
         yield return CloseAll();
         yield return Shot("지도_끝");
+
+        // 로컬(KUCA-check) 전용: 경희스팟 핀 여러 개가 보이게 지도 홈 카메라를 잠깐 높이 · 뒤로 (UI 그대로)
+        Camera wide = Camera.main;
+        if (wide != null)
+        {
+            Behaviour follow = wide.GetComponent("CameraFollow") as Behaviour;
+            bool followOn = follow != null && follow.enabled;
+            if (follow != null) follow.enabled = false;
+            Vector3 oldPos = wide.transform.position;
+            Quaternion oldRot = wide.transform.rotation;
+            foreach (var (tag, h, back) in new[] { ("넓게_1", 420f, 380f), ("넓게_2", 700f, 600f) })
+            {
+                wide.transform.SetPositionAndRotation(new Vector3(oldPos.x, h, oldPos.z - back), Quaternion.Euler(50f, oldRot.eulerAngles.y, 0f));
+                yield return 1f;
+                yield return Shot("지도_" + tag);
+            }
+            wide.transform.SetPositionAndRotation(oldPos, oldRot);
+            if (follow != null) follow.enabled = followOn;
+        }
     }
 
     // ---------- 구조물 사방 ----------
