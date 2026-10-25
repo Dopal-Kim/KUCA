@@ -130,8 +130,9 @@ public static partial class AuthEndpoints
             string email = (body?.Email ?? "").Trim().ToLowerInvariant();
             if (!KhuEmail().IsMatch(email))
                 return Results.BadRequest(new { error = "경희대 메일(@khu.ac.kr)만 쓸 수 있어요." });
-            if (store.EmailTakenByOther(user.Id, email))
-                return Results.Conflict(new { error = "이미 다른 계정이 인증한 메일이에요." });
+            // 이미 다른 계정이 인증한 메일이어도 보낸다: 인증하면 그 계정에 지금 로그인 방법을 이어 붙인다
+            // (카카오로 가입한 사람이 Apple 로 로그인한 경우). 체험 계정은 메일 인증을 하지 않는다
+            bool existing = store.EmailTakenByOther(user.Id, email);
             TimeSpan wait = store.ResendWait(user.Id);
             if (wait > TimeSpan.Zero)
                 return Results.Json(new { error = $"{Math.Ceiling(wait.TotalSeconds)}초 뒤에 다시 보낼 수 있어요." }, statusCode: 429);
@@ -148,14 +149,22 @@ public static partial class AuthEndpoints
                 if (!sent)
                     return Results.Json(new { error = "인증 메일을 보내지 못했어요. 잠시 뒤 다시 시도해 주세요." }, statusCode: 502);
             }
-            return devEcho && !mail.IsConfigured ? Results.Ok(new { sent = true, devCode = code }) : Results.Ok(new { sent = true });
+            return devEcho && !mail.IsConfigured ? Results.Ok(new { sent = true, existing, devCode = code }) : Results.Ok(new { sent = true, existing });
         });
 
-        me.MapPost("/email/verify", (EmailVerifyRequest? body, HttpRequest req, AccountStore store) =>
+        me.MapPost("/email/verify", (EmailVerifyRequest? body, HttpRequest req, AccountStore store, MatchService matches, WalkStore walks) =>
         {
             if (Current(req, store) is not { } user)
                 return Unauthorized();
-            return store.VerifyCode(user.Id, body?.Code ?? "") switch
+            AccountStore.VerifyResult result = store.VerifyCode(user.Id, body?.Code ?? "", out string? linkedTo);
+            if (result == AccountStore.VerifyResult.Linked && linkedTo != null && store.Find(linkedTo) is { } owner)
+            {
+                // 방금 만든 계정은 지워졌다: 그 계정의 매칭 · 산책 흔적도 지우고, 이어진 계정의 새 토큰을 준다
+                matches.ForgetAccount(user.Id);
+                walks.Forget(user.Id);
+                return Results.Ok(new LinkedResult(store.CreateSession(owner.Id), owner, true));
+            }
+            return result switch
             {
                 AccountStore.VerifyResult.Ok => Results.Ok(store.Find(user.Id)),
                 AccountStore.VerifyResult.NoCode => Results.BadRequest(new { error = "먼저 인증번호를 받아 주세요." }),
