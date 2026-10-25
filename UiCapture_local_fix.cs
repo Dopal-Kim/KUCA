@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -146,10 +146,6 @@ public static class UiCapture
 
     static IEnumerator Script()
     {
-        // 로컬(KUCA-check) 전용: 낮 고정, 끝나면 Auto
-        object dayLook = Find("KeyArtLook");
-        Type dayMode = dayLook?.GetType().GetNestedType("Mode");
-        if (dayMode != null) Call(dayLook, "SetMode", Enum.Parse(dayMode, "Day"));
         yield return Shot("개인정보_안내");
         Click("확인하고 시작");   // 저장 폴더를 지우고 시작하므로 동의 화면이 먼저 뜬다
         yield return 1.5f;
@@ -285,7 +281,9 @@ public static class UiCapture
         yield return CloseAll();
 
         object spots = Get(Find("KyungHeeSpots"), "Spots");
-        if (spots is IList list && list.Count > 0 && Call(Find("MemoBoard"), "OpenSpot", list[0])) { yield return 2f; yield return Shot("장소_메모"); yield return ShotBottom("장소_메모_아래"); }
+        if (spots is IList list && list.Count > 0 && Call(Find("MemoBoard"), "OpenSpot", list[0])) { yield return 2f; yield return Shot("장소_메모"); yield return ShotBottom("장소_메모_아래");
+            // 로컬(KUCA-check) 전용: "이곳 공지 보기" 를 누른 것처럼 공지 탭으로
+            if (Call(Find("MemoBoard"), "SetBoardTab", 1)) { yield return 1.5f; yield return Shot("장소_메모_공지"); } }
         yield return CloseAll();
 
         if (progress != null && Call(Find("CatchCameraScreen"), "OpenPartnerPhoto", progress)) { yield return 2f; yield return Shot("파트너_사진"); }
@@ -294,7 +292,6 @@ public static class UiCapture
         if (CallStatic("PreferenceSurvey", "Open", null)) { yield return 1f; yield return Shot("취향_설문"); }
         yield return CloseAll();
         yield return Shot("지도_끝");
-        if (dayMode != null) Call(dayLook, "SetMode", Enum.Parse(dayMode, "Auto"));
     }
 
     // ---------- 구조물 사방 ----------
