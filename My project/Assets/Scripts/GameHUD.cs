@@ -550,26 +550,31 @@ public class GameHUD : MonoBehaviour
         if (PlayerPrefs.GetInt(CoachKey, 0) == 1)
             return;
         RectTransform holder = UIKit.Rect(hud, "Coach");
-        // 위쪽 상태 카드 아래 · 오른쪽 버튼 줄 왼쪽: 산책 시작 버튼 위에 두니 가운데 플레이어 캐릭터를 가렸음 (REVIEW_v24 · v26)
-        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0f, 1f);
-        holder.anchoredPosition = new Vector2(Margin, -(Margin + 156f + KucaTheme.Space2 + 104f + KucaTheme.Space4));
-        holder.sizeDelta = new Vector2(860f, 0f);
+        // 산책 시작 버튼 바로 위, 낮게: 위쪽에 두면 카드가 설명하는 경희스팟 핀을 가렸고(v27), 높으면 가운데 캐릭터를 가렸음(v24 · v26)
+        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0.5f, 0f);
+        holder.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
+        holder.sizeDelta = new Vector2(1080f - 2f * KucaTheme.Gutter, 0f);
         UIKit.Vertical(holder, 0f);
         holder.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        RectTransform card = UIKit.CardBox(holder, "Card", KucaTheme.Space2);
+        RectTransform card = UIKit.CardBox(holder, "Card", KucaTheme.Space1);
         card.GetComponent<Image>().raycastTarget = true;
         UIInputBlocker.Register(holder);
-        UIKit.Bold(UIKit.Text(card, "이렇게 시작해요", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
-        UIKit.Paragraph(card, "산책 시작  ·  AI 가 지금 걷기 좋은 코스 3개를 골라 줘요", KucaTheme.Label, KucaTheme.InkMuted);
-        UIKit.Paragraph(card, "경희몬 얼굴 핀  ·  그 건물에 가까이 가서 누르면 메모를 보고 남겨요", KucaTheme.Label, KucaTheme.InkMuted);
-        UIKit.Paragraph(card, "아래 함께 탭  ·  근처에서 같이 걸을 산책메이트를 찾아요", KucaTheme.Label, KucaTheme.InkMuted);
-        UIKit.PrimaryButton(card, "알겠어요", () =>
+        // 제목 줄 오른쪽에 작은 "알겠어요" 칩 (큰 버튼이 카드 높이의 절반이었음), 할 일 세 줄은 한 줄씩
+        RectTransform head = UIKit.Rect(card, "Head");
+        UIKit.Size(head, 104f);
+        UIKit.Horizontal(head, KucaTheme.Space2).childForceExpandWidth = false;
+        Text title = UIKit.Bold(UIKit.Text(head, "이렇게 시작해요", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1f;
+        UIKit.Chip(head, "알겠어요", true, () =>
         {
             PlayerPrefs.SetInt(CoachKey, 1);
             PlayerPrefs.Save();
             Destroy(coach);
             coach = null;
         });
+        UIKit.Paragraph(card, "산책 시작  ·  AI 가 지금 걷기 좋은 코스를 골라 줘요", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(card, "경희몬 얼굴 핀  ·  가까이 가서 누르면 메모", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(card, "아래 함께 탭  ·  같이 걸을 산책메이트 찾기", KucaTheme.Label, KucaTheme.InkMuted);
         coach = holder.gameObject;
         coach.SetActive(false);
     }
