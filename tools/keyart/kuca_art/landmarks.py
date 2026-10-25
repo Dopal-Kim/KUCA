@@ -3,6 +3,7 @@
 (이전 Assets/Editor/KeyArtLandmarks.cs 를 옮겨 와 다듬음)
 """
 import math
+import random
 
 from .geo import Footprint
 from .mesh import Frame, IDENT, Builder, outward_normal, shade
@@ -92,6 +93,14 @@ def build(buildings, layer, ground, shells=None, entrances=None):
     b, f = fp(GREENHOUSE)
     if b:
         greenhouse_roof(builder_at(b), b, f)
+        # M15: OSM 상 온실 남쪽 끝(동쪽 날개 · 둥근 돌출부)과 생명과학대학 북쪽 벽은 14 ~ 19 m 떨어진 따로 선 건물인데,
+        #      35° 옆(N · W)에선 10 m 높이 온실 지붕이 틈을 가려 한 건물처럼 보였음 (REVIEW_v20) → 틈 가운데 나무 줄로 간격이 보이게
+        #      (위치는 두 OSM 외곽에서 7 ~ 9 m 씩 떨어진 틈 가운데)
+        from .nature import draw_tree
+        rr = random.Random(474521122)
+        for (px, pz), kind, sc in (((112.0, -95.5), 'round', 1.4), ((121.0, -97.5), 'cone', 1.3), ((130.0, -98.5), 'round', 1.4)):
+            draw_tree(layer.at(px, pz), kind, px, pz, sc, rr.uniform(0, 360), rr)   # 수관 10 m: 온실 지붕(10 m) 너머로 보이게
+            ground.occupy(px, pz, 4.0, ao=0.2, ao_radius=3.5)
 
     # 실사: 중앙도서관은 정면 거의 전체를 덮는 자이언트 오더 열주 (박공 없이 평평한 엔태블러처)
     # 정면 방향 (실사 · 항공 VR 확인, M6): 도서관 = 사색의 광장(동), 체육대학관 = 서쪽 긴 면 (대운동장 쪽 주차장 · 도로).
@@ -159,7 +168,7 @@ def build(buildings, layer, ground, shells=None, entrances=None):
         ground.occupy(px, pz, 5, ao=0.18, ao_radius=5.0)
 
     if ground.stadium_box:
-        stadium(layer, ground)
+        stadium(layer, ground, buildings)
 
     # 사색의 광장: 오벨리스크 바깥 양옆 대칭 잔디 화단 + 둥근 회양목 (실사)
     for s in (-1, 1):
@@ -357,14 +366,18 @@ def observatory(mb, b, f):
         if abs(math.cos(th)) < 0.2 and math.sin(th) < 0:   # 관측 창(-Z) 바로 옆
             continue
         ct, st = math.cos(th), math.sin(th)
-        for j in range(7):
-            ph = (j + 0.5) / 7 * (math.pi / 2) * 0.9
+        # M15: 곧은 상자 7토막은 이음매마다 끊겨 점선처럼 보였음 (REVIEW_v20) → 약 3.7° (돔 고리 간격) 마다 꺾이는 이어진 띠 하나 (윗면 + 양옆)
+        def P(ph, w, rr):
             cp, sp = math.cos(ph), math.sin(ph)
-            o = (cx + cp * ct * (r + 0.05), b.h + 3.7 + sp * (r + 0.05), cz + cp * st * (r + 0.05))
-            along = (-sp * ct, cp, -sp * st)
-            across = (-st, 0.0, ct)
-            out = (cp * ct, sp, cp * st)
-            mb.box(Frame(o, across, along, out), (0.0, 0.0, 0.0), (0.22, r * math.pi / 2 * 0.9 / 7 + 0.15, 0.12), rib)
+            return (cx + cp * ct * rr - st * w, b.h + 3.7 + sp * rr, cz + cp * st * rr + ct * w)
+        n = 22
+        for j in range(n):
+            a0, a1 = j / n * (math.pi / 2) * 0.9, (j + 1) / n * (math.pi / 2) * 0.9
+            mid = P((a0 + a1) / 2, 0.0, r)
+            mb.quad(IDENT, P(a0, -0.11, r + 0.1), P(a0, 0.11, r + 0.1), P(a1, 0.11, r + 0.1), P(a1, -0.11, r + 0.1), rib, mid)
+            for w in (-0.11, 0.11):
+                mb.quad(IDENT, P(a0, w, r - 0.03), P(a0, w, r + 0.1), P(a1, w, r + 0.1), P(a1, w, r - 0.03), shade(rib, 0.94),
+                        P((a0 + a1) / 2, 0.0, r + 0.03))
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
@@ -649,8 +662,10 @@ def obelisk(mb, pos):
     mb.cone(m, (0, 27.6, 0), 1.3 * 1.414, 3.6, 4, COLUMN, rot=45)
 
 
-def stadium(layer, ground):
-    """대운동장 네 모서리 조명탑 + 양쪽 긴 변 계단식 스탠드 (실사: 흙 운동장 둘레 스탠드)"""
+def stadium(layer, ground, buildings=()):
+    """대운동장 네 모서리 조명탑 + 양쪽 긴 변 계단식 스탠드 (실사: 흙 운동장 둘레 스탠드)
+    짧은 변(북 · 남)엔 스탠드 없음: OSM 에 그쪽 관람석 근거가 없고, 둘레 차도(way-423471655)가 8 ~ 15 m 바깥을 돈다 (M15)"""
+    from .geo import dist_to_poly_edge, point_in_poly
     (x0, z0), (x1, z1) = ground.stadium_box
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     long_z = (z1 - z0) > (x1 - x0)
@@ -683,10 +698,33 @@ def stadium(layer, ground):
         # M14: 디딤 · 챌면이 거의 같은 흰색이라 계단 덩어리로만 보였음 (REVIEW_v19) → 챌면 한 톤 어둡게 + 단마다 좌석 줄
         #      (14 m 블록마다 2 m 통로). 좌석 색은 실사 확인 못 함 — 흙 · 잔디와 갈리는 차분한 청회색 (추정)
         #      계단 · 뒤 벽도 블록마다 끊는다: 150 m 상자 하나는 양 끝 정점만 지형 높이를 따라가 가운데 좌석을 덮었음
-        nb = max(1, round(length / 14))
-        bw = length / nb
+        near = [bb for bb in buildings if math.hypot(bb.centroid[0] - pos[0], bb.centroid[1] - pos[2]) < length]
+
+        def clear(lx):
+            # 스탠드 단면(계단 앞 ~ 뒤 기둥 띠)이 건물 외곽에서 6 m 밖인지
+            for lz in (3.5, -2.0, -7.5):
+                q = m.p((lx, 0.0, lz))
+                if any(point_in_poly(q[0], q[2], bb.poly) or dist_to_poly_edge(q[0], q[2], bb.poly) < 6.0 for bb in near):
+                    return False
+            return True
+        # M15: 서쪽 스탠드 북쪽 토막이 멀티미디어교육관 벽을 따라 2.5 ~ 5.5 m 로 붙어 닿아 보였음 (REVIEW_v20) → 양 끝 토막(가운데
+        #      본부석 지붕 폭 밖)에서 건물 외곽 6 m 안에 드는 곳이 있으면, 그중 가장 안쪽 자리 1 m 앞에서 스탠드를 자른다.
+        #      건물이 끝(끝에서 15 m 안) 옆에 있을 때만 — 가운데 옆 건물(지붕 밑 여자동)은 그대로, 그 너머 남쪽 스탠드도 남긴다.
+        #      (끝 자체는 비스듬한 벽에서 5.5 m 라 끝에서부터 걸어 들어오면 못 찾음)
+        lo, hi = -length / 2, length / 2
+        for sgn in (1, -1):
+            bad = [k for k in range(int(length * 0.2), int(length / 2) + 1) if not clear(sgn * k)]
+            if bad and max(bad) >= length / 2 - 15:
+                if sgn > 0:
+                    hi = min(bad) - 1.0
+                else:
+                    lo = -min(bad) + 1.0
+        if hi - lo < length - 0.5:
+            print(f'stadium: 스탠드 끝 자름 {length:.0f} → {hi - lo:.0f} m')
+        nb = max(1, round((hi - lo) / 14))
+        bw = (hi - lo) / nb
         for k in range(nb):
-            bx = -length / 2 + (k + 0.5) * bw
+            bx = lo + (k + 0.5) * bw
             for i in range(10):
                 top = 0.55 * (i + 1)
                 mb.box(m, (bx, top / 2, 3 - i * 1.0), (bw, top, 1.0), shade(STEP, 0.82), top=STEP)
@@ -694,19 +732,21 @@ def stadium(layer, ground):
             mb.box(m, (bx, 3.2, -6.9), (bw, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
             # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
             mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), shade(STEP, 1.04))
-        for k in range(int(length / 6) + 1):
-            mb.box(m, (-length / 2 + k * length / int(length / 6), 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
+        n6 = max(1, int((hi - lo) / 6))
+        for k in range(n6 + 1):
+            mb.box(m, (lo + k * (hi - lo) / n6, 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
         if main:
             # M12: 본부석 지붕이 뒤쪽 가는 기둥 3개(위에서 안 보임)뿐이라 스탠드 위에 떠 있는 흰 판처럼 보였음
             #      → 앞쪽 굵은 기둥 5개 + 뒤 기둥 5개(바닥부터), 지붕 앞 처마 띠 · 어두운 밑면 (실제 본부석 구조는 확인 못 함 — 추정)
-            w = length * 0.4
-            mb.box(m, (0, 8.45, -1.6), (w + 1, 0.4, 10.0), (0.95, 0.95, 0.96))
-            mb.box(m, (0, 8.2, -1.6), (w + 0.6, 0.12, 9.6), (0.62, 0.64, 0.68))       # 밑면 그늘
-            mb.box(m, (0, 8.35, 3.45), (w + 1.2, 0.9, 0.35), shade(STEP, 1.02))       # 앞 처마 띠
+            r0, r1 = max(-length * 0.2, lo + 0.6), min(length * 0.2, hi - 0.6)   # 자른 스탠드 밖으로 나가지 않게 (M15)
+            w, rc = r1 - r0, (r0 + r1) / 2
+            mb.box(m, (rc, 8.45, -1.6), (w + 1, 0.4, 10.0), (0.95, 0.95, 0.96))
+            mb.box(m, (rc, 8.2, -1.6), (w + 0.6, 0.12, 9.6), (0.62, 0.64, 0.68))       # 밑면 그늘
+            mb.box(m, (rc, 8.35, 3.45), (w + 1.2, 0.9, 0.35), shade(STEP, 1.02))       # 앞 처마 띠
             for s in (-1, -0.5, 0, 0.5, 1):
-                mb.prism(m, (s * w / 2, 0.55, 2.9), 0.32, 7.65, 8, POLE)
-                mb.prism(m, (s * w / 2, 0.0, -6.0), 0.32, 8.2, 8, POLE)
-        for k in range(-int(length / 2), int(length / 2) + 1, 3):
+                mb.prism(m, (rc + s * w / 2, 0.55, 2.9), 0.32, 7.65, 8, POLE)
+                mb.prism(m, (rc + s * w / 2, 0.0, -6.0), 0.32, 8.2, 8, POLE)
+        for k in range(int(lo), int(hi) + 1, 3):
             p = m.p((k, 0, 0))
             ground.occupy(p[0], p[2], 4.0)
 

@@ -597,13 +597,16 @@ def _rooftop(mb, b, style, blocks, rng):
                 mb.ico(m, (lx, 3.5, lz), (1.6, 1.4, 1.6), (0.36, 0.62, 0.24))
 
     landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
-    if b.area > 2500 and not landmark_roof and not any(top > H for _, top in blocks):
+    # M15: 태양광 지붕엔 실외기 묶음 · 환기구를 두지 않는다 — 학생회관이 패널 + 묶음 + 낱개 실외기 + 환기구로 어수선했음 (REVIEW_v20)
+    if b.area > 2500 and not landmark_roof and feature != 'solar' and not any(top > H for _, top in blocks):
         blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, rng)
 
     # 실외기
     n_units = int(min(8, b.area / 300))
     if b.area > 400:
         n_units = max(n_units, 2)   # 중간 크기 지붕이 상자 하나로 비어 보이지 않게
+    if feature == 'solar':
+        n_units = min(n_units, max(2, n_units // 2))   # M15: 패널이 지붕을 채우니 낱개 실외기도 반만 (2대 아래로는 안 줄임)
     tries, placed = 0, []
     while len(placed) < n_units and tries < n_units * 12:
         tries += 1
