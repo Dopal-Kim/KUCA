@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// (예전 기둥 + 도는 원판은 포켓스탑과 너무 닮아 바꿈 — 10/25 시안 C 선택. 경희몬이 없는 건물은 학교 배지)
 /// - 멀리 있을 때: 흰 테 · 검은 리본, 카메라를 향한 채 천천히 떠다닌다. 뒤에 은은한 후광.
 /// - 가까이(InRange) 있을 때: 살짝 튀어 오르며 커지고, 테는 금색 · 리본은 초록, 후광이 숨 쉬듯 밝아진다 → 메모를 남길 수 있다는 신호.
-/// 화면 공간이 아니라 월드 공간 캔버스라 건물 뒤에선 가려진다. 탭하면 CollectController 가 SpotTapped 로 알려 준다.
+/// 월드 공간 캔버스지만 깊이 검사 없이 그려 늘 건물 위에 보인다 (지도 이름표처럼). 탭하면 CollectController 가 SpotTapped 로 알려 준다.
 /// </summary>
 public class KyungHeeSpot : MonoBehaviour
 {
@@ -31,6 +31,20 @@ public class KyungHeeSpot : MonoBehaviour
     static readonly int IntensityId = Shader.PropertyToID("_Intensity");
 
     static Mesh haloMesh;
+    static Material onTop;
+
+    /// <summary>깊이 검사 없이 그리는 UI 재질: 지붕 위 천창 · 탑 같은 높은 덩어리에 리본이 가려졌음 (REVIEW_v17)</summary>
+    static Material OnTop
+    {
+        get
+        {
+            if (onTop != null)
+                return onTop;
+            onTop = new Material(Graphic.defaultGraphicMaterial) { name = "KyungHeeSpotOnTop" };
+            onTop.SetInt("unity_GUIZTestMode", (int)UnityEngine.Rendering.CompareFunction.Always);
+            return onTop;
+        }
+    }
 
     public static KyungHeeSpot Create(CampusBuildingInfo building, Bounds bounds, Material badgeMat, Material poleMat, Transform parent,
                                       Material glowMat = null)
@@ -79,6 +93,9 @@ public class KyungHeeSpot : MonoBehaviour
         Text name = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
         UIKit.Stretch(name.rectTransform);
         Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(name.preferredWidth + 2f * KucaTheme.Space4, 92f));
+
+        foreach (Graphic g in pin.GetComponentsInChildren<Graphic>(true))
+            g.material = OnTop;
 
         if (glowMat != null)
         {
