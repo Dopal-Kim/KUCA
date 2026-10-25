@@ -430,7 +430,8 @@ def _courtyard(mb, b, fp, u, v, hu, hv, pal, rng):
 ROOF_FEATURE = {
     'relation-8269760': 'garden',   # 우정원 옥상정원
     'way-778946313': 'solar',       # 실험연구동 태양광 (M5 리뷰 ✅)
-    'way-801815069': 'solar',
+    'way-801815069': 'solar',       # 실험연구동 남쪽 동: RunMap 은 같은 이름 중 이 동을 찍는다 (M8)
+    'way-585696420': 'solar',       # 실습농장동: 흰 상자 하나뿐이라 단조로웠음 (MAP_REVIEW_v8)
 }
 
 
@@ -454,11 +455,16 @@ def _rooftop(mb, b, style, blocks, rng):
     def at(su, sv):
         return fp.center[0] + u[0] * su + v[0] * sv, fp.center[1] + u[1] * su + v[1] * sv
 
-    # 계단실
+    # 계단실: 긴 축 끝 쪽에, 지붕 면적의 4% 이하 (M8: 국제학관 · 도예관에서 가운데 큰 흰 상자가 장난감 블록처럼 보였음)
     if fp.half_u > 7 and fp.half_v > 5:
-        off = rng.uniform(-0.6, 0.6) * fp.half_u
-        px, pz = at(off, rng.uniform(-0.3, 0.3) * fp.half_v)
+        long_u = fp.half_u >= fp.half_v
+        hl, hs = (fp.half_u, fp.half_v) if long_u else (fp.half_v, fp.half_u)
+        off = rng.choice((-1, 1)) * rng.uniform(0.5, 0.68) * hl
+        side = rng.uniform(-0.2, 0.2) * hs
+        px, pz = at(off, side) if long_u else at(side, off)
         w, d = min(9.0, fp.half_u * 0.5), min(6.0, fp.half_v * 0.7)
+        k = min(1.0, math.sqrt(0.04 * b.area / (w * d)))
+        w, d = w * k, d * k
         if free(px, pz, max(w, d) / 2):
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
@@ -468,9 +474,9 @@ def _rooftop(mb, b, style, blocks, rng):
 
     # 큰 지붕: 하나를 골라 천창 / 태양광 / 옥상정원
     big = b.area > 900 and fp.half_u > 12 and fp.half_v > 9
-    feature = None
-    if big:
-        feature = ROOF_FEATURE.get(b.id) or rng.choices(['skylight', 'solar', 'garden', None], [0.4, 0.3, 0.2, 0.1] if style != 'Classical' else [0.2, 0.0, 0.5, 0.3])[0]
+    feature = ROOF_FEATURE.get(b.id)   # 고정한 건물은 크기와 상관없이 (실습농장동)
+    if big and feature is None:
+        feature = rng.choices(['skylight', 'solar', 'garden', None], [0.4, 0.3, 0.2, 0.1] if style != 'Classical' else [0.2, 0.0, 0.5, 0.3])[0]
     if feature == 'skylight':
         rows = max(1, min(4, int(fp.half_v / 5)))
         length = min(fp.half_u * 0.9, 16.0)
@@ -522,6 +528,8 @@ def _rooftop(mb, b, style, blocks, rng):
 
     # 실외기
     n_units = int(min(8, b.area / 300))
+    if b.area > 400:
+        n_units = max(n_units, 2)   # 중간 크기 지붕이 상자 하나로 비어 보이지 않게
     tries, placed = 0, []
     while len(placed) < n_units and tries < n_units * 12:
         tries += 1
