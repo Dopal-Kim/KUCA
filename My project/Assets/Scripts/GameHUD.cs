@@ -55,6 +55,8 @@ public class GameHUD : MonoBehaviour
     Image toastBg;
     float toastTimer;
     int lastModalCount;
+    GameObject coach;
+    const string CoachKey = "home_coach_done";
 
     // 프로필
     Text levelText, nextText, nicknameText;
@@ -127,6 +129,7 @@ public class GameHUD : MonoBehaviour
         BuildNearby();
         BuildTabBar();
         BuildStartButton();
+        BuildCoach();
 
         // 토스트: 진한 알약 (흰 카드 · 지도 어디 위에서도 읽히게), 시작 버튼 위
         toastBg = UIKit.Image(safe, "Toast", new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.92f));
@@ -187,6 +190,8 @@ public class GameHUD : MonoBehaviour
         if (modalCount > lastModalCount)
             toastTimer = Mathf.Min(toastTimer, 0.0001f);
         lastModalCount = modalCount;
+        if (coach != null)
+            coach.SetActive(modalCount == 0);   // 첫 꾸미기 · 파트너 고르기 같은 화면이 다 닫힌 뒤 지도에서만
         if (toastTimer > 0f)
         {
             toastTimer -= Time.unscaledDeltaTime;
@@ -241,7 +246,7 @@ public class GameHUD : MonoBehaviour
 
     public void Toast(string message)
     {
-        if (toastText == null)
+        if (toastText == null || (coach != null && coach.activeSelf))   // 안내 카드 위에 겹쳐 뜨지 않게 (카드가 같은 내용을 말함)
             return;
         toastText.text = message;
         toastBg.rectTransform.sizeDelta = new Vector2(Mathf.Min(980f, toastText.preferredWidth + 2f * 36f + 8f), 120f);
@@ -526,6 +531,38 @@ public class GameHUD : MonoBehaviour
         Text t = UIKit.Bold(UIKit.Text(face.transform, "산책 시작", KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
         UIKit.Stretch(t.rectTransform);
         t.rectTransform.offsetMin = new Vector2(90f, 0f);
+    }
+
+    /// <summary>
+    /// 첫 실행 안내 카드 (한 번만): 지도 홈에서 무엇을 하면 되는지가 토스트 한 줄뿐이라 사라지면 단서가 없었음 (REVIEW_v22_day P0).
+    /// 할 일 셋 — 산책 시작(AI 코스) · 경희몬 얼굴 핀(메모) · 함께 탭(산책메이트). "알겠어요" 를 누르면 다시 안 뜬다.
+    /// </summary>
+    void BuildCoach()
+    {
+        if (PlayerPrefs.GetInt(CoachKey, 0) == 1)
+            return;
+        RectTransform holder = UIKit.Rect(hud, "Coach");
+        holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0.5f, 0f);
+        holder.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
+        holder.sizeDelta = new Vector2(1080f - 2f * KucaTheme.Gutter, 0f);
+        UIKit.Vertical(holder, 0f);
+        holder.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        RectTransform card = UIKit.CardBox(holder, "Card", KucaTheme.Space2);
+        card.GetComponent<Image>().raycastTarget = true;
+        UIInputBlocker.Register(holder);
+        UIKit.Bold(UIKit.Text(card, "이렇게 시작해요", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        UIKit.Paragraph(card, "산책 시작  ·  AI 가 지금 걷기 좋은 코스 3개를 골라 줘요", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(card, "경희몬 얼굴 핀  ·  그 건물에 가까이 가서 누르면 메모를 보고 남겨요", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(card, "아래 함께 탭  ·  근처에서 같이 걸을 산책메이트를 찾아요", KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.PrimaryButton(card, "알겠어요", () =>
+        {
+            PlayerPrefs.SetInt(CoachKey, 1);
+            PlayerPrefs.Save();
+            Destroy(coach);
+            coach = null;
+        });
+        coach = holder.gameObject;
+        coach.SetActive(false);
     }
 
     // ---------- 오른쪽: 주변 (자연 출현이 켜진 경우만) ----------
