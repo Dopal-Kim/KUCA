@@ -424,8 +424,10 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
     for px, pz in spots:
         if pip(px, pz, b.poly) and dist_to_poly_edge(px, pz, b.poly) > 5:
             m = Frame.yaw((px, H, pz), math.degrees(math.atan2(u[0], u[1])))
-            mb.box(m, (0, 1.4, 0), (4.5, 2.8, 6.0), (0.93, 0.92, 0.89))
-            mb.box(m, (0, 2.95, 0), (4.9, 0.3, 6.4), (0.99, 0.98, 0.95))
+            # M19: 탑에 붙인 기계실(M16)이 탑 테와 같은 흰색이라 위(T)에서 탑과 한 덩어리로 보였음 (REVIEW_v24 우정원) → 탑을 나눈 건물만 회색 금속
+            body, cap = ((0.58, 0.60, 0.63), (0.66, 0.68, 0.71)) if len(parts) == 2 else ((0.93, 0.92, 0.89), (0.99, 0.98, 0.95))
+            mb.box(m, (0, 1.4, 0), (4.5, 2.8, 6.0), body)
+            mb.box(m, (0, 2.95, 0), (4.9, 0.3, 6.4), cap)
             huts.append((rect_poly((px, pz), u, v, 3.2, 2.45), H + 3.1))
     return huts
 
@@ -562,7 +564,8 @@ def _rooftop(mb, b, style, blocks, rng):
         nx = max(1, min(5, int(fp.half_u / 4)))
         nz = max(1, min(4, int(fp.half_v / 4)))
         face_u = abs(u[1]) > abs(v[1])                 # u 가 남북에 더 가까우면 u 쪽으로 기울인다
-        su, sv = (4.0, 5.5) if face_u else (5.5, 4.0)   # 패널 폭(4.6 m) 방향 5.5 m, 깊이(2.4 m) 방향 4.0 m 간격
+        # M19: 깊이 방향 4.0 m (틈 1.6 m) 는 실습농장동 E 에서 두 줄이 한 판처럼 붙어 보였음 (REVIEW_v24) → 5.4 m, 줄 사이 3 m 통로
+        su, sv = (5.4, 5.5) if face_u else (5.5, 5.4)   # 패널 폭(4.6 m) 방향 5.5 m, 깊이(2.4 m) 방향 5.4 m 간격
         fwd = u if face_u else v
         fwd = (-fwd[0], -fwd[1]) if fwd[1] > 0 else fwd
         side_ax = (fwd[1], -fwd[0])
@@ -656,11 +659,14 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
         pl = 1.3 * n   # 받침 반길이 (긴 축)
         eu, ev = fp.half_u - pl - 4.0, fp.half_v - pd - 4.0
 
+        # M19: 위 4 m 는 외접 사각형에서 잰 값이고 실제 난간 검사는 free(0.3) = 1.8 m 뿐이라, 서쪽 벽이 외곽보다 3 ~ 4 m 안쪽인
+        #      생명과학대에서 묶음이 난간 3 m 에 붙어 S 에서 테두리 위로 보였음 (REVIEW_v24) → 받침 모서리 · 변 가운데를 실제 외곽에서 4 m
         def fits(cu, cv):
-            return all(free(*at(cu + du, cv + dv), 0.3) for du in (-pl, 0.0, pl) for dv in (-pd, pd))
+            return all(free(*at(cu + du, cv + dv), 0.3) and dist_to_poly_edge(*at(cu + du, cv + dv), b.poly) >= 4.0
+                       for du in (-pl, 0.0, pl) for dv in (-pd, pd))
 
-        def corner(a, c):   # 외접 사각형 모서리가 지붕 밖이면 (생명과학대 서쪽 벽은 외곽보다 3 ~ 4 m 안쪽) 2 m 씩 안으로
-            return next(((a * (eu - k), c * (ev - k)) for k in (0.0, 2.0, 4.0) if fits(a * (eu - k), c * (ev - k))), None)
+        def corner(a, c):   # 외접 사각형 모서리가 지붕 밖이면 (생명과학대 서쪽 벽은 외곽보다 3 ~ 4 m 안쪽) 2 m 씩 안으로 (M19: 최대 4 → 8 m)
+            return next(((a * (eu - k), c * (ev - k)) for k in (0.0, 2.0, 4.0, 6.0, 8.0) if fits(a * (eu - k), c * (ev - k))), None)
         corners = [s for s in (corner(a, c) for a, c in ((1, 1), (-1, 1), (1, -1), (-1, -1))) if s]
         if n == 2:
             pairs = [(corner(a, c), corner(-a, -c)) for a, c in ((1, 1), (-1, 1))]
