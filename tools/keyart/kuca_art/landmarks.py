@@ -401,8 +401,10 @@ def observatory(mb, b, f):
             p3 = (x0, math.sin(a1) * rr, math.cos(a1) * rr)
             mb.quad(slit, p0, p1, p2, p3, col, (0, 0, 0))
     # M16: 꼭대기 너머 슬릿 끝이 리브와 같은 굵기라 셔터로 안 읽혔음 (REVIEW_v21) → 레일보다 넓고 두툼한 짙은 셔터 캡 (윗면 + 옆 + 끝면)
-    cap, cw, lo, hi = shade(SHUTTER, 0.8), 0.85, r + 0.02, r + 0.32
-    angs = [math.radians(a) for a in (84, 88, 92, 96, 100)]
+    # M21: 레일보다 넓은 짙은 캡(1.7 m × 16°)이 돔 꼭대기 한가운데라 위(T)에서 점처럼 튀었음 (REVIEW_v26)
+    #      → 폭을 레일 바깥(1.2 m)에 맞추고 길이 16 → 10°, 색은 한 단계 덜 짙게. 옆에서 슬릿 끝 두께는 그대로 (높이 0.3 m)
+    cap, cw, lo, hi = shade(SHUTTER, 0.9), 0.6, r + 0.02, r + 0.32
+    angs = [math.radians(a) for a in (88, 91, 94, 98)]
 
     def C(a, x, rr):
         return (x, math.sin(a) * rr, math.cos(a) * rr)

@@ -50,6 +50,8 @@ def load_look(path):
 GLASS_DOOR = (0.24, 0.33, 0.42)
 ROOF_UNIT = (0.80, 0.81, 0.83)
 FAN = (0.30, 0.33, 0.37)
+# 계단실 갓 (M20 0.76): 베이지 지붕(국제학관 · 공학실험동 · 생명과학대 T)에서 지붕과 밝기가 같아 묻혔음 (REVIEW_v26) → 한 단계 진한 회색
+HUT_CAP = (0.62, 0.61, 0.59)
 STEP = (0.86, 0.84, 0.79)
 HEDGE = (0.30, 0.55, 0.19)
 FLOWERS = [(0.98, 0.62, 0.76), (1.0, 0.92, 0.94), (0.99, 0.84, 0.34), (0.40, 0.66, 0.24)]
@@ -403,6 +405,11 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
         mb.band(rect, top - 0.05, top + 0.9, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
                 inner_col=shade(pal['wall'], 0.86))
         _eave_cap(mb, rect, top + 0.9, pal)
+        if len(parts) == 2:
+            # M21: 나눈 탑(우정원) 지붕만 분홍(건물 지붕색)이라 회색 갓 계단실 규칙과 달라 위(T)에서 혼자 튀었음 (REVIEW_v26) — 실사 근거 없음
+            #      → 난간 안 지붕면을 계단실 갓 회색으로 덮는다. 흰 난간 테는 남겨 바로 옆 회색 기계실(M19)과 한 덩어리로 안 보이게
+            mb.box(Frame.yaw((pc[0], top, pc[1]), math.degrees(math.atan2(u[0], u[1]))), (0, 0.1, 0),
+                   (ph * 2 - 0.9, 0.2, hw * 2 - 0.9), HUT_CAP)   # 로컬 z = u (hw)
     for sgn in (-1, 1):
         nrm = (v[0] * sgn, 0.0, v[1] * sgn)
         face_c = (cc[0] + v[0] * sgn * half, 0.0, cc[1] + v[1] * sgn * half)
@@ -532,14 +539,14 @@ def _rooftop(mb, b, style, blocks, rng):
                     px, pz = qx, qz
                     break
         if free(px, pz, max(w, d) / 2):
-            hut = (px, pz)
+            hut, hut_half = (px, pz), (w / 2, d / 2)
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
             # M20: 갓 윗면(0.99)이 Unity 에서 254 로 하얗게 날아가 위(T)에서 면 · 테두리 없이 떠 보였음 (REVIEW_v25, 생명과학대)
             #      → 갓을 0.76 으로 낮추고(웹 T 에서 0.86 도 250 으로 날아감) 밑동에 어두운 굽(0.4 m)을 둘러 지붕에 앉은 선이 보이게. 높이는 원래도 지붕 면(H)에 붙어 있음
             mb.box(m, (0, 0.2, 0), (d + 0.3, 0.4, w + 0.3), (0.70, 0.69, 0.66))
             mb.box(m, (0, 1.7, 0), (d, 3.4, w), (0.95, 0.93, 0.88))
-            mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), (0.76, 0.75, 0.72))
+            mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), HUT_CAP)
             mb.box(m, (d / 2 + 0.03, 1.1, w * 0.25), (0.06, 2.2, 1.2), GLASS_DOOR, top=GLASS_DOOR)
 
     # 큰 지붕: 하나를 골라 천창 / 태양광 / 옥상정원
@@ -573,14 +580,22 @@ def _rooftop(mb, b, style, blocks, rng):
         fwd = (-fwd[0], -fwd[1]) if fwd[1] > 0 else fwd
         side_ax = (fwd[1], -fwd[0])
 
-        def grid(cu, cv):
+        # M21: 국제학관 T 에서 계단실이 패널 바로 옆(틈 3 ~ 6 m)이라 붙어 보였음 (REVIEW_v26) → 패널 수가 같게 들어가는 자리 중
+        #      계단실과 6 m 넘게 떨어진 자리가 있으면 그쪽으로 (실습농장동 · 실험연구동처럼 옮길 자리가 없으면 예전 그대로, 패널 수는 안 줄임)
+        ext_u, ext_v = (1.2, 2.3) if face_u else (2.3, 1.2)   # 패널 반 깊이 · 반 폭이 놓이는 축
+        hut_pad = rect_poly(hut, u, v, hut_half[0] + 6.0 + ext_u, hut_half[1] + 6.0 + ext_v) if hut else None
+
+        def grid(cu, cv, pad=None):
             pts = [at(cu + (i - (nx - 1) / 2) * su, cv + (j - (nz - 1) / 2) * sv) for i in range(nx) for j in range(nz)]
-            return [p for p in pts if free(p[0], p[1], 2.2)]
+            return [p for p in pts if free(p[0], p[1], 2.2) and not (pad and point_in_poly(p[0], p[1], pad))]
         # M13: 十자 · ㄱ자 지붕(학생회관)은 외접 사각형 가운데가 오목한 곳이라 패널이 들쭉날쭉 빠졌음 → 가장 많이 들어가는 자리로 옮긴다
         #      (가운데를 먼저 보고 같으면 가운데 — 다 들어가던 건물은 그대로)
         offs = [(0.0, 0.0)] + [(a * fp.half_u, c * fp.half_v) for a in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)
                                for c in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)]
         spots = max((grid(*o) for o in offs), key=len)
+        apart = max((grid(*o, pad=hut_pad) for o in offs), key=len)
+        if len(apart) == len(spots):
+            spots = apart
         for x, z in spots:
             _solar_panel(mb, Frame.look((x, H, z), (fwd[0], 0.0, fwd[1])))
         blocks = blocks + [(rect_poly(p, side_ax, fwd, 2.3, 1.2), 0) for p in spots]   # 실외기가 패널 위에 놓이지 않게
@@ -702,7 +717,7 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
         yards.append(rect_poly((x, z), fp.u, fp.v, pl + 0.6, pd + 0.6))
     # M18: 둥근 환기구를 지붕 곳곳에 6개 흩던 것을 묶음마다 끝에 한 쌍으로 (REVIEW_v22_day: 공학실험동 옥상이 흩어져 보였음).
     #      지붕 가운데 쪽 끝 먼저, 막히면 반대쪽 끝
-    placed = []
+    placed, units = [], []
     for (cu, cv), y in zip(spots, yards):
         for sgn in ((-1, 1) if cu > 0 else (1, -1)):
             pts = [at(cu + sgn * (pl + 1.6), cv + dv) for dv in (-1.5, 1.5)]
@@ -711,10 +726,24 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
                    for x, z in pts):
                 placed += pts
                 break
+        else:
+            continue
+        if len(spots) == 1:
+            # M21: 묶음 하나뿐인 지붕(생명과학대)은 M20 에서 낱개를 뺀 뒤 넓은 베이지 판이 비어 보였음 (REVIEW_v26)
+            #      → 환기구 너머로 묶음 축을 따라 낱개 실외기 세 대를 한 줄로 (흩지 않고 묶음에 이어지게)
+            for k in range(3):
+                x, z = at(cu + sgn * (pl + 4.8 + k * 3.2), cv)
+                if not free(x, z, 1.6):
+                    break
+                units.append((x, z))
     for x, z in placed:
         mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
         mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓
-    return blocks + [(y, 0) for y in yards] + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed]
+    for x, z in units:
+        m = Frame.yaw((x, H, z), yaw)
+        mb.box(m, (0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
+        mb.box(m, (0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
+    return blocks + [(y, 0) for y in yards] + [(rect_poly(p, (1.0, 0.0), (0.0, 1.0), 1.0, 1.0), 0) for p in placed + units]
 
 
 def _solar_panel(mb, m):
