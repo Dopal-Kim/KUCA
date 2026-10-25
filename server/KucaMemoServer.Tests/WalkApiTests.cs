@@ -239,8 +239,8 @@ public class WalkApiTests : IDisposable
         // 별점을 낮게 줘도 상대는 계속 짝을 찾을 수 있다 (상대 평가 없음)
         await Finish(b, walkId, 1000);
         string c = await User("다");
-        await Send(HttpMethod.Post, "/api/match/queue", b, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.OK);
-        JsonElement s = await Send(HttpMethod.Post, "/api/match/queue", c, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.OK);
+        await Send(HttpMethod.Post, "/api/match/queue", b, new { minutes = 30, buildingId = StudentHall }, HttpStatusCode.OK);
+        JsonElement s = await Send(HttpMethod.Post, "/api/match/queue", c, new { minutes = 30, buildingId = StudentHall }, HttpStatusCode.OK);
         Assert.Equal("proposed", S(s, "state"));
     }
 

@@ -23,8 +23,16 @@ public static class MatchEndpoints
             Run(req, accounts, user => Results.Ok(service.Get(user.Id))));
 
         match.MapPost("/{matchId}/accept", (string matchId, HttpRequest req, AccountStore accounts, MatchService service,
-                                            ISmalltalkGenerator smalltalk, CancellationToken ct) =>
-            RunAsync(req, accounts, async user => Results.Ok(await service.AcceptAsync(user.Id, matchId, smalltalk, ct))));
+                                            ISmalltalkGenerator smalltalk, RouteRecommender recommender, CancellationToken ct) =>
+            RunAsync(req, accounts, async user => Results.Ok(await service.AcceptAsync(user.Id, matchId, smalltalk, recommender, ct))));
+
+        // 함께 걸을 코스: 둘 다 "이 코스 좋아요" 를 누르면 확정, "다른 코스" 는 3번까지
+        match.MapPost("/{matchId}/course/agree", (string matchId, HttpRequest req, AccountStore accounts, MatchService service) =>
+            Run(req, accounts, user => Results.Ok(service.AgreeCourse(user.Id, matchId))));
+
+        match.MapPost("/{matchId}/course/next", (string matchId, HttpRequest req, AccountStore accounts, MatchService service,
+                                                 RouteRecommender recommender, CancellationToken ct) =>
+            RunAsync(req, accounts, async user => Results.Ok(await service.NextCourseAsync(user.Id, matchId, recommender, ct))));
 
         match.MapPost("/{matchId}/decline", (string matchId, HttpRequest req, AccountStore accounts, MatchService service) =>
             Run(req, accounts, user => Results.Ok(service.Decline(user.Id, matchId))));

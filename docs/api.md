@@ -530,7 +530,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 
 | 필드 | 설명 |
 | --- | --- |
-| `minutes` | 15 · 30 · 60 (추천과 같음, 10/24 결정) |
+| `minutes` | **30 · 60** (함께 걷기는 최소 30분, 10/25 피드백). 15분은 `400`. 혼자 걷는 추천은 15분도 됩니다 |
 | `matchGender` | `same`(동성만) · `any`(상관없음). 없으면 계정 취향의 값, 그것도 없으면 `any` |
 | `buildingId` | 지금 가장 가까운 **건물 ID**. GPS 좌표는 보내지 않고, 서버도 건물 단위로만 저장합니다 |
 
@@ -574,16 +574,27 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   "myAppearance": "회색 맨투맨, 파란 백팩",
   "arrived": { "me": true, "partner": false },
   "walkId": null,
-  "endReason": null
+  "endReason": null,
+  "smalltalkCards": [
+    { "text": "학식 최애 메뉴 있어요?", "topic": "학식", "emoji": "🍚" },
+    { "text": "요즘 날씨에 걷기 좋은 길 알아요?", "topic": "계절", "emoji": "🍂" },
+    { "text": "아직 한 번도 안 가 본 건물 있어요?", "topic": "캠퍼스 장소", "emoji": "🏛️" }
+  ],
+  "course": {
+    "recommendationId": "rec_3b9a…", "title": "가을 오후 함께 걷는 30분", "source": "ai",
+    "stops": [ { "buildingId": "way-474085534", "name": "중앙도서관", "reason": "…", "walkMinutes": 4, "distanceM": 310, "lat": 37.2421, "lon": 127.0796 } ],
+    "totalDistanceM": 1450, "totalMinutes": 21,
+    "myAgree": true, "partnerAgree": false, "confirmed": false, "changesLeft": 2
+  }
 }
 ```
 
 | `state` | 뜻 | 채워지는 필드 |
 | --- | --- | --- |
 | `idle` | 매칭 안 함 | 없음 |
-| `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`) |
+| `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`), `nowSearching` (나 말고 지금 짝을 찾는 사람 수 — 대기 화면의 실시간 느낌용) |
 | `proposed` | 상대를 찾음, 수락 기다림 | `partner.nickname`, `partner.commonTastes`, `respondBy` (60초 `[가정]`), `myAnswer` (`null` · `accepted`) |
-| `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `myAppearance`, `partner.appearance`, `arrived` |
+| `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `smalltalkCards`, `myAppearance`, `partner.appearance`, `arrived`, `course` (함께 걸을 코스, 만드는 몇 초 동안은 `null`) |
 | `walking` | 만나서 산책 중 | `walkId` (산책 완료 API 에 씀) |
 | `ended` | 끝남 | `endReason` |
 
@@ -620,9 +631,27 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 - **상대에게만** 보이고, 매칭이 끝나면 지웁니다.
 - `200 MatchState`. `meeting` 에서만 쓸 수 있고, 다른 상태면 `409` 입니다.
 
+### 함께 걸을 코스 (10/25 피드백)
+
+둘 다 수락하는 순간 서버가 **만남 스팟에서 출발하는 코스**를 만들어 두 사람에게 똑같이 보여 줍니다 (`MatchState.course`).
+- 고른 시간(30 · 60분), 두 사람의 공통 취향, 지금 시간대 · 계절 · 날씨로 추천 v2 가 짭니다 (AI 키가 있으면 AI). 만남 스팟은 코스에 넣지 않습니다.
+- 만드는 데 몇 초 걸리므로 그동안 `course` 는 `null` 입니다 ("코스 준비 중"). 폴링으로 받습니다.
+
+`POST /api/match/{matchId}/course/agree` — "이 코스 좋아요"
+- 본문 없음. `200 MatchState`. **두 사람 모두 누르면 `course.confirmed: true`** (확정).
+- `myAgree` · `partnerAgree` 로 누가 눌렀는지 보여 줍니다. 가상 상대는 바로 동의합니다.
+
+`POST /api/match/{matchId}/course/next` — "다른 코스 보기"
+- 본문 없음. `200 MatchState`. 새 코스로 바뀌고 **두 사람의 동의가 지워집니다** (다시 함께 골라야 함).
+- 이미 보여 준 장소는 빼고 짜서 실제로 다른 코스가 나옵니다.
+- 매칭마다 **3번까지** (`changesLeft`). 넘으면 `429`, 확정된 뒤에는 `409`, 코스를 아직 만드는 중이면 `409`.
+
+출발 (둘 다 `arrived`) 하면 그때의 코스로 확정되고, 산책 기록(`walkId`)의 계획 거리 · 장소가 됩니다. 완료 판정은 혼자 걷는 추천 코스와 같습니다 (마지막 장소 도착 또는 계획 거리의 80%).
+
 ### POST /api/match/{matchId}/smalltalk (다음 주제)
 
-- 본문 없음. `200 { "smalltalk": ["…", "…", "…"], "source": "ai" }`. `meeting`·`walking` 에서만 됩니다 (아니면 `409`)
+- 본문 없음. `200 { "smalltalk": ["…", "…", "…"], "source": "ai", "smalltalkCards": [ … ] }`. `meeting`·`walking` 에서만 됩니다 (아니면 `409`)
+- `smalltalkCards`: 같은 주제에 분류(`topic`: 공강 · 학식 · 전공 · 캠퍼스 장소 · 계절 · 날씨 · 취향 · 대화)와 `emoji` 를 붙인 것. 앱은 이걸로 대화 카드를 꾸밉니다
 - 새 주제 3개를 돌려주고, 두 사람 모두 같은 카드를 봅니다.
 - 앱의 "다음 주제" 버튼은 받은 3개를 먼저 넘기고, 다 보면 이걸 부릅니다.
 - AI 는 공통 취향 + 만남 스팟 + 날씨로 씁니다. AI 가 실패하면 `Data/smalltalk.json` 예시 20개 중에서 고릅니다 (`source: "fallback"`).
@@ -681,7 +710,8 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 ```
 
 - **완료 판정 (서버):** 추천 코스면 마지막 스팟 도착(`visitedBuildingIds` 에 있음) 또는 계획 거리의 80% 이상
-  - 자유 산책 · 매칭 산책은 500m 이상이면 완료 `[가정]`
+  - 매칭 산책은 함께 정한 코스 기준 (위와 같음)
+  - 자유 산책은 500m 이상이면 완료 `[가정]`
 - 걸은 거리가 시간에 비해 너무 길면(초속 2.5m 초과) 거리를 깎습니다 `[가정]`. 탈것으로 이동한 경우를 막기 위해서입니다.
 - 매칭 산책은 한 사람이 `finish` 하면 그 사람 산책이 끝납니다. 두 사람 모두 끝나면 매칭이 `ended` (`completed`) 가 됩니다.
 
