@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -24,6 +25,12 @@ public class WalkHistoryScreen : MonoBehaviour
     Button detailShare;
     WalkHistory.Entry detailEntry;
     bool sharing;
+
+    IEnumerator UnlockAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        sharing = false;
+    }
 
     public static void Show()
     {
@@ -140,6 +147,7 @@ public class WalkHistoryScreen : MonoBehaviour
             return;
         sharing = true;
         FindAnyObjectByType<GameHUD>()?.Toast("공유 준비 중…");
+        StartCoroutine(UnlockAfter(10f));   // 중간에 예외가 나도 버튼이 묶여 있지 않게
         StartCoroutine(WalkShare.Share(detailFrame, WalkShare.KindOf(e.kind, e.stopsTotal, 0), e.meters, e.minutes, e.visitedBuildingIds, error =>
         {
             sharing = false;

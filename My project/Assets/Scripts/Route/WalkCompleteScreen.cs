@@ -154,12 +154,19 @@ public class WalkCompleteScreen : MonoBehaviour
 
     bool sharing;
 
+    IEnumerator UnlockAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        sharing = false;
+    }
+
     void ShareToKakao(RectTransform frame)
     {
         if (sharing || walk == null)
             return;
         sharing = true;
         FindAnyObjectByType<GameHUD>()?.Toast("공유 준비 중…");
+        StartCoroutine(UnlockAfter(10f));   // 중간에 예외가 나도 버튼이 묶여 있지 않게
         StartCoroutine(WalkShare.Share(frame, WalkShare.KindOf(walk.kind, walk.stopsTotal, walk.plannedMeters),
             walk.meters, walk.minutes, walk.visitedBuildingIds, error =>
             {

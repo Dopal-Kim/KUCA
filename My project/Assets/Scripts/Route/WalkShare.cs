@@ -54,9 +54,12 @@ public static class WalkShare
             new MultipartFormDataSection("kind", kind),
             new MultipartFormDataSection("meters", meters.ToString()),
             new MultipartFormDataSection("minutes", minutes.ToString()),
-            new MultipartFormDataSection("buildingIds", string.Join(",", buildingIds ?? new List<string>())),
             new MultipartFormFileSection("image", jpg, "walk.jpg", "image/jpeg"),
         };
+        // 빈 값 칸은 만들 수 없다 (Unity 가 예외를 던진다): 들른 곳이 없는 자유 산책은 아예 보내지 않는다
+        string ids = string.Join(",", buildingIds ?? new List<string>());
+        if (ids.Length > 0)
+            form.Add(new MultipartFormDataSection("buildingIds", ids));
         using UnityWebRequest req = UnityWebRequest.Post(server + "/api/walks/share", form);
         req.SetRequestHeader("Authorization", "Bearer " + AuthService.Token);
         req.timeout = 40;
