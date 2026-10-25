@@ -193,7 +193,7 @@ public class CollectController : MonoBehaviour
         if (countForQuests)
             Quests.Report("catch", 1, type.id);
         string name = CreatureLibrary.NameOf(speciesId);
-        hud?.Toast($"{name} 획득!  힘 {caught.cp}  ·  +{type.points} XP");
+        hud?.Toast($"{name}{CatchCameraScreen.Josa(name, "을", "를")} 만났어요!  +{type.points} XP");
         hud?.ShowProgress(Progress, spawner.types);
         if (target != null)
             spawner.Remove(target);

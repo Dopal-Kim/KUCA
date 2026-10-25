@@ -91,11 +91,11 @@ public partial class KhuMenus
         var sb = new System.Text.StringBuilder();
         foreach (bool premium in new[] { false, true })
         {
-            sb.Append(premium ? "<b>5장 뽑기</b>\n" : "<b>1장 뽑기</b>\n");
+            sb.Append(premium ? "<b>티켓 5장으로 만나기</b>\n" : "<b>티켓 1장으로 만나기</b>\n");
             foreach (var (grade, chance) in GachaRules.OddsOf(premium))
             {
                 int n = GachaRules.SpeciesOf(grade).Count;
-                sb.Append($"  <color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(grade))}>{GachaRules.Label(grade)} 등급</color>  {chance * 100f:0.#}%  ·  {n}종 (한 종 {chance * 100f / Mathf.Max(1, n):0.##}%)\n");
+                sb.Append($"  <color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(grade))}>{GachaRules.Label(grade)}</color>  {chance * 100f:0.#}%  ·  {n}종 (한 종 {chance * 100f / Mathf.Max(1, n):0.##}%)\n");
             }
             sb.Append('\n');
         }
@@ -108,7 +108,7 @@ public partial class KhuMenus
     /// <summary>뽑기: 가진 티켓을 크게 (카드), 뽑기 카드 2장 (1장 · 5장, 가격 알약), 확률표는 글자 버튼</summary>
     void BuildGacha()
     {
-        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Gacha", "뽑기", () => Show(gachaScreen, false), "걸어서 모은 티켓으로 새 경희펫을 만나요");
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Gacha", "새 친구 만나기", () => Show(gachaScreen, false), "걸어서 모은 티켓으로 새 경희펫을 만나요");
         gachaScreen = page.root;
 
         // 가진 티켓
@@ -125,8 +125,8 @@ public partial class KhuMenus
         gachaNext = T(tc, "", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         UIKit.Size(gachaNext, 60f);
 
-        singleButton = DrawCard(page.content, "1장 뽑기", "C · B · A 등급이 나와요", KucaTheme.Primary, () => Draw(false));
-        premiumButton = DrawCard(page.content, "5장 뽑기", "B · A · S 등급 · 더 귀한 경희펫", KucaTheme.Gold, () => Draw(true));
+        singleButton = DrawCard(page.content, "티켓 1장으로 만나기", "흔함 · 조금 드묾 · 드묾 친구가 나와요", KucaTheme.Primary, () => Draw(false));
+        premiumButton = DrawCard(page.content, "티켓 5장으로 만나기", "조금 드묾 ~ 아주 드묾 · 더 귀한 경희펫", KucaTheme.Gold, () => Draw(true));
 
         Button odds = UIKit.Button(page.content, "확률표 보기", ToggleOdds, new Color(1f, 1f, 1f, 0f), KucaTheme.Label);
         odds.GetComponentInChildren<Text>(true).color = KucaTheme.PrimaryDeep;
@@ -212,7 +212,7 @@ public partial class KhuMenus
             Text name = T(r, CreatureLibrary.NameOf(id), KucaTheme.Heading, TextAnchor.LowerLeft, KucaTheme.Ink, bold: true);
             FitOneLine(name, KucaTheme.Heading);
             Corners(name.rectTransform, new Vector2(0f, 0.55f), Vector2.one, new Vector2(330f, 0f), new Vector2(-110f, -24f));
-            Text sub = T(r, $"{GachaRules.Label(GachaRules.GradeOf(id))} 등급  ·  함께 걸으면 3단계까지 자라요", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+            Text sub = T(r, $"{GachaRules.Label(GachaRules.GradeOf(id))}  ·  함께 걸으면 3단계까지 자라요", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
             Corners(sub.rectTransform, Vector2.zero, new Vector2(1f, 0.55f), new Vector2(330f, 24f), new Vector2(-110f, -12f));
 
             Image chev = UIKit.Image(r, "Chevron", KucaTheme.InkSoft);
@@ -242,7 +242,7 @@ public partial class KhuMenus
         starterScreen = page.root;
         starterRow = UIKit.Rect(page.content, "Choices");
         UIKit.Vertical(starterRow, KucaTheme.Space3);
-        UIKit.Paragraph(page.content, "함께 걸을수록 자라요. 나중에 뽑기로 만난 경희펫으로 바꿀 수도 있어요.", KucaTheme.Label);
+        UIKit.Paragraph(page.content, "함께 걸을수록 자라요. 나중에 티켓으로 만난 경희펫으로 바꿀 수도 있어요.", KucaTheme.Label);
     }
 
 }

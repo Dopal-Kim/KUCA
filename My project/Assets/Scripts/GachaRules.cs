@@ -32,7 +32,14 @@ public static class GachaRules
         return byGrade[grade];
     }
 
-    public static string Label(Grade g) => g.ToString();
+    /// <summary>화면에 보이는 희귀도 말 (펫을 C~S "등급" 으로 부르면 어색했음 — 사용자 결정 10/26). 규칙 · 저장은 Grade 그대로</summary>
+    public static string Label(Grade g) => g switch
+    {
+        Grade.C => "흔함",
+        Grade.B => "조금 드묾",
+        Grade.A => "드묾",
+        _ => "아주 드묾",
+    };
 
     public static Color ColorOf(Grade g) => g switch
     {
