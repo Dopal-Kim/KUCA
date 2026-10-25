@@ -660,6 +660,9 @@ public class CharacterCustomizer : MonoBehaviour
             le = go.AddComponent<LayoutElement>();
         le.preferredHeight = height;
         le.minHeight = height;
+        // 높이를 정한 칸은 늘어나지 않게 (안에 가로 줄 배치가 있으면 기본으로 남는 공간을 나눠 가져
+        // 탭 · 랜덤 · 완료 버튼이 내용 칸만큼 커지던 것)
+        le.flexibleHeight = 0f;
     }
 
     static void SetWidth(GameObject go, float width, float flexible)
