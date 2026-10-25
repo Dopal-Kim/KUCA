@@ -432,7 +432,8 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
         if pip(px, pz, b.poly) and dist_to_poly_edge(px, pz, b.poly) > 5:
             m = Frame.yaw((px, H, pz), math.degrees(math.atan2(u[0], u[1])))
             # M19: 탑에 붙인 기계실(M16)이 탑 테와 같은 흰색이라 위(T)에서 탑과 한 덩어리로 보였음 (REVIEW_v24 우정원) → 탑을 나눈 건물만 회색 금속
-            body, cap = ((0.58, 0.60, 0.63), (0.66, 0.68, 0.71)) if len(parts) == 2 else ((0.93, 0.92, 0.89), (0.99, 0.98, 0.95))
+            # M22: 갓(0.66 ~ 0.71)이 M21 탑 지붕 회색 판(0.62)과 밝기가 같아 위(T)에서 다시 한 덩어리 (REVIEW_v27) → 한 단계 진한 청회색
+            body, cap = ((0.46, 0.49, 0.53), (0.50, 0.53, 0.57)) if len(parts) == 2 else ((0.93, 0.92, 0.89), (0.99, 0.98, 0.95))
             mb.box(m, (0, 1.4, 0), (4.5, 2.8, 6.0), body)
             mb.box(m, (0, 2.95, 0), (4.9, 0.3, 6.4), cap)
             huts.append((rect_poly((px, pz), u, v, 3.2, 2.45), H + 3.1))
@@ -512,7 +513,7 @@ def _rooftop(mb, b, style, blocks, rng):
     def at(su, sv):
         return fp.center[0] + u[0] * su + v[0] * sv, fp.center[1] + u[1] * su + v[1] * sv
 
-    hut = None
+    hut, hut_end = None, False
     # 계단실: 긴 축 끝 쪽에, 지붕 면적의 4% 이하 (M8: 국제학관 · 도예관에서 가운데 큰 흰 상자가 장난감 블록처럼 보였음)
     if fp.half_u > 7 and fp.half_v > 5 and b.id not in NO_STAIR_HUT:
         long_u = fp.half_u >= fp.half_v
@@ -525,8 +526,16 @@ def _rooftop(mb, b, style, blocks, rng):
         w, d = w * k, d * k
         if ROOF_FEATURE.get(b.id) == 'skylight' and long_u:
             # M14: 공학실험동 천창 4줄 중 2줄이 계단실에 막혀 한쪽 토막만 남았음 → 계단실을 천창 줄 끝 너머로 (rng 순서는 그대로)
-            past = min(fp.half_u - 6.5, 16.0) + 5.0 + max(w, d) / 2
+            # M22: 줄 끝에서 2.3 m 라 남쪽 계단실 그림자가 천창 줄에 걸렸음 (REVIEW_v27) → 줄 끝 너머 5 → 8 m (틈 약 5 m)
+            past = min(fp.half_u - 6.5, 16.0) + 8.0 + max(w, d) / 2
             off = math.copysign(max(abs(off), min(past, hl - max(w, d) / 2 - 3.0)), off)
+        if ROOF_FEATURE.get(b.id) == 'solar' and hl < 20:
+            # M22: 실습농장동(긴 반축 17 m)은 패널 4 × 2 (폭 21 m) + 계단실 + 6 m 틈이 지붕 길이에 다 안 들어가 M21 의 '떨어진 자리'가
+            #      하나도 없어 예전 자리(틈 2.8 m) 그대로였음 (REVIEW_v27) → 짧은 태양광 지붕은 계단실 짧은 변을 긴 축으로 돌리고 난간 4.5 m 앞 끝까지 민다
+            #      (긴 지붕 국제학관 · 실험연구동은 M21 자리 그대로)
+            #      (짧은 축은 가운데, 여유 0.5 m — 딱 4 m 면 둥근 모서리에 걸려 M18 이 한 칸 안으로 다시 끌어들였음)
+            w, d = (min(w, d), max(w, d)) if long_u else (max(w, d), min(w, d))
+            off, side, hut_end = math.copysign(hl - (w if long_u else d) / 2 - 4.5, off), 0.0, True
         px, pz = at(off, side) if long_u else at(side, off)
         # M18: 상자 모서리가 난간에서 4 m 안쪽이 아니면 가장 가까운 4 m 자리로 들인다 (4 m 안쪽이던 건물 · 계단실이 없던 건물은 예전과 같음)
         #      생명과학대 동쪽 날개는 외접 사각형보다 좁아 계단실이 날개 남쪽 난간에 3 m 로 붙어 S 에서 벽 위로 튀어나와 보였음 (REVIEW_v22_day)
@@ -592,10 +601,14 @@ def _rooftop(mb, b, style, blocks, rng):
         #      (가운데를 먼저 보고 같으면 가운데 — 다 들어가던 건물은 그대로)
         offs = [(0.0, 0.0)] + [(a * fp.half_u, c * fp.half_v) for a in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)
                                for c in (-0.45, -0.3, -0.15, 0.0, 0.15, 0.3, 0.45)]
-        spots = max((grid(*o) for o in offs), key=len)
+        grids = [grid(*o) for o in offs]
+        spots = max(grids, key=len)
         apart = max((grid(*o, pad=hut_pad) for o in offs), key=len)
         if len(apart) == len(spots):
             spots = apart
+        elif hut_end:
+            # M22: 끝으로 민 계단실(실습농장동)은 6 m 자리가 없으면 가운데(첫 최대)로 돌아가 더 붙었음 → 같은 수 중 계단실에서 가장 먼 자리
+            spots = max((g for g in grids if len(g) == len(spots)), key=lambda g: min(math.dist(p, hut) for p in g))
         for x, z in spots:
             _solar_panel(mb, Frame.look((x, H, z), (fwd[0], 0.0, fwd[1])))
         blocks = blocks + [(rect_poly(p, side_ax, fwd, 2.3, 1.2), 0) for p in spots]   # 실외기가 패널 위에 놓이지 않게
@@ -731,11 +744,13 @@ def _plant_yard(mb, b, fp, at, yaw, free, blocks, hut=None):
         if len(spots) == 1:
             # M21: 묶음 하나뿐인 지붕(생명과학대)은 M20 에서 낱개를 뺀 뒤 넓은 베이지 판이 비어 보였음 (REVIEW_v26)
             #      → 환기구 너머로 묶음 축을 따라 낱개 실외기 세 대를 한 줄로 (흩지 않고 묶음에 이어지게)
-            for k in range(3):
-                x, z = at(cu + sgn * (pl + 4.8 + k * 3.2), cv)
-                if not free(x, z, 1.6):
+            # M22: 묶음과 같은 줄이라 위(T)에서 묶음 · 환기구 · 세 대가 21 m 한 줄로 이어져 보였음 (REVIEW_v27)
+            #      → 환기구에서 2 m 더 띄우고, 줄을 묶음 축에서 옆으로 3.5 m 어긋나게 (지붕 가운데 쪽 먼저)
+            for dv in sorted((-3.5, 3.5), key=lambda t: abs(cv + t)):
+                row = [at(cu + sgn * (pl + 6.8 + k * 3.2), cv + dv) for k in range(3)]
+                if all(free(x, z, 1.6) for x, z in row):
+                    units += row
                     break
-                units.append((x, z))
     for x, z in placed:
         mb.prism(IDENT, (x, H, z), 0.5, 1.3, 8, ROOF_UNIT)
         mb.prism(IDENT, (x, H + 1.3, z), 0.9, 0.3, 8, shade(ROOF_UNIT, 1.05), caps=True)   # 버섯 갓

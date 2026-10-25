@@ -366,7 +366,8 @@ def observatory(mb, b, f):
     # M13: 40 × 10 칸은 빛에 따라 작은 다각형 면이 보였음 (MAP_REVIEW_v18) → 64 × 16
     # M14: 지도 메시는 면 법선(각진 음영)이라 64 × 16 도 N · W 에서 작은 사각 칸이 보였음 (REVIEW_v19) → 96 × 24 (이웃 면 각도 5.6° → 3.75°)
     mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 96, 24, DOME, checker=False)
-    rib = shade(DOME, 0.88)
+    # M22: 0.88 리브가 해 드는 S · E 면에서 돔과 같이 하얗게 날아가 칸 선이 거의 안 보였음 (REVIEW_v27) → 한 단계 진하게 · 조금 넓게 (0.22 → 0.3 m)
+    rib, rw = shade(DOME, 0.74), 0.15
     for i in range(12):
         th = 2 * math.pi * (i + 0.5) / 12
         if abs(math.cos(th)) < 0.2 and math.sin(th) < 0:   # 관측 창(-Z) 바로 옆
@@ -380,8 +381,8 @@ def observatory(mb, b, f):
         for j in range(n):
             a0, a1 = j / n * (math.pi / 2) * 0.9, (j + 1) / n * (math.pi / 2) * 0.9
             mid = P((a0 + a1) / 2, 0.0, r)
-            mb.quad(IDENT, P(a0, -0.11, r + 0.1), P(a0, 0.11, r + 0.1), P(a1, 0.11, r + 0.1), P(a1, -0.11, r + 0.1), rib, mid)
-            for w in (-0.11, 0.11):
+            mb.quad(IDENT, P(a0, -rw, r + 0.1), P(a0, rw, r + 0.1), P(a1, rw, r + 0.1), P(a1, -rw, r + 0.1), rib, mid)
+            for w in (-rw, rw):
                 mb.quad(IDENT, P(a0, w, r - 0.03), P(a0, w, r + 0.1), P(a1, w, r + 0.1), P(a1, w, r - 0.03), shade(rib, 0.94),
                         P((a0 + a1) / 2, 0.0, r + 0.03))
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
