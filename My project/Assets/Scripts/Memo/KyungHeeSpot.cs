@@ -74,9 +74,11 @@ public class KyungHeeSpot : MonoBehaviour
         spot.ribbon = UIKit.Image(pin, "Ribbon", KucaTheme.Ink);
         spot.ribbon.sprite = HudIcons.Pill;
         spot.ribbon.type = Image.Type.Sliced;
-        Text name = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Label, TextAnchor.MiddleCenter, Color.white));
+        spot.ribbon.pixelsPerUnitMultiplier = 1.4f;   // 알약 테두리(60)가 리본 높이 절반보다 크면 가운데가 갈라져 보였음 (v16)
+        // 지도 홈 거리에서 Label(38) 은 약 10px 라 안 읽혔음 (v16) → Heading
+        Text name = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
         UIKit.Stretch(name.rectTransform);
-        Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(name.preferredWidth + 2f * KucaTheme.Space4, 72f));
+        Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(name.preferredWidth + 2f * KucaTheme.Space4, 92f));
 
         if (glowMat != null)
         {
@@ -126,7 +128,7 @@ public class KyungHeeSpot : MonoBehaviour
         if (t == null)
             return;
         face.texture = t;
-        face.uvRect = new Rect(0.2f, 0.38f, 0.6f, 0.6f);   // shortcut: 썸네일(전신 + 받침) 위쪽을 얼굴로 자름, 피규어마다 머리 위치가 다르면 종별 값으로
+        face.uvRect = new Rect(0.24f, 0.42f, 0.52f, 0.52f);   // shortcut: 썸네일(전신 + 받침) 위쪽을 얼굴로 자름, 피규어마다 머리 위치가 다르면 종별 값으로
     }
 
     /// <summary>Player 위치에서 건물 외곽까지의 수평 거리 (m). 건물 안이면 0.</summary>

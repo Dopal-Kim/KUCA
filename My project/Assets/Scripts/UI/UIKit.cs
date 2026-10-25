@@ -253,12 +253,10 @@ public static class UIKit
             lr.offsetMin = Vector2.zero;
             lr.offsetMax = new Vector2(0f, 2f);
             shade.gameObject.SetActive(false);
-            area.GetComponent<ScrollRect>().onValueChanged.AddListener(v =>
-            {
-                bool longer = page.content.rect.height > area.rect.height + 1f;
-                divider.enabled = longer && v.y < 0.995f;
-                shade.gameObject.SetActive(longer && v.y > 0.005f);
-            });
+            var edges = area.gameObject.AddComponent<ScrollEdges>();
+            edges.scroll = area.GetComponent<ScrollRect>();
+            edges.top = divider;
+            edges.bottom = shade.gameObject;
         }
         else
         {

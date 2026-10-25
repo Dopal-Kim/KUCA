@@ -60,11 +60,13 @@ public static class CharacterLook
     /// </summary>
     public static readonly (string name, string menTop, string menBottom, string womenTop, string womenBottom)[] Styles =
     {
+        // v16 캡처: KHU 상의는 과잠이 아니라 빨간 반팔 티라 "경희 티셔츠", 여자 하의는 주황 바지가 캐주얼과 겹쳐 모험가 반바지로.
+        // 남자 Adventurer 상의는 정장과 같은 모양이라 다섯째는 남 Beach · 여 Adventurer (조끼 · 반바지) 의 "나들이"
         ("경희 모험가", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer"),
-        ("경희대 과잠", "KHU", "Casual_2", "KHU", "Casual"),
+        ("경희 티셔츠", "KHU", "Casual_2", "KHU", "KHU_Adventurer"),
         ("캐주얼", "Casual_Hoodie", "Casual_Hoodie", "Casual", "Casual"),
         ("정장", "Suit", "Suit", "Suit", "Suit"),
-        ("아웃도어", "Adventurer", "Adventurer", "Adventurer", "Adventurer"),
+        ("나들이", "Beach", "Beach", "Adventurer", "Adventurer"),
     };
 
     static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");

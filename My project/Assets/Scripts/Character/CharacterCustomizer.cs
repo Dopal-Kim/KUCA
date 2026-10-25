@@ -57,6 +57,7 @@ public class CharacterCustomizer : MonoBehaviour
     RectTransform clothesContent;
     int clothesGender = -1;
     GameObject faceRows;
+    Text lead;
     Text faceNote;
 
     CharacterPartsDatabase Db => character != null ? character.database : null;
@@ -155,6 +156,7 @@ public class CharacterCustomizer : MonoBehaviour
     void SetTab(Tab t)
     {
         tab = t;
+        lead.enabled = t != Tab.Clothes;   // 옷 탭은 전신이라 모자가 안내 문구를 덮었음 (REVIEW_v16)
         for (int i = 0; i < pages.Length; i++)
         {
             bool on = i == (int)t;
@@ -334,7 +336,7 @@ public class CharacterCustomizer : MonoBehaviour
         tr.offsetMin = new Vector2(KucaTheme.Gutter + 110f, -144f);
         tr.offsetMax = new Vector2(-KucaTheme.Gutter, -12f);
         // 첫 실행에 무엇을 하는 화면인지 한 줄 (REVIEW_v14: "꾸미기" 제목뿐이었음)
-        Text lead = UIKit.Text(safe, "나를 닮은 탐험가를 만들어요", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        lead = UIKit.Text(safe, "나를 닮은 탐험가를 만들어요", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         RectTransform lr = lead.rectTransform;
         lr.anchorMin = new Vector2(0f, 1f);
         lr.anchorMax = Vector2.one;

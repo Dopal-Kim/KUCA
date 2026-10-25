@@ -475,7 +475,7 @@ public class LoginScreen : MonoBehaviour
         UIKit.Stretch((RectTransform)privacyPage.transform);
         Heading(privacyPage.transform, "개인정보 안내");
         Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요. 초록 줄은 민감한 정보예요.", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
-        Box(ph.rectTransform, G, 254f, G, 60f);
+        Box(ph.rectTransform, G, 254f, G, 100f);   // 두 줄 (60 이면 둘째 줄이 첫 카드에 깔렸음, REVIEW_v16)
 
         (string item, string use, string keep)[] rows =
         {
@@ -487,7 +487,7 @@ public class LoginScreen : MonoBehaviour
             ("사진 · 메모", "경희스팟 메모판에 공개", "직접 지울 때까지"),
             ("체험 계정", "로그인 없이 둘러보기", "만든 지 7일 뒤 삭제"),
         };
-        float top = 330f;
+        float top = 370f;
         foreach (var (item, use, keep) in rows)
         {
             // 민감한 셋(성별 · 위치 · 인상착의)은 옅은 초록 + 왼쪽 띠로 먼저 눈에 띄게: 7줄이 같은 무게라 훑기 어려웠음 (REVIEW_v14)
