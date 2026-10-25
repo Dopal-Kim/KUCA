@@ -1,11 +1,12 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
-/// 경희스팟 표지판 하나 (포켓스탑 같은 것). 건물 지붕 위에 매끈한 기둥과 학교 배지(두께 있는 둥근 메달)가 떠 있다.
-/// - 멀리 있을 때: 배지가 카메라 쪽으로 부드럽게 돌아보며 천천히 떠다닌다. 뒤에 은은한 후광.
-/// - 가까이(InRange) 있을 때: 살짝 튀어 오르며 커지고, 천천히 돌고, 후광이 숨 쉬듯 밝아진다 → 메모를 남길 수 있다는 신호.
-/// 메달·기둥은 모두 배지 텍스처(KyungHeeSpotBadge.png) 하나로 칠한다: 앞면 = 로고, 테·고리 = 금색 띠, 뒷면·기둥 = 남색 띠.
-/// 탭하면 CollectController 가 SpotTapped 로 알려 준다.
+/// 경희스팟 표지 하나: 지붕 위에 선 얼굴 핀. 둥근 테 안에 그 건물의 경희몬 얼굴, 아래에 건물 이름 리본.
+/// (예전 기둥 + 도는 원판은 포켓스탑과 너무 닮아 바꿈 — 10/25 시안 C 선택. 경희몬이 없는 건물은 학교 배지)
+/// - 멀리 있을 때: 흰 테 · 검은 리본, 카메라를 향한 채 천천히 떠다닌다. 뒤에 은은한 후광.
+/// - 가까이(InRange) 있을 때: 살짝 튀어 오르며 커지고, 테는 금색 · 리본은 초록, 후광이 숨 쉬듯 밝아진다 → 메모를 남길 수 있다는 신호.
+/// 화면 공간이 아니라 월드 공간 캔버스라 건물 뒤에선 가려진다. 탭하면 CollectController 가 SpotTapped 로 알려 준다.
 /// </summary>
 public class KyungHeeSpot : MonoBehaviour
 {
@@ -13,24 +14,23 @@ public class KyungHeeSpot : MonoBehaviour
     public Bounds BuildingBounds { get; private set; }
     public bool InRange { get; private set; }
 
-    Transform badge, halo;
+    Transform badge, halo;        // badge = 핀 캔버스 (아래 끝 = 지붕)
+    Image ring, ribbon;
+    RawImage face;
+    string species;
     Renderer haloRenderer;
     MaterialPropertyBlock haloProps;
     float phase;
     float near, nearVel;          // 0 = 멀리, 1 = 가까이 (부드럽게)
-    float spinAngle, spinSpeed, spinVel;
-    float yaw, yawVel;
 
-    const float PoleHeight = 13f;   // 18 · 26 은 가까운 지도 시점에서 건물보다 커서 화면 아래를 가렸음 (UI_REVIEW_v5)
-    const float BadgeSize = 17f;
-    const int Segments = 64;
+    const float PoleHeight = 13f;   // 지붕에서 얼굴 아래까지 (m). 18 · 26 은 가까운 지도 시점에서 건물보다 커서 화면 아래를 가렸음 (UI_REVIEW_v5)
+    const float BadgeSize = 17f;    // 얼굴 원 지름 (m)
+    const float FacePx = 220f;      // 캔버스 안 얼굴 원 지름 (px): 글자 크기를 화면 부품과 같은 단위로 쓰려고
+    const float StemPx = FacePx * PoleHeight / BadgeSize;
 
-    // 배지 텍스처에서 색을 뽑을 자리 (512 px 원: 금 246~254, 남색 208~246, 금 202~208, 흰 0~202)
-    static readonly Vector2 GoldUV = new Vector2(0.5f, 0.5f + 0.492f);
-    static readonly Vector2 NavyUV = new Vector2(0.5f, 0.5f + 0.44f);
     static readonly int IntensityId = Shader.PropertyToID("_Intensity");
 
-    static Mesh badgeMesh, poleMesh, haloMesh;
+    static Mesh haloMesh;
 
     public static KyungHeeSpot Create(CampusBuildingInfo building, Bounds bounds, Material badgeMat, Material poleMat, Transform parent,
                                       Material glowMat = null)
@@ -45,23 +45,38 @@ public class KyungHeeSpot : MonoBehaviour
         spot.Building = building;
         spot.BuildingBounds = bounds;
         spot.phase = Random.value * Mathf.PI * 2f;
+        spot.species = SpeciesOf(building, bounds);
 
-        var pole = new GameObject("Pole");
-        pole.transform.SetParent(root.transform, false);
-        pole.AddComponent<MeshFilter>().sharedMesh = PoleMesh();
-        var pr = pole.AddComponent<MeshRenderer>();
-        pr.sharedMaterial = badgeMat;
-        pr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+        // 핀 캔버스: 아래 가운데가 지붕. 막대 → 얼굴 원(테 + 얼굴) → 이름 리본
+        var go = new GameObject("Pin", typeof(RectTransform), typeof(Canvas));
+        go.transform.SetParent(root.transform, false);
+        go.GetComponent<Canvas>().renderMode = RenderMode.WorldSpace;
+        var pin = (RectTransform)go.transform;
+        pin.pivot = new Vector2(0.5f, 0f);
+        pin.sizeDelta = new Vector2(FacePx * 4f, StemPx + FacePx + 40f);
+        spot.badge = pin;
 
-        var disc = new GameObject("Badge");
-        disc.transform.SetParent(root.transform, false);
-        disc.transform.localPosition = new Vector3(0f, PoleHeight + BadgeSize / 2f, 0f);
-        disc.transform.localScale = Vector3.one * BadgeSize;
-        disc.AddComponent<MeshFilter>().sharedMesh = BadgeMesh();
-        var r = disc.AddComponent<MeshRenderer>();
-        r.sharedMaterial = badgeMat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-        spot.badge = disc.transform;
+        Place(UIKit.Image(pin, "Stem", KucaTheme.Card).rectTransform, StemPx / 2f, new Vector2(10f, StemPx));
+        float faceY = StemPx + FacePx / 2f;
+        spot.ring = UIKit.Image(pin, "Ring", KucaTheme.Card);
+        spot.ring.sprite = HudIcons.Circle;
+        Place(spot.ring.rectTransform, faceY, Vector2.one * (FacePx + 20f));
+        Image disc = UIKit.Image(pin, "Face", KucaTheme.PrimarySoft);
+        disc.sprite = HudIcons.Circle;
+        disc.gameObject.AddComponent<Mask>();
+        Place(disc.rectTransform, faceY, Vector2.one * FacePx);
+        spot.face = new GameObject("Image", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+        spot.face.transform.SetParent(disc.transform, false);
+        spot.face.raycastTarget = false;
+        UIKit.Stretch(spot.face.rectTransform);
+        spot.face.texture = badgeMat != null ? badgeMat.mainTexture : null;   // 경희몬이 없거나 아직 못 그렸으면 학교 배지
+
+        spot.ribbon = UIKit.Image(pin, "Ribbon", KucaTheme.Ink);
+        spot.ribbon.sprite = HudIcons.Pill;
+        spot.ribbon.type = Image.Type.Sliced;
+        Text name = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Label, TextAnchor.MiddleCenter, Color.white));
+        UIKit.Stretch(name.rectTransform);
+        Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(name.preferredWidth + 2f * KucaTheme.Space4, 72f));
 
         if (glowMat != null)
         {
@@ -76,12 +91,42 @@ public class KyungHeeSpot : MonoBehaviour
             spot.halo = h.transform;
         }
 
-        // 손가락으로 누르기 쉽게 배지보다 큰 충돌체 (트리거라 물리에는 영향 없음)
+        // 손가락으로 누르기 쉽게 얼굴보다 큰 충돌체 (트리거라 물리에는 영향 없음)
         var hit = root.AddComponent<SphereCollider>();
         hit.isTrigger = true;
-        hit.center = disc.transform.localPosition;
+        hit.center = new Vector3(0f, PoleHeight + BadgeSize / 2f, 0f);
         hit.radius = BadgeSize * 0.8f;
         return spot;
+    }
+
+    static void Place(RectTransform r, float y, Vector2 size)
+    {
+        r.anchorMin = r.anchorMax = new Vector2(0.5f, 0f);
+        r.pivot = new Vector2(0.5f, 0.5f);
+        r.anchoredPosition = new Vector2(0f, y);
+        r.sizeDelta = size;
+    }
+
+    /// <summary>그 건물의 경희몬: 만남 스팟 표 → 없으면 중심이 건물 안에 있는 황금 구역. 둘 다 없으면 null (학교 배지)</summary>
+    static string SpeciesOf(CampusBuildingInfo building, Bounds bounds)
+    {
+        string s = MeetSpotCatalog.SpeciesAt(building.buildingId);
+        if (s != null)
+            return s;
+        foreach (CreatureLibrary.GoldZone z in CreatureLibrary.GoldZones)
+            if (bounds.Contains(new Vector3(z.center.x, bounds.center.y, z.center.y)))
+                return z.species;
+        return null;
+    }
+
+    void Start()
+    {
+        // 피규어 메시가 준비된 뒤(첫 프레임)에 얼굴을 한 번 찍는다
+        Texture2D t = MonsterThumbnails.Get(species);
+        if (t == null)
+            return;
+        face.texture = t;
+        face.uvRect = new Rect(0.2f, 0.38f, 0.6f, 0.6f);   // shortcut: 썸네일(전신 + 받침) 위쪽을 얼굴로 자름, 피규어마다 머리 위치가 다르면 종별 값으로
     }
 
     /// <summary>Player 위치에서 건물 외곽까지의 수평 거리 (m). 건물 안이면 0.</summary>
@@ -99,35 +144,27 @@ public class KyungHeeSpot : MonoBehaviour
     {
         if (badge == null)
             return;
-        float dt = Time.deltaTime;
         near = Mathf.SmoothDamp(near, InRange ? 1f : 0f, ref nearVel, 0.35f);
         float t = Time.time + phase;
 
         // 떠다니기 (두 물결을 섞어 기계적이지 않게) + 가까우면 조금 더 위로
         float bob = Mathf.Sin(t * 1.3f) * 1.0f + Mathf.Sin(t * 0.71f) * 0.45f;
-        // 카메라가 가까우면 배지를 줄인다 (캠퍼스 전체 보기에선 그대로, 플레이어 가까이선 건물 · 산책 시작 버튼을 가리지 않게)
+        // 카메라가 가까우면 핀을 줄인다 (캠퍼스 전체 보기에선 그대로, 플레이어 가까이선 건물 · 산책 시작 버튼을 가리지 않게)
         // 지도 홈 기본 카메라는 표지판에서 약 430 m: 기준 320 이면 배율이 늘 1 이라 줄지 않았음 (UI_REVIEW_v8) → 900 이면 약 0.5 배
         Camera cam = Camera.main;
         float size = BadgeSize * (cam != null ? Mathf.Clamp(Vector3.Distance(cam.transform.position, transform.position) / 900f, 0.4f, 1f) : 1f);
-        Vector3 center = new Vector3(0f, PoleHeight + size / 2f + bob + near * 3f, 0f);
-        badge.localPosition = center;
-        badge.localScale = Vector3.one * size * (1f + 0.28f * EaseOutBack(near));
-
-        // 카메라 쪽으로 부드럽게 돌아보고, 가까우면 천천히 회전 (멀어지면 앞면으로 부드럽게 돌아옴)
-        float camYaw = cam != null ? cam.transform.eulerAngles.y : 0f;
-        float camPitch = cam != null ? cam.transform.eulerAngles.x : 0f;
-        if (camPitch > 180f) camPitch -= 360f;
-        spinSpeed = Mathf.Lerp(spinSpeed, InRange ? 90f : 0f, dt * 2f);
-        if (InRange) spinAngle = Mathf.Repeat(spinAngle + spinSpeed * dt, 360f);
-        else spinAngle = Mathf.SmoothDampAngle(spinAngle, 0f, ref spinVel, 0.6f);
-        yaw = Mathf.SmoothDampAngle(yaw, camYaw + spinAngle, ref yawVel, 0.2f);
-        badge.rotation = Quaternion.Euler(camPitch * 0.3f, yaw, 0f);
+        badge.localPosition = new Vector3(0f, bob + near * 3f, 0f);
+        badge.localScale = Vector3.one * (size / FacePx) * (1f + 0.28f * EaseOutBack(near));
+        if (cam != null)
+            badge.rotation = cam.transform.rotation;   // 늘 화면을 향한 그림 (이름이 어느 방향에서도 읽힘)
+        ring.color = Color.Lerp(KucaTheme.Card, KucaTheme.Gold, near);
+        ribbon.color = Color.Lerp(KucaTheme.Ink, KucaTheme.Primary, near);
 
         if (halo != null)
         {
-            halo.localPosition = center;
+            halo.position = badge.TransformPoint(0f, StemPx + FacePx / 2f, 0f)
+                            + (cam != null ? cam.transform.forward : Vector3.forward) * (size * 0.3f);   // 얼굴 뒤
             halo.rotation = cam != null ? cam.transform.rotation : Quaternion.identity;
-            halo.position += (cam != null ? cam.transform.forward : Vector3.forward) * (size * 0.3f);   // 배지 뒤
             float breathe = 0.5f + 0.5f * Mathf.Sin(t * 2.4f);
             halo.localScale = Vector3.one * size * (1.75f + 0.25f * near + 0.08f * breathe * near);
             haloProps.SetFloat(IntensityId, 0.28f + 0.55f * near * (0.7f + 0.3f * breathe));
@@ -142,116 +179,6 @@ public class KyungHeeSpot : MonoBehaviour
     }
 
     // ---------- 메시 (한 번 만들어 모든 스팟이 같이 씀) ----------
-
-    /// <summary>지름 1, 두께 0.14 의 둥근 메달. 앞면(-Z, 카메라 쪽)은 로고, 앞 테두리는 비스듬히 깎고, 옆은 금색, 뒷면은 남색.</summary>
-    static Mesh BadgeMesh()
-    {
-        if (badgeMesh != null) return badgeMesh;
-        const float R = 0.5f, Bevel = 0.035f, T = 0.14f;
-        var v = new System.Collections.Generic.List<Vector3>();
-        var uv = new System.Collections.Generic.List<Vector2>();
-        var tri = new System.Collections.Generic.List<int>();
-
-        void Ring(float radius, float z, System.Func<float, float, Vector2> uvOf)
-        {
-            for (int i = 0; i <= Segments; i++)
-            {
-                float a = i * Mathf.PI * 2f / Segments;
-                float x = Mathf.Cos(a) * radius, y = Mathf.Sin(a) * radius;
-                v.Add(new Vector3(x, y, z));
-                uv.Add(uvOf(x, y));
-            }
-        }
-        void Strip(int r0, int r1)
-        {
-            for (int i = 0; i < Segments; i++)
-            {
-                tri.Add(r0 + i); tri.Add(r1 + i); tri.Add(r1 + i + 1);
-                tri.Add(r0 + i); tri.Add(r1 + i + 1); tri.Add(r0 + i + 1);
-            }
-        }
-
-        // 앞면: 가운데 점 + 로고가 그대로 보이는 원판 (배지 텍스처 UV = 위치)
-        int c0 = v.Count;
-        v.Add(new Vector3(0f, 0f, -T / 2f)); uv.Add(new Vector2(0.5f, 0.5f));
-        int front = v.Count;
-        Ring(R - Bevel, -T / 2f, (x, y) => new Vector2(0.5f + x, 0.5f + y));
-        for (int i = 0; i < Segments; i++) { tri.Add(c0); tri.Add(front + i + 1); tri.Add(front + i); }
-        // 앞 테두리 비스듬한 면 (금색 띠)
-        int bevelIn = v.Count;
-        Ring(R - Bevel, -T / 2f, (x, y) => GoldUV);
-        int bevelOut = v.Count;
-        Ring(R, -T / 2f + Bevel, (x, y) => GoldUV);
-        Strip(bevelIn, bevelOut);
-        // 옆면 (금색)
-        int sideA = v.Count;
-        Ring(R, -T / 2f + Bevel, (x, y) => GoldUV);
-        int sideB = v.Count;
-        Ring(R, T / 2f, (x, y) => GoldUV);
-        Strip(sideA, sideB);
-        // 뒷면 (남색)
-        int c1 = v.Count;
-        v.Add(new Vector3(0f, 0f, T / 2f)); uv.Add(NavyUV);
-        int back = v.Count;
-        Ring(R, T / 2f, (x, y) => NavyUV);
-        for (int i = 0; i < Segments; i++) { tri.Add(c1); tri.Add(back + i); tri.Add(back + i + 1); }
-
-        badgeMesh = new Mesh { name = "KyungHeeSpotBadge" };
-        badgeMesh.SetVertices(v);
-        badgeMesh.SetUVs(0, uv);
-        badgeMesh.SetTriangles(tri, 0);
-        badgeMesh.RecalculateNormals();
-        badgeMesh.RecalculateBounds();
-        return badgeMesh;
-    }
-
-    /// <summary>지붕 위 받침(금) + 위로 가늘어지는 기둥(남색) + 배지 아래 금색 고리</summary>
-    static Mesh PoleMesh()
-    {
-        if (poleMesh != null) return poleMesh;
-        const int S = 20;
-        var v = new System.Collections.Generic.List<Vector3>();
-        var uv = new System.Collections.Generic.List<Vector2>();
-        var tri = new System.Collections.Generic.List<int>();
-
-        void Tube(float y0, float y1, float r0, float r1, Vector2 col, bool cap)
-        {
-            int b = v.Count;
-            for (int i = 0; i <= S; i++)
-            {
-                float a = i * Mathf.PI * 2f / S;
-                v.Add(new Vector3(Mathf.Cos(a) * r0, y0, Mathf.Sin(a) * r0)); uv.Add(col);
-                v.Add(new Vector3(Mathf.Cos(a) * r1, y1, Mathf.Sin(a) * r1)); uv.Add(col);
-            }
-            for (int i = 0; i < S; i++)
-            {
-                int k = b + i * 2;
-                tri.Add(k); tri.Add(k + 1); tri.Add(k + 3);
-                tri.Add(k); tri.Add(k + 3); tri.Add(k + 2);
-            }
-            if (!cap) return;
-            int c = v.Count;
-            v.Add(new Vector3(0f, y1, 0f)); uv.Add(col);
-            for (int i = 0; i < S; i++)
-            {
-                tri.Add(c); tri.Add(b + (i + 1) * 2 + 1); tri.Add(b + i * 2 + 1);
-            }
-        }
-
-        Tube(0f, 0.5f, 3.2f, 3.0f, GoldUV, true);               // 받침
-        Tube(0.5f, 1.2f, 1.6f, 1.2f, NavyUV, false);            // 받침 목
-        Tube(1.2f, PoleHeight - 1.5f, 0.95f, 0.6f, NavyUV, false); // 기둥
-        Tube(PoleHeight - 1.5f, PoleHeight - 0.9f, 1.3f, 1.3f, GoldUV, true);   // 금색 고리
-        Tube(PoleHeight - 0.9f, PoleHeight + 1.5f, 0.6f, 0.45f, NavyUV, true);  // 배지 잡는 끝
-
-        poleMesh = new Mesh { name = "KyungHeeSpotPole" };
-        poleMesh.SetVertices(v);
-        poleMesh.SetUVs(0, uv);
-        poleMesh.SetTriangles(tri, 0);
-        poleMesh.RecalculateNormals();
-        poleMesh.RecalculateBounds();
-        return poleMesh;
-    }
 
     static Mesh HaloMesh()
     {
