@@ -16,6 +16,7 @@ DOME = (0.97, 0.97, 0.98)
 DARK = (0.24, 0.30, 0.38)
 SHUTTER = (0.55, 0.60, 0.67)   # 천문대 관측 창 닫힌 셔터 (M14)
 SEAT = (0.30, 0.42, 0.60)      # 대운동장 스탠드 좌석 줄 (M14, 추정)
+STAND_ROOF = (0.78, 0.81, 0.85)   # 대운동장 본부석 지붕 · 스탠드 뒤 갓 (M24 · M25, 연한 청회색 금속, 추정)
 GLASS = (0.30, 0.42, 0.52)
 SKY_GLASS = (0.66, 0.82, 0.93)   # 하늘이 비친 유리 (M10 도서관 천창)
 GOLD = (0.86, 0.72, 0.40)
@@ -760,25 +761,32 @@ def stadium(layer, ground, buildings=()):
             print(f'stadium: 스탠드 끝 자름 {length:.0f} → {hi - lo:.0f} m')
         nb = max(1, round((hi - lo) / 14))
         bw = (hi - lo) / nb
+        # M25: 동쪽 스탠드가 위(T)에서 같은 파랑 좌석 + 흰 갓돌이 100 m 넘게 이어진 한 줄 패널처럼 보였음 (REVIEW_v30)
+        #      → 블록마다 좌석 톤을 번갈아(파랑 / 한 단계 연한 청회색), 블록 사이 통로 가운데 어두운 난간 줄,
+        #      뒤 갓돌은 본부석 지붕과 같은 청회색 금속 + 기둥 띠(6 m)마다 이음 줄
         for k in range(nb):
             bx = lo + (k + 0.5) * bw
+            seat = SEAT if k % 2 == 0 else (0.50, 0.58, 0.70)
             for i in range(10):
                 top = 0.55 * (i + 1)
                 mb.box(m, (bx, top / 2, 3 - i * 1.0), (bw, top, 1.0), shade(STEP, 0.82), top=STEP)
-                mb.box(m, (bx, top + 0.15, 3 - i * 1.0 - 0.05), (bw - 2.0, 0.3, 0.5), SEAT if i % 2 else shade(SEAT, 1.08))
+                mb.box(m, (bx, top + 0.15, 3 - i * 1.0 - 0.05), (bw - 2.0, 0.3, 0.5), seat if i % 2 else shade(seat, 1.08))
+                if k:   # 통로 난간 (앞 블록과의 사이)
+                    mb.box(m, (lo + k * bw, top + 0.45, 3 - i * 1.0), (0.25, 0.9, 1.0), (0.42, 0.45, 0.50))
             mb.box(m, (bx, 3.2, -6.9), (bw, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
             # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
-            mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), shade(STEP, 1.04))
+            mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), STAND_ROOF, top=shade(STAND_ROOF, 1.04))
         n6 = max(1, int((hi - lo) / 6))
         for k in range(n6 + 1):
             mb.box(m, (lo + k * (hi - lo) / n6, 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
+            mb.box(m, (lo + k * (hi - lo) / n6, 6.68, -6.9), (0.2, 0.08, 1.14), shade(STAND_ROOF, 0.8))   # 갓돌 이음 줄
         if main:
             # M12: 본부석 지붕이 뒤쪽 가는 기둥 3개(위에서 안 보임)뿐이라 스탠드 위에 떠 있는 흰 판처럼 보였음
             #      → 앞쪽 굵은 기둥 5개 + 뒤 기둥 5개(바닥부터), 지붕 앞 처마 띠 · 어두운 밑면 (실제 본부석 구조는 확인 못 함 — 추정)
             r0, r1 = max(-length * 0.2, lo + 0.6), min(length * 0.2, hi - 0.6)   # 자른 스탠드 밖으로 나가지 않게 (M15)
             w, rc = r1 - r0, (r0 + r1) / 2
             # M24: 0.95 흰 지붕이 위(T) · 끝(N · S) · 여자동 E 에서 민짜 흰 판으로 튀었음 → 연한 청회색 금속판 + 3 m 마다 이음 줄 (추정)
-            roof = (0.78, 0.81, 0.85)
+            roof = STAND_ROOF
             mb.box(m, (rc, 8.45, -1.6), (w + 1, 0.4, 10.0), roof, top=shade(roof, 1.04))
             for k in range(1, int((w + 1) / 3.0)):
                 mb.box(m, (rc - (w + 1) / 2 + k * (w + 1) / int((w + 1) / 3.0), 8.69, -1.6), (0.18, 0.08, 10.0), shade(roof, 0.86))
@@ -846,7 +854,8 @@ def ujeongwon_front(mb, m, b, elen, ground):
 def foreign_canopy(mb, m, b, elen, ground):
     """외국어대학관: 가운데 입구 위로 크게 내민 캔틸레버 평 캐노피 (기둥 없음) + 넓은 계단"""
     w = min(max(elen * 0.6, 18.0), 26.0)
-    mb.box(m, (0, 6.0, 4.6), (w, 0.9, 9.2), COLUMN, top=shade(COLUMN, 1.02))
+    # M25: 9 m 흰 윗면이 위(T)에서 하얗게 날아간 지붕 판으로 보였음 (국제학관 현관과 같은 문제) → 윗면만 회색 한 단계
+    mb.box(m, (0, 6.0, 4.6), (w, 0.9, 9.2), COLUMN, top=shade(COLUMN, 0.84))
     mb.box(m, (0, 5.5, 4.6), (w - 0.6, 0.1, 8.8), (0.98, 0.95, 0.82), top=(0.98, 0.95, 0.82))   # 밑면 조명 띠
     for k in range(4):
         mb.box(m, (0, 0.12 * (4 - k), 3.2 + k * 1.0), (w + 2 - k * 0.6, 0.24 * (4 - k), 1.0), STEP)
@@ -883,7 +892,7 @@ def electronics_plaza(mb, m, b, elen, ground):
 def union_canopy(mb, m, b, elen, ground):
     """학생회관: 크게 내민 평 캐노피 + 넓은 대계단 (실사)"""
     w = min(max(elen * 0.5, 16.0), 24.0)
-    mb.box(m, (0, 5.4, 3.8), (w, 0.8, 7.6), COLUMN, top=shade(COLUMN, 1.02))
+    mb.box(m, (0, 5.4, 3.8), (w, 0.8, 7.6), COLUMN, top=shade(COLUMN, 0.84))   # M25: 윗면 회색 한 단계 (외국어대 캐노피와 같음)
     for x in (-w / 2 + 0.8, w / 2 - 0.8):
         mb.box(m, (x, 2.5, 6.8), (0.8, 5.0, 0.8), COLUMN)
     for k in range(6):
