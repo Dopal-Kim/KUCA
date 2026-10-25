@@ -38,13 +38,32 @@ Shader "KUCA/VertexColorLit"
                 float fog : TEXCOORD2;
             };
 
+            // M31: 정점 알파 128 ~ 239 = 서 있는 학생 인형 (people.py DOLL_ALPHA0): 128 + 위상 칸 × 16 + 발에서 높이 칸(0.5 m).
+            // 발은 두고 몸을 좌우로 아주 작게 흔들고(머리 쪽 약 ±0.3 m, 주기 2.6 ~ 3.8 초) 숨쉬듯 늘였다 줄인다 (±1.2%).
+            // 다른 물체의 알파는 0 · 255 뿐이라 그대로. 그림자 · 깊이 패스는 정지 자세 그대로 (차이 수 cm).
+            float3 KucaDollSway(float alpha, inout half glowA)
+            {
+                float a8 = floor(alpha * 255.0 + 0.5);
+                if (a8 < 127.5 || a8 > 239.5) return float3(0, 0, 0);
+                glowA = 1.0h;   // 인형은 밤에 빛나지 않음
+                float k = a8 - 128.0;
+                float ph = floor(k / 16.0);
+                float h = (k - ph * 16.0) * 0.5;
+                float t = _Time.y;
+                float sway = sin(t * 6.2831853 / (2.6 + 0.2 * ph) + ph * 2.4) * 0.04 * h;
+                float breathe = sin(t * 2.6 + ph * 1.7) * 0.012 * h;
+                return float3(cos(ph * 0.9) * sway, breathe, sin(ph * 0.9) * sway);
+            }
+
             Varyings vert (Attributes v)
             {
                 Varyings o;
-                o.positionWS = TransformObjectToWorld(v.positionOS.xyz);
+                half4 c = v.color;
+                half glowA = c.a;
+                o.positionWS = TransformObjectToWorld(v.positionOS.xyz) + KucaDollSway(v.color.a, glowA);
+                c.a = glowA;
                 o.positionCS = TransformWorldToHClip(o.positionWS);
                 o.normalWS = TransformObjectToWorldNormal(v.normalOS);
-                half4 c = v.color;
             #if !defined(UNITY_COLORSPACE_GAMMA)
                 c.rgb = SRGBToLinear(c.rgb);
             #endif

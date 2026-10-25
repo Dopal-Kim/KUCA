@@ -75,6 +75,9 @@ half3 KucaNightLight(half3 albedo, float3 positionWS, half amount)
     if (_KucaNight <= 0.001 || _KucaMapSize.x <= 0) return 0;
     float2 uv = positionWS.xz / _KucaMapSize.xy + 0.5;
     half pool = SAMPLE_TEXTURE2D_LOD(_KucaLightMap, sampler_KucaLightMap, uv, 0).r;
+    // M31: 등 바로 아래(불빛 지도 1 근처)만 1.6 배, 사이 번짐(0.3 안팎)은 0.75 배 — 길을 따라 고른 띠 대신 웅덩이로 (REVIEW_v36 5절 5번)
+    half p2 = pool * pool;
+    pool *= 0.75h + 0.85h * p2 * p2;
     return _KucaGlowColor.rgb * pool * _KucaNight * _KucaGroundLight * amount * (albedo * 1.3h + 0.06h);
 }
 

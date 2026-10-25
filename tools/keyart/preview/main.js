@@ -60,7 +60,7 @@ async function main() {
     uShadowStrength: { value: look.shadowStrength }, uWrap: { value: S.wrap }, uShadowTint: { value: raw(S.shadowTint) },
     uWarmTop: { value: S.warmTop }, uRim: { value: S.rim }, uSat: { value: S.saturation },
     uWash: { value: S.wash }, uWashColor: { value: lin(S.washColor) }, uResolution: { value: new THREE.Vector2(W, H) },
-    uTime: { value: 0 },
+    uTime: { value: num('t', 0) },   // ?t=초 : 물 반짝임 · 인형 흔들림 시각 (M31)
     uNight: { value: night }, uGlowColor: { value: lin(look.glow.color) }, uGlowStrength: { value: look.glow.strength },
     uLitWindows: { value: look.glow.litWindows },
     uLights: { value: lightsTex }, uGroundLight: { value: look.glow.groundLight || 0 },
@@ -96,7 +96,20 @@ async function main() {
        diffuseColor.rgb = kucaSeasonFoliage(diffuseColor.rgb, P, vec3(dn.x, dn.y, -dn.z)); }
      kEmit = diffuseColor.rgb * uGlowColor * uGlowStrength * uNight * (1.0 - vGlow) * 2.0;
      kNightAmt = 0.6;`, '#include <color_fragment>',
-    'attribute float glowMask; varying float vGlow;@@vGlow = glowMask;');
+    'attribute float glowMask; varying float vGlow; uniform float uTime; float kDoll = 0.0;@@vGlow = max(glowMask, kDoll);');
+  // M31: 서 있는 학생 인형만 아주 작게 흔들기 (VertexColorLit.shader 의 KucaDollSway 와 같은 계산, three 는 z 가 뒤집힘)
+  const vcCompile = vcMat.onBeforeCompile;
+  vcMat.onBeforeCompile = (sh) => {
+    vcCompile(sh);
+    sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      { float a8 = floor(glowMask * 255.0 + 0.5);
+        if (a8 > 127.5 && a8 < 239.5) {
+          float k = a8 - 128.0, ph = floor(k / 16.0), h = (k - ph * 16.0) * 0.5;
+          float sway = sin(uTime * 6.2831853 / (2.6 + 0.2 * ph) + ph * 2.4) * 0.04 * h;
+          transformed += vec3(cos(ph * 0.9) * sway, sin(uTime * 2.6 + ph * 1.7) * 0.012 * h, -sin(ph * 0.9) * sway);
+          kDoll = 1.0;
+        } }`);
+  };
   const shellMats = {};
   for (const { name, g } of await parseGeometry(buf)) {
     const shell = name.match(/^Shell(\w+?)_\d+$/);
@@ -145,6 +158,7 @@ uniform vec4 uSeasonBlossom;
 vec3 kucaNightLight(vec3 albedo, vec3 p, float amount) {
   if (uNight <= 0.001 || amount <= 0.0) return vec3(0.0);
   float pool = texture2D(uLights, p.xz / vec2(1418.0, 1548.0) + 0.5).r;
+  pool *= 0.75 + 0.85 * pool * pool * pool * pool;   // M31: 등 아래 웅덩이를 또렷하게 (KUCAStylizedLighting.hlsl 와 같음)
   return uGlowColor * pool * uNight * uGroundLight * amount * (albedo * 1.3 + 0.06);
 }
 vec3 kucaSeasonFoliage(vec3 c, vec3 p, vec3 n) {

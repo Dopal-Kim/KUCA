@@ -539,10 +539,12 @@ class Ground:
             d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=int(255 * min(1.0, s)))
         pts = np.asarray(img).astype(np.float32) / 255
         # 등 아래 또렷한 웅덩이 + 25 m 에 걸쳐 넓게 번지는 따뜻한 빛 (등이 모인 곳일수록 밝은 동네 불빛)
-        tight = ndimage.gaussian_filter(pts, 2.5 * ppm)
+        # M31: 웅덩이 가장자리 2.5 → 1.5 m, 번짐 0.45 → 0.25 — 24 m 마다 선 등의 웅덩이가 길을 따라 고른 띠로 이어져 Unity 에서
+        #      '바닥 빛 웅덩이'로 안 읽혔음 (REVIEW_v36 5절 5번). 셰이더가 1 근처만 더 밝힌다 (KUCAStylizedLighting.KucaNightLight)
+        tight = ndimage.gaussian_filter(pts, 1.5 * ppm)
         wide = ndimage.gaussian_filter(pts, 14.0 * ppm)
         wide = wide / (np.percentile(wide[wide > 0.001], 95) + 1e-6) if (wide > 0.001).any() else wide
-        acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.45, 0, 1) ** 0.85
+        acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.25, 0, 1) ** 0.85
         Image.fromarray((acc * 255).astype(np.uint8)).save(path)
         print('lights', len(lights), path)
 

@@ -402,7 +402,7 @@ def write_bytes(path, meshes, pos_unit=None):
       반복: int32 nameLen, utf8 name, float32[3] origin, int32 vertexCount, int32 flags(1 = 벽 좌표 있음),
             int16[vc*3] position (origin 기준, 2 cm 단위), uint8[vc*4] sRGB color,
             (flags&1) uint16[vc*2] 벽 좌표 (u, 벽 길이) 10 cm 단위
-      color 알파 0 = 밤에 빛나는 부분
+      color 알파 0 = 밤에 빛나는 부분, 128 ~ 239 = 서 있는 학생 인형 (흔들림 위상 · 높이 칸, people.DOLL_ALPHA0)
     삼각형은 정점 3개씩 순서대로 (인덱스 없음). 법선은 읽는 쪽에서 면 법선으로 계산.
     """
     import gzip
@@ -428,7 +428,7 @@ def write_bytes(path, meshes, pos_unit=None):
         body.write(q.astype('<i2').tobytes())
         c = np.clip(np.asarray(b.col, np.float32).reshape(-1, 3) * 255 + 0.5, 0, 255).astype(np.uint8)
         al = np.asarray(b.alpha, np.float32) if len(b.alpha) == vc else np.ones(vc, np.float32)
-        c = np.concatenate([c, (al * 255).astype(np.uint8)[:, None]], axis=1)
+        c = np.concatenate([c, np.clip(np.round(al * 255), 0, 255).astype(np.uint8)[:, None]], axis=1)   # M31: 반올림 (인형 흔들림 표시 128 ~ 239)
         body.write(c.tobytes())
         if has_aux:
             body.write(np.clip(np.round(np.asarray(b.aux, np.float64) * 10), 0, 65535).astype('<u2').tobytes())
