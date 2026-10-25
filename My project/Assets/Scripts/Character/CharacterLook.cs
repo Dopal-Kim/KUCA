@@ -55,18 +55,17 @@ public static class CharacterLook
     };
 
     /// <summary>
-    /// 옷 스타일 5: 성별마다 상의 id 와 하의 · 신발 id (Characters/{Men,Women} 의 의상 이름). 머리는 늘 경희 모험가
-    /// (얼굴 갈래가 이 머리에만 있다). 부위를 하나씩 섞던 방식은 말 머리 · 왕 · 우주복 같은 조합이 나와 뺐다 (10/25)
+    /// 옷 스타일 5: 성별마다 상의 id 와 하의 · 신발 id (Characters/{Men,Women} 의 의상 폴더 이름). 머리는 늘 경희 모험가
+    /// (얼굴 갈래가 이 머리에만 있다). 다섯 벌 모두 tools/character/build_adventurer.py --outfit 으로 만든 같은 몸
+    /// (경희 모험가 비율 · 형태) 에 옷만 다르게 입힌 것이다. 몸 비율이 다른 Quaternius 의상은 고르지 않는다 (10/25)
     /// </summary>
     public static readonly (string name, string menTop, string menBottom, string womenTop, string womenBottom)[] Styles =
     {
-        // v16 캡처: KHU 상의는 과잠이 아니라 빨간 반팔 티라 "경희 티셔츠", 여자 하의는 주황 바지가 캐주얼과 겹쳐 모험가 반바지로.
-        // 남자 Adventurer 상의는 정장과 같은 모양이라 다섯째는 남 Beach · 여 Adventurer (조끼 · 반바지) 의 "나들이"
         ("경희 모험가", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer"),
-        ("경희 티셔츠", "KHU", "Casual_2", "KHU", "KHU_Adventurer"),
-        ("캐주얼", "Casual_Hoodie", "Casual_Hoodie", "Casual", "Casual"),
-        ("정장", "Suit", "Suit", "Suit", "Suit"),
-        ("나들이", "Beach", "Beach", "Adventurer", "Adventurer"),
+        ("경희 과잠", "KHU_Varsity", "KHU_Varsity", "KHU_Varsity", "KHU_Varsity"),
+        ("후드티", "KHU_Hoodie", "KHU_Hoodie", "KHU_Hoodie", "KHU_Hoodie"),
+        ("단정", "KHU_Neat", "KHU_Neat", "KHU_Neat", "KHU_Neat"),
+        ("여름 나들이", "KHU_Summer", "KHU_Summer", "KHU_Summer", "KHU_Summer"),
     };
 
     static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");

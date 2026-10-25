@@ -20,7 +20,8 @@ public static class CharacterSetup
     static readonly Dictionary<string, string> OutfitNames = new Dictionary<string, string>
     {
         { "Adventurer", "모험가" }, { "Beach", "해변" }, { "Casual", "캐주얼" }, { "Casual_2", "캐주얼 2" },
-        { "Casual_Hoodie", "후드티" }, { "KHU", "경희대 과잠" }, { "KHU_Adventurer", "경희 모험가" }, { "Farmer", "농부" }, { "Formal", "포멀" }, { "Horse", "말 머리" },
+        { "Casual_Hoodie", "후드티" }, { "KHU", "경희대 과잠" }, { "KHU_Adventurer", "경희 모험가" }, { "KHU_Varsity", "경희 과잠" }, { "KHU_Hoodie", "후드티" },
+        { "KHU_Neat", "단정" }, { "KHU_Summer", "여름 나들이" }, { "Farmer", "농부" }, { "Formal", "포멀" }, { "Horse", "말 머리" },
         { "King", "왕" }, { "Medieval", "중세" }, { "Punk", "펑크" }, { "SciFi", "SF" }, { "Soldier", "군인" },
         { "SpaceSuit", "우주복" }, { "Suit", "정장" }, { "Swat", "특수부대" }, { "Witch", "마녀" }, { "Worker", "작업자" },
     };
