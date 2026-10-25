@@ -75,7 +75,7 @@ public partial class RoutePlanner
         mealNote.text = afterMeal ? $"가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : "";
         startValue.text = Escape(StartLabel);
         destValue.text = roundTrip ? "출발지로 돌아오기"
-            : destSpot != null ? Escape(destSpot.Building.buildingName) : "추천대로";
+            : destSpot != null ? Escape(destSpot.Building.buildingName) : "AI 가 정해요";   // "추천대로" 는 뜻을 몰랐음 (REVIEW_v22_day)
     }
 
     /// <summary>v4 칩 (UIKit.Chip) 켜짐 / 꺼짐: 초록 + 흰 굵은 글자 / 흰 바탕 + 회색 테 + 진한 글자</summary>
@@ -123,8 +123,10 @@ public partial class RoutePlanner
         }
         mealChip = Chip(ChipRow(c), "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        // AI 가 무엇을 하는지 버튼 바로 위에서 보이게: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0)
+        UIKit.Paragraph(c, "AI 가 지금 시간 · 날씨와 고른 취향, 장소 소개를 보고 코스 3개와 들를 이유를 골라요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
 
-        UIKit.PrimaryButton(b, "코스 3개 추천 받기", RequestRoutes);
+        UIKit.PrimaryButton(b, "AI 코스 3개 추천 받기", RequestRoutes);
         UIKit.SecondaryButton(b, "코스 없이 자유 산책 시작", () => { HideSheet(); FreeWalk.Begin(); });
     }
 

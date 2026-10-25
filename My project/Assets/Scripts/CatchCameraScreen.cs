@@ -755,7 +755,7 @@ public class CatchCameraScreen : MonoBehaviour
         {
             resultTitle.text = $"{displayName}{Josa(displayName, "을", "를")} 잡았다!";
             resultSub.text = caught != null
-                ? $"쿠옹력 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
+                ? $"힘 {caught.cp}  ·  +{type.points} XP\n사진은 프로필 › 스크랩북에 저장됐어요"
                 : "사진을 저장했어요";
         }
         albumButton.interactable = lastPhotoPath != null;

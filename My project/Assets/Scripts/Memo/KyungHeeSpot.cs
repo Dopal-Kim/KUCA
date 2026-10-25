@@ -16,6 +16,8 @@ public class KyungHeeSpot : MonoBehaviour
 
     Transform badge, halo;        // badge = 핀 캔버스 (아래 끝 = 지붕)
     Image ring, ribbon;
+    Text label;
+    bool hinted;
     RawImage face;
     string species;
     Renderer haloRenderer;
@@ -90,9 +92,9 @@ public class KyungHeeSpot : MonoBehaviour
         spot.ribbon.type = Image.Type.Sliced;
         spot.ribbon.pixelsPerUnitMultiplier = 1.4f;   // 알약 테두리(60)가 리본 높이 절반보다 크면 가운데가 갈라져 보였음 (v16)
         // 지도 홈 거리에서 Label(38) 은 약 10px 라 안 읽혔음 (v16) → Heading
-        Text name = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
-        UIKit.Stretch(name.rectTransform);
-        Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(name.preferredWidth + 2f * KucaTheme.Space4, 92f));
+        spot.label = UIKit.Bold(UIKit.Text(spot.ribbon.transform, building.DisplayName, KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white));
+        UIKit.Stretch(spot.label.rectTransform);
+        Place(spot.ribbon.rectTransform, StemPx + 14f, new Vector2(spot.label.preferredWidth + 2f * KucaTheme.Space4, 92f));
 
         foreach (Graphic g in pin.GetComponentsInChildren<Graphic>(true))
             g.material = OnTop;
@@ -178,6 +180,13 @@ public class KyungHeeSpot : MonoBehaviour
             badge.rotation = cam.transform.rotation;   // 늘 화면을 향한 그림 (이름이 어느 방향에서도 읽힘)
         ring.color = Color.Lerp(KucaTheme.Card, KucaTheme.Gold, near);
         ribbon.color = Color.Lerp(KucaTheme.Ink, KucaTheme.Primary, near);
+        // 가까우면 누를 수 있다는 것을 글로: 핀이 눌리는 것인지 몰랐음 (REVIEW_v22_day P0)
+        if (InRange != hinted)
+        {
+            hinted = InRange;
+            label.text = hinted ? Building.DisplayName + " · 눌러서 메모" : Building.DisplayName;
+            ribbon.rectTransform.sizeDelta = new Vector2(label.preferredWidth + 2f * KucaTheme.Space4, 92f);
+        }
 
         if (halo != null)
         {

@@ -149,7 +149,11 @@ public static class UiCapture
         yield return Shot("개인정보_안내");
         Click("확인하고 시작");   // 저장 폴더를 지우고 시작하므로 동의 화면이 먼저 뜬다
         yield return 1.5f;
+        // 에디터 전용 "로그인 건너뛰기" 는 빌드에 없으니 캡처에서도 숨긴다 (심사 · 시연 자료에 미완성처럼 찍혔음, REVIEW_v22_day)
+        GameObject editorSkip = FindButton("에디터: 로그인 건너뛰기");
+        if (editorSkip != null) editorSkip.SetActive(false);
         yield return Shot("로그인");
+        if (editorSkip != null) editorSkip.SetActive(true);
         Click("에디터: 로그인 건너뛰기");
         yield return 4f;
         yield return Shot("첫_꾸미기");   // 처음 깐 앱은 로그인 뒤 꾸미기가 먼저 뜬다
@@ -514,6 +518,17 @@ public static class UiCapture
         }
         yield return 0.4f;
         PickStarterIfShown();
+    }
+
+    static GameObject FindButton(string label)
+    {
+        foreach (Button b in UnityEngine.Object.FindObjectsByType<Button>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+        {
+            Text t = b.GetComponentInChildren<Text>();
+            if (t != null && t.text.Trim() == label)
+                return b.gameObject;
+        }
+        return null;
     }
 
     static bool Click(string label)

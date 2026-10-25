@@ -523,7 +523,8 @@ public class MatchScreen : MonoBehaviour
     void BuildCondition(RectTransform body)
     {
         conditionPage = Step(body, "Condition", "같이 걸을 사람을\n찾아 드릴게요", 1, out RectTransform c, out RectTransform b);
-        Note(c, "공강 시간에 근처에서 함께 걸을 경희대 학생을 이어 드려요.");
+        // 누르면 무슨 일이 생기는지 · AI 가 맡는 일 (REVIEW_v22_day P0 · P1). 짝은 규칙(거리 · 취향)으로 찾고 AI 는 대화 주제만 — 과장하지 않기
+        Note(c, "공강 시간에 근처에서 함께 걸을 경희대 학생을 이어 드려요. 찾는 동안 앱을 켜 두세요. 짝이 생기면 둘 다 수락해야 만나고, 만나면 AI 가 첫 대화 주제를 골라 줘요.");
         SafetyCard(c);
         Question(c, "얼마나 걸을까요?");
         RectTransform minutesRow = ChipRow(c);

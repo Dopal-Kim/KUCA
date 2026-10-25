@@ -36,7 +36,7 @@ public partial class KhuMenus
         float left = Mathf.Max(0f, GachaRules.TicketMeters - progress.ticketMeters);
         gachaNext.text = progress.TicketCapped
             ? $"오늘 티켓 {GachaRules.TicketsPerDay}장을 다 받았어요. 내일 또 걸어요"
-            : $"다음 티켓까지 {left:N0}m  ·  오늘 {progress.TicketsToday}/{GachaRules.TicketsPerDay}장";
+            : $"다음 티켓까지 {left:N0}m  ·  오늘 받은 티켓 {progress.TicketsToday}/{GachaRules.TicketsPerDay}장";
         SetDrawButton(singleButton, progress.tickets >= GachaRules.SingleCost);
         SetDrawButton(premiumButton, progress.tickets >= GachaRules.PremiumCost);
         RefreshGachaBadge();

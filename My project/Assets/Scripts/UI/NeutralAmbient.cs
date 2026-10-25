@@ -18,6 +18,7 @@ public class NeutralAmbient : MonoBehaviour
     float sunIntensity;
     Quaternion sunRotation;
     bool fog;
+    static KeyArtLook look;
 
     void OnEnable()
     {
@@ -41,6 +42,8 @@ public class NeutralAmbient : MonoBehaviour
         RenderSettings.ambientProbe = neutral;
         fog = RenderSettings.fog;
         RenderSettings.fog = false;
+        if (look == null) look = FindAnyObjectByType<KeyArtLook>();
+        if (look != null) look.ApplyShaderGlobals(look.day);   // 캐릭터 · 경희몬 셰이더가 읽는 하늘 · 땅 빛 · 밤 정도도 낮으로
         sun = RenderSettings.sun;
         if (sun == null) return;
         sunColor = sun.color;
@@ -57,6 +60,8 @@ public class NeutralAmbient : MonoBehaviour
         if (c != cam) return;
         RenderSettings.ambientProbe = saved;
         RenderSettings.fog = fog;
+        KeyArtLook.Preset now = look != null ? look.Current() : null;
+        if (now != null) look.ApplyShaderGlobals(now);
         if (sun == null) return;
         sun.color = sunColor;
         sun.intensity = sunIntensity;

@@ -64,7 +64,7 @@ public partial class KhuMenus : MonoBehaviour
     GameObject sortButton;
     Button sortChip;
     int sortMode; // 0 최근, 1 CP, 2 이름
-    static readonly string[] SortNames = { "최근 잡은 순", "쿠옹력 높은 순", "이름 순" };
+    static readonly string[] SortNames = { "최근 잡은 순", "힘 센 순", "이름 순" };
 
     // 상세 / 목록 팝업
     GameObject detail;
@@ -267,7 +267,7 @@ public partial class KhuMenus : MonoBehaviour
         if (r.tickets > 0)
         {
             progress.Save();
-            hud?.Toast($"티켓 {r.tickets}장을 받았어요!  오늘 {progress.TicketsToday}/{GachaRules.TicketsPerDay}");
+            hud?.Toast($"티켓 {r.tickets}장을 받았어요!  오늘 받은 티켓 {progress.TicketsToday}/{GachaRules.TicketsPerDay}");
         }
         if (r.evolved && progress.Partner != null)
         {
@@ -564,7 +564,7 @@ public partial class KhuMenus : MonoBehaviour
         Text name = T(cell, NameOf(c), KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
-        Text cp = T(cell, $"쿠옹력 {c.cp}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+        Text cp = T(cell, $"힘 {c.cp}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         BottomBox(cp.rectTransform, 40f, 44f);
         StageDots(cell, progress.StageOf(c.speciesId), new Vector2(0f, -378f));
 
@@ -650,7 +650,7 @@ public partial class KhuMenus : MonoBehaviour
             ("진화 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
             ("만난 수", $"{progress.SpeciesCountOf(species)}마리"),
             ("가지고 있는 수", $"{mine.Count}마리"),
-            ("최고 쿠옹력", best > 0 ? best.ToString() : "-"),
+            ("가장 센 힘", best > 0 ? best.ToString() : "-"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
             ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
         };
@@ -678,7 +678,7 @@ public partial class KhuMenus : MonoBehaviour
 
     // ---------- 경희몬 상세 ----------
 
-    /// <summary>경희몬 상세 카드: 큰 그림 · 이름 · 쿠옹력 · 등급/단계, 아래 "파트너로 지정" 하나 + 꾸미기 · 닫기</summary>
+    /// <summary>경희몬 상세 카드: 큰 그림 · 이름 · 힘 · 등급/단계, 아래 "파트너로 지정" 하나 + 꾸미기 · 닫기</summary>
     void BuildDetail()
     {
         detail = Overlay(collection.transform, "Detail", new Vector2(940f, 1420f), out RectTransform card);
@@ -710,7 +710,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         detailTarget = c;
         detailThumb.texture = ThumbOf(c.speciesId);
-        detailCp.text = $"쿠옹력 {c.cp}";
+        detailCp.text = $"힘 {c.cp}";
         detailName.text = string.IsNullOrEmpty(c.speciesId) ? NameOf(c) : CreatureLibrary.StageName(c.speciesId, progress.StageOf(c.speciesId));
         int growth = progress.GrowthOf(c.speciesId);
         int next = GachaRules.NextThreshold(growth);
@@ -732,7 +732,7 @@ public partial class KhuMenus : MonoBehaviour
         progress.SetPartner(detailTarget.uid);
         progress.Save();
         RefreshBuddy();
-        hud?.Toast($"{NameOf(detailTarget)}(쿠옹력 {detailTarget.cp}){CatchCameraScreen.Josa(NameOf(detailTarget), "과", "와")} 함께 다녀요!");
+        hud?.Toast($"{NameOf(detailTarget)}(힘 {detailTarget.cp}){CatchCameraScreen.Josa(NameOf(detailTarget), "과", "와")} 함께 다녀요!");
         OpenDetail(detailTarget);
         FillCollection();
     }
@@ -927,7 +927,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         scrapPhoto.texture = tex;
         scrapFitter.aspectRatio = (float)tex.width / tex.height;
-        scrapCaption.text = $"{NameOf(c)}  ·  쿠옹력 {c.cp}  ·  {c.CaughtAt:yyyy.MM.dd HH:mm}";
+        scrapCaption.text = $"{NameOf(c)}  ·  힘 {c.cp}  ·  {c.CaughtAt:yyyy.MM.dd HH:mm}";
         SetActive(scrapViewer, true);
     }
 
@@ -1100,7 +1100,7 @@ public partial class KhuMenus : MonoBehaviour
         {
             var r = progress.partnerHistory[i];
             GameProgress.Caught c = progress.Find(r.uid);
-            string name = c != null ? $"{NameOf(c)} (쿠옹력 {c.cp})" : "떠나간 경희몬";
+            string name = c != null ? $"{NameOf(c)} (힘 {c.cp})" : "떠나간 경희몬";
             rows.Add((name, new DateTime(r.since).ToString("yyyy.MM.dd") + (r.uid == progress.partnerUid ? " ~ 지금" : "")));
         }
         ShowList("역대 파트너", rows);
@@ -1112,7 +1112,7 @@ public partial class KhuMenus : MonoBehaviour
         list.Sort((a, b) => b.caughtAt.CompareTo(a.caughtAt));
         var rows = new List<(string, string)>();
         for (int i = 0; i < list.Count && i < 50; i++)
-            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"쿠옹력 {list[i].cp}"));
+            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"힘 {list[i].cp}"));
         ShowList("모험노트", rows);
     }
 
