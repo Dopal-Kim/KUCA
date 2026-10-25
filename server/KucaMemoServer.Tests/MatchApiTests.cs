@@ -188,17 +188,16 @@ public class MatchApiTests : IDisposable
         string a = await User("가"), b = await User("나"), c = await User("다");
         await Join(a, minutes: 30);
         Assert.Equal("waiting", S(await Join(b, minutes: 60), "state"));
-        Assert.Equal("waiting", S(await Join(c, minutes: 15), "state"));
+        Assert.Equal("proposed", S(await Join(c, minutes: 30), "state"));
     }
 
     [Fact]
-    public async Task 십오분끼리도_짝이_된다()
+    public async Task 함께_걷기는_최소_30분이다()
     {
-        string a = await User("가"), b = await User("나");
-        await Join(a, minutes: 15);
-        JsonElement p = await Join(b, minutes: 15);
-        Assert.Equal("proposed", S(p, "state"));
-        Assert.Equal(15, p.GetProperty("minutes").GetInt32());
+        string a = await User("가");
+        JsonElement r = await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.BadRequest);
+        Assert.Contains("30분", r.GetProperty("error").GetString());
+        Assert.Equal("idle", S(await State(a), "state"));
     }
 
     /// <summary>B 와 C 가 서로 거절해서 둘 다 기다리는 상태를 만든다 (거절한 둘은 1시간 동안 다시 안 묶임)</summary>

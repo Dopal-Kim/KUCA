@@ -10,7 +10,8 @@ namespace KucaMemoServer.Services;
 /// </summary>
 public static class MatchRules
 {
-    public static readonly int[] AllowedMinutes = [15, 30, 60];
+    /// <summary>함께 걷기는 최소 30분 (10/25 피드백). 혼자 걷는 추천은 15분도 된다</summary>
+    public static readonly int[] AllowedMinutes = [30, 60];
     public static readonly string[] ReportReasons = ["noshow", "rude", "unsafe", "fake", "other"];
     public static readonly string[] CancelReasons = ["late", "changed_mind", "other"];
 
@@ -122,7 +123,7 @@ public class MatchService(
     public MatchState Join(Account user, MatchJoinRequest? body)
     {
         if (body == null || !MatchRules.AllowedMinutes.Contains(body.Minutes))
-            throw new MatchException(400, "minutes 는 15, 30, 60 중 하나여야 합니다.");
+            throw new MatchException(400, "함께 걷기는 30분 또는 60분이에요.");
         Prefs prefs = ParsePrefs(user.PreferencesJson);
         string matchGender = body.MatchGender ?? prefs.MatchGender ?? "any";
         if (matchGender is not ("same" or "any"))
