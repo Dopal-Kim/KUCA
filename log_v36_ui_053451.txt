@@ -1,0 +1,606 @@
+﻿
+C:\Users\admin\KUCA-check\ui_053451.log:22:[Licensing::Module] Error: Access token is unavailable; failed to update
+C:\Users\admin\KUCA-check\ui_053451.log:53:UiCapture.Run
+C:\Users\admin\KUCA-check\ui_053451.log:184:			LogAssemblyErrors (3ms)
+C:\Users\admin\KUCA-check\ui_053451.log:272:    com.unity.shadergraph@17.6.0 (location: C:\Users\admin\KUCA-check\My pr
+oject\Library\PackageCache\com.unity.shadergraph@58bcb150677d)
+C:\Users\admin\KUCA-check\ui_053451.log:320:[Licensing::Client] Error: Code 404 while processing request (status: Found
+ 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:340:			LogAssemblyErrors (3ms)
+C:\Users\admin\KUCA-check\ui_053451.log:393:[ 348/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPi
+peline.Universal.ShaderLibrary.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:424:[ 484/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.Internal
+APIEditorBridge.ShaderGraph.Editor.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:427:[ 496/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGr
+aph.Utilities.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:439:[ 523/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGr
+aph.Editor.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:494:[ 773/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPi
+pelines.ShaderGraph.ShaderGraphLibrary.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:498:[ 777/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPi
+pelines.Core.ShaderLibrary.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:503:[ 782/1962  0s] WriteText Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPi
+pelines.Universal.Shaders.rsp
+C:\Users\admin\KUCA-check\ui_053451.log:745:[1088/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.InternalAPIEdi
+torBridge.ShaderGraph.Editor.dll (+2 others) [CacheHit 3d2fb6eeec17755c237d430faec3357800000000000000000000000000000006
+]
+C:\Users\admin\KUCA-check\ui_053451.log:746:[1119/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.InternalAPIEdi
+torBridge.ShaderGraph.Editor.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:749:[1093/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.Ut
+ilities.dll (+2 others) [CacheHit 3c8971f447f38c19ac1338eabe02633700000000000000000000000000000006]
+C:\Users\admin\KUCA-check\ui_053451.log:750:[1125/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.Ut
+ilities.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:811:[1187/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+.Universal.ShaderLibrary.dll (+2 others) [CacheHit 7dc022eb5dc529c22cc535045842e50700000000000000000000000000000006]
+C:\Users\admin\KUCA-check\ui_053451.log:812:[1251/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+.Universal.ShaderLibrary.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:923:[1352/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.Ed
+itor.dll (+2 others) [CacheHit ec1b73d7cbd6cc2d15b43f3431abd01300000000000000000000000000000006]
+C:\Users\admin\KUCA-check\ui_053451.log:924:[1471/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.Ed
+itor.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:968:[1394/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.Universal.Shaders.dll (+2 others) [CacheHit 668976d36e279af75adf665646c6614400000000000000000000000000000006]
+C:\Users\admin\KUCA-check\ui_053451.log:969:[1535/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.Universal.Shaders.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:972:[1400/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.ShaderGraph.ShaderGraphLibrary.dll (+2 others) [CacheHit 573a3694fceefd5bc3ed72aac14891fb0000000000000000000000000000
+0006]
+C:\Users\admin\KUCA-check\ui_053451.log:973:[1543/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.ShaderGraph.ShaderGraphLibrary.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:978:[1412/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.Core.ShaderLibrary.dll (+2 others) [CacheHit cca91b7d046707b1d512d121fee6b4a800000000000000000000000000000006]
+C:\Users\admin\KUCA-check\ui_053451.log:979:[1558/1962  0s] Csc Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipeline
+s.Core.ShaderLibrary.dll (+2 others)
+C:\Users\admin\KUCA-check\ui_053451.log:1033:[1643/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.RenderPipelines.ShaderGraph.ShaderGraphLibrary.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1034:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipelin
+es.ShaderGraph.ShaderGraphLibrary.dll, with 152 defines and 315 references
+C:\Users\admin\KUCA-check\ui_053451.log:1053:[1645/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.RenderPipelines.Universal.Shaders.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1054:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipelin
+es.Universal.Shaders.dll, with 152 defines and 315 references
+C:\Users\admin\KUCA-check\ui_053451.log:1063:[1646/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.RenderPipelines.Core.ShaderLibrary.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1064:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipelin
+es.Core.ShaderLibrary.dll, with 152 defines and 315 references
+C:\Users\admin\KUCA-check\ui_053451.log:1193:[1659/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.RenderPipeline.Universal.ShaderLibrary.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1194:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.RenderPipelin
+e.Universal.ShaderLibrary.dll, with 152 defines and 316 references
+C:\Users\admin\KUCA-check\ui_053451.log:1552:Assets\Editor\UiCapture.cs(357,111): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1554:Assets\Editor\UiCapture.cs(357,41): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1556:Assets\Editor\UiCapture.cs(370,98): warning CS0618: 'FindObjectsSortMode' 
+is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjec
+tsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1558:Assets\Editor\UiCapture.cs(370,22): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1560:Assets\Editor\UiCapture.cs(373,109): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1562:Assets\Editor\UiCapture.cs(373,33): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1564:Assets\Editor\UiCapture.cs(567,104): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1566:Assets\Editor\UiCapture.cs(567,30): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1568:Assets\Editor\UiCapture.cs(578,104): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1570:Assets\Editor\UiCapture.cs(578,30): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1572:Assets\Editor\UiCapture.cs(681,112): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:1574:Assets\Editor\UiCapture.cs(681,34): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:1576:Assets\Editor\UiCapture.cs(592,9): warning UAC0005: AppDomain.GetAssemblie
+s() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cur
+rentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui_053451.log:1717:[1710/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.InternalAPIEditorBridge.ShaderGraph.Editor.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1718:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.InternalAPIEd
+itorBridge.ShaderGraph.Editor.dll, with 150 defines and 324 references
+C:\Users\admin\KUCA-check\ui_053451.log:1787:[1717/1962  0s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.ShaderGraph.Utilities.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:1788:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.U
+tilities.dll, with 150 defines and 324 references
+C:\Users\admin\KUCA-check\ui_053451.log:2137:[1752/1962  4s] ILPostProcess Library/Bee/artifacts/1900b0aE.dag/post-proc
+essed/Unity.ShaderGraph.Editor.dll (+pdb)
+C:\Users\admin\KUCA-check\ui_053451.log:2138:Processing assembly Library/Bee/artifacts/1900b0aE.dag/Unity.ShaderGraph.E
+ditor.dll, with 150 defines and 330 references
+C:\Users\admin\KUCA-check\ui_053451.log:2575:[1830/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.U
+niversal.Shaders.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2592:[1847/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.S
+haderGraph.ShaderGraphLibrary.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2596:[1851/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.C
+ore.ShaderLibrary.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2598:[1853/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipeline.Un
+iversal.ShaderLibrary.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2681:[1936/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.ShaderGraph.Edito
+r.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2684:[1939/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.ShaderGraph.Edito
+r.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2751:[2006/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.ShaderGraph.Utili
+ties.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2752:[2007/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.ShaderGraph.Utili
+ties.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2763:[2018/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.InternalAPIEditor
+Bridge.ShaderGraph.Editor.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2764:[2019/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.InternalAPIEditor
+Bridge.ShaderGraph.Editor.dll
+C:\Users\admin\KUCA-check\ui_053451.log:2814:[2069/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipeline.Un
+iversal.ShaderLibrary.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2828:[2083/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.S
+haderGraph.ShaderGraphLibrary.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2829:[2084/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.U
+niversal.Shaders.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2830:[2085/1962  0s] CopyFiles Library/ScriptAssemblies/Unity.RenderPipelines.C
+ore.ShaderLibrary.pdb
+C:\Users\admin\KUCA-check\ui_053451.log:2982:Assets\Editor\UiCapture.cs(357,111): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2983:Assets\Editor\UiCapture.cs(357,41): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2984:Assets\Editor\UiCapture.cs(370,98): warning CS0618: 'FindObjectsSortMode' 
+is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObjec
+tsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2985:Assets\Editor\UiCapture.cs(370,22): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2986:Assets\Editor\UiCapture.cs(373,109): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2987:Assets\Editor\UiCapture.cs(373,33): warning CS0618: 'Object.FindObjectsByT
+ype(Type, FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter
+ has been deprecated. Use FindObjectsByType(Type) or FindObjectsByType(Type, FindObjectsInactive) instead. InstanceID w
+ill be replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2988:Assets\Editor\UiCapture.cs(567,104): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2989:Assets\Editor\UiCapture.cs(567,30): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2990:Assets\Editor\UiCapture.cs(578,104): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2991:Assets\Editor\UiCapture.cs(578,30): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2992:Assets\Editor\UiCapture.cs(681,112): warning CS0618: 'FindObjectsSortMode'
+ is obsolete: 'FindObjectsSortMode has been deprecated. Use the FindObjectsByType overloads that do not take a FindObje
+ctsSortMode parameter.'
+C:\Users\admin\KUCA-check\ui_053451.log:2993:Assets\Editor\UiCapture.cs(681,34): warning CS0618: 'Object.FindObjectsByT
+ype<T>(FindObjectsInactive, FindObjectsSortMode)' is obsolete: 'FindObjectsByType with FindObjectsSortMode parameter ha
+s been deprecated. Use FindObjectsByType<T>() or FindObjectsByType<T>(FindObjectsInactive) instead. InstanceID will be 
+replaced in the future with EntityId and previous sort order cannot be maintained.'
+C:\Users\admin\KUCA-check\ui_053451.log:2994:Assets\Editor\UiCapture.cs(592,9): warning UAC0005: AppDomain.GetAssemblie
+s() in Unity may return already unloaded assemblies and result in errors or leaks. Use Unity APIs instead, such as 'Cur
+rentAssemblies.GetLoadedAssemblies()' or 'TypeCache.GetTypesDerivedFrom()'.
+C:\Users\admin\KUCA-check\ui_053451.log:3005:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3025:			LogAssemblyErrors (5ms)
+C:\Users\admin\KUCA-check\ui_053451.log:3034:Importing 'GUID: d19f4f8a13b6edb48b986a47ec96402e - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapShadowMaskIntegration.urtshader' with importer (ScriptedIm
+porter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3035:Launched and connected shader compiler UnityShaderCompiler.exe after 0.02 
+seconds
+C:\Users\admin\KUCA-check\ui_053451.log:3037:Compiling Ray Tracing Shader "LightmapShadowMaskIntegration.urtshader", ke
+ywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3040:Importing 'GUID: 737a1597422c12547a8714d76a9406ec - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapGBufferDebug.urtshader' with importer (ScriptedImporter : 
+Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3042:Compiling Ray Tracing Shader "LightmapGBufferDebug.urtshader", keywords = 
+<no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3045:Importing 'GUID: f32463968f29423cad25aee15a14b9f1 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/Lighting/SurfaceCache/PunctualLightSampling.urtshader' with importer (ScriptedImporter
+ : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3047:Compiling Ray Tracing Shader "PunctualLightSampling.urtshader", keywords =
+ <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3050:Importing 'GUID: 1451d029813b192429211be28181beab - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapNormalIntegration.urtshader' with importer (ScriptedImport
+er : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3052:Compiling Ray Tracing Shader "LightmapNormalIntegration.urtshader", keywor
+ds = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3055:Importing 'GUID: 94a070d33e408384bafc1dea4a565df9 - Path: Packages/com.uni
+ty.render-pipelines.core/Editor/Lighting/ProbeVolume/RenderingLayerMask/TraceRenderingLayerMask.urtshader' with importe
+r (ScriptedImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImpo
+rter)
+C:\Users\admin\KUCA-check\ui_053451.log:3057:Compiling Ray Tracing Shader "TraceRenderingLayerMask.urtshader", keywords
+ = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3060:Importing 'GUID: 94a39d12848d8d64ca962a72b74e7c50 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/Lighting/SurfaceCache/Estimation.urtshader' with importer (ScriptedImporter : Unity.Re
+ndering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3062:Compiling Ray Tracing Shader "Estimation.urtshader", keywords = <no keywor
+ds>
+C:\Users\admin\KUCA-check\ui_053451.log:3065:Importing 'GUID: f5ba4d424d4566249b3d94cf81a3e916 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapDirectDirectionalAndEnvironmentIntegration.urtshader' with
+ importer (ScriptedImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTSh
+aderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3067:Compiling Ray Tracing Shader "LightmapDirectDirectionalAndEnvironmentInteg
+ration.urtshader", keywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3070:Importing 'GUID: 7624adbeb148b5c48ab5ab660cc2602a - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapIndirectIntegration.urtshader' with importer (ScriptedImpo
+rter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3072:Compiling Ray Tracing Shader "LightmapIndirectIntegration.urtshader", keyw
+ords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3075:Importing 'GUID: 5951703b3d165764c95c653e98350884 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapDirectBRDFIntegration.urtshader' with importer (ScriptedIm
+porter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3077:Compiling Ray Tracing Shader "LightmapDirectBRDFIntegration.urtshader", ke
+ywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3080:Importing 'GUID: 99ac6221b6ecd7b479be13e8b9866300 - Path: Packages/com.uni
+ty.render-pipelines.core/Tests/Editor/PathTracing/Shaders/TerrainRayMarchingTest.urtshader' with importer (ScriptedImpo
+rter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3082:Compiling Ray Tracing Shader "TerrainRayMarchingTest.urtshader", keywords 
+= <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3085:Importing 'GUID: e9f4de6d1e07fb94f9a60d35b618f724 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapGBufferIntegration.urtshader' with importer (ScriptedImpor
+ter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3087:Compiling Ray Tracing Shader "LightmapGBufferIntegration.urtshader", keywo
+rds = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3090:Importing 'GUID: 5a2a534753fbdb44e96c3c78b5a6999d - Path: Packages/com.uni
+ty.render-pipelines.core/Editor/Lighting/ProbeVolume/DynamicGI/DynamicGISkyOcclusion.urtshader' with importer (Scripted
+Importer : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3092:Compiling Ray Tracing Shader "DynamicGISkyOcclusion.urtshader", keywords =
+ <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3095:Importing 'GUID: 5bbebdef5916845478fcef13fa10d89f - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapDirectStochasticLightIntegration.urtshader' with importer 
+(ScriptedImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImport
+er)
+C:\Users\admin\KUCA-check\ui_053451.log:3097:Compiling Ray Tracing Shader "LightmapDirectStochasticLightIntegration.urt
+shader", keywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3100:Importing 'GUID: 1c410815c01ce1d4d82c645c0cd45747 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapAOIntegration.urtshader' with importer (ScriptedImporter :
+ Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3102:Compiling Ray Tracing Shader "LightmapAOIntegration.urtshader", keywords =
+ <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3105:Importing 'GUID: 2c32233d92a2d0745930664c087c5c9a - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/ProbeIntegrationValidity.urtshader' with importer (ScriptedImporte
+r : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3107:Compiling Ray Tracing Shader "ProbeIntegrationValidity.urtshader", keyword
+s = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3110:Importing 'GUID: ace95ac84e213794891b4bd7c9b3c158 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/LightmapValidityIntegration.urtshader' with importer (ScriptedImpo
+rter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3112:Compiling Ray Tracing Shader "LightmapValidityIntegration.urtshader", keyw
+ords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3115:Importing 'GUID: 5ecdabd800f05984696f22ba95284516 - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/ProbeIntegrationIndirect.urtshader' with importer (ScriptedImporte
+r : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3117:Compiling Ray Tracing Shader "ProbeIntegrationIndirect.urtshader", keyword
+s = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3120:Importing 'GUID: 6e0b547bab30a804c8123974120d583f - Path: Packages/com.uni
+ty.render-pipelines.core/Tests/Runtime/PathTracing/PathIteratorTest.urtshader' with importer (ScriptedImporter : Unity.
+Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3122:Compiling Ray Tracing Shader "PathIteratorTest.urtshader", keywords = <no 
+keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3125:Importing 'GUID: de3013e16d99f2746ab1735ec06a660b - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/ProbeIntegrationOcclusion.urtshader' with importer (ScriptedImport
+er : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3127:Compiling Ray Tracing Shader "ProbeIntegrationOcclusion.urtshader", keywor
+ds = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3130:Importing 'GUID: fe7f1a959d1d3f544a208b7e8805e6cd - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/ProbeIntegrationDirectDirectionalAndEnvironment.urtshader' with im
+porter (ScriptedImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShade
+rImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3132:Compiling Ray Tracing Shader "ProbeIntegrationDirectDirectionalAndEnvironm
+ent.urtshader", keywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3135:Importing 'GUID: 1f9bfe60b4ad75943a5281839c1a4e5c - Path: Packages/com.uni
+ty.render-pipelines.core/Runtime/PathTracing/Shaders/ProbeIntegrationDirectStochasticLight.urtshader' with importer (Sc
+riptedImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3137:Compiling Ray Tracing Shader "ProbeIntegrationDirectStochasticLight.urtsha
+der", keywords = <no keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3140:Importing 'GUID: ff2cbab5da58bf04d82c5f34037ed123 - Path: Packages/com.uni
+ty.render-pipelines.core/Editor/Lighting/ProbeVolume/VirtualOffset/TraceVirtualOffset.urtshader' with importer (Scripte
+dImporter : Unity.Rendering.LightTransport.Editor:UnityEditor.Rendering.UnifiedRayTracing:UnifiedRTShaderImporter)
+C:\Users\admin\KUCA-check\ui_053451.log:3142:Compiling Ray Tracing Shader "TraceVirtualOffset.urtshader", keywords = <n
+o keywords>
+C:\Users\admin\KUCA-check\ui_053451.log:3175:		ComputeShaderImportPostprocess 149.081ms
+C:\Users\admin\KUCA-check\ui_053451.log:3176:		RaytracingShaderImportPostprocess 146.100ms
+C:\Users\admin\KUCA-check\ui_053451.log:3181:		ShaderAssetModifiedCallback 0.070ms
+C:\Users\admin\KUCA-check\ui_053451.log:3193:			ShaderGraphAssetPostProcessor.OnPostprocessAllAssets 4.293ms
+C:\Users\admin\KUCA-check\ui_053451.log:3203:			ShaderReflectionAssetPostProcessor.OnPostprocessAllAssets 0.738ms
+C:\Users\admin\KUCA-check\ui_053451.log:3278:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/
+UiCapture.cs:63)
+C:\Users\admin\KUCA-check\ui_053451.log:3279:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui_053451.log:3281:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui_053451.log:3306:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/
+UiCapture.cs:63)
+C:\Users\admin\KUCA-check\ui_053451.log:3307:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui_053451.log:3309:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui_053451.log:3334:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/
+UiCapture.cs:63)
+C:\Users\admin\KUCA-check\ui_053451.log:3335:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui_053451.log:3337:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui_053451.log:3362:UiCapture:Start (string,System.Collections.IEnumerator) (at Assets/Editor/
+UiCapture.cs:63)
+C:\Users\admin\KUCA-check\ui_053451.log:3363:UiCapture:Run () (at Assets/Editor/UiCapture.cs:35)
+C:\Users\admin\KUCA-check\ui_053451.log:3365:[Assets/Editor/UiCapture.cs line 63]
+C:\Users\admin\KUCA-check\ui_053451.log:3428:Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 
+seconds
+C:\Users\admin\KUCA-check\ui_053451.log:3429:Launched and connected shader compiler UnityShaderCompiler.exe after 0.01 
+seconds
+C:\Users\admin\KUCA-check\ui_053451.log:3433:[UiCapture] 01_개인정보_안내
+C:\Users\admin\KUCA-check\ui_053451.log:3440:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3441:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3444:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3457:[UiCapture] 02_로그인
+C:\Users\admin\KUCA-check\ui_053451.log:3464:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3465:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3468:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3471:[UiCapture] 03_첫_꾸미기
+C:\Users\admin\KUCA-check\ui_053451.log:3478:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3479:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3482:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3484:[UiCapture] 04_지도
+C:\Users\admin\KUCA-check\ui_053451.log:3491:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3492:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3495:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3497:[UiCapture] 05_꾸미기_Face
+C:\Users\admin\KUCA-check\ui_053451.log:3504:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3505:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3508:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3510:[UiCapture] 06_꾸미기_Color
+C:\Users\admin\KUCA-check\ui_053451.log:3517:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3518:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3521:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3547:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3548:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3549:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3550:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3551:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3552:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3553:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3554:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3555:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3556:[Licensing::Client] Error: Code 404 while processing request (status: Foun
+d 0 entitlement groups and 0 free entitlements matching requested entitlement ids)
+C:\Users\admin\KUCA-check\ui_053451.log:3557:[UiCapture] 07_꾸미기_Clothes
+C:\Users\admin\KUCA-check\ui_053451.log:3564:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3565:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3568:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3570:[UiCapture] 08_꾸미기_스타일_남1
+C:\Users\admin\KUCA-check\ui_053451.log:3577:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3578:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3581:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3583:[UiCapture] 09_꾸미기_스타일_남2
+C:\Users\admin\KUCA-check\ui_053451.log:3590:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3591:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3594:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3596:[UiCapture] 10_꾸미기_스타일_남3
+C:\Users\admin\KUCA-check\ui_053451.log:3603:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3604:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3607:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3609:[UiCapture] 11_꾸미기_스타일_남4
+C:\Users\admin\KUCA-check\ui_053451.log:3616:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3617:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3620:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3622:[UiCapture] 12_꾸미기_스타일_남5
+C:\Users\admin\KUCA-check\ui_053451.log:3629:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3630:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3633:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3635:[UiCapture] 13_꾸미기_스타일_여1
+C:\Users\admin\KUCA-check\ui_053451.log:3642:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3643:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3646:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3648:[UiCapture] 14_꾸미기_스타일_여2
+C:\Users\admin\KUCA-check\ui_053451.log:3655:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3656:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3659:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3661:[UiCapture] 15_꾸미기_스타일_여3
+C:\Users\admin\KUCA-check\ui_053451.log:3668:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3669:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3672:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3674:[UiCapture] 16_꾸미기_스타일_여4
+C:\Users\admin\KUCA-check\ui_053451.log:3681:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3682:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3685:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3687:[UiCapture] 17_꾸미기_스타일_여5
+C:\Users\admin\KUCA-check\ui_053451.log:3694:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3695:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3698:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3701:[UiCapture] 18_꾸미기_옆_여2
+C:\Users\admin\KUCA-check\ui_053451.log:3708:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3709:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3712:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3714:[UiCapture] 19_꾸미기_걷기_여2
+C:\Users\admin\KUCA-check\ui_053451.log:3721:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3722:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3725:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3727:[UiCapture] 20_꾸미기_옆_여3
+C:\Users\admin\KUCA-check\ui_053451.log:3734:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3735:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3738:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3740:[UiCapture] 21_꾸미기_걷기_여3
+C:\Users\admin\KUCA-check\ui_053451.log:3747:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3748:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3751:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3753:[UiCapture] 22_꾸미기_옆_여4
+C:\Users\admin\KUCA-check\ui_053451.log:3760:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3761:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3764:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3766:[UiCapture] 23_꾸미기_걷기_여4
+C:\Users\admin\KUCA-check\ui_053451.log:3773:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3774:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3777:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3779:[UiCapture] 24_경희펫_메뉴
+C:\Users\admin\KUCA-check\ui_053451.log:3786:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3787:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3790:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3792:[UiCapture] 25_경희펫_Monsters
+C:\Users\admin\KUCA-check\ui_053451.log:3799:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3800:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3803:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3805:[UiCapture] 26_경희펫_Dex
+C:\Users\admin\KUCA-check\ui_053451.log:3812:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3813:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3816:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3818:[UiCapture] 27_경희펫_Dex_아래
+C:\Users\admin\KUCA-check\ui_053451.log:3825:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3826:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3829:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3831:[UiCapture] 28_뽑기
+C:\Users\admin\KUCA-check\ui_053451.log:3838:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3839:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3842:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3844:[UiCapture] 29_뽑기_결과_1
+C:\Users\admin\KUCA-check\ui_053451.log:3851:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3852:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3855:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3857:[UiCapture] 30_뽑기_결과_2
+C:\Users\admin\KUCA-check\ui_053451.log:3864:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3865:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3868:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3870:[UiCapture] 5장 만나기 전 티켓=11
+C:\Users\admin\KUCA-check\ui_053451.log:3877:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:245)
+C:\Users\admin\KUCA-check\ui_053451.log:3878:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3881:(Filename: Assets/Editor/UiCapture.cs Line: 245)
+C:\Users\admin\KUCA-check\ui_053451.log:3883:[UiCapture] 31_뽑기_5장_결과
+C:\Users\admin\KUCA-check\ui_053451.log:3890:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3891:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3894:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3896:[UiCapture] 5장 만나기 뒤 티켓=6
+C:\Users\admin\KUCA-check\ui_053451.log:3903:UiCapture/<Script>d__19:MoveNext () (at Assets/Editor/UiCapture.cs:252)
+C:\Users\admin\KUCA-check\ui_053451.log:3904:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3907:(Filename: Assets/Editor/UiCapture.cs Line: 252)
+C:\Users\admin\KUCA-check\ui_053451.log:3909:[UiCapture] 32_프로필
+C:\Users\admin\KUCA-check\ui_053451.log:3916:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3917:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3920:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3922:[UiCapture] 33_프로필_아래
+C:\Users\admin\KUCA-check\ui_053451.log:3929:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3930:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3933:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3935:[UiCapture] 34_산책_추천
+C:\Users\admin\KUCA-check\ui_053451.log:3942:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3943:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3946:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3948:[UiCapture] 35_함께_걷기
+C:\Users\admin\KUCA-check\ui_053451.log:3955:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3956:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3959:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3961:[UiCapture] 36_산책_기록
+C:\Users\admin\KUCA-check\ui_053451.log:3968:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3969:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3972:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3974:[UiCapture] 37_산책_완료
+C:\Users\admin\KUCA-check\ui_053451.log:3981:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3982:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3985:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:3987:[UiCapture] 38_산책_완료_아래
+C:\Users\admin\KUCA-check\ui_053451.log:3994:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:3995:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:3998:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4000:[UiCapture] 39_진화_1
+C:\Users\admin\KUCA-check\ui_053451.log:4007:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4008:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4011:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4013:[UiCapture] 40_진화_2
+C:\Users\admin\KUCA-check\ui_053451.log:4020:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4021:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4024:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4026:[UiCapture] 41_설정
+C:\Users\admin\KUCA-check\ui_053451.log:4033:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4034:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4037:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4039:[UiCapture] 42_기록_앨범
+C:\Users\admin\KUCA-check\ui_053451.log:4046:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4047:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4050:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4052:[UiCapture] 43_장소_메모
+C:\Users\admin\KUCA-check\ui_053451.log:4059:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4060:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4063:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4065:[UiCapture] 44_장소_메모_아래
+C:\Users\admin\KUCA-check\ui_053451.log:4072:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4073:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4076:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4078:[UiCapture] 45_장소_메모_공지
+C:\Users\admin\KUCA-check\ui_053451.log:4085:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4086:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4089:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4091:[UiCapture] 46_파트너_사진
+C:\Users\admin\KUCA-check\ui_053451.log:4098:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4099:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4102:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4104:[UiCapture] 47_취향_설문
+C:\Users\admin\KUCA-check\ui_053451.log:4111:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4112:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4115:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4117:[UiCapture] 48_지도_끝
+C:\Users\admin\KUCA-check\ui_053451.log:4124:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4125:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4128:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4130:[UiCapture] 49_지도_홈_Day
+C:\Users\admin\KUCA-check\ui_053451.log:4137:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4138:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4141:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4143:[UiCapture] 50_지도_넓게_1_Day
+C:\Users\admin\KUCA-check\ui_053451.log:4150:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4151:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4154:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4156:[UiCapture] 51_지도_넓게_2_Day
+C:\Users\admin\KUCA-check\ui_053451.log:4163:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4164:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4167:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4169:[UiCapture] 52_지도_가까이_Day
+C:\Users\admin\KUCA-check\ui_053451.log:4176:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4177:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4180:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4182:[UiCapture] 53_지도_홈_Night
+C:\Users\admin\KUCA-check\ui_053451.log:4189:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4190:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4193:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4195:[UiCapture] 54_지도_넓게_1_Night
+C:\Users\admin\KUCA-check\ui_053451.log:4202:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4203:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4206:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4208:[UiCapture] 55_지도_넓게_2_Night
+C:\Users\admin\KUCA-check\ui_053451.log:4215:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4216:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4219:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4221:[UiCapture] 56_지도_가까이_Night
+C:\Users\admin\KUCA-check\ui_053451.log:4228:UiCapture/<Shot>d__40:MoveNext () (at Assets/Editor/UiCapture.cs:664)
+C:\Users\admin\KUCA-check\ui_053451.log:4229:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:112)
+C:\Users\admin\KUCA-check\ui_053451.log:4232:(Filename: Assets/Editor/UiCapture.cs Line: 664)
+C:\Users\admin\KUCA-check\ui_053451.log:4234:[UiCapture] 끝 (56장) → C:\Users\admin\KUCA-check\Builds\UiShots
+C:\Users\admin\KUCA-check\ui_053451.log:4241:UiCapture:Finish (int) (at Assets/Editor/UiCapture.cs:140)
+C:\Users\admin\KUCA-check\ui_053451.log:4242:UiCapture:Tick () (at Assets/Editor/UiCapture.cs:124)
+C:\Users\admin\KUCA-check\ui_053451.log:4245:(Filename: Assets/Editor/UiCapture.cs Line: 140)
+C:\Users\admin\KUCA-check\ui_053451.log:4273:Project ID request failed, Reason: The requested URL returned error: 403 (
+403).
+C:\Users\admin\KUCA-check\ui_053451.log:4274:Unknown Unity Connect error (400). Please contact support at support@unity
+.com while processing request "https://services.unity.com/api/unity/legacy/v1/projects/45a19be4-66ba-49dd-8c5e-d8ec2b00
+36aa", HTTP error code 403
+
+

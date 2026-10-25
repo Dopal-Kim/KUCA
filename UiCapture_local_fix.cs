@@ -307,10 +307,16 @@ public static class UiCapture
         yield return CloseAll();
         yield return Shot("지도_끝");
 
-        // 로컬(KUCA-check) 전용: 지도 홈을 넓게 · 가장 가까이 (학생 인형 확인)
-        Camera wide = Camera.main;
-        if (wide != null)
+        // 로컬(KUCA-check) 전용: 지도 홈 낮 · 밤 · 넓게 · 가까이 (학생 인형 · 밤 창 불빛 확인)
+        object look = Find("KeyArtLook");
+        Type lookMode = look?.GetType().GetNestedType("Mode");
+        foreach (string mode in new[] { "Day", "Night" })
         {
+            if (lookMode != null) Call(look, "SetMode", Enum.Parse(lookMode, mode));
+            yield return 1.5f;
+            yield return Shot("지도_홈_" + mode);
+            Camera wide = Camera.main;
+            if (wide == null) continue;
             Behaviour follow = wide.GetComponent("CameraFollow") as Behaviour;
             bool followOn = follow != null && follow.enabled;
             if (follow != null) follow.enabled = false;
@@ -320,11 +326,12 @@ public static class UiCapture
             {
                 wide.transform.SetPositionAndRotation(new Vector3(oldPos.x, h, oldPos.z - back), Quaternion.Euler(pitch, oldRot.eulerAngles.y, 0f));
                 yield return 1f;
-                yield return Shot("지도_" + tag);
+                yield return Shot($"지도_{tag}_{mode}");
             }
             wide.transform.SetPositionAndRotation(oldPos, oldRot);
             if (follow != null) follow.enabled = followOn;
         }
+        if (lookMode != null) Call(look, "SetMode", Enum.Parse(lookMode, "Auto"));
     }
 
     // ---------- 구조물 사방 ----------
