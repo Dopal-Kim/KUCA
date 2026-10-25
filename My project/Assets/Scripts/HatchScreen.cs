@@ -93,7 +93,7 @@ public class HatchScreen : MonoBehaviour
         rootBg.color = new Color(KucaTheme.Scrim.r, KucaTheme.Scrim.g, KucaTheme.Scrim.b, 0.94f);   // 연출과 같은 어둡기: 0.85 도 리니어 색 공간에선 확 밝아 보였음 (REVIEW_v15)
         creature.gameObject.SetActive(true);
         rays.gameObject.SetActive(true);
-        title.text = "뽑았어요!";
+        title.text = "만났어요!";
         foreach (Text t in new[] { nameText, tierText, info }) t.enabled = true;
         tierChip.enabled = true;
         ok.gameObject.SetActive(true);

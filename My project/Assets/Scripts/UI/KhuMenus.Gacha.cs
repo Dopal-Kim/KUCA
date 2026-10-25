@@ -125,8 +125,8 @@ public partial class KhuMenus
         gachaNext = T(tc, "", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         UIKit.Size(gachaNext, 60f);
 
-        singleButton = DrawCard(page.content, "티켓 1장으로 만나기", "흔함 · 조금 드묾 · 드묾 친구가 나와요", KucaTheme.Primary, () => Draw(false));
-        premiumButton = DrawCard(page.content, "티켓 5장으로 만나기", "조금 드묾 ~ 아주 드묾 · 더 귀한 경희펫", KucaTheme.Gold, () => Draw(true));
+        singleButton = DrawCard(page.content, "티켓 1장으로 만나기", "흔함 ~ 드묾 친구가 나와요", GachaRules.SingleCost, KucaTheme.Primary, () => Draw(false));
+        premiumButton = DrawCard(page.content, "티켓 5장으로 만나기", "조금 드묾 ~ 아주 드묾, 더 귀한 친구", GachaRules.PremiumCost, KucaTheme.Gold, () => Draw(true));
 
         Button odds = UIKit.Button(page.content, "확률표 보기", ToggleOdds, new Color(1f, 1f, 1f, 0f), KucaTheme.Label);
         odds.GetComponentInChildren<Text>(true).color = KucaTheme.PrimaryDeep;
@@ -148,7 +148,7 @@ public partial class KhuMenus
     }
 
     /// <summary>뽑기 카드: 왼쪽 티켓 타일 + 제목 + 설명 + 오른쪽 가격 알약. 제목이 카드의 첫 글자 (캡처 도구가 "1장 뽑기" 로 누른다)</summary>
-    Button DrawCard(RectTransform parent, string label, string desc, Color accent, UnityEngine.Events.UnityAction onClick)
+    Button DrawCard(RectTransform parent, string label, string desc, int cost, Color accent, UnityEngine.Events.UnityAction onClick)
     {
         Button b = CardButton(parent, label, onClick);
         UIKit.Size(b, 260f);
@@ -170,7 +170,6 @@ public partial class KhuMenus
         Place(ic.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         ic.rectTransform.sizeDelta = new Vector2(100f, 100f);
 
-        int cost = label.StartsWith("5") ? GachaRules.PremiumCost : GachaRules.SingleCost;
         Image price = UIKit.Image(r, "Price", accent);
         price.sprite = HudIcons.Pill;
         price.type = Image.Type.Sliced;

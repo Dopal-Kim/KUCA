@@ -309,7 +309,7 @@ public partial class KhuMenus : MonoBehaviour
         mainMenu = page.root;
         hubMonsters = HubCard(page.content, HudIcons.Monster, "내 경희펫", "파트너 정하기 · 꾸미기", KucaTheme.Fill, KucaTheme.Ink,
             () => OpenCollection(Tab.Monsters)).GetComponentInChildren<Text>(true);
-        gachaMenuBadge = HubCard(page.content, HudIcons.Ticket, "새 친구 만나기", "걸어서 모은 티켓으로 새 경희펫 만나기", KucaTheme.Primary, Color.white, OpenGacha);
+        gachaMenuBadge = HubCard(page.content, HudIcons.Ticket, "새 친구 만나기", "티켓으로 새 경희펫 만나기", KucaTheme.Primary, Color.white, OpenGacha);
         gachaMenuBadgeText = gachaMenuBadge.GetComponentInChildren<Text>(true);
         gachaMenuBadge.gameObject.SetActive(false);
         hubDex = HubCard(page.content, HudIcons.Dex, "도감", "만난 경희펫 모아 보기", KucaTheme.Fill, KucaTheme.Ink,
@@ -607,13 +607,19 @@ public partial class KhuMenus : MonoBehaviour
         FitOneLine(cnt, KucaTheme.Caption);
     }
 
-    /// <summary>칸 위 모서리 등급 원 (C · B · A · S)</summary>
+    /// <summary>칸 위 모서리 희귀도 알약 ("흔함" · "조금 드묾" …). 작은 원에 넣으니 글자가 넘치고 뭉갰음 (REVIEW_v30)</summary>
     static void GradeChip(Transform cell, GachaRules.Grade grade, bool right = false)
     {
-        Image chip = Circle(cell, "Grade", GachaRules.ColorOf(grade), 56f);
-        Place(chip.rectTransform, new Vector2(right ? 1f : 0f, 1f), new Vector2(right ? -18f : 18f, -18f));
+        Image chip = UIKit.Image(cell, "Grade", GachaRules.ColorOf(grade));
+        chip.sprite = HudIcons.Pill;
+        chip.type = Image.Type.Sliced;
+        chip.pixelsPerUnitMultiplier = 2f;
         Text g = T(chip.transform, GachaRules.Label(grade), KucaTheme.Caption, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(g.rectTransform);
+        RectTransform cr = chip.rectTransform;
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(right ? 1f : 0f, 1f);
+        cr.anchoredPosition = new Vector2(right ? -14f : 14f, -14f);
+        cr.sizeDelta = new Vector2(g.preferredWidth + 32f, 52f);
     }
 
     List<(string, string)> DexRows(string species)
