@@ -344,7 +344,23 @@ def observatory(mb, b, f):
     # 둥근 발코니 난간
     mb.prism(IDENT, (cx, b.h + 0.5, cz), r + 2.1, 0.9, 20, COLUMN, r_top=r + 2.1)
     mb.prism(IDENT, (cx, b.h + 0.5, cz), r, 3.2, 20, STONE)
-    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 20, 6, DOME)
+    # M12: 칸마다 밝기를 번갈아 칠하던 체커(선승관과 같은 문제, Unity v15 사방 모두 바둑판)를 끄고 칸을 늘려 매끈하게,
+    #      결은 금속판 이음 리브 12줄이 맡는다 (관측 창 자리는 비움)
+    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 40, 10, DOME, checker=False)
+    rib = shade(DOME, 0.88)
+    for i in range(12):
+        th = 2 * math.pi * (i + 0.5) / 12
+        if abs(math.cos(th)) < 0.2 and math.sin(th) < 0:   # 관측 창(-Z) 바로 옆
+            continue
+        ct, st = math.cos(th), math.sin(th)
+        for j in range(7):
+            ph = (j + 0.5) / 7 * (math.pi / 2) * 0.9
+            cp, sp = math.cos(ph), math.sin(ph)
+            o = (cx + cp * ct * (r + 0.05), b.h + 3.7 + sp * (r + 0.05), cz + cp * st * (r + 0.05))
+            along = (-sp * ct, cp, -sp * st)
+            across = (-st, 0.0, ct)
+            out = (cp * ct, sp, cp * st)
+            mb.box(Frame(o, across, along, out), (0.0, 0.0, 0.0), (0.22, r * math.pi / 2 * 0.9 / 7 + 0.15, 0.12), rib)
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
@@ -541,6 +557,13 @@ def gate(mb, f, ground=None):
         side = m.child((0, 0, 0), side_yaw)
         mb.disc(side, (0, block_top + 0.8 + AT / 2, (D - 0.6) / 2 + 0.06), 1.0, 0.1, 20, GOLD)
     top = block_top + 1.1 + AT
+    # M12 (PC v16 ③): 위(T)에서 23 × 15 m 흰 평면 하나로 보였음 → 회색 금속 지붕 판(가장자리 흰 테만 남김) + 앞뒤 난간 + 조각 밑 두 단 받침
+    #      (실제 윗면 마감은 확인 못 함 — 추정)
+    mb.box(m, (0, top + 0.03, 0), (cw - 2.6, 0.06, D - 2.4), shade(ROOF, 0.96), top=shade(ROOF, 0.96))
+    for sz in (-1, 1):
+        balustrade(mb, m, (0, top, sz * (D / 2 - 0.9)), cw - 3.0, 0.8)
+    mb.box(m, (0, top + 0.2, 0), (9.0, 0.4, 6.0), STONE)
+    mb.box(m, (0, top + 0.45, 0), (7.0, 0.1, 4.4), COLUMN)
     mb.box(m, (0, top + 0.5, 0), (5.0, 1.0, 2.6), COLUMN)   # 꼭대기 조각 무리
     mb.ico(m, (0, top + 1.9, 0), (1.5, 1.6, 1.0), COLUMN, var=0.05)
     for s in (-1, 1):
@@ -654,11 +677,20 @@ def stadium(layer, ground):
         for i in range(10):
             mb.box(m, (0, 0.55 * (i + 1) / 2, 3 - i * 1.0), (length, 0.55 * (i + 1), 1.0), STEP if i % 2 else shade(STEP, 1.06))
         mb.box(m, (0, 3.2, -6.9), (length, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
+        # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
+        mb.box(m, (0, 6.5, -6.9), (length + 0.4, 0.3, 1.1), shade(STEP, 1.04))
+        for k in range(int(length / 6) + 1):
+            mb.box(m, (-length / 2 + k * length / int(length / 6), 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
         if main:
+            # M12: 본부석 지붕이 뒤쪽 가는 기둥 3개(위에서 안 보임)뿐이라 스탠드 위에 떠 있는 흰 판처럼 보였음
+            #      → 앞쪽 굵은 기둥 5개 + 뒤 기둥 5개(바닥부터), 지붕 앞 처마 띠 · 어두운 밑면 (실제 본부석 구조는 확인 못 함 — 추정)
             w = length * 0.4
-            mb.box(m, (0, 8.4, -1.6), (w + 1, 0.45, 10.0), (0.95, 0.95, 0.96))
-            for s in (-1, 0, 1):
-                mb.prism(m, (s * w / 2, 5.5, -6.0), 0.2, 2.9, 6, POLE)
+            mb.box(m, (0, 8.45, -1.6), (w + 1, 0.4, 10.0), (0.95, 0.95, 0.96))
+            mb.box(m, (0, 8.2, -1.6), (w + 0.6, 0.12, 9.6), (0.62, 0.64, 0.68))       # 밑면 그늘
+            mb.box(m, (0, 8.35, 3.45), (w + 1.2, 0.9, 0.35), shade(STEP, 1.02))       # 앞 처마 띠
+            for s in (-1, -0.5, 0, 0.5, 1):
+                mb.prism(m, (s * w / 2, 0.55, 2.9), 0.32, 7.65, 8, POLE)
+                mb.prism(m, (s * w / 2, 0.0, -6.0), 0.32, 8.2, 8, POLE)
         for k in range(-int(length / 2), int(length / 2) + 1, 3):
             p = m.p((k, 0, 0))
             ground.occupy(p[0], p[2], 4.0)

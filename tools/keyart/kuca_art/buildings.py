@@ -317,7 +317,8 @@ def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
         from .mesh import clip_half_plane
         for sgn in (-1, 1):
             axis = (u[0] * sgn, u[1] * sgn)
-            part = clip_half_plane(b.poly, fp.center, axis, hu * 0.64)
+            part = _cylinder(b.poly, fp.center, axis, hu, clip_half_plane) if b.id in CYLINDER_ENDS \
+                else clip_half_plane(b.poly, fp.center, axis, hu * 0.64)
             if len(part) >= 3:
                 top = H + fh * 0.5
                 extrude_poly(shell, part, H - 0.1, top, roof_col=roof_tint(b))
@@ -332,6 +333,29 @@ def _massing_mode(mode, mb, shell, b, fp, u, v, hu, hv, fh, pal, rng):
         _courtyard(mb, b, fp, u, v, hu, hv, pal, rng)
         return [(rect_poly(fp.center, u, v, hu * 0.40, hv * 0.40), H)]
     return []
+
+
+# M12: 외국어대학관은 원통 두 개 + 막대 동 — 고정 비율(0.64)로 자르면 원통 한가운데를 직선이 가로질러 지붕에 금처럼 보였음 (Unity v15 T · E) → 원통만 통째로
+CYLINDER_ENDS = {'way-585696507'}
+
+
+def _cylinder(poly, c, axis, hu, clip_half_plane):
+    """긴 축 끝(0.75 바깥) 외곽 점들에 원을 맞춰(최소제곱) 그 원 안쪽만 = 원통 하나를 통째로 반 층 위로.
+    원이 팔 지붕을 조금 덮어도 그 자리는 원통이 팔 위로 반 층 솟은 단차라 자연스럽다"""
+    import numpy as np
+    pts = np.array([p for p in poly if (p[0] - c[0]) * axis[0] + (p[1] - c[1]) * axis[1] > hu * 0.75])
+    if len(pts) < 5:
+        return clip_half_plane(poly, c, axis, hu * 0.64)
+    A = np.c_[2 * pts, np.ones(len(pts))]
+    cx, cz, k = np.linalg.lstsq(A, (pts ** 2).sum(1), rcond=None)[0]
+    R = math.sqrt(k + cx * cx + cz * cz) + 1.0   # 맞춘 원보다 1 m 크게: 실제 외곽이 원에서 조금 벗어난 곳도 잘리지 않게
+    part, n = list(poly), 32
+    for i in range(n):
+        a = 2 * math.pi * (i + 0.5) / n
+        part = clip_half_plane(part, (cx, cz), (-math.cos(a), -math.sin(a)), -R * math.cos(math.pi / n))
+        if len(part) < 3:
+            return clip_half_plane(poly, c, axis, hu * 0.64)
+    return part
 
 
 def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
@@ -362,14 +386,22 @@ def _stair_core(mb, shell, b, fp, u, v, hu, hv, fh, pal):
     cc = (c[0] + v[0] * mid, c[1] + v[1] * mid)
     half = (lo + hi) / 2
     hw = 4.5
-    rect = round_corners(rect_poly(cc, u, v, hw, half), radius=1.2)
     top = H + fh
-    extrude_poly(shell, rect, 0.0, top, roof_col=roof_tint(b, 2))
+    # M12: 깊은 건물(우정원 약 70 m)은 한 층 높은 계단탑이 지붕 끝에서 끝까지 이어져 지붕을 가르는 긴 띠로 보였음 (Unity v15 T · N)
+    #      → 앞뒤 벽에 붙은 깊이 10 m 탑 두 개로 (유리 띠 · 현관은 그대로). 얕은 몸체(공학관)는 예전처럼 한 덩어리
+    if half > 15:
+        parts = [(cc[0] + v[0] * sg * (half - 5.0), cc[1] + v[1] * sg * (half - 5.0)) for sg in (-1, 1)]
+        ph = 5.0
+    else:
+        parts, ph = [cc], half
     mb.ao_strength = 0.0
-    mb.band(rect, 0.0, 0.9, 0.3, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
-    mb.band(rect, top - 0.05, top + 0.9, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
-            inner_col=shade(pal['wall'], 0.86))
-    _eave_cap(mb, rect, top + 0.9, pal)
+    for pc in parts:
+        rect = round_corners(rect_poly(pc, u, v, hw, ph), radius=1.2)
+        extrude_poly(shell, rect, 0.0, top, roof_col=roof_tint(b, 2))
+        mb.band(rect, 0.0, 0.9, 0.3, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
+        mb.band(rect, top - 0.05, top + 0.9, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
+                inner_col=shade(pal['wall'], 0.86))
+        _eave_cap(mb, rect, top + 0.9, pal)
     for sgn in (-1, 1):
         nrm = (v[0] * sgn, 0.0, v[1] * sgn)
         face_c = (cc[0] + v[0] * sgn * half, 0.0, cc[1] + v[1] * sgn * half)

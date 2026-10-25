@@ -532,7 +532,29 @@ def _wall_runs(poly, max_turn_deg=12.0):
     def turn(i):
         d = abs(dirs[i][0] - dirs[i - 1][0]) % (2 * math.pi)
         return math.degrees(min(d, 2 * math.pi - d))
-    starts = [i for i in range(n) if turn(i) > max_turn_deg]
+    # M12: 원통 · 둥근 벽(같은 쪽으로 조금씩 꺾이는 꼭짓점이 5개 이상, 합 60° 이상)은 한 벽으로 — 짧은 변마다 끊겨 창이 하나도 안 들어갔음
+    #      (천문대 20각형 드럼 · 외국어대학관 원통). 둥근 모서리(round_corners) 토막은 변이 2 m 보다 짧아 그대로 끊긴다.
+    def signed(i):
+        d = (dirs[i][0] - dirs[i - 1][0] + math.pi) % (2 * math.pi) - math.pi
+        return math.degrees(d)
+    arc = [False] * n
+    sg = [signed(i) for i in range(n)]
+    small = [3.0 < abs(sg[i]) <= 25.0 and min(dirs[i][1], dirs[i - 1][1]) >= 2.0 for i in range(n)]   # 둥근 모서리 토막(짧은 변)은 빼고
+    if all(small) and len({t > 0 for t in sg}) == 1:
+        arc = [True] * n
+    else:
+        i0 = next((i for i in range(n) if not small[i]), 0)
+        run = []
+        for k in range(1, n + 1):
+            i = (i0 + k) % n
+            if small[i] and (not run or (sg[i] > 0) == (sg[run[0]] > 0)):
+                run.append(i)
+                continue
+            if len(run) >= 5 and sum(abs(sg[j]) for j in run) >= 60.0:
+                for j in run:
+                    arc[j] = True
+            run = [i] if small[i] else []
+    starts = [i for i in range(n) if turn(i) > max_turn_deg and not arc[i]]
     out = [None] * n
     if not starts:
         total = sum(l for _, l in dirs)
