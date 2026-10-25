@@ -566,7 +566,9 @@ public partial class RoutePlanner
         b.onClick.AddListener(() => { if (!string.IsNullOrEmpty(url)) Application.OpenURL(url); });
         if (withPlace)
             UIKit.Bold(UIKit.Text(row.transform, n.buildingName, KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
-        UIKit.Bold(UIKit.Text(row.transform, n.title, KucaTheme.Body, TextAnchor.UpperLeft, Ink));
+        // 두 줄 남짓에서 자르기 (세 줄까지 꺾여 카드 높이가 제각각이었음, REVIEW_v28). shortcut: 글자 수로 자름, 글꼴 폭이 크게 바뀌면 줄 수로
+        string title = n.title != null && n.title.Length > 34 ? n.title.Substring(0, 33) + "…" : n.title;
+        UIKit.Bold(UIKit.Text(row.transform, title, KucaTheme.Body, TextAnchor.UpperLeft, Ink));
         if (!string.IsNullOrEmpty(n.summary))
             UIKit.Text(row.transform, n.summary, KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         UIKit.Text(row.transform, $"{n.postedAt}   <color=#{PrimaryHex}>원문 보기 ›</color>", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);

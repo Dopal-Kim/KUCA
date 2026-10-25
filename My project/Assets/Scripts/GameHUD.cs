@@ -552,7 +552,7 @@ public class GameHUD : MonoBehaviour
         RectTransform holder = UIKit.Rect(hud, "Coach");
         // 산책 시작 버튼 바로 위, 낮게: 위쪽에 두면 카드가 설명하는 경희스팟 핀을 가렸고(v27), 높으면 가운데 캐릭터를 가렸음(v24 · v26)
         holder.anchorMin = holder.anchorMax = holder.pivot = new Vector2(0.5f, 0f);
-        holder.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4);
+        holder.anchoredPosition = new Vector2(0f, BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space8);   // Space4 는 버튼과 한 덩어리로 보였음 (v28)
         holder.sizeDelta = new Vector2(1080f - 2f * KucaTheme.Gutter, 0f);
         UIKit.Vertical(holder, 0f);
         holder.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;

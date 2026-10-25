@@ -79,6 +79,8 @@ public partial class MemoBoard
             ClearBoardNotices();
             if (error != null) { NoticeMessage($"{error}\n잠시 뒤 다시 열어 주세요"); return; }
             if (list.Count == 0) { NoticeMessage("이 장소와 관련된 공지가 아직 없어요"); return; }
+            // 어디서 온 공지인지: 학교 전체 공지로 오해했음 (REVIEW_v28)
+            UIKit.Size(UIKit.Text(boardNoticeList, "이 건물을 쓰는 학과 · 기관 게시판의 공지예요", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet), 64f);
             foreach (PlaceNotice n in list)
             {
                 RoutePlanner.NoticeRow(boardNoticeList, n, false);
