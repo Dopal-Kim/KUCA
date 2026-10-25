@@ -17,6 +17,7 @@ builder.Services.AddSingleton<BuildingStore>();
 // 메모 저장소 (SQLite 파일 memos.db) 와 사진 저장소 (wwwroot/photos)
 builder.Services.AddSingleton<MemoStore>();
 builder.Services.AddSingleton<PhotoStore>();
+builder.Services.AddSingleton<WalkShareStore>();
 
 // 로그인 · 계정: 카카오 / Apple 로그인 확인, 경희대 메일 인증 (Kakao:AppId, Email:User/Password 설정)
 builder.Services.AddSingleton<AccountStore>();
@@ -87,6 +88,7 @@ app.MapReactionEndpoints();
 app.MapRecommendEndpoints();
 app.MapMatchEndpoints();
 app.MapWalkEndpoints();
+app.MapWalkShareEndpoints();
 app.MapNoticeEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();

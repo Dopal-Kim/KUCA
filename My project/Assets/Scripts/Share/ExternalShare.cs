@@ -47,11 +47,12 @@ public static class ExternalShare
     }
 
     /// <summary>카카오톡 피드 카드로 보낸다. done(에러 메시지 또는 null)</summary>
-    public static void Kakao(string title, string description, string imageUrl, string webUrl, Action<string> done)
+    /// <param name="buttonTitle">카드 아래 버튼 글자 (비우면 ShareConfig.KakaoButtonTitle)</param>
+    public static void Kakao(string title, string description, string imageUrl, string webUrl, Action<string> done, string buttonTitle = null)
     {
 #if UNITY_IOS && !UNITY_EDITOR
         kakaoDone = done;
-        kuca_share_kakao(ShareConfig.KakaoNativeAppKey, title, description, imageUrl ?? "", webUrl, ShareConfig.KakaoButtonTitle, OnKakaoDone);
+        kuca_share_kakao(ShareConfig.KakaoNativeAppKey, title, description, imageUrl ?? "", webUrl, buttonTitle ?? ShareConfig.KakaoButtonTitle, OnKakaoDone);
 #else
         Debug.Log($"[ExternalShare] 카카오톡 카드 (에디터에서는 보내지 않음): {title} / {description} / {imageUrl} / {webUrl}");
         done?.Invoke(null);

@@ -32,7 +32,7 @@ public class WalkCompleteScreen : MonoBehaviour
     bool reviewSent, busy;
     int partnerStars, courseStars;
 
-    GameObject root, partnerRow, reviewCard, rewardCard, recap;
+    GameObject root, partnerRow, reviewCard, rewardCard, recap, shareRow;
     RawImage recapMap;
     RectTransform recapOverlay;
     RenderTexture recapTexture;
@@ -113,6 +113,7 @@ public class WalkCompleteScreen : MonoBehaviour
         // 걸은 길 돌아보기 + 산책 기록에 남기기
         bool hasTrack = walk.track != null && walk.track.Count >= 2;
         recap.SetActive(hasTrack);
+        shareRow.SetActive(hasTrack);
         if (hasTrack)
             StartCoroutine(DrawRecap(walk.track, LineColor(walk)));
         saved = walk.meters > 0 || hasTrack ? WalkHistory.Add(walk, System.DateTime.Now) : null;
@@ -136,6 +137,35 @@ public class WalkCompleteScreen : MonoBehaviour
             ApplyReward(r.xp, r.tickets, r.growth);
             StartCoroutine(FillLevel(score, r));
         }));
+    }
+
+    /// <summary>카카오톡 노란 버튼 (말풍선 + 글자)</summary>
+    public static Button KakaoButton(Transform parent, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = Pill(parent, "카카오톡으로 자랑하기", new Color(1f, 0.9f, 0f), new Color(0.1f, 0.1f, 0.12f), onClick);
+        Image icon = UIKit.Image(b.transform, "Icon", new Color(0.1f, 0.1f, 0.12f));
+        icon.sprite = HudIcons.Bubble;
+        icon.raycastTarget = false;
+        icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        icon.rectTransform.anchoredPosition = new Vector2(44f, 0f);
+        icon.rectTransform.sizeDelta = new Vector2(48f, 48f);
+        return b;
+    }
+
+    bool sharing;
+
+    void ShareToKakao(RectTransform frame)
+    {
+        if (sharing || walk == null)
+            return;
+        sharing = true;
+        StartCoroutine(WalkShare.Share(frame, WalkShare.KindOf(walk.kind, walk.stopsTotal, walk.plannedMeters),
+            walk.meters, walk.minutes, walk.visitedBuildingIds, error =>
+            {
+                sharing = false;
+                var hud = FindAnyObjectByType<GameHUD>();
+                if (hud != null && error != null) hud.Toast(error);
+            }));
     }
 
     /// <summary>완료를 못 했을 때: 얼마나 더 했으면 됐는지 (다음에 다시 걷게)</summary>
@@ -349,6 +379,9 @@ public class WalkCompleteScreen : MonoBehaviour
         Image frame = TopMap.Frame(list, "Recap", out recapMap, out recapOverlay);
         UIKit.Size(frame, 600f);
         recap = frame.gameObject;
+        Button kakao = KakaoButton(list, () => ShareToKakao((RectTransform)recap.transform));
+        UIKit.Size(kakao, 104f);
+        shareRow = kakao.gameObject;
         reason = Line(list, "", 32, InkQuiet, 50f, true);
         reason.alignment = TextAnchor.MiddleCenter;
 
