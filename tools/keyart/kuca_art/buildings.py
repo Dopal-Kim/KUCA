@@ -535,8 +535,11 @@ def _rooftop(mb, b, style, blocks, rng):
             hut = (px, pz)
             blocks = blocks + [(rect_poly((px, pz), u, v, w / 2, d / 2), 0)]   # 옥상정원 · 태양광이 계단실과 겹치지 않게
             m = Frame.yaw((px, H, pz), yaw)
+            # M20: 갓 윗면(0.99)이 Unity 에서 254 로 하얗게 날아가 위(T)에서 면 · 테두리 없이 떠 보였음 (REVIEW_v25, 생명과학대)
+            #      → 갓을 0.76 으로 낮추고(웹 T 에서 0.86 도 250 으로 날아감) 밑동에 어두운 굽(0.4 m)을 둘러 지붕에 앉은 선이 보이게. 높이는 원래도 지붕 면(H)에 붙어 있음
+            mb.box(m, (0, 0.2, 0), (d + 0.3, 0.4, w + 0.3), (0.70, 0.69, 0.66))
             mb.box(m, (0, 1.7, 0), (d, 3.4, w), (0.95, 0.93, 0.88))
-            mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), (0.99, 0.98, 0.95))
+            mb.box(m, (0, 3.55, 0), (d + 0.4, 0.3, w + 0.4), (0.76, 0.75, 0.72))
             mb.box(m, (d / 2 + 0.03, 1.1, w * 0.25), (0.06, 2.2, 1.2), GLASS_DOOR, top=GLASS_DOOR)
 
     # 큰 지붕: 하나를 골라 천창 / 태양광 / 옥상정원
@@ -623,8 +626,11 @@ def _rooftop(mb, b, style, blocks, rng):
 
     landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
     # M15: 태양광 지붕엔 실외기 묶음 · 환기구를 두지 않는다 — 학생회관이 패널 + 묶음 + 낱개 실외기 + 환기구로 어수선했음 (REVIEW_v20)
+    yard = False
     if b.area > 2500 and not landmark_roof and feature != 'solar' and not any(top > H for _, top in blocks):
+        n_blocks = len(blocks)
         blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, hut)
+        yard = len(blocks) > n_blocks
 
     # 실외기
     n_units = int(min(8, b.area / 300))
@@ -632,6 +638,10 @@ def _rooftop(mb, b, style, blocks, rng):
         n_units = max(n_units, 2)   # 중간 크기 지붕이 상자 하나로 비어 보이지 않게
     if feature == 'solar':
         n_units = min(n_units, max(2, n_units // 2))   # M15: 패널이 지붕을 채우니 낱개 실외기도 반만 (2대 아래로는 안 줄임)
+    if yard:
+        # M20: 묶음이 선 지붕에 낱개 실외기 6 ~ 8대를 rng 로 또 흩어, 위(T)에서 흩어진 작은 상자가 '묶음 옆 한 쌍' 규칙과 어긋나 보였음
+        #      (REVIEW_v25 공학실험동 — 지붕 위 둥근 것은 묶음 옆 환기구뿐이고 흩어진 건 이 낱개 실외기) → 묶음이 있으면 낱개는 두지 않음
+        n_units = 0
     tries, placed = 0, []
     while len(placed) < n_units and tries < n_units * 12:
         tries += 1

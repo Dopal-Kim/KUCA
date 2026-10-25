@@ -33,6 +33,9 @@ LIBRARY, ARTS, PE, SEONSEUNG = 'way-474085534', 'way-474085536', 'way-455726113'
 UJEONGWON, FOREIGN, ENGINEERING, ELECTRONICS = 'relation-8269760', 'way-585696507', 'way-455725718', 'way-474085540'
 STUDENT_UNION = 'way-474085535'
 TEAL_GLASS = (0.30, 0.66, 0.68)   # 실사 우정원 청록 유리 계단탑 · 캐노피
+# M20: 원통 계단탑 유리가 Unity 에서 채도 0.65 · 밝기 0.55 로 다른 건물 창(채도 약 0.33 · 밝기 0.72)보다 진해 튀었음 (REVIEW_v25)
+#      → 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로. 캐노피 · 외국어대 띠창은 지적 없어 그대로
+TOWER_GLASS = (0.56, 0.79, 0.84)
 WISTERIA = (0.70, 0.58, 0.86)
 VINE = (0.36, 0.56, 0.24)
 DECK = (0.66, 0.48, 0.32)
@@ -56,6 +59,9 @@ REAL_LEVELS = {
     'way-474085542': 4,      # 국제학관: OSM 4층
     'way-474521123': 2,      # 도예관
     'way-474521125': 3,      # 천문대: 지하2·지상3 (공식 캠퍼스맵), 돔 아래 계단식 몸체
+    # M20: 천문대 주차장 옆 12 m² 작은 동 (OSM way-1385686358, building=yes · man_made=observatory, 2025-05 '천문대 주차장 개선'
+    #      편집, 높이 · 층수 없음). 기본 10 m 라 전자정보대 E 에서 가는 기둥으로 튀었음 (REVIEW_v25) → 한 층(3.3 m × 높이 배율 1.3 = 4.3 m) 작은 관측 동으로
+    'way-1385686358': 1,
 }
 LEVEL_H = 3.3
 
@@ -814,7 +820,7 @@ def ujeongwon_front(mb, m, b, elen, ground):
     ends = (min(front + [-elen / 2]), max(front + [elen / 2]))
     for s, edge in zip((-1, 1), ends):
         x = edge - s * 3.0
-        mb.prism(m, (x, 0.0, 1.2), 3.6, H + 3.3, 14, TEAL_GLASS, caps=True)
+        mb.prism(m, (x, 0.0, 1.2), 3.6, H + 3.3, 14, TOWER_GLASS, caps=True)
         for k in range(1, int((H + 3.3) / 3.3)):
             mb.prism(m, (x, k * 3.3 - 0.15, 1.2), 3.75, 0.3, 14, COLUMN)   # 층 띠
         mb.prism(m, (x, H + 3.3, 1.2), 3.9, 0.5, 14, COLUMN, caps=True)  # 꼭대기 테
