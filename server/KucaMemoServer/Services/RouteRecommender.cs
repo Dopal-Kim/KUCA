@@ -113,8 +113,11 @@ public partial class RouteRecommender(
 
     record Candidate(Building Building, Spot? Spot, double Meters, bool Visited, double Score);
 
-    /// <summary>pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal)</summary>
-    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct)
+    /// <summary>
+    /// pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal).
+    /// countAsShown: 매칭 코스처럼 혼자 걷기 추천이 아닌 경우 false (추천 수락률 집계에서 뺀다)
+    /// </summary>
+    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct, bool countAsShown = true)
     {
         DateTimeOffset now = clock.GetUtcNow();
         DateTimeOffset kst = now.ToOffset(TimeSpan.FromHours(9));
@@ -146,7 +149,8 @@ public partial class RouteRecommender(
             r.AfterMeal ? RecommendRules.AfterMealNote : null);
         saved.Add(new RecommendationStore.Saved(result.Id, source, r.Minutes,
             stops.Select(s => s.BuildingId).ToArray(), result.TotalDistanceM, now));
-        metrics.Record(MetricsStore.RecShown, source);
+        if (countAsShown)
+            metrics.Record(MetricsStore.RecShown, source);
         metrics.Record(MetricsStore.AiCall, "recommend", source == "ai" ? 1 : 0);
         return result;
     }

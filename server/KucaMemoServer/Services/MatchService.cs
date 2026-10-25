@@ -35,6 +35,8 @@ public static class MatchRules
 
     public const int MaxAppearanceLength = 60;
     public const int MaxReportTextLength = 300;
+    /// <summary>함께 걸을 코스의 "다른 코스" 횟수 (10/25 피드백, 방식 (가))</summary>
+    public const int MaxCourseChanges = 3;
     /// <summary>[가정] 매칭 하나에서 "다음 주제" 를 부를 수 있는 횟수</summary>
     public const int MaxSmalltalkRefresh = 5;
 
@@ -82,7 +84,7 @@ public class MatchService(
         public required string UserId, Nickname, Gender, MatchGender, BuildingId;
         public required Prefs Prefs;
         public bool IsGuest;
-        public bool Accepted, Arrived, Finished;
+        public bool Accepted, Arrived, Finished, CourseAgree;
         public string? Appearance;
         public bool IsDemo => UserId == MatchRules.DemoUserId;
     }
@@ -96,11 +98,16 @@ public class MatchService(
         public DateTimeOffset RespondBy, MeetBy, WalkUntil;
         public Spot? Spot;
         public Building? SpotBuilding;
-        public List<string> Smalltalk = [];
+        public List<SmalltalkCard> Cards = [];
         public string SmalltalkSource = "fallback";
         public readonly List<string> Shown = [];
         public int Refreshes, Version;
         public string? WalkId;
+        // 함께 걸을 코스: 둘 다 동의하면 확정, "다른 코스"는 MaxCourseChanges 번까지
+        public RecommendResult? Course;
+        public bool CourseConfirmed;
+        public int CourseChanges, CourseVersion;
+        public readonly HashSet<string> CourseSeen = [];
         public Side Me(string userId) => A.UserId == userId ? A : B;
         public Side Other(string userId) => A.UserId == userId ? B : A;
         public IEnumerable<Side> Sides => [A, B];
@@ -169,7 +176,7 @@ public class MatchService(
 
     // ───── 제안 · 수락 · 거절 ─────
 
-    public async Task<MatchState> AcceptAsync(string userId, string matchId, ISmalltalkGenerator smalltalk, CancellationToken ct)
+    public async Task<MatchState> AcceptAsync(string userId, string matchId, ISmalltalkGenerator smalltalk, RouteRecommender recommender, CancellationToken ct)
     {
         Match m;
         int version;
@@ -185,9 +192,86 @@ public class MatchService(
             StartMeeting(m, smalltalk);
             version = m.Version;
         }
-        await ReplaceWithAiSmalltalkAsync(m, version, smalltalk, ct);
+        // 스몰토크(AI)와 함께 걸을 코스를 같이 만든다. 그사이 앱은 폴링으로 예시 주제 · "코스 준비 중"을 본다
+        await Task.WhenAll(ReplaceWithAiSmalltalkAsync(m, version, smalltalk, ct), MakeCourseAsync(m, recommender, ct));
         lock (gate)
             return View(userId);
+    }
+
+    // ───── 함께 걸을 코스 ─────
+
+    /// <summary>"이 코스 좋아요". 두 사람 모두 누르면 확정</summary>
+    public MatchState AgreeCourse(string userId, string matchId)
+    {
+        lock (gate)
+        {
+            Tick(Now);
+            Match m = Own(userId, matchId);
+            if (m.State != "meeting")
+                throw new MatchException(409, "만나러 가는 중에만 코스를 정할 수 있어요.");
+            if (m.Course == null)
+                throw new MatchException(409, "코스를 준비하고 있어요. 잠시 뒤에 다시 눌러 주세요.");
+            m.Me(userId).CourseAgree = true;
+            if (m.Sides.All(s => s.CourseAgree))
+                m.CourseConfirmed = true;
+            return View(userId);
+        }
+    }
+
+    /// <summary>"다른 코스 보기". 새 코스를 만들고 두 사람의 동의를 지운다</summary>
+    public async Task<MatchState> NextCourseAsync(string userId, string matchId, RouteRecommender recommender, CancellationToken ct)
+    {
+        Match m;
+        lock (gate)
+        {
+            Tick(Now);
+            m = Own(userId, matchId);
+            if (m.State != "meeting")
+                throw new MatchException(409, "만나러 가는 중에만 코스를 바꿀 수 있어요.");
+            if (m.CourseConfirmed)
+                throw new MatchException(409, "두 사람이 이미 정한 코스예요.");
+            if (m.Course == null)
+                throw new MatchException(409, "코스를 준비하고 있어요. 잠시 뒤에 다시 눌러 주세요.");
+            if (m.CourseChanges >= MatchRules.MaxCourseChanges)
+                throw new MatchException(429, $"다른 코스는 {MatchRules.MaxCourseChanges}번까지 볼 수 있어요. 지금 코스 중에서 골라 주세요.");
+            m.CourseChanges++;
+        }
+        await MakeCourseAsync(m, recommender, ct);
+        lock (gate)
+            return View(userId);
+    }
+
+    /// <summary>
+    /// 만남 스팟에서 출발하는 코스를 추천 v2 로 만든다 (고른 시간 · 두 사람의 공통 취향 · 지금 날씨).
+    /// 만남 스팟과 이미 보여 준 장소는 빼서 "다른 코스"가 실제로 달라지게 한다.
+    /// </summary>
+    async Task MakeCourseAsync(Match m, RouteRecommender recommender, CancellationToken ct)
+    {
+        RecommendRequest request;
+        int version;
+        lock (gate)
+        {
+            if (!matches.ContainsKey(m.Id) || m.Spot == null || m.SpotBuilding == null)
+                return;
+            string meetId = m.Spot.Id;
+            var all = spots.All.Select(s => s.Id).Where(id => id != meetId && buildings.Find(id) != null).ToList();
+            var fresh = all.Where(id => !m.CourseSeen.Contains(id)).ToList();
+            var tastes = m.A.Prefs.Tastes.Intersect(m.B.Prefs.Tastes).Where(RecommendRules.AllowedTastes.Contains).ToList();
+            request = new RecommendRequest(m.Minutes, tastes, m.SpotBuilding.Lat, m.SpotBuilding.Lon, null,
+                                           fresh.Count >= RecommendRules.MaxStops(m.Minutes) ? fresh : all);
+            version = ++m.CourseVersion;
+        }
+        RecommendResult course = await recommender.RecommendAsync(request, "normal", ct, countAsShown: false);
+        lock (gate)
+        {
+            if (!matches.ContainsKey(m.Id) || m.CourseVersion != version || m.CourseConfirmed)
+                return;
+            m.Course = course;
+            foreach (RecommendStop stop in course.Stops)
+                m.CourseSeen.Add(stop.BuildingId);
+            foreach (Side s in m.Sides)
+                s.CourseAgree = s.IsDemo;   // 새 코스는 다시 동의받는다 (가상 상대는 바로 동의)
+        }
     }
 
     public MatchState Decline(string userId, string matchId)
@@ -255,18 +339,18 @@ public class MatchService(
             input = Input(m, null);
         }
         input = input with { Weather = await weather.NowAsync(ct) };
-        (List<string> topics, string source) = await smalltalk.GenerateAsync(input, ct);
+        (List<SmalltalkCard> cards, string source) = await smalltalk.GenerateAsync(input, ct);
         lock (gate)
         {
             if (matches.TryGetValue(matchId, out Match? m))
             {
-                m.Smalltalk = topics;
+                m.Cards = cards;
                 m.SmalltalkSource = source;
-                m.Shown.AddRange(topics);
+                m.Shown.AddRange(cards.Select(c => c.Text));
                 m.Version++;
             }
         }
-        return new SmalltalkResult(topics, source);
+        return new SmalltalkResult(cards.Select(c => c.Text).ToList(), source, cards);
     }
 
     public MatchState Arrived(string userId, string matchId, string? buildingId)
@@ -286,10 +370,15 @@ public class MatchService(
                 m.State = "walking";
                 m.WalkId = "w_" + Guid.NewGuid().ToString("N");
                 m.WalkUntil = now + MatchRules.WalkingLimit(m.Minutes);
+                // 둘 다 도착하면 지금 코스로 출발 (동의를 다 안 했어도 확정). 완료 판정은 이 코스 기준
+                if (m.Course != null)
+                    m.CourseConfirmed = true;
+                RecommendResult? course = m.Course;
                 // 두 사람 각자의 산책 기록 (같은 walkId). 끝내기 · 리뷰는 산책 API 로
                 foreach (Side s in m.Sides.Where(s => !s.IsDemo))
                 {
-                    walks.Start(m.WalkId, s.UserId, "match", null, m.Minutes, null, [], m.Other(s.UserId).UserId, now);
+                    walks.Start(m.WalkId, s.UserId, "match", course?.Id, m.Minutes, course?.TotalDistanceM,
+                                course?.Stops.Select(x => x.BuildingId) ?? [], m.Other(s.UserId).UserId, now);
                     metrics.Record(MetricsStore.WalkStarted, "match");
                 }
                 Count(m, MetricsStore.MatchWalking);
@@ -490,9 +579,9 @@ public class MatchService(
         (m.Spot, m.SpotBuilding) = PickSpot(m.A.BuildingId, m.B.BuildingId);
         m.State = "meeting";
         m.MeetBy = now + MatchRules.NoShowLimit;
-        m.Smalltalk = smalltalk.Fallback();  // AI 답이 오기 전까지 보여 줄 예시
+        m.Cards = smalltalk.Fallback();  // AI 답이 오기 전까지 보여 줄 예시
         m.SmalltalkSource = "fallback";
-        m.Shown.AddRange(m.Smalltalk);
+        m.Shown.AddRange(m.Cards.Select(c => c.Text));
         foreach (Side s in m.Sides.Where(s => s.IsDemo))
             (s.Appearance, s.Arrived) = (MatchRules.DemoAppearance, true);
         store.SetSpot(m.Id, m.Spot.Id);
@@ -506,16 +595,16 @@ public class MatchService(
         lock (gate)
             input = Input(m, null);
         input = input with { Weather = await weather.NowAsync(ct) };
-        (List<string> topics, string source) = await smalltalk.GenerateAsync(input with { Already = [] }, ct);
+        (List<SmalltalkCard> cards, string source) = await smalltalk.GenerateAsync(input with { Already = [] }, ct);
         if (source != "ai")
             return;
         lock (gate)
         {
             if (m.Version != version || !matches.ContainsKey(m.Id))
                 return;
-            m.Smalltalk = topics;
+            m.Cards = cards;
             m.SmalltalkSource = source;
-            m.Shown.AddRange(topics);
+            m.Shown.AddRange(cards.Select(c => c.Text));
             m.Version++;
         }
     }
@@ -604,7 +693,8 @@ public class MatchService(
     MatchState View(string userId)
     {
         if (waiting.TryGetValue(userId, out Waiting? w))
-            return new MatchState("waiting", Minutes: w.Minutes, WaitingSince: Iso(w.Since), WaitingUntil: Iso(w.Until));
+            return new MatchState("waiting", Minutes: w.Minutes, WaitingSince: Iso(w.Since), WaitingUntil: Iso(w.Until),
+                                  NowSearching: waiting.Count - 1);   // 나 말고 지금 찾는 사람 수 (실시간 느낌용, 개인정보 없음)
 
         if (current.TryGetValue(userId, out string? id) && matches.TryGetValue(id, out Match? m))
         {
@@ -619,10 +709,15 @@ public class MatchService(
                 MyAnswer: "accepted",
                 MeetSpot: new MeetSpotView(m.Spot!.Id, m.Spot.Name, m.SpotBuilding!.Lat, m.SpotBuilding.Lon, m.Spot.MeetSpecies),
                 MeetBy: Iso(m.MeetBy),
-                Smalltalk: m.Smalltalk, SmalltalkSource: m.SmalltalkSource,
+                Smalltalk: m.Cards.Select(c => c.Text).ToList(), SmalltalkSource: m.SmalltalkSource,
                 MyAppearance: me.Appearance,
                 Arrived: new MatchArrived(me.Arrived, other.Arrived),
-                WalkId: m.WalkId);
+                WalkId: m.WalkId,
+                SmalltalkCards: m.Cards,
+                Course: m.Course is { } c
+                    ? new MatchCourse(c.Id, c.Title, c.Source, c.Stops, c.TotalDistanceM, c.TotalMinutes,
+                                      me.CourseAgree, other.CourseAgree, m.CourseConfirmed, MatchRules.MaxCourseChanges - m.CourseChanges)
+                    : null);
         }
 
         if (ended.TryGetValue(userId, out Ended? e))
