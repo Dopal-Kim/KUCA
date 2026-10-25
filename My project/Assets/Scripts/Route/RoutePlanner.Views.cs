@@ -93,6 +93,8 @@ public partial class RoutePlanner
     {
         sheet = Sheet("RouteSheet", "어디로 걸을까요?", HideSheet, 0.9f, 2, out RectTransform c, out RectTransform b, out _);
 
+        // AI 가 무엇을 하는지 시트 맨 위에: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0). 버튼 위에 두니 시트 아래로 밀려 안 보였음 (v24)
+        UIKit.Paragraph(c, "AI 가 지금 시간 · 날씨와 고른 취향, 장소 소개를 보고 코스 3개와 들를 이유를 골라요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
         RectTransform places = UIKit.ListGroup(c, null);
         places.GetComponent<Image>().color = KucaTheme.Fill;   // 흰 시트 위라 회색 묶음
         startValue = PlaceRow(places, "출발", () => ShowPicker(true));
@@ -123,8 +125,6 @@ public partial class RoutePlanner
         }
         mealChip = Chip(ChipRow(c), "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
-        // AI 가 무엇을 하는지 버튼 바로 위에서 보이게: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0)
-        UIKit.Paragraph(c, "AI 가 지금 시간 · 날씨와 고른 취향, 장소 소개를 보고 코스 3개와 들를 이유를 골라요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
 
         UIKit.PrimaryButton(b, "AI 코스 3개 추천 받기", RequestRoutes);
         UIKit.SecondaryButton(b, "코스 없이 자유 산책 시작", () => { HideSheet(); FreeWalk.Begin(); });

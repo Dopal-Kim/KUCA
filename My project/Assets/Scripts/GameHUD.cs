@@ -191,7 +191,15 @@ public class GameHUD : MonoBehaviour
             toastTimer = Mathf.Min(toastTimer, 0.0001f);
         lastModalCount = modalCount;
         if (coach != null)
+        {
             coach.SetActive(modalCount == 0);   // 첫 꾸미기 · 파트너 고르기 같은 화면이 다 닫힌 뒤 지도에서만
+            // 파트너를 고를 때 띄운 토스트가 카드가 나타난 뒤에도 남아 "알겠어요" 를 덮었음 (REVIEW_v24 P0)
+            if (coach.activeSelf && toastBg.gameObject.activeSelf)
+            {
+                toastBg.gameObject.SetActive(false);
+                toastTimer = 0f;
+            }
+        }
         if (toastTimer > 0f)
         {
             toastTimer -= Time.unscaledDeltaTime;

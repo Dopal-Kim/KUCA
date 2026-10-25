@@ -617,18 +617,14 @@ public partial class KhuMenus : MonoBehaviour
         UIKit.Stretch(g.rectTransform);
     }
 
-    /// <summary>진화 단계 점 ●●○ (0~2단계 → 1~3개 채움)</summary>
+    /// <summary>진화 단계 "진화 1/3단계" (점 ●○○ 은 뜻을 몰랐음, REVIEW_v22_day · v24)</summary>
     static void StageDots(Transform cell, int stage, Vector2 pos)
     {
-        RectTransform row = UIKit.Rect(cell, "Stage");
-        row.anchorMin = row.anchorMax = row.pivot = new Vector2(0.5f, 1f);
-        row.anchoredPosition = pos;
-        row.sizeDelta = new Vector2(96f, 22f);
-        for (int i = 0; i <= GachaRules.MaxStage; i++)
-        {
-            Image dot = Circle(row, "Dot" + i, i <= stage ? KucaTheme.Gold : KucaTheme.Line, 20f);
-            Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 32f, 0f));
-        }
+        Text t = T(cell, $"진화 {stage + 1}/{GachaRules.MaxStage + 1}단계", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.Gold, bold: true);
+        RectTransform r = t.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 1f);
+        r.anchoredPosition = pos + new Vector2(0f, 8f);
+        r.sizeDelta = new Vector2(260f, 40f);
     }
 
     List<(string, string)> DexRows(string species)

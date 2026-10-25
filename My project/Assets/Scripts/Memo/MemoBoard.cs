@@ -690,8 +690,8 @@ public partial class MemoBoard : MonoBehaviour
         writeHint.transform.parent.gameObject.SetActive((!canWrite || locked) && boardTab == 0);
         if (locked)
             writeHint.text = lockedCount > 0
-                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"
-                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m";
+                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요\n이곳 소식은 위 공지 탭에서 지금 볼 수 있어요"
+                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m\n이곳 소식은 위 공지 탭에서 지금 볼 수 있어요";   // 잠겨 있어도 할 수 있는 일 (REVIEW_v22_day · v24)
         else if (!canWrite)
             writeHint.text = $"경희스팟까지 {d:F0}m  ·  {spots.interactRadius:F0}m 안에서 사진을 남길 수 있어요";
     }
