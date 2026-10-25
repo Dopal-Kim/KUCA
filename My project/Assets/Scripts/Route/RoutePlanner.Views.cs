@@ -113,9 +113,10 @@ public partial class RoutePlanner
         UIKit.Text(c, "여러 개 고를 수 있어요", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         tasteChips = new Image[TasteChoices.Length];
         RectTransform row = null;
+        // 한 줄에 3개, "식후 걷기" 는 마지막 줄 끝에: 시트 맨 위 AI 안내가 들어간 뒤 마지막 칩 줄이 버튼 뒤로 잘려 빠진 것처럼 보였음 (REVIEW_v25 P1)
         for (int i = 0; i < TasteChoices.Length; i++)
         {
-            if (i % 2 == 0) row = ChipRow(c);
+            if (i % 3 == 0) row = ChipRow(c);
             string id = TasteChoices[i].id;
             tasteChips[i] = Chip(row, TasteChoices[i].label, () =>
             {
@@ -123,7 +124,7 @@ public partial class RoutePlanner
                 RefreshChips();
             });
         }
-        mealChip = Chip(ChipRow(c), "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
+        mealChip = Chip(TasteChoices.Length % 3 == 0 ? ChipRow(c) : row, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
 
         UIKit.PrimaryButton(b, "AI 코스 3개 추천 받기", RequestRoutes);

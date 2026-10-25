@@ -953,7 +953,7 @@ public partial class MemoBoard : MonoBehaviour
         hintBox.pivot = new Vector2(0.5f, 0f);
         hintBox.offsetMin = new Vector2(KucaTheme.Gutter, 32f + KucaTheme.ButtonHeight + 8f);
         hintBox.offsetMax = new Vector2(-KucaTheme.Gutter, 32f + KucaTheme.ButtonHeight + 96f);
-        writeHint = UIKit.Text(hintBox, "", KucaTheme.Caption, TextAnchor.MiddleCenter, InkQuiet);
+        writeHint = UIKit.Text(hintBox, "", KucaTheme.Label, TextAnchor.MiddleCenter, InkQuiet);   // Caption 은 공지 탭 안내를 놓치기 쉬웠음 (REVIEW_v25)
         UIKit.Stretch(writeHint.rectTransform);
         writeButton = UIKit.PrimaryButton(safe, "메모 남기기", OnWriteButton);
         writeButtonFace = writeButton.GetComponent<Image>();

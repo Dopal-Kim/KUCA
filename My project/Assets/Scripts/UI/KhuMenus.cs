@@ -564,9 +564,10 @@ public partial class KhuMenus : MonoBehaviour
         Text name = T(cell, NameOf(c), KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
-        Text cp = T(cell, $"힘 {c.cp}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+        // 진화 단계는 같은 줄에: 따로 둔 주황 글자가 카드 아래 끝에 걸려 대비 약하고 겹쳐 보였음 (REVIEW_v25)
+        Text cp = T(cell, $"힘 {c.cp}  ·  진화 {progress.StageOf(c.speciesId) + 1}/{GachaRules.MaxStage + 1}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         BottomBox(cp.rectTransform, 40f, 44f);
-        StageDots(cell, progress.StageOf(c.speciesId), new Vector2(0f, -378f));
+        FitOneLine(cp, KucaTheme.Caption);
 
         if (c.uid == progress.partnerUid)
         {
@@ -601,11 +602,10 @@ public partial class KhuMenus : MonoBehaviour
             known ? KucaTheme.Ink : KucaTheme.InkSoft, bold: true);
         BottomBox(name.rectTransform, 84f, 56f);
         FitOneLine(name, KucaTheme.Label);
-        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}" : "아직 못 만났어요", KucaTheme.Caption, TextAnchor.MiddleCenter,
+        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  진화 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "아직 못 만났어요", KucaTheme.Caption, TextAnchor.MiddleCenter,
             known ? KucaTheme.PrimaryDeep : KucaTheme.InkSoft);
         BottomBox(cnt.rectTransform, 40f, 44f);
-        if (known)
-            StageDots(cell, progress.StageOf(species), new Vector2(0f, -378f));
+        FitOneLine(cnt, KucaTheme.Caption);
     }
 
     /// <summary>칸 위 모서리 등급 원 (C · B · A · S)</summary>
@@ -615,16 +615,6 @@ public partial class KhuMenus : MonoBehaviour
         Place(chip.rectTransform, new Vector2(right ? 1f : 0f, 1f), new Vector2(right ? -18f : 18f, -18f));
         Text g = T(chip.transform, GachaRules.Label(grade), KucaTheme.Caption, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(g.rectTransform);
-    }
-
-    /// <summary>진화 단계 "진화 1/3단계" (점 ●○○ 은 뜻을 몰랐음, REVIEW_v22_day · v24)</summary>
-    static void StageDots(Transform cell, int stage, Vector2 pos)
-    {
-        Text t = T(cell, $"진화 {stage + 1}/{GachaRules.MaxStage + 1}단계", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.Gold, bold: true);
-        RectTransform r = t.rectTransform;
-        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 1f);
-        r.anchoredPosition = pos + new Vector2(0f, 8f);
-        r.sizeDelta = new Vector2(260f, 40f);
     }
 
     List<(string, string)> DexRows(string species)
