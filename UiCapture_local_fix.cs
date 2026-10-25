@@ -213,8 +213,11 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
+            // 로컬(KUCA-check) 전용: 산책 완료는 서버에 POST 하므로 이 단계만 기기 계산 (prod 서버는 GET 만)
+            PlayerPrefs.SetString("memo_server_url", "");
             if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
+            PlayerPrefs.DeleteKey("memo_server_url");
         }
 
         if (CallStatic("EvolutionScreen", "Show", "library_owl", 0, 1) || CallStatic("EvolutionScreen", "Show", "pigeon", 0, 1))
@@ -275,28 +278,130 @@ public static class UiCapture
             Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), "Spring"));
         }
         yield return 0.5f;
-        var done = new HashSet<string>();
+        var count = new Dictionary<string, int>();
+        // 막힘 판정용: 건물마다 (정보, 콜라이더 경계상자). 콜라이더 모양이 보이는 건물과 달라도(공학관 날개) 경계상자로 잡는다 (MAP_REVIEW_v10)
+        var others = UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>()
+            .Select(o => (info: o, col: o.GetComponentInChildren<Collider>())).Where(o => o.col != null).Select(o => (o.info, o.col.bounds)).ToList();   // 같은 이름 여러 동(실험연구동 북 · 남 등)은 _2, _3 로 모두 찍는다 (한 동만 찍혀 태양광이 없는 쪽만 보였음, M8)
         foreach (Component info in UnityEngine.Object.FindObjectsByType(infoType, FindObjectsInactive.Include, FindObjectsSortMode.None).Cast<Component>())
         {
             string name = Get(info, "buildingName") as string;
             Collider col = info.GetComponentInChildren<Collider>(true);
-            if (string.IsNullOrEmpty(name) || col == null || !done.Add(name))
+            if (string.IsNullOrEmpty(name) || col == null)
                 continue;
+            count[name] = count.TryGetValue(name, out int n) ? n + 1 : 1;
+            if (count[name] > 1)
+                name += "_" + count[name];
             Bounds b = col.bounds;
             float size = Mathf.Max(b.size.x, b.size.z, b.size.y * 1.5f);
             float dist = size * 1.4f + 40f;
             Vector3 target = new Vector3(b.center.x, b.min.y + b.size.y * 0.35f, b.center.z);
             foreach (var (tag, yaw, pitch) in new[] { ("N", 180f, 35f), ("E", 270f, 35f), ("S", 0f, 35f), ("W", 90f, 35f), ("T", 0f, 80f) })
             {
-                // 북쪽(+z)에서 남쪽을 바라보면 yaw 180
-                Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);
-                // 옆 건물에 막히면 (원자로센터 E·S, 도예관 S 등) 더 내려다보는 각도로
-                if (Physics.Raycast(target, -(rot * Vector3.forward), out RaycastHit hit, dist) && hit.collider.GetComponentInParent(infoType) != info)
-                    rot = Quaternion.Euler(Mathf.Max(pitch, 58f), yaw, 0f);
-                ShotFrom(cam, target - rot * Vector3.forward * dist, rot, $"{Safe(name)}_{tag}");
+                // 북쪽(+z)에서 남쪽을 바라보면 yaw 180. 옆 건물에 막히면 단계적으로 더 내려다보고 · 멀리서 (원자로센터 E·S, 글로벌관 E, 도예관 S)
+                // 58° 하나로는 여전히 막혔음 (MAP_REVIEW_v6 U6). 끝까지 막히면 파일 이름에 _막힘
+                Quaternion rot = default;
+                float d = dist;
+                bool blocked = true;
+                // 끝까지 못 넘으면 마지막(80°) 대신 가장 덜 가려진 단계로: 고층 이웃 사이(글로벌관 E)는 58° 가 80° 보다 나았음 (MAP_REVIEW_v12)
+                (Quaternion rot, float d, float score) best = (default, 0f, float.MaxValue);
+                // 작은 건물(가로 40 m 미만)은 35° 에서 앞 건물 지붕에 가려지기 쉬워 50° 부터 (원자로센터 · 온실, v9)
+                float first = Mathf.Max(b.size.x, b.size.z) < 40f ? Mathf.Max(pitch, 50f) : pitch;
+                foreach (var (p, k) in new[] { (first, 1f), (Mathf.Max(pitch, 58f), 1f), (Mathf.Max(pitch, 70f), 1.6f), (Mathf.Max(pitch, 80f), 1.6f) })
+                {
+                    rot = Quaternion.Euler(p, yaw, 0f);
+                    d = dist * k;
+                    Vector3 camPos = target - rot * Vector3.forward * d;
+                    int hits = BlockedRays(b, camPos, info, infoType, others, out string by);
+                    float front = Foreground(camPos, rot, cam.fieldOfView, Vector3.Distance(camPos, b.center), info, infoType);
+                    // 1/3: 2/6 로도 사진은 거의 가려졌음 (글로벌관 E, v9). 전경 55%: 답답한 사진은 57~80%, 멀쩡한 첫 단계는 37~43% 였음 (30% 는 너무 민감, v12)
+                    blocked = hits * 3 >= ProbeCount || front >= 0.55f;
+                    float score = front + (float)hits / ProbeCount;
+                    if (score < best.score)
+                        best = (rot, d, score);
+                    Debug.Log($"[UiCapture] 막힘 검사 {Safe(name)}_{tag} 각도={p:0} 거리x{k} 막힌 광선={hits}/{ProbeCount} 전경={front:P0} 맞은 것={by}");
+                    if (!blocked)
+                        break;
+                }
+                if (blocked)
+                    (rot, d) = (best.rot, best.d);
+                ShotFrom(cam, target - rot * Vector3.forward * d, rot, $"{Safe(name)}_{tag}" + (blocked ? "_막힘" : ""));
             }
             yield return 0.05f;
         }
+    }
+
+    const int ProbeCount = 10;
+
+    /// <summary>
+    /// 건물의 열 점(가운데 아래 · 위, 위쪽 네 모서리 안쪽, 네 벽 가운데 높이)으로 카메라에서 광선을 쏴, 그 점보다 앞에서 다른 건물에 막힌 수. by = 막은 건물 이름.
+    /// - 카메라 → 건물 방향 + 뒷면도 맞게: 건물 → 카메라 방향은 메시 콜라이더 앞면만 맞아 가리는 건물을 지나쳤음 (원자로센터 0/10, MAP_REVIEW_v10)
+    /// - 다른 건물 경계상자도 본다: 공학관처럼 콜라이더가 보이는 모양과 다르면 광선이 비켜 감 (경계상자는 L 자 건물에서 조금 넉넉하게 막힘으로 셈)
+    /// </summary>
+    static int BlockedRays(Bounds b, Vector3 camPos, Component self, Type infoType, List<(Component info, Bounds bounds)> others, out string by)
+    {
+        var names = new HashSet<string>();
+        Vector3 c = b.center, e = b.extents * 0.8f;
+        float lo = b.min.y + b.size.y * 0.35f, mid = b.min.y + b.size.y * 0.55f, hi = b.min.y + b.size.y * 0.9f;
+        var points = new[]
+        {
+            new Vector3(c.x, lo, c.z), new Vector3(c.x, hi, c.z),
+            new Vector3(c.x - e.x, hi, c.z - e.z), new Vector3(c.x + e.x, hi, c.z - e.z),
+            new Vector3(c.x - e.x, hi, c.z + e.z), new Vector3(c.x + e.x, hi, c.z + e.z),
+            new Vector3(c.x - e.x, mid, c.z), new Vector3(c.x + e.x, mid, c.z),
+            new Vector3(c.x, mid, c.z - e.z), new Vector3(c.x, mid, c.z + e.z),
+        };
+        bool backfaces = Physics.queriesHitBackfaces;
+        Physics.queriesHitBackfaces = true;
+        int blocked = 0;
+        foreach (Vector3 p in points)
+        {
+            Vector3 dir = p - camPos;
+            float len = dir.magnitude - 1f;   // 점 바로 앞까지
+            var ray = new Ray(camPos, dir.normalized);
+            var hitBy = new List<string>();
+            foreach (RaycastHit h in Physics.RaycastAll(ray, len))
+            {
+                Component o = h.collider.GetComponentInParent(infoType);
+                if (!(h.collider is TerrainCollider) && o != self)
+                    hitBy.Add(h.collider.name);
+            }
+            foreach (var (info, bounds) in others)
+                if (info != self && !bounds.Contains(p) && bounds.IntersectRay(ray, out float at) && at < len)
+                    hitBy.Add(info.name);
+            if (hitBy.Count == 0)
+                continue;
+            blocked++;
+            names.UnionWith(hitBy);
+        }
+        Physics.queriesHitBackfaces = backfaces;
+        by = names.Count == 0 ? "없음" : string.Join(",", names.Take(4));
+        return blocked;
+    }
+
+    /// <summary>
+    /// 전경 점유율: 사진(960×720) 아래 절반 격자 7×5 광선 중 대상 건물보다 앞에서 다른 건물 콜라이더(뒷면 포함)에 맞는 비율.
+    /// 건물 점 판정은 대상이 보이는지만 봐서, 대상은 다 보이는데 화면 아래를 앞 건물 지붕이 채우는 사진을 못 잡았음 (MAP_REVIEW_v11 2절)
+    /// </summary>
+    static float Foreground(Vector3 camPos, Quaternion rot, float fov, float targetDist, Component self, Type infoType)
+    {
+        float tanY = Mathf.Tan(fov * 0.5f * Mathf.Deg2Rad), tanX = tanY * 960f / 720f;
+        bool backfaces = Physics.queriesHitBackfaces;
+        Physics.queriesHitBackfaces = true;
+        int hit = 0, total = 0;
+        for (int ix = 0; ix < 7; ix++)
+            for (int iy = 0; iy < 5; iy++)
+            {
+                float vx = 0.1f + 0.8f * ix / 6f, vy = 0.05f + 0.4f * iy / 4f;   // 화면 아래 절반
+                Vector3 dir = rot * new Vector3((2f * vx - 1f) * tanX, (2f * vy - 1f) * tanY, 1f);
+                total++;
+                foreach (RaycastHit h in Physics.RaycastAll(camPos, dir.normalized, targetDist))
+                {
+                    Component o = h.collider.GetComponentInParent(infoType);
+                    if (o != null && o != self) { hit++; break; }
+                }
+            }
+        Physics.queriesHitBackfaces = backfaces;
+        return (float)hit / total;
     }
 
     static string Safe(string s) => string.Concat(s.Split(Path.GetInvalidFileNameChars())).Replace(' ', '_');
