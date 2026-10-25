@@ -36,14 +36,6 @@ public class CharacterCustomizer : MonoBehaviour
     enum Tab { Face, Color, Clothes }
     static readonly string[] TabNames = { "얼굴", "색", "옷" };
 
-    static readonly (CharacterSlot slot, string label)[] SlotRows =
-    {
-        (CharacterSlot.Head, "머리"),
-        (CharacterSlot.Body, "상의"),
-        (CharacterSlot.Legs, "하의"),
-        (CharacterSlot.Feet, "신발"),
-        (CharacterSlot.Accessory, "가방"),
-    };
 
     CharacterAppearance editing;
     GameObject screen;
@@ -81,6 +73,8 @@ public class CharacterCustomizer : MonoBehaviour
             saved = DefaultAppearance(saved.gender);
             saved.Save();
         }
+        if (saved != null && Normalize(saved))
+            saved.Save();   // 예전 부위 섞기 · 색 8개 시절 저장을 지금 선택지 안으로
         if (saved != null)
         {
             character.Build(saved);
@@ -175,15 +169,21 @@ public class CharacterCustomizer : MonoBehaviour
     {
         if (editing.gender == gender)
             return;
-        // 성별이 바뀌면 같은 옷 이름이 그 성별에도 있으면 이어 입고, 없으면 기본 한 벌
+        // 성별이 바뀌어도 같은 스타일 · 가방 · 얼굴 · 색을 이어 입는다
         CharacterAppearance a = DefaultAppearance(gender);
-        foreach (var (slot, _) in SlotRows)
-            if (Db.genders[gender].Options(slot).Exists(o => o.id == editing.Get(slot)))
-                a.Set(slot, editing.Get(slot));
+        WearStyle(a, Mathf.Max(0, StyleOf(editing)));
+        if (Has(a.gender, CharacterSlot.Accessory, editing.accessory))
+            a.accessory = editing.accessory;
         a.skin = editing.skin; a.hairColor = editing.hairColor; a.eyeColor = editing.eyeColor;
         a.eyes = editing.eyes; a.brows = editing.brows; a.mouth = editing.mouth; a.nose = editing.nose; a.cheeks = editing.cheeks;
         a.eyeSize = editing.eyeSize; a.eyeSpacing = editing.eyeSpacing; a.eyeHeight = editing.eyeHeight;
         editing = a;
+        Apply();
+    }
+
+    void SetStyle(int style)
+    {
+        WearStyle(editing, style);
         Apply();
     }
 
@@ -193,51 +193,75 @@ public class CharacterCustomizer : MonoBehaviour
         Apply();
     }
 
-    /// <summary>기본 캐릭터: 경희 모험가 한 벌 (없으면 첫 선택지)</summary>
+    bool Has(int gender, CharacterSlot slot, string id) => Db.genders[gender].Options(slot).Exists(o => o.id == id);
+
+    /// <summary>스타일 i 를 입힌다: 머리는 경희 모험가, 상의 · 하의 · 신발은 그 성별의 스타일 부품 (없으면 경희 모험가)</summary>
+    void WearStyle(CharacterAppearance a, int i)
+    {
+        var st = CharacterLook.Styles[Mathf.Clamp(i, 0, CharacterLook.Styles.Length - 1)];
+        bool women = Db.genders[a.gender].id == "women";
+        string top = women ? st.womenTop : st.menTop, bottom = women ? st.womenBottom : st.menBottom;
+        string fallback = CharacterAppearance.DefaultOutfit;
+        a.head = fallback;
+        a.body = Has(a.gender, CharacterSlot.Body, top) ? top : fallback;
+        a.legs = Has(a.gender, CharacterSlot.Legs, bottom) ? bottom : fallback;
+        a.feet = Has(a.gender, CharacterSlot.Feet, bottom) ? bottom : fallback;
+    }
+
+    /// <summary>지금 입은 옷이 몇 번 스타일인지 (어느 스타일과도 다르면 -1)</summary>
+    int StyleOf(CharacterAppearance a)
+    {
+        var t = new CharacterAppearance { gender = a.gender };
+        for (int i = 0; i < CharacterLook.Styles.Length; i++)
+        {
+            WearStyle(t, i);
+            if (t.head == a.head && t.body == a.body && t.legs == a.legs && t.feet == a.feet)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>선택지 밖의 저장(스타일에 없는 부위 조합 · 없어진 색 번호)을 기본으로 되돌린다. 바뀌었으면 true</summary>
+    bool Normalize(CharacterAppearance a)
+    {
+        bool changed = false;
+        if (a.gender < 0 || a.gender >= Db.genders.Count) { a.gender = 0; changed = true; }
+        if (StyleOf(a) < 0) { WearStyle(a, 0); changed = true; }
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0 && !Has(a.gender, CharacterSlot.Accessory, a.accessory)) { a.accessory = bags[0].id; changed = true; }
+        if (a.skin >= CharacterLook.Skins.Length) { a.skin = 0; changed = true; }
+        if (a.hairColor >= CharacterLook.Hairs.Length) { a.hairColor = 0; changed = true; }
+        if (a.eyeColor >= CharacterLook.EyeColors.Length) { a.eyeColor = 0; changed = true; }
+        return changed;
+    }
+
+    /// <summary>기본 캐릭터: 경희 모험가 스타일, 가방 첫 선택지</summary>
     CharacterAppearance DefaultAppearance(int gender)
     {
         var a = new CharacterAppearance { gender = Mathf.Clamp(gender, 0, Db.genders.Count - 1) };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count == 0)
-                continue;
-            var match = options.Find(o => o.id == CharacterAppearance.DefaultOutfit);
-            a.Set(slot, slot == CharacterSlot.Accessory ? options[0].id : (match ?? options[0]).id);
-        }
+        WearStyle(a, 0);
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0)
+            a.accessory = bags[0].id;
         return a;
     }
 
     CharacterAppearance RandomAppearance()
     {
-        var a = new CharacterAppearance { gender = Random.Range(0, Db.genders.Count) };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        // 머리·상의·하의·신발은 같은 의상 세트에서 시작해 어울리게 만든다.
-        string outfit = set.bodies[Random.Range(0, set.bodies.Count)].id;
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count == 0)
-                continue;
-            var match = options.Find(o => o.id == outfit);
-            a.Set(slot, slot == CharacterSlot.Accessory ? options[0].id : (match ?? options[0]).id);
-        }
+        CharacterAppearance a = DefaultAppearance(Random.Range(0, Db.genders.Count));
+        WearStyle(a, Random.Range(0, CharacterLook.Styles.Length));
         return a;
     }
 
     void Randomize()
     {
-        CharacterAppearance a = new CharacterAppearance { gender = editing.gender };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count > 0)
-                a.Set(slot, options[Random.Range(0, options.Count)].id);
-        }
-        // 얼굴 · 색도 섞는다 (피부는 자연색 6 안에서, 슬라이더는 기본)
-        a.skin = Random.Range(0, 6);
+        CharacterAppearance a = DefaultAppearance(editing.gender);
+        WearStyle(a, Random.Range(0, CharacterLook.Styles.Length));
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0)
+            a.accessory = bags[Random.Range(0, bags.Count)].id;
+        // 얼굴 · 색도 섞는다 (슬라이더는 기본)
+        a.skin = Random.Range(0, CharacterLook.Skins.Length);
         a.hairColor = Random.Range(0, CharacterLook.Hairs.Length);
         a.eyeColor = Random.Range(0, CharacterLook.EyeColors.Length);
         foreach (CharacterLook.Part part in System.Enum.GetValues(typeof(CharacterLook.Part)))
@@ -483,20 +507,25 @@ public class CharacterCustomizer : MonoBehaviour
             var (bg, label) = ChipCell(genders, Db.genders[g].displayName, () => SetGender(gi));
             clothesChips.Add((bg, label, () => editing.gender == gi));
         }
-        CharacterPartsDatabase.GenderSet set = Db.genders[editing.gender];
-        foreach (var (slot, name) in SlotRows)
+        // 스타일 5 (상의 · 하의 · 신발 한 벌씩) + 가방
+        Label(clothesContent, "스타일");
+        RectTransform styles = ChipGrid(clothesContent, 3);
+        for (int i = 0; i < CharacterLook.Styles.Length; i++)
         {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count == 0)
-                continue;
-            CharacterSlot s = slot;
-            Label(clothesContent, name);
+            int si = i;
+            var (bg, label) = ChipCell(styles, CharacterLook.Styles[i].name, () => SetStyle(si));
+            clothesChips.Add((bg, label, () => StyleOf(editing) == si));
+        }
+        List<CharacterPartsDatabase.PartOption> bags = Db.genders[editing.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 1)
+        {
+            Label(clothesContent, "가방");
             RectTransform grid = ChipGrid(clothesContent, 3);
-            foreach (var o in options)
+            foreach (var o in bags)
             {
                 string id = o.id;
-                var (bg, label) = ChipCell(grid, o.displayName, () => SetPart(s, id));
-                clothesChips.Add((bg, label, () => editing.Get(s) == id));
+                var (bg, label) = ChipCell(grid, o.displayName, () => SetPart(CharacterSlot.Accessory, id));
+                clothesChips.Add((bg, label, () => editing.accessory == id));
             }
         }
     }

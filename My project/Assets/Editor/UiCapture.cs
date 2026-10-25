@@ -172,6 +172,17 @@ public static class UiCapture
                 yield return 1.5f;
                 yield return Shot("꾸미기_" + t);
             }
+            // 옷 스타일 5가지가 위아래 어울리는지 (남 · 여 각각, 10/25 스타일 정리)
+            for (int g = 0; g < 2; g++)
+            {
+                Call(customizer, "SetGender", g);
+                for (int st = 0; st < 5; st++)
+                {
+                    Call(customizer, "SetStyle", st);
+                    yield return 1f;
+                    yield return Shot($"꾸미기_스타일_{(g == 0 ? "남" : "여")}{st + 1}");
+                }
+            }
             Call(customizer, "SetOpen", false);
             yield return 0.5f;
         }
