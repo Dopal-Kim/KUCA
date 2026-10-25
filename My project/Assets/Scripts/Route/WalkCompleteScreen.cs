@@ -159,6 +159,7 @@ public class WalkCompleteScreen : MonoBehaviour
         if (sharing || walk == null)
             return;
         sharing = true;
+        FindAnyObjectByType<GameHUD>()?.Toast("공유 준비 중…");
         StartCoroutine(WalkShare.Share(frame, WalkShare.KindOf(walk.kind, walk.stopsTotal, walk.plannedMeters),
             walk.meters, walk.minutes, walk.visitedBuildingIds, error =>
             {
