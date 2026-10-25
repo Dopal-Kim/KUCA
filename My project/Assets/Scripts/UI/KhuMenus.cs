@@ -592,7 +592,8 @@ public partial class KhuMenus : MonoBehaviour
                 hud?.Toast(grade >= GachaRules.Grade.B ? $"아직 만나지 못한 {GachaRules.Label(grade)} 친구예요. 티켓 5장으로 만나기에서 나와요"
                                                        : "아직 만나지 못한 경희펫이에요. 티켓 1장으로 만나기에서 나와요");
         }).transform;
-        Text no = T(cell, $"No.{number:000}", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft, bold: true);
+        Text no = T(cell, $"{number:000}",   // "No." 를 빼 희귀도 알약("아주 드묾")과 붙지 않게 (REVIEW_v31)
+            KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft, bold: true);
         TopBox(no.rectTransform, 24f, 48f);
         no.rectTransform.offsetMin = new Vector2(24f, no.rectTransform.offsetMin.y);
         GradeChip(cell, grade, right: true);

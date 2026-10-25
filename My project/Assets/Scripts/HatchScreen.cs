@@ -50,7 +50,7 @@ public class HatchScreen : MonoBehaviour
         nameText.text = CreatureLibrary.NameOf(r.species);
         tierText.text = GachaRules.Label(r.grade);
         tierChip.color = GachaRules.ColorOf(r.grade);
-        string what = r.isNew ? "새 경희펫!  도감에 등록됐어요"
+        string what = r.isNew ? "새 친구가 생겼어요!  도감에 적었어요"
             : r.evolved ? $"성장 경험치 +{r.growthAdded}\n{KhuMenus.EvolvedMessage(r.species, r.stage)}"
             : $"이미 있는 경희펫  ·  성장 경험치 +{r.growthAdded}";
         info.text = $"{what}\n남은 티켓 {ticketsLeft}장";

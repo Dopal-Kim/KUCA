@@ -125,8 +125,8 @@ public partial class KhuMenus
         gachaNext = T(tc, "", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         UIKit.Size(gachaNext, 60f);
 
-        singleButton = DrawCard(page.content, "티켓 1장으로 만나기", "흔함 ~ 드묾 친구가 나와요", GachaRules.SingleCost, KucaTheme.Primary, () => Draw(false));
-        premiumButton = DrawCard(page.content, "티켓 5장으로 만나기", "조금 드묾 ~ 아주 드묾, 더 귀한 친구", GachaRules.PremiumCost, KucaTheme.Gold, () => Draw(true));
+        singleButton = DrawCard(page.content, "티켓 1장으로 만나기", "흔함 ~ 드묾 친구 한 마리", GachaRules.SingleCost, KucaTheme.Primary, () => Draw(false));
+        premiumButton = DrawCard(page.content, "티켓 5장으로 만나기", "더 드문 친구 한 마리", GachaRules.PremiumCost, KucaTheme.Gold, () => Draw(true));
 
         Button odds = UIKit.Button(page.content, "확률표 보기", ToggleOdds, new Color(1f, 1f, 1f, 0f), KucaTheme.Label);
         odds.GetComponentInChildren<Text>(true).color = KucaTheme.PrimaryDeep;
