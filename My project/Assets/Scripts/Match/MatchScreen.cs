@@ -20,7 +20,7 @@ public class MatchScreen : MonoBehaviour
 
     static readonly Dictionary<string, string> TasteNames = new Dictionary<string, string>
     {
-        ["photo"] = "사진 명소", ["quiet"] = "조용한 곳", ["food"] = "맛집·카페", ["unvisited"] = "안 가 본 곳",
+        ["photo"] = "사진 명소", ["quiet"] = "조용한 곳", ["food"] = "맛집·카페", ["unvisited"] = "처음 가는 곳",
         ["partner"] = "파트너와 걷기", ["exercise"] = "운동",
     };
 

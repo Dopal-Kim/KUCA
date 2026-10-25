@@ -474,7 +474,7 @@ public class LoginScreen : MonoBehaviour
         privacyPage = UIKit.Rect(panel, "PrivacyPage").gameObject;
         UIKit.Stretch((RectTransform)privacyPage.transform);
         Heading(privacyPage.transform, "개인정보 안내");
-        Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요.", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요. 초록 줄은 민감한 정보예요.", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         Box(ph.rectTransform, G, 254f, G, 60f);
 
         (string item, string use, string keep)[] rows =
@@ -490,11 +490,22 @@ public class LoginScreen : MonoBehaviour
         float top = 330f;
         foreach (var (item, use, keep) in rows)
         {
-            Image row = UIKit.Image(privacyPage.transform, item, Field);
+            // 민감한 셋(성별 · 위치 · 인상착의)은 옅은 초록 + 왼쪽 띠로 먼저 눈에 띄게: 7줄이 같은 무게라 훑기 어려웠음 (REVIEW_v14)
+            bool sensitive = item == "성별" || item == "위치" || item == "인상착의";
+            Image row = UIKit.Image(privacyPage.transform, item, sensitive ? KucaTheme.PrimarySoft : Field);
             row.sprite = HudIcons.Rounded;
             row.type = Image.Type.Sliced;
             row.pixelsPerUnitMultiplier = 0.5f;
             Box(row.rectTransform, G, top, G, 124f);
+            if (sensitive)
+            {
+                Image bar = UIKit.Image(row.transform, "Mark", KucaTheme.Primary);
+                RectTransform br = bar.rectTransform;
+                br.anchorMin = new Vector2(0f, 0.18f);
+                br.anchorMax = new Vector2(0f, 0.82f);
+                br.offsetMin = new Vector2(12f, 0f);
+                br.offsetMax = new Vector2(20f, 0f);
+            }
             Text name = UIKit.Bold(UIKit.Text(row.transform, item, KucaTheme.Label, TextAnchor.UpperLeft, Ink));
             Box(name.rectTransform, 36f, 16f, 36f, 50f);
             Text k = UIKit.Bold(UIKit.Text(row.transform, keep, KucaTheme.Caption, TextAnchor.UpperRight, KucaTheme.PrimaryDeep));

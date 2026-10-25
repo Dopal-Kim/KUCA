@@ -26,7 +26,7 @@ public partial class RoutePlanner : MonoBehaviour
 
     static readonly (int minutes, string label)[] TimeChoices = { (15, "15분"), (30, "30분"), (60, "1시간") };
     static readonly (string id, string label)[] TasteChoices =
-        { ("photo", "사진 명소"), ("quiet", "조용한 곳"), ("food", "맛집·카페"), ("unvisited", "안 가 본 곳") };
+        { ("photo", "사진 명소"), ("quiet", "조용한 곳"), ("food", "맛집·카페"), ("unvisited", "처음 가는 곳") };
 
     /// <summary>한 번에 보여 주는 세 코스. 조건을 조금씩 달리해 서버에 따로 요청한다.</summary>
     static readonly Variant[] Variants =

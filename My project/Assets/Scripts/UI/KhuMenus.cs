@@ -86,10 +86,7 @@ public partial class KhuMenus : MonoBehaviour
 
     // 프로필
     GameObject profile;
-    GameObject profileMe, profileOther;
-    Text profileOtherTitle, profileOtherText;
-    readonly Text[] profileTabs = new Text[3];
-    readonly Image[] profileSegs = new Image[3];
+    GameObject profileMe;
     RawImage profileView;
     RectTransform profileHero;
     RectTransform profileRays;
@@ -955,7 +952,6 @@ public partial class KhuMenus : MonoBehaviour
     public void OpenProfile()
     {
         Show(profile, true);
-        SelectProfileTab(0);
         profileYaw = 0f;
         FillProfile();
         EnsureProfileCamera();
@@ -973,7 +969,7 @@ public partial class KhuMenus : MonoBehaviour
     }
 
     /// <summary>
-    /// 프로필 (참조: 애플 피트니스 요약 · 토스 내 정보): 세그먼트(나 · 프렌드 · 소셜), 캐릭터 3D 카드(이름 아래에서 시작),
+    /// 프로필 (참조: 애플 피트니스 요약 · 토스 내 정보): 캐릭터 3D 카드(이름 아래에서 시작),
     /// 레벨 큰 숫자 + 경험치 막대, 활동 숫자 3개, 아래 목록(지난 파트너 · 스크랩북 · 모험노트 · 꾸미기).
     /// </summary>
     void BuildProfile()
@@ -983,9 +979,7 @@ public partial class KhuMenus : MonoBehaviour
         RectTransform content = page.content;
         ScrollRect scroll = content.GetComponentInParent<ScrollRect>(true);
 
-        Segmented(content, new[] { "나", "프렌드", "소셜" }, 3, SelectProfileTab, profileTabs, null, profileSegs);
-
-        // "나": 세로로 쌓인 카드들
+        // 세로로 쌓인 카드들
         RectTransform me = UIKit.Rect(content, "Me");
         UIKit.Vertical(me, KucaTheme.Space4);
         profileMe = me.gameObject;
@@ -997,12 +991,6 @@ public partial class KhuMenus : MonoBehaviour
         UIKit.ListRow(more, "스크랩북", ShowScrapbook);
         UIKit.ListRow(more, "모험노트", ShowAdventureNote);
         UIKit.ListRow(more, "캐릭터 꾸미기", () => { if (customizer != null) customizer.SetOpen(true); });
-
-        // 프렌드 / 소셜 (준비 중)
-        RectTransform other = UIKit.EmptyState(content, " ", " ");
-        profileOther = other.gameObject;
-        profileOtherTitle = other.GetChild(0).GetComponent<Text>();
-        profileOtherText = other.GetChild(1).GetComponent<Text>();
     }
 
     /// <summary>캐릭터 카드: 위에 이름 · 파트너 · "파트너 바꾸기", 그 아래에 3D 캐릭터 (끌어서 돌리기)</summary>
@@ -1085,18 +1073,6 @@ public partial class KhuMenus : MonoBehaviour
         statWalk = row.GetChild(0).GetComponentInChildren<Text>(true);
         statCaught = row.GetChild(1).GetComponentInChildren<Text>(true);
         statSpots = row.GetChild(2).GetComponentInChildren<Text>(true);
-    }
-
-    void SelectProfileTab(int i)
-    {
-        PaintSegments(i, profileTabs, null, profileSegs);
-        profileMe.SetActive(i == 0);
-        profileOther.SetActive(i != 0);
-        profileOtherTitle.text = i == 1 ? "프렌드는 준비 중이에요" : "소셜은 준비 중이에요";
-        profileOtherText.text = i == 1 ? "같이 캠퍼스를 걷는 친구를 곧 추가할 수 있어요"
-                                       : "다른 학생들의 산책 소식을 곧 볼 수 있어요";
-        if (profileView != null)
-            profileView.enabled = i == 0;
     }
 
     void FillProfile()
