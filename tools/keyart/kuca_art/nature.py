@@ -233,6 +233,8 @@ def draw_lamp(mb, x, z, face_yaw):
 
 def draw_bench(mb, x, z, face_yaw):
     """face_yaw: 앉은 사람이 바라보는 방향 (로컬 +Z)"""
+    from .people import BENCHES
+    BENCHES.append((x, z, face_yaw))   # M29: 학생 인형이 앉을 자리
     m = Frame.yaw((x, 0.0, z), face_yaw)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.25
     for s in (-0.75, 0.75):

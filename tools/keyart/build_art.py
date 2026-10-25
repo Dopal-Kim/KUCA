@@ -18,7 +18,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from kuca_art import buildings as bld, landmarks, nature
+from kuca_art import buildings as bld, landmarks, nature, people
 from kuca_art.geo import MAP_H, MAP_W, load_buildings, load_osm
 from kuca_art.ground import Ground
 from kuca_art.mesh import Layer, round_corners, write_bytes
@@ -95,6 +95,8 @@ def main():
     print('plants', counts, f'({time.time() - t0:.0f}s)')
     print('props', nature.place_props(layer, ground, rng))
     print('pond stones', nature.pond_stones(layer, ground, rng))
+    # M29: 학생 인형 (따로 시드 · 땅 막기 없음 — 나무 · 가로등 배치는 그대로)
+    print('people', people.place_people(layer, ground, entrances, buildings))
 
     ground.paint(os.path.join(OUT, 'CampusGround.jpg'), os.path.join(OUT, 'GrassDetail.png'))
     ground.paint_lights(os.path.join(OUT, 'KeyArtLights.png'), nature.LIGHTS)

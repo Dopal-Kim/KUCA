@@ -430,14 +430,29 @@ def observatory(mb, b, f):
 
 GH_GLASS = (0.72, 0.87, 0.94)
 GH_FRAME = (0.93, 0.95, 0.96)
+# M29: 온실이 위(T)에서 흰 테두리 + 하늘색 지붕이라 다른 건물 유리 천창과 같은 톤 — 사무동처럼 보였음 (MAP_REVIEW_v34 5번)
+#      셰이더가 불투명이라 '비치는' 유리는 색으로: 화분대 위 유리는 초록빛, 통로 위 · 윗벽 유리는 거의 무색 연한 유리
+GH_CLEAR = (0.80, 0.90, 0.89)     # 통로 위 · 윗벽: 하늘빛을 뺀 투명한 연한 유리
+GH_PLANT = (0.58, 0.79, 0.60)     # 화분대 위: 안쪽 초록 식물이 비친 유리
+GH_PLANT2 = (0.50, 0.73, 0.52)
+GH_KNEE = (0.78, 0.77, 0.74)      # 아래 콘크리트 턱
 
 
 def greenhouse_roof(mb, b, f):
-    """원예생물공학온실: 하늘색 유리 박공 여러 줄 (벤로형 연동 온실). 건물 윤곽 안에 들어오는 칸에만 얹는다 (ㄱ자 모양도 맞게)"""
+    """원예생물공학온실: 유리 박공 여러 줄 (벤로형 연동 온실). 건물 윤곽 안에 들어오는 칸에만 얹는다 (ㄱ자 모양도 맞게)
+    M29: 박공마다 용마루 쪽 반은 화분대(초록 줄)가 비친 유리, 골 쪽 반은 통로 위 투명 유리 → 위에서 초록 · 연한 줄무늬.
+         외벽은 Shell(유리 커튼월 셰이더) 0.1 m 바깥에 연한 유리 + 아래 초록 화분대 띠 + 흰 틀을 덧씌운다"""
     from .geo import point_in_poly
+    from .mesh import offset_polygon, triangulate
     (ax, az), length, width = f.long_axis()
     m = Frame.look((f.center[0], b.h, f.center[1]), (ax, 0.0, az))   # 로컬 z = 긴 방향 (용마루 방향)
-    span, seg = 4.0, 4.0
+    span, seg, rise = 4.0, 4.0, 1.6
+    H = b.h
+    # 바닥 유리 판: 박공이 안 덮는 가장자리 칸도 흰 Shell 지붕 대신 투명 유리로
+    for ia, ib, ic in triangulate(b.poly):
+        pa, pb, pc = b.poly[ia], b.poly[ib], b.poly[ic]
+        mb.tri(IDENT, (pa[0], H + 0.03, pa[1]), (pb[0], H + 0.03, pb[1]), (pc[0], H + 0.03, pc[1]), GH_CLEAR,
+               ((pa[0] + pb[0] + pc[0]) / 3, H - 1.0, (pa[1] + pb[1] + pc[1]) / 3))
     nx, nz = max(1, int(width / span)), max(1, int(length / seg))
     for i in range(nx):
         x = -width / 2 + span * (i + 0.5)
@@ -446,9 +461,45 @@ def greenhouse_roof(mb, b, f):
             p = m.p((x, 0.0, z))
             if not point_in_poly(p[0], p[2], b.poly):
                 continue
-            mb.gable(m, (x, 0.0, z), span, seg + 0.02, 1.6, GH_GLASS, True, end_col=GH_GLASS)
-            mb.box(m, (x, 1.62, z), (0.18, 0.12, seg + 0.02), GH_FRAME)   # 용마루 틀
+            z0, z1 = z - seg / 2 - 0.01, z + seg / 2 + 0.01
+            for sgn in (-1, 1):   # 비탈 하나를 골 쪽(투명) · 용마루 쪽(초록) 두 띠로
+                xm, ym = x + sgn * span / 4, rise / 2
+                lit = 1.03 if sgn > 0 else 0.95
+                inside = (x, rise * 0.3, z)
+                mb.quad(m, (x + sgn * span / 2, 0.0, z0), (xm, ym, z0), (xm, ym, z1), (x + sgn * span / 2, 0.0, z1),
+                        shade(GH_CLEAR, lit), inside)
+                mb.quad(m, (xm, ym, z0), (x, rise, z0), (x, rise, z1), (xm, ym, z1),
+                        shade(GH_PLANT if k % 2 else GH_PLANT2, lit), inside)
+            for zz in (z0, z1):
+                mb.tri(m, (x - span / 2, 0.0, zz), (x + span / 2, 0.0, zz), (x, rise, zz), GH_CLEAR, (x, rise * 0.3, z))
+            mb.box(m, (x, rise + 0.02, z), (0.18, 0.12, seg + 0.02), GH_FRAME)   # 용마루 틀
             mb.box(m, (x - span / 2, 0.05, z), (0.16, 0.12, seg + 0.02), GH_FRAME)   # 골 틀
+    # 외벽 덧씌움: 콘크리트 턱 0 ~ 0.6 m, 화분대 띠 0.6 ~ 3.0 m (1 m 칸마다 초록 두 톤), 위는 투명 유리, 흰 틀
+    skin = offset_polygon(b.poly, 0.1)
+    frame = offset_polygon(b.poly, 0.16)
+    n = len(skin)
+    for i in range(n):
+        (x0, z0), (x1, z1) = skin[i], skin[(i + 1) % n]
+        L = math.hypot(x1 - x0, z1 - z0)
+        if L < 0.05:
+            continue
+        cin = ((x0 + x1) / 2 - (frame[i][0] - skin[i][0]) * 10, 1.0, (z0 + z1) / 2 - (frame[i][1] - skin[i][1]) * 10)
+        cells = max(1, round(L))
+        for c in range(cells):
+            t0, t1 = c / cells, (c + 1) / cells
+            a = (x0 + (x1 - x0) * t0, z0 + (z1 - z0) * t0)
+            e = (x0 + (x1 - x0) * t1, z0 + (z1 - z0) * t1)
+            for y0, y1, col in ((0.0, 0.6, GH_KNEE), (0.6, 3.0, GH_PLANT if c % 2 else GH_PLANT2), (3.0, H, GH_CLEAR)):
+                mb.quad(IDENT, (a[0], y0, a[1]), (e[0], y0, e[1]), (e[0], y1, e[1]), (a[0], y1, a[1]), col, (cin[0], (y0 + y1) / 2, cin[2]))
+        (f0x, f0z), (f1x, f1z) = frame[i], frame[(i + 1) % n]
+        for y0, y1 in ((0.55, 0.7), (2.95, 3.1), (H - 0.2, H + 0.05)):   # 가로 틀
+            mb.quad(IDENT, (f0x, y0, f0z), (f1x, y0, f1z), (f1x, y1, f1z), (f0x, y1, f0z), GH_FRAME, (cin[0], (y0 + y1) / 2, cin[2]))
+        for c in range(1, max(1, round(L / 2.0))):   # 세로 틀 (약 2 m)
+            t = c / max(1, round(L / 2.0))
+            px, pz = f0x + (f1x - f0x) * t, f0z + (f1z - f0z) * t
+            dx, dz = (f1x - f0x) / L * 0.07, (f1z - f0z) / L * 0.07
+            mb.quad(IDENT, (px - dx, 0.6, pz - dz), (px + dx, 0.6, pz + dz), (px + dx, H, pz + dz), (px - dx, H, pz - dz), GH_FRAME,
+                    (cin[0], H / 2, cin[2]))
 
 
 def pitched_roof(mb, b, f):
@@ -515,6 +566,23 @@ def amphitheater(mb, f, to_pond, ground):
                 a, rm = center + math.radians(deg), r0 + 1.5 * k + 0.75
                 am = m.child((math.cos(a) * rm, 0, math.sin(a) * rm), 90 - math.degrees(a))
                 mb.box(am, (0, 0.6 * i + 0.3 * (k + 1) + 0.01, 0), (1.6, 0.04, 1.5), shade(STEP, 0.72), top=shade(STEP, 0.72))
+    # M29: 학생 인형이 앉을 객석 줄 (단 뒤쪽 0.9 m, 통로 계단 사이마다 한 줄씩, 무대를 본다)
+    from .people import SEAT_ROWS
+    for i in range(tiers):
+        for k in range(2):
+            rm, y = 12 + i * 3.0 + 1.5 * k + 0.9, 0.6 * i + 0.3 * (k + 1)
+            row = []
+            for j in range(int(2 * spread * rm / 0.75)):
+                a = center - spread + (j + 0.5) * 0.75 / rm
+                if any(abs(a - center - math.radians(deg)) * rm < 1.3 for deg in (-45, 0, 45)):
+                    if len(row) >= 2:
+                        SEAT_ROWS['amphitheater'].append(row)
+                    row = []
+                    continue
+                p, d = m.p((math.cos(a) * rm, y, math.sin(a) * rm)), m.dir((-math.cos(a), 0.0, -math.sin(a)))
+                row.append((p[0], p[1], p[2], math.degrees(math.atan2(d[0], d[2]))))
+            if len(row) >= 2:
+                SEAT_ROWS['amphitheater'].append(row)
     outer = 12 + tiers * 3.0
     # 뒤쪽 둘레 벽
     mb.arc_tier(m, (0, 0, 0), outer, outer + 1.0, center - spread, center + spread, 0.6 * tiers + 1.0, 24, COLUMN)
@@ -776,6 +844,19 @@ def stadium(layer, ground, buildings=()):
                 if k:   # 통로 난간 (앞 블록과의 사이)
                     mb.box(m, (lo + k * bw, top + 0.45, 3 - i * 1.0), (0.25, 0.9, 1.0), (0.42, 0.45, 0.50))
             mb.box(m, (bx, 3.2, -6.9), (bw, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
+            # M29: 학생 인형이 앉을 좌석 줄 (블록 · 단마다, 본부석 지붕 밑은 위에서 안 보여 뺌)
+            from .people import SEAT_ROWS
+            fd = m.dir((0.0, 0.0, 1.0))
+            for i in range(10):
+                row = []
+                for j in range(int((bw - 3.0) / 0.75)):
+                    lx = bx - (bw - 3.0) / 2 + (j + 0.5) * 0.75
+                    if main and -length * 0.2 - 1 < lx < length * 0.2 + 1:
+                        continue
+                    p = m.p((lx, 0.55 * (i + 1) + 0.3, 3 - i * 1.0 - 0.05))
+                    row.append((p[0], p[1], p[2], math.degrees(math.atan2(fd[0], fd[2]))))
+                if row:
+                    SEAT_ROWS['stadium'].append(row)
             # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
             mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), STAND_ROOF, top=shade(STAND_ROOF, 1.04))
         n6 = max(1, int((hi - lo) / 6))

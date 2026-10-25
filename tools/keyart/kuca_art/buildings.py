@@ -212,11 +212,18 @@ def build_details(buildings, layer, shells, entrances, skip_ids, rng):
         small = b.area < 80
         mb.ao_floor, mb.ao_strength = 0.0, 0.25
         # 기단: 바깥으로 0.35 m, 높이 0.9 m
-        mb.band(b.poly, 0.0, 0.9, 0.35, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
+        acc = ACCENT.get(b.id)
+        if acc:
+            # M29: 큰 건물 몇 곳만 기단을 돌 띠로 (1.3 m) + 1층 위 가는 돌 띠 — 같은 흰 벽 · 같은 창 줄에서 건물이 갈리게 (추정)
+            fh1 = floor_height(style)
+            mb.band(b.poly, 0.0, 1.3, 0.35, 0.0, acc[0], top_col=shade(acc[0], 1.1))
+            mb.band(b.poly, fh1 - 0.2, fh1 + 0.2, 0.14, 0.0, acc[0], top_col=shade(acc[0], 1.1))
+        else:
+            mb.band(b.poly, 0.0, 0.9, 0.35, 0.0, pal['base'], top_col=shade(pal['base'], 1.12))
         mb.ao_strength = 0.0
         if not small:
             # 코니스 (지붕 1 m 아래 내민 띠)
-            mb.band(b.poly, H - 1.1, H - 0.55, 0.32, 0.0, pal['trim'])
+            mb.band(b.poly, H - 1.1, H - 0.55, 0.32, 0.0, acc[1] if acc else pal['trim'])
         # 옥상 난간: 지붕 위 1.0 m, 안쪽 두께 0.45 m
         par_h = 0.6 if small else 1.0
         mb.band(b.poly, H - 0.05, H + par_h, 0.12, 0.45, pal['trim'], top_col=shade(pal['trim'], 1.04),
@@ -511,6 +518,19 @@ FLUSH_BAY = {'way-585696507'}
 PAIRED_UNITS = {'way-474085534'}
 # M28: 낱개 실외기를 흩지 않고 지붕 양 끝 두 곳에 세 대씩 모을 건물 (체육대학관 — 지붕 가운데 옥상 트랙 둘레에 고르게 흩어져 장식처럼 보였음)
 CLUSTER_UNITS = {'way-455726113'}
+# M29: 건물마다 같은 흰 벽 · 연베이지 지붕이라 위에서 모양으로만 갈렸음 (MAP_REVIEW_v34 2번). 외벽 재료 근거가 기록에 있는 건물
+#   (선승관 · 도예관 벽돌, 석재 셋 · 회색 석재 둘)은 이미 M1 에서 반영 — 그 밖엔 근거가 없어 외벽은 그대로 두고
+#   큰 건물 셋만 기단 돌 띠 · 1층 위 돌 띠 · 코니스 색을 은은하게 (모두 추정): 건물 id → (돌 띠 색, 코니스 색)
+ACCENT = {
+    'way-455725718': ((0.60, 0.62, 0.65), (0.80, 0.83, 0.87)),     # 공학관: 청회색 화강석 기단 + 차가운 회색 코니스
+    'relation-8269760': ((0.66, 0.63, 0.60), (0.70, 0.84, 0.84)),  # 우정원: 따뜻한 회색 기단 + 청록 계단탑 쪽 연청록 코니스
+    'way-474085535': ((0.70, 0.68, 0.64), (0.86, 0.84, 0.79)),     # 학생회관: 연회색 석재 기단 + 한 톤 낮은 코니스
+}
+# M29: 넓은 평지붕이 베이지 판에 작은 환기구만 (MAP_REVIEW_v34 3번) — 위 덩어리가 있어 묶음 규칙(_plant_yard)에서 빠졌던 건물
+#   우정원: 계단탑이 지붕 위로 올라와 묶음이 막혔음 → 본 지붕에 (옥상정원 · 탑 자리는 free() 가 피함)
+#   체육대학관 · 공학관: 양 끝 덩어리(체육대 파빌리온 · 공학관 날개) 지붕마다 하나씩 (가운데 트랙 · 계단탑은 본 지붕이라 안 겹침)
+YARD_MAIN = {'relation-8269760'}
+YARD_ENDS = {'way-455726113', 'way-455725718'}
 
 
 def _hut_box(mb, m, sx, sz):
@@ -682,7 +702,8 @@ def _rooftop(mb, b, style, blocks, rng):
     landmark_roof = MASSING.get(b.id) == 'none' and b.id not in ROOF_FEATURE   # 선승관: 지붕을 랜드마크가 그림
     # M15: 태양광 지붕엔 실외기 묶음 · 환기구를 두지 않는다 — 학생회관이 패널 + 묶음 + 낱개 실외기 + 환기구로 어수선했음 (REVIEW_v20)
     yard = False
-    if (b.area > 2500 or feature == 'yard') and not landmark_roof and feature != 'solar' and not any(top > H for _, top in blocks):
+    if (b.area > 2500 or feature == 'yard') and not landmark_roof and feature != 'solar' and \
+            (b.id in YARD_MAIN or not any(top > H for _, top in blocks)):
         n_blocks = len(blocks)
         blocks = _plant_yard(mb, b, fp, at, yaw, free, blocks, hut)
         yard = len(blocks) > n_blocks
@@ -730,6 +751,25 @@ def _rooftop(mb, b, style, blocks, rng):
         m = Frame.yaw((x, H, z), yaw)
         mb.box(m, (0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
         mb.box(m, (0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
+    if b.id in YARD_ENDS:
+        # M29: 양 끝 덩어리(반 층 위) 지붕을 작은 건물 하나로 보고 같은 묶음 규칙 (높이 · 외곽 · 축만 그 덩어리 것)
+        half = floor_height(style) * 0.5
+        for part, top in blocks:
+            if abs(top - H - half) > 0.01:
+                continue   # 계단탑 · 옥상 트랙 자리는 빼고 양 끝 덩어리만
+            pf = Footprint(part, top)
+            area = abs(sum(part[i - 1][0] * part[i][1] - part[i][0] * part[i - 1][1] for i in range(len(part)))) / 2
+            sub = type('Part', (), {'poly': part, 'h': top, 'id': b.id, 'area': area})
+
+            def p_at(su, sv, pf=pf):
+                return pf.center[0] + pf.u[0] * su + pf.v[0] * sv, pf.center[1] + pf.u[1] * su + pf.v[1] * sv
+
+            def p_free(x, z, r, part=part):
+                return point_in_poly(x, z, part) and dist_to_poly_edge(x, z, part) > r + 1.5
+            mb.ao_floor = top
+            n_before = mb.tri_count
+            _plant_yard(mb, sub, pf, p_at, math.degrees(math.atan2(pf.u[0], pf.u[1])), p_free, [])
+            print('rooftop: 양 끝 덩어리 묶음', b.id, round(area), mb.tri_count > n_before)
     mb.ao_floor, mb.ao_height = 0.0, 2.0
 
 
