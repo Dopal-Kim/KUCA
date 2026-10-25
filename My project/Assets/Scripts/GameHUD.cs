@@ -149,7 +149,7 @@ public class GameHUD : MonoBehaviour
         toastBg.gameObject.SetActive(false);
 
         noticeScreen = BuildScreen("NoticeScreen", "공지사항", CloseNotices, out _, out noticeList);
-        settingsScreen = BuildScreen("SettingsScreen", "설정", CloseSettings, out _, out settingsList);
+        settingsScreen = BuildLightScreen("SettingsScreen", "설정", CloseSettings, out settingsList);
         BackButton.Attach(noticeScreen, CloseNotices);
         BackButton.Attach(settingsScreen, CloseSettings);
         BuildSettings();
@@ -867,59 +867,66 @@ public class GameHUD : MonoBehaviour
 
     void CloseSettings() => SetScreen(settingsScreen, false, null);
 
+    // ---------- 설정 (산책 길잡이와 같은 흰 바탕 · 파란 선택 단추, 디자인 평가 10/25) ----------
+
+    static readonly Color LightPage = new Color(0.98f, 0.98f, 1f);
+    static readonly Color LightInk = new Color(0.11f, 0.11f, 0.12f);
+    static readonly Color LightQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
+    static readonly Color LightChip = new Color(0.94f, 0.95f, 0.96f);
+    static readonly Color LightBlue = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color LightDanger = new Color(0.86f, 0.24f, 0.26f);
+
     void BuildSettings()
     {
-        Image nickCard = Card(settingsList, "NicknameCard");
-        UIKit.Vertical(nickCard, 18f, new RectOffset(40, 40, 32, 36));
-        UIKit.Text(nickCard.transform, "닉네임", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
-        RectTransform row = UIKit.Rect(nickCard.transform, "Row");
+        LightHeading(settingsList, "닉네임");
+        RectTransform row = UIKit.Rect(settingsList, "NicknameRow");
         UIKit.Size(row, 110f);
         var h = UIKit.Horizontal(row, 20f);
         h.childForceExpandWidth = false;
-        nicknameInput = UIKit.Input(row, defaultNickname, 40, false, 12);
+        nicknameInput = LightInput(row, defaultNickname, 12);
         UIKit.Size(nicknameInput, 110f, -1f, 1f);
-        Button save = UIKit.Button(row, "저장", SaveNickname, UIKit.Accent, 40);
-        UIKit.Size(save, 110f, 200f);
-        UIKit.Text(nickCard.transform, "메모를 남길 때도 이 이름이 쓰여요.", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
+        Button save = LightPill(row, "저장", LightBlue, Color.white, SaveNickname);
+        UIKit.Size(save, 110f, 190f);
+        UIKit.Size(UIKit.Text(settingsList, "메모를 남길 때도 이 이름이 쓰여요.", 28, TextAnchor.MiddleLeft, LightQuiet), 44f);
 
         // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버). 개발용이라 에디터 · 개발 빌드에서만 보인다
         // (일반 사용자가 잘못 바꾸면 서버와 끊긴다, 디자인 평가 10/25)
-        Image serverCard = Card(settingsList, "ServerCard");
-        serverCard.gameObject.SetActive(Application.isEditor || Debug.isDebugBuild);
-        UIKit.Vertical(serverCard, 18f, new RectOffset(40, 40, 32, 36));
-        UIKit.Text(serverCard.transform, "메모 서버", 34, TextAnchor.MiddleLeft, UIKit.Quiet);
-        RectTransform srow = UIKit.Rect(serverCard.transform, "Row");
+        bool dev = Application.isEditor || Debug.isDebugBuild;
+        RectTransform serverBlock = UIKit.Rect(settingsList, "ServerBlock");
+        UIKit.Vertical(serverBlock, 16f);
+        serverBlock.gameObject.SetActive(dev);
+        LightHeading(serverBlock, "메모 서버  <size=26><color=#8C8C91>개발용</color></size>");
+        RectTransform srow = UIKit.Rect(serverBlock, "ServerRow");
         UIKit.Size(srow, 110f);
         var sh = UIKit.Horizontal(srow, 20f);
         sh.childForceExpandWidth = false;
-        serverInput = UIKit.Input(srow, "비우면 기본 서버", 36, false, 80);
+        serverInput = LightInput(srow, "비우면 기본 서버", 80);
         serverInput.keyboardType = TouchScreenKeyboardType.URL;
         UIKit.Size(serverInput, 110f, -1f, 1f);
-        Button check = UIKit.Button(srow, "연결", SaveServer, UIKit.Accent, 38);
-        UIKit.Size(check, 110f, 200f);
-        serverStatus = UIKit.Text(serverCard.transform, "", 28, TextAnchor.MiddleLeft, UIKit.Quiet);
+        Button check = LightPill(srow, "연결", LightBlue, Color.white, SaveServer);
+        UIKit.Size(check, 110f, 190f);
+        serverStatus = UIKit.Text(serverBlock, "", 26, TextAnchor.MiddleLeft, LightQuiet);
+        UIKit.Size(serverStatus, 44f);
 
-        Image optCard = Card(settingsList, "OptionsCard");
-        UIKit.Vertical(optCard, 18f, new RectOffset(40, 40, 32, 36));
-        Button custom = UIKit.Button(optCard.transform, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(custom, 110f);
-        Button north = UIKit.Button(optCard.transform, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(north, 110f);
-        Button prefs = UIKit.Button(optCard.transform, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(prefs, 110f);
-        Button privacy = UIKit.Button(optCard.transform, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); }, UIKit.ButtonGray, 38);
-        UIKit.Size(privacy, 110f);
-        // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        LightHeading(settingsList, "내 산책");
+        LightRow(settingsList, "캐릭터 꾸미기", () => { CloseSettings(); OpenCustomizer(); });
+        LightRow(settingsList, "산책 취향 다시 고르기", () => { CloseSettings(); PreferenceSurvey.Open(); });
         // 체험 계정만: 캠퍼스 밖에서도 정문부터 가상으로 걸어 보기 (공모전 심사 설명용)
-        virtualWalkButton = UIKit.Button(optCard.transform, "가상 산책 켜기 (체험 계정)", () =>
+        virtualWalkButton = LightRow(settingsList, "가상 산책 켜기 (체험 계정)", () =>
         {
             CloseSettings();
             var v = VirtualWalk.Instance;
             if (v == null) return;
             if (v.On) v.Stop(); else v.Begin();
-        }, UIKit.ButtonGray, 38);
-        UIKit.Size(virtualWalkButton, 110f);
-        logoutButton = UIKit.Button(optCard.transform, "로그아웃", () =>
+        });
+
+        LightHeading(settingsList, "지도");
+        LightRow(settingsList, "지도 북쪽으로 돌리기", () => { CloseSettings(); if (cameraFollow != null) cameraFollow.ResetNorthUp(); });
+
+        LightHeading(settingsList, "계정");
+        LightRow(settingsList, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); });
+        // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
+        logoutButton = LightRow(settingsList, "로그아웃", () =>
         {
             bool guest = AuthService.Current != null && AuthService.Current.isGuest;
             ConfirmDialog.Show(guest ? "체험을 끝내고 로그인할까요?" : "로그아웃할까요?",
@@ -929,14 +936,107 @@ public class GameHUD : MonoBehaviour
                     CloseSettings();
                     StartCoroutine(AuthService.Logout(LoginScreen.Begin));
                 });
-        }, UIKit.ButtonGray, 38);
-        logoutButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);   // 되돌리기 어려운 동작은 빨간 글자
-        UIKit.Size(logoutButton, 110f);
-        deleteAccountButton = UIKit.Button(optCard.transform, "회원 탈퇴", DeleteAccount, UIKit.ButtonGray, 38);
-        deleteAccountButton.GetComponentInChildren<Text>().color = new Color(0.95f, 0.45f, 0.45f);
-        UIKit.Size(deleteAccountButton, 110f);
+        }, LightDanger);   // 되돌리기 어려운 동작은 빨간 글자
+        deleteAccountButton = LightRow(settingsList, "회원 탈퇴", DeleteAccount, LightDanger);
 
-        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", 28, TextAnchor.MiddleCenter, UIKit.Quiet), 80f);
+        UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", 26, TextAnchor.MiddleCenter, LightQuiet), 90f);
+    }
+
+    /// <summary>흰 바탕 전체 화면: 왼쪽 위 굵은 제목, 오른쪽 위 X, 아래로 스크롤되는 목록 (산책 길잡이 · 산책메이트와 같은 모양)</summary>
+    GameObject BuildLightScreen(string name, string titleText, UnityEngine.Events.UnityAction onClose, out RectTransform list)
+    {
+        Image root = UIKit.Image(canvas.transform, name, LightPage, raycast: true);
+        UIKit.Stretch(root.rectTransform);
+        RectTransform inner = UIKit.Rect(root.transform, "Inner");
+        inner.anchorMin = safe.anchorMin;
+        inner.anchorMax = safe.anchorMax;
+        inner.offsetMin = inner.offsetMax = Vector2.zero;
+
+        Text title = UIKit.Text(inner, titleText, 52, TextAnchor.MiddleLeft, LightInk);
+        title.fontStyle = FontStyle.Bold;
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = new Vector2(1f, 1f);
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(60f, -150f);
+        tr.offsetMax = new Vector2(-160f, -50f);
+
+        Image close = UIKit.Image(inner, "Close", new Color(0f, 0f, 0f, 0f), raycast: true);
+        Place(close.rectTransform, new Vector2(1f, 1f), new Vector2(-36f, -54f));
+        close.rectTransform.sizeDelta = new Vector2(92f, 92f);
+        close.gameObject.AddComponent<Button>().onClick.AddListener(onClose);
+        Image ci = UIKit.Image(close.transform, "Icon", LightInk);
+        ci.sprite = HudIcons.Close;
+        Place(ci.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        ci.rectTransform.sizeDelta = new Vector2(42f, 42f);
+
+        RectTransform area = UIKit.Rect(inner, "List");
+        UIKit.StretchBetween(area, 0f, 170f);
+        list = UIKit.ScrollList(area, 16f, new RectOffset(50, 50, 10, 80));
+        root.gameObject.SetActive(false);
+        return root.gameObject;
+    }
+
+    static void LightHeading(Transform parent, string text)
+    {
+        Text t = UIKit.Text(parent, text, 36, TextAnchor.LowerLeft, LightInk);
+        t.fontStyle = FontStyle.Bold;
+        UIKit.Size(t, 76f);
+    }
+
+    /// <summary>회색 둥근 칸 안의 입력 (검은 글자)</summary>
+    static InputField LightInput(Transform parent, string placeholder, int limit)
+    {
+        InputField input = UIKit.Input(parent, placeholder, 36, false, limit);
+        Image bg = input.GetComponent<Image>();
+        bg.color = LightChip;
+        bg.sprite = HudIcons.Rounded;
+        bg.type = Image.Type.Sliced;
+        bg.pixelsPerUnitMultiplier = 0.7f;
+        input.textComponent.color = LightInk;
+        ((Text)input.placeholder).color = LightQuiet;
+        return input;
+    }
+
+    static Button LightPill(Transform parent, string label, Color face, Color ink, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = UIKit.Button(parent, label, onClick, face, 36);
+        Image img = b.GetComponent<Image>();
+        img.sprite = HudIcons.Pill;
+        img.type = Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 120f / 110f;
+        Text t = b.GetComponentInChildren<Text>();
+        t.color = ink;
+        t.fontStyle = FontStyle.Bold;
+        b.gameObject.AddComponent<PressScale>();
+        return b;
+    }
+
+    /// <summary>누르면 열리는 한 줄 (회색 둥근 칸, 왼쪽 이름, 오른쪽 ›). 산책 길잡이의 "출발 · 도착" 줄과 같은 모양</summary>
+    static Button LightRow(Transform parent, string label, UnityEngine.Events.UnityAction onClick, Color? ink = null)
+    {
+        Image row = UIKit.Image(parent, label, LightChip, raycast: true);
+        row.sprite = HudIcons.Rounded;
+        row.type = Image.Type.Sliced;
+        row.pixelsPerUnitMultiplier = 0.7f;
+        UIKit.Size(row, 108f);
+        var b = row.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        row.gameObject.AddComponent<PressScale>();
+        Text t = UIKit.Text(row.transform, label, 34, TextAnchor.MiddleLeft, ink ?? LightInk);   // 첫 글자 = UIKit.SetLabel 이 바꾸는 이름
+        RectTransform r = t.rectTransform;
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = Vector2.one;
+        r.offsetMin = new Vector2(40f, 0f);
+        r.offsetMax = new Vector2(-90f, 0f);
+        Text arrow = UIKit.Text(row.transform, "›", 44, TextAnchor.MiddleRight, ink ?? LightBlue);
+        RectTransform ar = arrow.rectTransform;
+        ar.anchorMin = Vector2.zero;
+        ar.anchorMax = Vector2.one;
+        ar.offsetMin = new Vector2(0f, 4f);
+        ar.offsetMax = new Vector2(-40f, 0f);
+        return b;
     }
 
     string DefaultMemoServer
@@ -953,7 +1053,7 @@ public class GameHUD : MonoBehaviour
         bool custom = PlayerPrefs.HasKey(MemoBoard.ServerUrlKey);
         string url = custom ? PlayerPrefs.GetString(MemoBoard.ServerUrlKey) : DefaultMemoServer;
         serverInput.text = custom ? url : "";
-        serverStatus.color = UIKit.Quiet;
+        serverStatus.color = LightQuiet;
         serverStatus.text = custom
             ? $"지금 쓰는 서버: {url}  (비우고 연결을 누르면 기본 서버로)"
             : $"기본 서버를 쓰고 있어요: {url}";
@@ -971,20 +1071,20 @@ public class GameHUD : MonoBehaviour
             Toast("기본 메모 서버를 써요");
             return;
         }
-        serverStatus.color = UIKit.Quiet;
+        serverStatus.color = LightQuiet;
         serverStatus.text = "연결 확인 중…";
         StartCoroutine(HttpMemoService.Check(url, (ok, error) =>
         {
             if (!ok)
             {
-                serverStatus.color = new Color(1f, 0.55f, 0.55f);
+                serverStatus.color = LightDanger;
                 serverStatus.text = error;
                 return;
             }
             PlayerPrefs.SetString(MemoBoard.ServerUrlKey, url);
             PlayerPrefs.Save();
             RefreshServerStatus();
-            serverStatus.color = new Color(0.55f, 0.9f, 0.65f);
+            serverStatus.color = new Color(0.18f, 0.62f, 0.36f);
             serverStatus.text = $"연결됐어요: {url}";
             Toast("메모 서버에 연결했어요");
         }));
