@@ -209,8 +209,9 @@ public class WalkCompleteScreen : MonoBehaviour
         Vector2 size = overlay.rect.size;
         TopMap.Polyline(overlay, cam, size, track, 19f, new Color(1f, 1f, 1f, 0.95f));
         TopMap.Polyline(overlay, cam, size, track, 12f, color, true);
-        TopMap.Marker(overlay, cam, size, track[0], Ink, "출발", 74f);
-        TopMap.Marker(overlay, cam, size, track[track.Count - 1], color, "끝", 64f);
+        // 공유 그림 · 작은 폰에서도 읽히게 코스 지도(74)보다 크게 (REVIEW_v40: "출발" 글자가 작음)
+        TopMap.Marker(overlay, cam, size, track[0], Ink, "출발", 100f);
+        TopMap.Marker(overlay, cam, size, track[track.Count - 1], color, "끝", 80f);
     }
 
     IEnumerator DrawRecap(List<Vector3> track, Color color)
