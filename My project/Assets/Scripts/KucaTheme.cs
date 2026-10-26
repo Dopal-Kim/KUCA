@@ -22,6 +22,8 @@ public static class KucaTheme
     public static readonly Color InkMuted = Hex(0x4E5968);     // 보조 글자 (대비 7.4)
     public static readonly Color InkSoft = Hex(0x8B95A1);      // 비활성 글자 · 아이콘 · 자리표시
     public static readonly Color Primary = Hex(0x2B7A4B);      // 캠퍼스 초록: 주요 버튼 (흰 글자 대비 5.3)
+    public static readonly Color KakaoYellow = Hex(0xFEE500);  // 카카오 버튼 (카카오 디자인 가이드 색)
+    public static readonly Color KakaoInk = Hex(0x191919);
     public static readonly Color PrimaryDeep = Hex(0x1E5E3B);  // 눌림 · 초록 글자
     public static readonly Color PrimarySoft = Hex(0xE6F2EA);  // 선택된 칩 · 옅은 강조 바탕
     public static readonly Color Gold = Hex(0xF2B630);         // 별 · 보상 · 티켓
