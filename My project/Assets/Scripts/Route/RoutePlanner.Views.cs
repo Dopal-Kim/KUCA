@@ -662,6 +662,7 @@ public partial class RoutePlanner
         UIKit.StretchBetween(area, bottomH, 176f);
         int g = (int)KucaTheme.Gutter;
         content = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset(g, g, 8, (int)KucaTheme.Space6));
+        UIKit.MoreBelow(pr, area, bottomH);   // 버튼 위에서 반쯤 잘린 제목이 깨져 보였음 (REVIEW_v45)
         dim.gameObject.SetActive(false);
         return dim.gameObject;
     }

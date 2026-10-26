@@ -161,7 +161,7 @@ public class WalkHistoryScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkHistoryCanvas", 50);
-        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " ");
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " \n ");   // 두 줄: 이번 주 요약 + 색 범례
         root = page.root;
         summary = page.subtitle;
         summary.supportRichText = true;   // 색 범례 ■ (UIKit.Text 는 기본으로 꺼 둠)

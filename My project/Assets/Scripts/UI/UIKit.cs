@@ -179,7 +179,9 @@ public static class UIKit
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         // 위: 뒤로 + 큰 제목 + 부제
-        float headH = 150f + (string.IsNullOrEmpty(title) ? 0f : 100f) + (string.IsNullOrEmpty(subtitle) ? 0f : 70f);
+        // 부제가 여러 줄이면 (자리 잡기용 " \n " 포함) 한 줄에 48 씩 더 (두 줄 부제가 첫 카드에 붙었음, REVIEW_v45)
+        float subExtra = string.IsNullOrEmpty(subtitle) ? 0f : (subtitle.Split('\n').Length - 1) * 48f;
+        float headH = 150f + (string.IsNullOrEmpty(title) ? 0f : 100f) + (string.IsNullOrEmpty(subtitle) ? 0f : 70f) + subExtra;
         RectTransform head = Rect(safe, "Header");
         head.anchorMin = new Vector2(0f, 1f);
         head.anchorMax = Vector2.one;
@@ -197,7 +199,7 @@ public static class UIKit
         if (!string.IsNullOrEmpty(subtitle))
         {
             page.subtitle = Text(head, subtitle, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
-            Box(page.subtitle.rectTransform, KucaTheme.Gutter, 250f, 64f);
+            Box(page.subtitle.rectTransform, KucaTheme.Gutter, 250f, 64f + subExtra);
         }
 
         // 아래 고정 버튼 칸 (버튼 수만큼 세로로)
@@ -232,31 +234,7 @@ public static class UIKit
             dr.offsetMin = Vector2.zero;
             dr.offsetMax = new Vector2(0f, 2f);
             divider.enabled = false;
-            // 아래로 더 있으면 아래 끝에 구분선 + 위로 옅어지는 그림자: 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14).
-            // 바탕색으로 흐리게 하던 v15 는 흰 카드 → #F2F4F6 라 눈에 안 띄었음
-            RawImage shade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            shade.transform.SetParent(safe, false);
-            shade.texture = FadeUp;
-            shade.color = new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.22f);
-            shade.raycastTarget = false;
-            RectTransform sr = shade.rectTransform;
-            sr.anchorMin = Vector2.zero;
-            sr.anchorMax = new Vector2(1f, 0f);
-            sr.pivot = new Vector2(0.5f, 0f);
-            sr.offsetMin = new Vector2(0f, bottomH);
-            sr.offsetMax = new Vector2(0f, bottomH + 48f);
-            Image line = Image(shade.transform, "Line", KucaTheme.InkSoft);
-            RectTransform lr = line.rectTransform;
-            lr.anchorMin = Vector2.zero;
-            lr.anchorMax = new Vector2(1f, 0f);
-            lr.pivot = new Vector2(0.5f, 0f);
-            lr.offsetMin = Vector2.zero;
-            lr.offsetMax = new Vector2(0f, 2f);
-            shade.gameObject.SetActive(false);
-            var edges = area.gameObject.AddComponent<ScrollEdges>();
-            edges.scroll = area.GetComponent<ScrollRect>();
-            edges.top = divider;
-            edges.bottom = shade.gameObject;
+            MoreBelow(safe, area, bottomH, divider);
         }
         else
         {
@@ -265,6 +243,37 @@ public static class UIKit
         }
         page.root.SetActive(false);
         return page;
+    }
+
+    /// <summary>
+    /// 스크롤 영역 아래에 더 있으면 아래 끝에 구분선 + 위로 옅어지는 그림자 (bottomH 위에), 위로 밀렸으면 topDivider 를 켠다.
+    /// 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14). 바탕색으로 흐리게 하던 v15 는 흰 카드 → #F2F4F6 라 눈에 안 띄었음
+    /// </summary>
+    public static void MoreBelow(Transform parent, RectTransform scrollArea, float bottomH, Behaviour topDivider = null)
+    {
+        RawImage shade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+        shade.transform.SetParent(parent, false);
+        shade.texture = FadeUp;
+        shade.color = new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.22f);
+        shade.raycastTarget = false;
+        RectTransform sr = shade.rectTransform;
+        sr.anchorMin = Vector2.zero;
+        sr.anchorMax = new Vector2(1f, 0f);
+        sr.pivot = new Vector2(0.5f, 0f);
+        sr.offsetMin = new Vector2(0f, bottomH);
+        sr.offsetMax = new Vector2(0f, bottomH + 48f);
+        Image line = Image(shade.transform, "Line", KucaTheme.InkSoft);
+        RectTransform lr = line.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = new Vector2(1f, 0f);
+        lr.pivot = new Vector2(0.5f, 0f);
+        lr.offsetMin = Vector2.zero;
+        lr.offsetMax = new Vector2(0f, 2f);
+        shade.gameObject.SetActive(false);
+        var edges = scrollArea.gameObject.AddComponent<ScrollEdges>();
+        edges.scroll = scrollArea.GetComponent<ScrollRect>();
+        edges.top = topDivider;
+        edges.bottom = shade.gameObject;
     }
 
     /// <summary>아이콘만 있는 둥근 터치 영역 (‹ 뒤로 · × 닫기 등). flip: 좌우 뒤집기 (› 를 ‹ 로)</summary>
