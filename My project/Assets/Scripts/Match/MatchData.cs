@@ -24,6 +24,46 @@ public class MatchPartner
     public List<string> commonTastes = new List<string>();
     /// <summary>chatty · some · quiet</summary>
     public string talkStyle;
+    /// <summary>왜 둘을 연결했는지 한 줄 (서버 AI, 실패하면 공통점 틀 문장)</summary>
+    public string whyMatched;
+}
+
+/// <summary>스몰토크 카드 한 장 (서버 smalltalkCards). topic: 공강 · 학식 · 전공 · 캠퍼스 장소 · 계절 · 날씨 · 취향 · 대화</summary>
+[Serializable]
+public class TopicCard
+{
+    public string text;
+    public string topic;
+    public string emoji;
+
+    public static TopicCard Plain(string text) => new TopicCard { text = text, topic = "대화", emoji = "💬" };
+}
+
+[Serializable]
+public class CourseStop
+{
+    public string buildingId;
+    public string name;
+    public string reason;
+    public int walkMinutes;
+    public int distanceM;
+}
+
+/// <summary>
+/// 함께 걸을 코스 (서버 course). 둘 다 "이 코스 좋아요" 를 누르면 confirmed.
+/// "다른 코스" 는 changesLeft 번 더 볼 수 있고, 바꾸면 두 사람의 동의가 지워진다.
+/// </summary>
+[Serializable]
+public class MatchCourse
+{
+    public string recommendationId;
+    public string title;
+    public string source;
+    public List<CourseStop> stops = new List<CourseStop>();
+    public int totalDistanceM;
+    public int totalMinutes;
+    public bool myAgree, partnerAgree, confirmed;
+    public int changesLeft;
 }
 
 [Serializable]
@@ -50,6 +90,12 @@ public class MatchState
     public bool partnerAccepted;
     public MeetSpot spot;
     public List<string> smalltalk = new List<string>();
+    /// <summary>smalltalk 와 같은 주제에 분류 · 이모지를 붙인 것 (서버가 안 주면 비어 있음)</summary>
+    public List<TopicCard> cards = new List<TopicCard>();
+    /// <summary>함께 걸을 코스 (meeting · walking). 서버가 만드는 몇 초 동안은 null</summary>
+    public MatchCourse course;
+    /// <summary>기다리는 동안 나 말고 지금 짝을 찾는 사람 수 (-1 = 모름)</summary>
+    public int nowSearching = -1;
     public string myLook;
     public string partnerLook;
     public int noShowSecondsLeft;
@@ -59,6 +105,9 @@ public class MatchState
     public string walkId;
     /// <summary>만남 스팟 도착 여부 (서버)</summary>
     public bool meArrived, partnerArrived;
+
+    /// <summary>코스가 왔는지 (JsonUtility 는 없는 객체도 빈 객체로 채우므로 ID 로 본다)</summary>
+    public bool HasCourse => course != null && !string.IsNullOrEmpty(course.recommendationId);
 
     /// <summary>대기 · 제안 · 만남 · 산책 중 (화면을 닫아도 계속 지켜볼 상태)</summary>
     public bool Active => status == Waiting || status == Proposed || status == Accepted || status == Matched || status == Walking;
@@ -77,8 +126,12 @@ public interface IMatchService
     IEnumerator Status(Action<MatchState, string> onDone);
     IEnumerator Respond(string matchId, bool accept, Action<MatchState, string> onDone);
     IEnumerator SetLook(string matchId, string look, Action<MatchState, string> onDone);
-    /// <summary>다음 스몰토크 주제. onDone(주제, 에러)</summary>
-    IEnumerator NextTopic(string matchId, Action<string, string> onDone);
+    /// <summary>다음 스몰토크 주제 카드. onDone(카드, 에러)</summary>
+    IEnumerator NextTopic(string matchId, Action<TopicCard, string> onDone);
+    /// <summary>"이 코스 좋아요" (둘 다 누르면 확정)</summary>
+    IEnumerator AgreeCourse(string matchId, Action<MatchState, string> onDone);
+    /// <summary>"다른 코스 보기" (두 사람의 동의가 지워진다)</summary>
+    IEnumerator NextCourse(string matchId, Action<MatchState, string> onDone);
     IEnumerator StartWalk(string matchId, Action<MatchState, string> onDone);
     /// <summary>산책 끝내기 → ended (완료 · 리뷰 · 보상은 B-V4 / C-V4)</summary>
     IEnumerator End(string matchId, Action<MatchState, string> onDone);

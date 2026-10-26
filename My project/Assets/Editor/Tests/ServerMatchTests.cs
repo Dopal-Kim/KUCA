@@ -51,4 +51,35 @@ public class ServerMatchTests
         Assert.AreEqual(MatchState.Cancelled, HttpMatchService.Parse("{\"state\":\"ended\",\"endReason\":\"noshow\"}").status);
         Assert.IsNull(HttpMatchService.Parse("not json"));
     }
+
+    [Test]
+    public void 대기_인원과_AI_매칭_이유를_옮긴다()
+    {
+        MatchState w = HttpMatchService.Parse("{\"state\":\"waiting\",\"waitingUntil\":\"2099-01-01T00:00:00Z\",\"nowSearching\":2}");
+        Assert.AreEqual(2, w.nowSearching);
+        Assert.AreEqual(-1, HttpMatchService.Parse("{\"state\":\"waiting\"}").nowSearching);   // 예전 서버: 모름
+
+        MatchState p = HttpMatchService.Parse("{\"state\":\"proposed\",\"partner\":{\"nickname\":\"민지\",\"whyMatched\":\"둘 다 사진 찍기를 좋아해서 연결했어요\"}}");
+        Assert.AreEqual("둘 다 사진 찍기를 좋아해서 연결했어요", p.partner.whyMatched);
+    }
+
+    [Test]
+    public void 코스와_주제_카드를_옮기고_없으면_비운다()
+    {
+        const string meeting = "{\"state\":\"meeting\",\"matchId\":\"m_1\",\"partner\":{\"nickname\":\"민지\"}," +
+            "\"smalltalk\":[\"학식 뭐 좋아해요?\"],\"smalltalkCards\":[{\"text\":\"학식 뭐 좋아해요?\",\"topic\":\"학식\",\"emoji\":\"🍚\"}]," +
+            "\"course\":{\"recommendationId\":\"rec_1\",\"title\":\"가을 30분\",\"source\":\"ai\",\"stops\":[{\"buildingId\":\"way-1\",\"name\":\"중앙도서관\",\"reason\":\"쉬어 가요\",\"walkMinutes\":4,\"distanceM\":300}]," +
+            "\"totalDistanceM\":300,\"totalMinutes\":4,\"myAgree\":true,\"partnerAgree\":false,\"confirmed\":false,\"changesLeft\":2}}";
+        MatchState m = HttpMatchService.Parse(meeting);
+        Assert.IsTrue(m.HasCourse);
+        Assert.AreEqual("중앙도서관", m.course.stops[0].name);
+        Assert.IsTrue(m.course.myAgree);
+        Assert.AreEqual(2, m.course.changesLeft);
+        Assert.AreEqual("학식", m.cards[0].topic);
+
+        MatchState old = HttpMatchService.Parse("{\"state\":\"meeting\",\"matchId\":\"m_1\",\"smalltalk\":[\"a\",\"b\"]}");
+        Assert.IsFalse(old.HasCourse);                   // 코스가 없으면 (만드는 중 · 예전 서버) null
+        Assert.AreEqual(2, old.cards.Count);             // 카드가 없으면 글만으로 만든다
+        Assert.AreEqual("대화", old.cards[0].topic);
+    }
 }

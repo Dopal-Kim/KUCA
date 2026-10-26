@@ -10,6 +10,8 @@ using UnityEngine.UI;
 /// 화면을 닫아도 매칭은 계속되고 (상태를 계속 물어봄), 상대가 나타나면 화면이 다시 열린다.
 /// 서버 호출은 IMatchService: 서버에 API 가 없으면 기기 안 가상 상대 (HttpMatchService → MockMatchService).
 /// v4 (docs/디자인_v4.md): 당근 "같이 해요" + 토스 단계형 — 단계마다 큰 질문 제목 · 칩 선택 · 맨 위 안전 카드, 아래 고정 버튼.
+/// 10/25 피드백 (생동감): 대기 중 원 파동 + "지금 n명이 함께 찾는 중", 찾은 순간 별가루, 제안에 AI 매칭 이유 한 줄,
+/// 만남 뒤 함께 걸을 코스를 둘이 고르는 단계 (둘 다 "좋아요" 면 확정 · "다른 코스" 3번), 대화 주제는 분류 태그가 붙은 카드 (MatchEffects.cs).
 /// </summary>
 public class MatchScreen : MonoBehaviour
 {
@@ -32,11 +34,16 @@ public class MatchScreen : MonoBehaviour
     int minutes = 30;
     bool sameGender;
     int topicIndex;
-    string shownTopic;
+    TopicCard shownTopic;
+    string shownCourseId;
 
-    GameObject root, conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, lookPage, talkPage, walkPage, endPage, reportPanel;
-    Text waitTime, proposeName, proposeTastes, proposeTime, meetName, meetInfo, meetNoShow, lookMine, lookPartner,
-        talkTopic, walkTitle, endTitle, endMessage, serviceLabel;
+    GameObject root, conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, coursePage, lookPage, talkPage, walkPage, endPage, reportPanel;
+    Text waitTime, waitSearching, proposeName, proposeWhy, proposeTastes, proposeTime, meetName, meetInfo, meetNoShow, lookMine, lookPartner,
+        courseTitle, courseSummary, courseStatus, courseLoading, talkTopic, talkTopicTag, walkTitle, walkCourse, endTitle, endMessage, serviceLabel;
+    GameObject proposeWhyBox;
+    RectTransform proposeCard, courseCard, courseStops, talkCard;
+    LayoutElement talkTagSize;
+    Button courseAgree, courseNext;
     RawImage waitPartner, meetCreature;
     InputField lookInput;
     Image[] minuteChips, genderChips, reasonChips;
@@ -129,7 +136,11 @@ public class MatchScreen : MonoBehaviour
         if (s == null)
             return;
         string before = state.status;
+        bool wasConfirmed = state.HasCourse && state.course.confirmed;
         state = s;
+        // 상대를 찾은 순간 · 코스가 정해진 순간은 별가루로 축하한다 (화면을 닫아 둔 사이여도 다시 열 때 보이게 Render 뒤에)
+        bool found = before != s.status && s.status == MatchState.Proposed && before != MatchState.Accepted;
+        bool agreed = !wasConfirmed && s.HasCourse && s.course.confirmed && s.status == MatchState.Matched;
         if (before != s.status)
         {
             // 산책 기록 (B-V4): 시작하면 걸은 거리를 재기 시작하고, 끝나면 완료 화면으로
@@ -155,6 +166,15 @@ public class MatchScreen : MonoBehaviour
                 ShowPage(meetPage);
         }
         Render();
+        if (found || agreed)
+            Celebrate(found ? proposeCard : courseCard);
+    }
+
+    /// <summary>별가루를 뿌리고 카드를 살짝 튀게 한다</summary>
+    void Celebrate(RectTransform card)
+    {
+        Stardust.Burst((RectTransform)root.transform);
+        PopIn.Play(card);
     }
 
     /// <summary>지금 상태에 맞는 쪽을 보여 준다. matched 는 만남 → 인상착의 → 스몰토크를 사용자가 넘긴다.</summary>
@@ -176,20 +196,27 @@ public class MatchScreen : MonoBehaviour
                     waitPartner.enabled = waitPartner.texture != null;
                 }
                 waitTime.text = $"남은 시간 {state.waitSecondsLeft / 60}:{state.waitSecondsLeft % 60:00}";
+                waitSearching.text = state.nowSearching > 0
+                    ? $"지금 {state.nowSearching}명이 함께 산책메이트를 찾고 있어요"
+                    : "근처에서 함께 걸을 사람을 찾고 있어요";
                 break;
             case MatchState.Proposed:
                 ShowPage(proposePage);
                 proposeName.text = state.partner?.nickname ?? "산책메이트";
                 proposeTastes.text = CommonTastes();
+                string why = state.partner?.whyMatched;
+                proposeWhyBox.SetActive(!string.IsNullOrEmpty(why));
+                proposeWhy.text = why ?? "";
                 proposeTime.text = $"{state.minutes}분 산책  ·  {state.decideSecondsLeft}초 안에 골라 주세요";
                 break;
             case MatchState.Accepted:
                 ShowPage(acceptWaitPage);
                 break;
             case MatchState.Matched:
-                if (!meetPage.activeSelf && !lookPage.activeSelf && !talkPage.activeSelf)
+                if (!meetPage.activeSelf && !coursePage.activeSelf && !lookPage.activeSelf && !talkPage.activeSelf)
                     ShowPage(meetPage);
                 FillMeet();
+                FillCourse();
                 FillLook();
                 if (talkPage.activeSelf && shownTopic == null)
                     ShowTopic();
@@ -197,6 +224,7 @@ public class MatchScreen : MonoBehaviour
             case MatchState.Walking:
                 ShowPage(walkPage);
                 walkTitle.text = $"{state.partner?.nickname ?? "산책메이트"}님과 걷는 중";
+                walkCourse.text = state.HasCourse ? "오늘 코스\n" + string.Join("  →  ", StopNames(state.course)) : "";
                 break;
             case MatchState.Ended:
                 ShowPage(endPage);
@@ -219,7 +247,7 @@ public class MatchScreen : MonoBehaviour
 
     void ShowPage(GameObject page)
     {
-        foreach (GameObject p in new[] { conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, lookPage, talkPage, walkPage, endPage })
+        foreach (GameObject p in new[] { conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, coursePage, lookPage, talkPage, walkPage, endPage })
             p.SetActive(p == page);
     }
 
@@ -317,29 +345,150 @@ public class MatchScreen : MonoBehaviour
         if (!busy) Call(service.SetLook(state.matchId, look, Apply));
     }
 
+    /// <summary>받아 둔 주제 i 번째 (분류가 있는 카드 우선, 없으면 글만)</summary>
+    TopicCard TopicAt(int i)
+    {
+        if (state.cards != null && i < state.cards.Count) return state.cards[i];
+        if (state.smalltalk != null && i < state.smalltalk.Count) return TopicCard.Plain(state.smalltalk[i]);
+        return null;
+    }
+
+    int TopicCount => Mathf.Max(state.cards?.Count ?? 0, state.smalltalk?.Count ?? 0);
+
     void ShowTopic()
     {
-        if (state.smalltalk != null && topicIndex < state.smalltalk.Count)
-            shownTopic = state.smalltalk[topicIndex];
-        talkTopic.text = shownTopic ?? "무엇이든 편하게 이야기해요";
+        TopicCard card = TopicAt(topicIndex);
+        if (card != null)
+            shownTopic = card;
+        SetTopic(shownTopic);
+    }
+
+    /// <summary>주제 카드: 위에 분류 태그 (#학식), 아래 큰 질문. 바뀔 때마다 살짝 튄다</summary>
+    void SetTopic(TopicCard card)
+    {
+        talkTopic.text = card?.text ?? "무엇이든 편하게 이야기해요";
+        talkTopicTag.text = "#" + (string.IsNullOrEmpty(card?.topic) ? "대화" : card.topic);
+        talkTagSize.preferredWidth = talkTagSize.minWidth = talkTopicTag.preferredWidth + 2 * KucaTheme.Space4;
+        PopIn.Play(talkCard);
     }
 
     void NextTopic()
     {
         topicIndex++;
-        if (state.smalltalk != null && topicIndex < state.smalltalk.Count)
+        if (topicIndex < TopicCount)
         {
             ShowTopic();
             return;
         }
         if (busy) return;
         busy = true;
-        StartCoroutine(Run(service.NextTopic(state.matchId, (topic, error) =>
+        StartCoroutine(Run(service.NextTopic(state.matchId, (card, error) =>
         {
             if (error != null) { Toast(error); return; }
-            shownTopic = topic;
-            talkTopic.text = topic;
+            shownTopic = card;
+            SetTopic(card);
         })));
+    }
+
+    // ---------- 함께 걸을 코스 ----------
+
+    static List<string> StopNames(MatchCourse course)
+    {
+        var names = new List<string>();
+        if (course?.stops != null)
+            foreach (CourseStop s in course.stops) names.Add(s.name);
+        return names;
+    }
+
+    /// <summary>
+    /// 코스 카드: 제목 · 몇 곳 · 몇 분 · 거리, 들를 곳 목록 (번호 · 이름 · 이유), 두 사람의 동의 상태.
+    /// 코스가 아직 없으면 (서버가 짜는 몇 초 · 예전 서버) 준비 중 문구를 보이고 다음 단계로 넘어갈 수 있게 둔다.
+    /// </summary>
+    void FillCourse()
+    {
+        bool has = state.HasCourse;
+        courseLoading.gameObject.SetActive(!has);
+        courseTitle.gameObject.SetActive(has);
+        courseSummary.gameObject.SetActive(has);
+        courseStops.gameObject.SetActive(has);
+        if (!has)
+        {
+            courseStatus.text = "";
+            UIKit.SetLabel(courseAgree, "다음: 인상착의 알려 주기");
+            courseNext.gameObject.SetActive(false);
+            return;
+        }
+        MatchCourse k = state.course;
+        if (k.recommendationId != shownCourseId)
+        {
+            shownCourseId = k.recommendationId;
+            BuildStops(k);
+            PopIn.Play(courseCard);
+        }
+        courseTitle.text = k.title;
+        courseSummary.text = $"{k.stops.Count}곳  ·  {k.totalMinutes}분  ·  {RouteMath.Distance(k.totalDistanceM)}";
+        string partnerName = state.partner?.nickname ?? "상대";
+        if (k.confirmed)
+        {
+            courseStatus.text = "둘 다 좋다고 했어요. 이 코스로 걸어요!";
+            courseStatus.color = KucaTheme.AccentText;
+        }
+        else
+        {
+            courseStatus.text = $"나  {(k.myAgree ? "✓ 좋아요" : "고르는 중")}      {partnerName}  {(k.partnerAgree ? "✓ 좋아요" : "고르는 중")}";
+            courseStatus.color = InkQuiet;
+        }
+        // 내가 좋다고 했으면 상대를 기다리지 않고 다음 단계로 갈 수 있다 (만나서 출발하면 지금 코스로 정해진다)
+        UIKit.SetLabel(courseAgree, k.myAgree || k.confirmed ? "다음: 인상착의 알려 주기" : "이 코스 좋아요");
+        courseNext.gameObject.SetActive(!k.confirmed);
+        courseNext.interactable = k.changesLeft > 0;
+        UIKit.SetLabel(courseNext, k.changesLeft > 0 ? $"다른 코스 보기 ({k.changesLeft}번 남음)" : "다른 코스는 다 봤어요");
+    }
+
+    /// <summary>들를 곳 줄: 초록 번호 원 · 이름(굵게) · 한 줄 이유 · 걷는 분</summary>
+    void BuildStops(MatchCourse course)
+    {
+        for (int i = courseStops.childCount - 1; i >= 0; i--)
+        {
+            GameObject old = courseStops.GetChild(i).gameObject;
+            old.SetActive(false);   // Destroy 는 프레임 끝에 지우므로 그동안 레이아웃에서 먼저 뺀다
+            Destroy(old);
+        }
+        for (int i = 0; i < course.stops.Count; i++)
+        {
+            CourseStop stop = course.stops[i];
+            RectTransform row = UIKit.Rect(courseStops, "Stop" + i);
+            HorizontalLayoutGroup h = UIKit.Horizontal(row, KucaTheme.Space3);
+            h.childForceExpandWidth = h.childForceExpandHeight = false;
+            h.childAlignment = TextAnchor.UpperLeft;
+            Image badge = UIKit.Image(row, "Number", Accent);
+            badge.sprite = HudIcons.Circle;
+            UIKit.Size(badge, 72f, 72f);
+            UIKit.Stretch(UIKit.Bold(UIKit.Text(badge.transform, (i + 1).ToString(), KucaTheme.Label, TextAnchor.MiddleCenter, Color.white)).rectTransform);
+            RectTransform col = UIKit.Rect(row, "Text");
+            UIKit.Vertical(col, KucaTheme.Space1);
+            UIKit.Size(col, -1f, -1f, 1f);
+            UIKit.Bold(UIKit.Text(col, $"{stop.name}  ·  {stop.walkMinutes}분", KucaTheme.Body, TextAnchor.UpperLeft, Ink));
+            if (!string.IsNullOrEmpty(stop.reason))
+                UIKit.Text(col, stop.reason, KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        }
+    }
+
+    void AgreeCourse()
+    {
+        // 코스가 없거나 이미 좋다고 했으면 다음 단계로
+        if (!state.HasCourse || state.course.myAgree || state.course.confirmed)
+        {
+            ShowPage(lookPage);
+            Render();
+            return;
+        }
+        if (!busy) Call(service.AgreeCourse(state.matchId, Apply));
+    }
+
+    void NextCourse()
+    {
+        if (!busy) Call(service.NextCourse(state.matchId, Apply));
     }
 
     void StartWalk()
@@ -374,6 +523,7 @@ public class MatchScreen : MonoBehaviour
         state = new MatchState();
         topicIndex = 0;
         shownTopic = null;
+        shownCourseId = null;
         ResetCondition();
         Render();
     }
@@ -491,6 +641,7 @@ public class MatchScreen : MonoBehaviour
         BuildPropose(body);
         BuildAcceptWait(body);
         BuildMeet(body);
+        BuildCourse(body);
         BuildLook(body);
         BuildTalk(body);
         BuildWalk(body);
@@ -571,10 +722,16 @@ public class MatchScreen : MonoBehaviour
     void BuildWait(RectTransform body)
     {
         waitPage = Step(body, "Wait", "산책메이트를\n찾는 중이에요", 1, out RectTransform c, out RectTransform b);
-        waitPartner = Picture(c, 360f);
+        // 원 파동이 계속 퍼지는 가운데 내 파트너 경희펫이 통통 뛴다 (실시간으로 찾는 중)
+        RectTransform ripple = UIKit.Rect(c, "Ripple");
+        UIKit.Size(ripple, 560f);
+        MatchRipple.Add(ripple, 560f, Accent);
+        waitPartner = RawIn(ripple, 300f);
         waitPartner.gameObject.AddComponent<Bob>();
         waitTime = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Heading, TextAnchor.MiddleCenter, Accent));
         UIKit.Size(waitTime, 80f);
+        waitSearching = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Body, TextAnchor.MiddleCenter, Ink));
+        UIKit.Size(waitSearching, 72f);
         Note(c, "화면을 닫아도 계속 찾아요. 찾으면 알려 드릴게요.").alignment = TextAnchor.UpperCenter;
         UIKit.SecondaryButton(b, "그만 찾기", CancelMatch);
     }
@@ -595,6 +752,22 @@ public class MatchScreen : MonoBehaviour
         person.rectTransform.sizeDelta = new Vector2(110f, 110f);
         proposeName = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Heading, TextAnchor.MiddleLeft, Ink));
         UIKit.Size(proposeName, 72f);
+        // AI 매칭 이유 한 줄: 옅은 강조 바탕 + 별
+        Image why = UIKit.Image(card, "Why", KucaTheme.AccentSoft);
+        why.sprite = HudIcons.Rounded;
+        why.type = Image.Type.Sliced;
+        why.pixelsPerUnitMultiplier = 0.4f;
+        HorizontalLayoutGroup wh = UIKit.Horizontal(why, KucaTheme.Space2);
+        wh.padding = new RectOffset((int)KucaTheme.Space4, (int)KucaTheme.Space4, (int)KucaTheme.Space3, (int)KucaTheme.Space3);
+        wh.childForceExpandWidth = wh.childForceExpandHeight = false;
+        wh.childAlignment = TextAnchor.MiddleLeft;
+        Image star = UIKit.Image(why.transform, "Star", KucaTheme.Gold);
+        star.sprite = HudIcons.Star;
+        UIKit.Size(star, 52f, 52f);
+        proposeWhy = UIKit.Bold(UIKit.Text(why.transform, "", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.AccentText));
+        UIKit.Size(proposeWhy, -1f, -1f, 1f);
+        proposeWhyBox = why.gameObject;
+        proposeCard = card;
         proposeTastes = UIKit.Text(card, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
         proposeTime = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Label, TextAnchor.MiddleLeft, Accent));
         UIKit.Size(proposeTime, 56f);
@@ -619,8 +792,24 @@ public class MatchScreen : MonoBehaviour
         UIKit.Size(meetName, 72f);
         meetInfo = UIKit.Text(card, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
         meetNoShow = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, Danger);
-        UIKit.PrimaryButton(b, "다음: 인상착의 알려 주기", () => { ShowPage(lookPage); Render(); });
+        UIKit.PrimaryButton(b, "다음: 같이 걸을 코스 정하기", () => { ShowPage(coursePage); Render(); });
         UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
+    }
+
+    /// <summary>함께 걸을 코스 (10/25 피드백): 만남 스팟에서 출발하는 코스를 둘이 함께 고른다</summary>
+    void BuildCourse(RectTransform body)
+    {
+        coursePage = Step(body, "Course", "같이 걸을 코스를\n골라요", 2, out RectTransform c, out RectTransform b);
+        Note(c, "만남 스팟에서 출발해요. 둘 다 좋다고 하면 코스가 정해져요.");
+        courseCard = UIKit.CardBox(c, "CourseCard", KucaTheme.Space3);
+        courseTitle = UIKit.Bold(UIKit.Text(courseCard, "", KucaTheme.Heading, TextAnchor.UpperLeft, Ink));
+        courseSummary = UIKit.Bold(UIKit.Text(courseCard, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.AccentText));
+        courseStops = UIKit.Rect(courseCard, "Stops");
+        UIKit.Vertical(courseStops, KucaTheme.Space3);
+        courseLoading = UIKit.Text(courseCard, "두 사람에게 맞는 코스를 짜고 있어요…", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        courseStatus = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet));
+        courseAgree = UIKit.PrimaryButton(b, "이 코스 좋아요", AgreeCourse);
+        courseNext = UIKit.SecondaryButton(b, "다른 코스 보기", NextCourse);
     }
 
     void BuildLook(RectTransform body)
@@ -647,9 +836,22 @@ public class MatchScreen : MonoBehaviour
     void BuildTalk(RectTransform body)
     {
         talkPage = Step(body, "Talk", "어색하면 이 이야기로\n시작해 보세요", 2, out RectTransform c, out RectTransform b);
-        RectTransform card = UIKit.CardBox(c, "Topic", KucaTheme.Space2);
+        RectTransform card = UIKit.CardBox(c, "Topic", KucaTheme.Space3);
+        talkCard = card;
+        // 분류 태그 (#학식 · #캠퍼스 장소 …): 옅은 강조 알약
+        RectTransform tagRow = UIKit.Rect(card, "TagRow");
+        UIKit.Size(tagRow, 72f);
+        HorizontalLayoutGroup th = UIKit.Horizontal(tagRow, 0f);
+        th.childForceExpandWidth = false;
+        Image tag = UIKit.Image(tagRow, "Tag", KucaTheme.AccentSoft);
+        tag.sprite = HudIcons.Pill;
+        tag.type = Image.Type.Sliced;
+        tag.pixelsPerUnitMultiplier = 1.4f;
+        talkTagSize = UIKit.Size(tag, 72f, 200f);
+        talkTopicTag = UIKit.Bold(UIKit.Text(tag.transform, "#대화", KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.AccentText));
+        UIKit.Stretch(talkTopicTag.rectTransform);
         talkTopic = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
-        UIKit.Size(talkTopic, 360f);
+        UIKit.Size(talkTopic, 300f);
         UIKit.SecondaryButton(c, "다음 주제", NextTopic);
         UIKit.PrimaryButton(b, "만났어요! 산책 시작", StartWalk);
         UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
@@ -665,6 +867,7 @@ public class MatchScreen : MonoBehaviour
         Place(ic.rectTransform, new Vector2(0f, 0.5f), Vector2.zero);
         ic.rectTransform.pivot = new Vector2(0f, 0.5f);
         ic.rectTransform.sizeDelta = new Vector2(200f, 200f);
+        walkCourse = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Body, TextAnchor.UpperLeft, Ink));
         Note(c, "즐겁게 걸어요! 불편한 일이 생기면 오른쪽 위 신고 · 차단을 눌러 주세요.");
         UIKit.PrimaryButton(b, "산책 끝내기", EndWalk);
         UIKit.SecondaryButton(b, "지도로 돌아가기", Hide);
@@ -736,6 +939,17 @@ public class MatchScreen : MonoBehaviour
         Button b = UIKit.Chip(row, label, false, onClick);
         b.gameObject.AddComponent<PressScale>();
         return b.GetComponent<Image>();
+    }
+
+    /// <summary>holder 가운데에 정사각 그림 (원 파동 위에 얹는다)</summary>
+    static RawImage RawIn(RectTransform holder, float size)
+    {
+        var raw = new GameObject("Picture", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+        raw.transform.SetParent(holder, false);
+        raw.raycastTarget = false;
+        Place(raw.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
+        raw.rectTransform.sizeDelta = new Vector2(size, size);
+        return raw;
     }
 
     /// <summary>경희펫 그림 칸 (가로로 늘어나지 않게 정사각 그림을 왼쪽에)</summary>
