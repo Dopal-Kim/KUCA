@@ -241,7 +241,18 @@ public static class UiCapture
         if (Call(menus, "OpenProfile")) { yield return 1f; yield return Shot("프로필"); yield return ShotBottom("프로필_아래"); }
         yield return CloseAll();
 
-        if (CallStatic("RoutePlanner", "Open")) { yield return 2f; yield return Shot("산책_추천"); }
+        if (CallStatic("RoutePlanner", "Open"))
+        {
+            yield return 2f;
+            yield return Shot("산책_추천");
+            // 말로 하는 요청 칸에 예시를 넣은 모습 (추천 받기는 누르지 않는다: 운영 서버에 POST 가 간다)
+            if (Get(Find("RoutePlanner"), "wishInput") is InputField wish)
+            {
+                wish.text = "그늘지고 조용한 데 30분, 오르막은 빼고 도서관은 들르고 싶어";
+                yield return 0.5f;
+                yield return Shot("산책_추천_말로");
+            }
+        }
         yield return CloseAll();
         if (CallStatic("MatchScreen", "Open")) { yield return 2f; yield return Shot("함께_걷기"); }
         yield return CloseAll();

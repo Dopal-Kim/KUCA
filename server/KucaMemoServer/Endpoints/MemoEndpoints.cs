@@ -98,6 +98,9 @@ public static class MemoEndpoints
             ModerationResult check = await moderator.CheckAsync($"닉네임: {author}\n{text}", image, request.HttpContext.RequestAborted);
             if (check.Verdict == Verdict.Block)
                 return Rejected(check);
+            // AI 가 사진을 못 봤으면(시간 초과 · 키 없음) 금지어 검사는 글만 본 것이라 사진은 검토 대기로
+            if (image is not null && check.UsedFallback && check.Verdict == Verdict.Allow)
+                check = new ModerationResult(Verdict.Review, null, "AI 가 사진을 검사하지 못함", true);
 
             var memo = new Memo
             {
@@ -110,6 +113,7 @@ public static class MemoEndpoints
                 CreatedAt = TruncateToMilliseconds(DateTime.UtcNow),
                 Status = check.Verdict == Verdict.Review ? ContentStatus.Pending : ContentStatus.Visible,
                 FlagNote = check.Verdict == Verdict.Review ? DescribeFlag(check) : null,
+                PhotoCaption = check.Caption,
             };
 
             if (photo is not null && extension is not null)

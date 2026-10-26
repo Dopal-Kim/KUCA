@@ -140,6 +140,25 @@ public class WalkStore
             ("$w", walkId), ("$u", userId), ("$c", courseRating), ("$t", text), ("$at", at.ToUnixTimeSeconds()));
     }
 
+    /// <summary>장소의 요즘 상태를 정리할 재료: since(유닉스 초) 뒤 리뷰 한 줄과 별점, 그 코스의 장소들 (최신 limit 개, 사람 정보 없음)</summary>
+    public List<(string[] Stops, int Rating, string Text)> RecentReviews(long since, int limit)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT w.stops, r.course_rating, r.text FROM reviews r JOIN walks w ON w.id = r.walk_id AND w.user_id = r.user_id
+            WHERE r.created_at >= $since AND r.text IS NOT NULL AND TRIM(r.text) <> '' AND w.stops <> ''
+            ORDER BY r.created_at DESC LIMIT $limit
+            """;
+        cmd.Parameters.AddWithValue("$since", since);
+        cmd.Parameters.AddWithValue("$limit", limit);
+        using var reader = cmd.ExecuteReader();
+        var rows = new List<(string[], int, string)>();
+        while (reader.Read())
+            rows.Add((reader.GetString(0).Split(',', StringSplitOptions.RemoveEmptyEntries), reader.GetInt32(1), reader.GetString(2)));
+        return rows;
+    }
+
     public int TotalXp(string userId) => Scalar<int>("SELECT COALESCE(SUM(xp), 0) FROM xp_events WHERE user_id = $u", ("$u", userId));
 
     public (int Walks, int DistanceM, int Together) Totals(string userId)

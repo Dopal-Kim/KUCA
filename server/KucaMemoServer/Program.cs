@@ -57,6 +57,8 @@ builder.Services.AddSingleton<WalkService>();
 // 경희스팟 목록 (공지·추천·매칭이 같이 씀), 장소 공지 (C-4): 공지 저장소, AI 공지 판별 (내용 검사와 같은 게이트웨이·키)
 builder.Services.AddSingleton<SpotStore>();
 builder.Services.AddSingleton<NoticeStore>();
+builder.Services.AddSingleton<PlaceStateService>();   // 쪽지 · 리뷰 · 사진으로 본 장소의 요즘 상태 (산책 추천이 씀)
+builder.Services.AddSingleton<WishInterpreter>();     // 말로 한 산책 바람 → 추천 조건 (같은 문장은 10분 기억)
 builder.Services.AddHttpClient<INoticeClassifier, AiNoticeClassifier>();
 builder.Services.AddHttpClient<INoticePageFetcher, HttpNoticePageFetcher>(c => c.Timeout = TimeSpan.FromSeconds(15));
 builder.Services.AddSingleton<NoticeCollector>();
@@ -65,6 +67,8 @@ builder.Services.AddSingleton<NoticeCollector>();
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);
 
 var app = builder.Build();
+// SQLite 표를 만드는 저장소는 시작할 때 만든다: 늦게 만들면 그 전에 열려 있던 연결이 새 표를 모른다("no such table")
+app.Services.GetRequiredService<NoticeStore>();
 
 app.UseSwagger();
 app.UseSwaggerUI();

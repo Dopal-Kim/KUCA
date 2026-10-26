@@ -77,8 +77,10 @@ public static class NoticeEndpoints
 
             string id = Guid.NewGuid().ToString();
             notices.Add(id, title, body, url, result.Summary, postedAt, result.BuildingIds);
+            notices.AddEvent(id, result.BuildingIds, result.Kind, result.StartsOn, result.EndsOn);
             return Results.Created($"/api/notices?buildingId={Uri.EscapeDataString(result.BuildingIds[0])}",
-                new { id, buildingIds = result.BuildingIds, summary = result.Summary, source = result.Source });
+                new { id, buildingIds = result.BuildingIds, summary = result.Summary, source = result.Source,
+                      kind = result.Kind, startsOn = result.StartsOn, endsOn = result.EndsOn });
         });
 
         // 단과대 게시판에서 지금 모으기 (결과: 게시판마다 읽은 글 · 새로 넣은 수 · 오류). 이미 모으는 중이면 409

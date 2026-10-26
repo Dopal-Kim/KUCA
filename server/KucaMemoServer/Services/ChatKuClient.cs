@@ -61,7 +61,8 @@ public class ChatKuClient(HttpClient http, IConfiguration config, ILogger<ChatKu
             }
             return ReadAnswer(text);
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+        // InvalidOperationException: content 가 문자열이 아닌 모양의 답 (잡지 않으면 추천이 500 으로 끝남)
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
         {
             log.LogWarning("챗쿠 호출 실패: {Message}", e.Message);
             return null;

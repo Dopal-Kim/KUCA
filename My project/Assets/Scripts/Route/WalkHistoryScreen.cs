@@ -164,6 +164,7 @@ public class WalkHistoryScreen : MonoBehaviour
         UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " ");
         root = page.root;
         summary = page.subtitle;
+        summary.supportRichText = true;   // 색 범례 ■ (UIKit.Text 는 기본으로 꺼 둠)
         list = page.content;
 
         // 기록 하나 자세히 (지도): 어둡게 덮고 흰 카드
