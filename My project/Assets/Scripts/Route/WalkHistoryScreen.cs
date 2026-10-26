@@ -189,10 +189,10 @@ public class WalkHistoryScreen : MonoBehaviour
         detailStats = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
         Box(detailStats.rectTransform, 56f, 140f, 56f, 110f);
         Image frame = TopMap.Frame(cr, "Map", out detailMap, out detailOverlay);
-        Box(frame.rectTransform, 40f, 270f, 40f, 1010f);
+        Box(frame.rectTransform, 40f, 270f, 40f, 990f);
         detailFrame = frame.rectTransform;
         detailShare = WalkCompleteScreen.KakaoButton(cr, () => ShareToKakao());
-        Box((RectTransform)detailShare.transform, 40f, 1296f, 40f, 104f);
+        Box((RectTransform)detailShare.transform, 40f, 1290f, 40f, 104f);   // 지도와 30 띄움 (16 은 붙어 보였음, REVIEW_v40)
         detail.SetActive(false);
     }
 
