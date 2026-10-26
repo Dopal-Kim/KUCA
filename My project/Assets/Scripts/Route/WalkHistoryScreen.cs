@@ -46,7 +46,7 @@ public class WalkHistoryScreen : MonoBehaviour
         int weekCount = 0, weekMeters = 0;
         foreach (WalkHistory.Entry e in all)
             if (e.EndedAt >= monday) { weekCount++; weekMeters += e.meters; }
-        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요   " +
+        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요\n" +
             $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Course, 3, 1))}>■</color> 코스  " +
             $"<color=#{ColorUtility.ToHtmlStringRGB(FreeWalk.TrackColor)}>■</color> 자유  " +
             $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Mate, 0, 0))}>■</color> 산책메이트";
@@ -93,6 +93,7 @@ public class WalkHistoryScreen : MonoBehaviour
     void Row(WalkHistory.Entry e)
     {
         RectTransform card = UIKit.CardBox(list, "Walk", KucaTheme.Space1);
+        card.GetComponent<Image>().raycastTarget = true;   // CardBox 는 터치를 받지 않는 카드라 그대로면 눌리지 않았다
         var b = card.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
         WalkHistory.Entry entry = e;

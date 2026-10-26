@@ -71,8 +71,9 @@ public partial class RoutePlanner
             SetChip(tasteChips[i], tastes.Contains(TasteChoices[i].id));
         string meal = RouteMath.MealOf(System.DateTime.Now);
         SetChip(mealChip, afterMeal);
-        UIKit.SetLabel(mealChip.GetComponent<Button>(), meal != null ? $"식후 걷기  ·  지금 {meal}시간" : "식후 걷기");
-        mealNote.text = afterMeal ? $"가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : "";
+        UIKit.SetLabel(mealChip.GetComponent<Button>(), "식후 걷기");   // "지금 점심시간" 은 칩 아래 안내로 (칩 안에 넣으면 세 줄로 넘쳤다)
+        string now = meal != null ? $"지금 {meal}시간이에요. " : "";
+        mealNote.text = afterMeal ? $"{now}식후 걷기: 가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : meal != null ? $"{now}식후 걷기를 켜면 가까운 곳 위주로 골라요." : "";
         startValue.text = Escape(StartLabel);
         destValue.text = roundTrip ? "출발지로 돌아오기"
             : destSpot != null ? Escape(destSpot.Building.buildingName) : "AI 가 정해요";   // "추천대로" 는 뜻을 몰랐음 (REVIEW_v22_day)
@@ -409,13 +410,23 @@ public partial class RoutePlanner
 
     // ---------- 걷는 중 판 ----------
 
+    /// <summary>한 줄로만 쓰고 칸보다 길면 min 까지 글자를 줄인다 (가상 산책 중엔 판이 좁아진다)</summary>
+    static void OneLine(Text t, int max, int min)
+    {
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.resizeTextForBestFit = true;
+        t.resizeTextMaxSize = max;
+        t.resizeTextMinSize = min;
+    }
+
     void RefreshWalkPanel()
     {
         if (active == null)
             return;
         Option o = active;
         walkDot.color = o.variant.color;
-        walkTitle.text = $"{o.variant.label}  <size={KucaTheme.Label}><color=#{SoftHex}>{RouteMath.Distance(o.meters)} · 약 {o.walkMinutes}분</color></size>";
+        walkTitle.text = o.variant.label;   // 거리 · 시간은 아래 진행 줄로 (가상 산책 중 좁은 판에서 제목이 세 줄로 넘쳤다)
         int next = done.FindIndex(x => !x);
         int count = done.FindAll(x => x).Count;
         if (next >= 0)
@@ -426,7 +437,7 @@ public partial class RoutePlanner
             walkNext.text = $"<color=#{ColorUtility.ToHtmlStringRGB(o.variant.color)}>{(last ? "마지막" : "다음")} {next + 1}</color>  {Escape(s.name)}  <size={KucaTheme.Label}><color=#{SoftHex}>· {RouteMath.Distance(left)}</color></size>";
             walkReason.text = Escape(s.reason);
         }
-        walkProgress.text = $"{count}/{o.result.stops.Count}곳 들렀어요";
+        walkProgress.text = $"{count}/{o.result.stops.Count}곳 들렀어요  <color=#{SoftHex}>· {RouteMath.Distance(o.meters)} · 약 {o.walkMinutes}분</color>";
         pathToggle.color = showPath ? o.variant.color : KucaTheme.Fill;
         pathToggleText.color = showPath ? Color.white : Ink;
         pathToggleText.text = showPath ? "경로 켜짐" : "경로 꺼짐";
@@ -455,6 +466,7 @@ public partial class RoutePlanner
         walkDot.rectTransform.sizeDelta = new Vector2(32f, 32f);
         walkTitle = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
         Box(walkTitle.rectTransform, 92f, 30f, 430f, 76f);
+        OneLine(walkTitle, KucaTheme.Body, KucaTheme.Caption);
 
         Button toggle = UIKit.Button(pr, "경로 켜짐", () => { showPath = !showPath; RefreshWalkPanel(); }, RouteBlue, KucaTheme.Caption);
         pathToggle = toggle.GetComponent<Image>();
@@ -474,11 +486,13 @@ public partial class RoutePlanner
         nb.onClick.AddListener(() => { int i = done.FindIndex(x => !x); OpenPlace(i < 0 ? 0 : i); });
         walkNext = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Heading, TextAnchor.UpperLeft, Ink));
         Box(walkNext.rectTransform, 12f, 0f, 12f, 72f);
+        OneLine(walkNext, KucaTheme.Heading, KucaTheme.Label);
         walkReason = UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         walkReason.verticalOverflow = VerticalWrapMode.Truncate;
         Box(walkReason.rectTransform, 12f, 80f, 12f, 96f);
         walkProgress = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
         Box(walkProgress.rectTransform, 12f, 184f, 12f, 52f);
+        OneLine(walkProgress, KucaTheme.Label, KucaTheme.Caption - 2);
         walkPanel.SetActive(false);
     }
 

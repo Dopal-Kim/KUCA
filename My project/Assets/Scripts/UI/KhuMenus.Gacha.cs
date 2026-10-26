@@ -154,10 +154,13 @@ public partial class KhuMenus
         UIKit.Size(b, 260f);
         RectTransform r = (RectTransform)b.transform;
 
+        // 제목 · 설명은 한 줄씩: 세로로 긴 폰은 폭이 좁아 제목이 두 줄로 넘쳐 카드 위로 삐져나왔다 → 넘치면 글자를 줄인다
         Text t = T(r, label, KucaTheme.Heading + 6, TextAnchor.LowerLeft, KucaTheme.Ink, bold: true);
-        Corners(t.rectTransform, new Vector2(0f, 0.5f), Vector2.one, new Vector2(228f, 0f), new Vector2(-260f, -30f));
+        Corners(t.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(228f, 4f), new Vector2(-240f, 66f));
+        OneLine(t, KucaTheme.Heading + 6, KucaTheme.Body - 2);
         Text d = T(r, desc, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
-        Corners(d.rectTransform, Vector2.zero, new Vector2(1f, 0.5f), new Vector2(228f, 24f), new Vector2(-260f, -12f));
+        Corners(d.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(228f, -52f), new Vector2(-240f, -8f));
+        OneLine(d, KucaTheme.Label, KucaTheme.Caption - 2);
 
         Image tile = UIKit.Image(r, "Tile", new Color(accent.r, accent.g, accent.b, 0.16f));
         tile.sprite = HudIcons.Rounded;
@@ -175,10 +178,20 @@ public partial class KhuMenus
         price.type = Image.Type.Sliced;
         price.pixelsPerUnitMultiplier = 1.4f;
         Place(price.rectTransform, new Vector2(1f, 0.5f), new Vector2(-44f, 0f));
-        price.rectTransform.sizeDelta = new Vector2(200f, 88f);
+        price.rectTransform.sizeDelta = new Vector2(180f, 88f);
         Text pt = T(price.transform, $"티켓 {cost}장", KucaTheme.Caption, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(pt.rectTransform);
         return b;
+    }
+
+    /// <summary>한 줄로만 쓰고, 칸보다 길면 min 까지 글자를 줄인다</summary>
+    static void OneLine(Text t, int max, int min)
+    {
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.resizeTextForBestFit = true;
+        t.resizeTextMaxSize = max;
+        t.resizeTextMinSize = min;
     }
 
     // ---------- 첫 파트너 고르기 ----------
