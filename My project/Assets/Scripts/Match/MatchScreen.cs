@@ -44,7 +44,7 @@ public class MatchScreen : MonoBehaviour
     RectTransform proposeCard, courseCard, courseStops, talkCard;
     LayoutElement talkTagSize;
     Button courseAgree, courseNext;
-    RawImage waitPartner, meetCreature;
+    RawImage waitPartner, acceptWaitPartner, meetCreature;
     InputField lookInput;
     Image[] minuteChips, genderChips, reasonChips;
     Image blockChip;
@@ -211,6 +211,8 @@ public class MatchScreen : MonoBehaviour
                 break;
             case MatchState.Accepted:
                 ShowPage(acceptWaitPage);
+                acceptWaitPartner.texture = waitPartner.texture;
+                acceptWaitPartner.enabled = acceptWaitPartner.texture != null;
                 break;
             case MatchState.Matched:
                 if (!meetPage.activeSelf && !coursePage.activeSelf && !lookPage.activeSelf && !talkPage.activeSelf)
@@ -258,8 +260,9 @@ public class MatchScreen : MonoBehaviour
             foreach (string t in state.partner.commonTastes)
                 names.Add(TasteNames.TryGetValue(t, out string n) ? n : t);
         string talk = state.partner?.talkStyle switch { "chatty" => "수다 떨며", "quiet" => "조용히 각자", "some" => "가끔 대화", _ => null };
-        string tastes = names.Count > 0 ? "같이 좋아하는 것  " + string.Join(" · ", names) : "";
-        return talk != null ? $"{tastes}\n걸을 때 분위기  {talk}" : tastes;
+        // 값만 굵게: 이름표와 값이 같은 굵기라 한 덩어리로 읽혔음 (REVIEW_v42)
+        string tastes = names.Count > 0 ? $"같이 좋아하는 것  <b>{string.Join(" · ", names)}</b>" : "";
+        return talk != null ? $"{tastes}\n걸을 때 분위기  <b>{talk}</b>" : tastes;
     }
 
     // ---------- 조건 ----------
@@ -778,6 +781,12 @@ public class MatchScreen : MonoBehaviour
     void BuildAcceptWait(RectTransform body)
     {
         acceptWaitPage = Step(body, "AcceptWait", "상대의 수락을\n기다리는 중이에요", 1, out RectTransform c, out RectTransform b);
+        // 찾는 중 화면과 같은 물결 + 파트너 (제목 한 줄만 있어 텅 비어 보였음, REVIEW_v42)
+        RectTransform ripple = UIKit.Rect(c, "Ripple");
+        UIKit.Size(ripple, 560f);
+        MatchRipple.Add(ripple, 560f, Accent);
+        acceptWaitPartner = RawIn(ripple, 300f);
+        acceptWaitPartner.gameObject.AddComponent<Bob>();
         Note(c, "상대도 수락하면 만날 곳을 알려 드려요.");
         UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
     }
