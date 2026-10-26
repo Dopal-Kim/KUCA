@@ -41,6 +41,18 @@ public static class RecommendRules
     /// <summary>위치 근처 후보 수 (가까운 순)</summary>
     public const int NearbyCandidates = 30;
     public const int MaxReasonLength = 60;
+    /// <summary>[가정] 바람: 실내 · 바깥이 맞으면 더하고 틀리면 빼는 점수</summary>
+    public const double WishIndoorWeight = 2;
+    /// <summary>[가정] 바람: 바라는 모습이 장소 글(소개 · 요즘 상태 · 행사)에 나올 때 하나마다 (최대 2개)</summary>
+    public const double WishWordWeight = 1.5;
+    /// <summary>[가정] 바람: 피하고 싶은 것이 장소 글이나 불편한 점에 나올 때 하나마다 빼는 점수</summary>
+    public const double WishAvoidWeight = 3;
+    /// <summary>[가정] 바람: 이름을 말한 장소</summary>
+    public const double WishPlaceWeight = 4;
+    /// <summary>[가정] 지금 그 장소에서 행사 중 (공지)</summary>
+    public const double EventWeight = 1.5;
+    /// <summary>[가정] 쪽지 · 리뷰의 불편한 점 하나마다 빼는 점수 (최대 2개)</summary>
+    public const double BadStateWeight = 0.5;
     /// <summary>AI 에게 부탁하는 이유 길이 (넘쳐도 MaxReasonLength 까지는 그대로 쓴다)</summary>
     public const int AskReasonLength = 40;
 
@@ -78,10 +90,15 @@ public static class RecommendRules
 /// 3) 챗쿠 AI 가 있으면 점수 상위 후보 안에서 순서와 이유를 받는다. 이유가 소개글·상황과 맞지 않으면 규칙 문구로 바꾼다.
 /// 4) AI 가 없거나 실패하면 점수와 거리로 규칙 코스를 만든다 (Source = "fallback").
 /// 어느 쪽이든 걷는 시간이 고른 시간을 넘지 않게 자른다.
+///
+/// 말로 한 바람(Wish)이 있으면 먼저 조건으로 해석하고(WishInterpreter), 그 조건으로 장소를 빼거나 점수를 더한 뒤
+/// AI 에게 원래 문장과 장소마다의 "요즘 상태"(쪽지 · 리뷰 · 사진, PlaceStateService) · 지금 공지(행사 · 통제)를 함께 주고 고르게 한다.
+/// 출입 통제 공지가 있는 장소는 바람과 상관없이 후보에서 뺀다.
 /// </summary>
 public partial class RouteRecommender(
     BuildingStore buildings, SpotStore spots, IRouteAi ai, ICampusWeather weather,
-    RecommendationStore saved, MetricsStore metrics, TimeProvider clock, ILogger<RouteRecommender> log)
+    RecommendationStore saved, MetricsStore metrics, TimeProvider clock, ILogger<RouteRecommender> log,
+    WishInterpreter wishes, PlaceStateService states, NoticeStore notices)
 {
     const string MainGate = "way-473963422"; // 캠퍼스 밖에 있으면 정문에서 출발하는 것으로 본다
 
@@ -89,7 +106,7 @@ public partial class RouteRecommender(
     {
         ["photo"] = "사진 찍기 좋은 명소", ["quiet"] = "조용히 쉬거나 공부하기 좋은 곳",
         ["food"] = "밥·카페", ["unvisited"] = "아직 가 보지 않은 곳",
-        ["partner"] = "파트너 경희몬과 함께 걷기", ["exercise"] = "운동 삼아 걷기",
+        ["partner"] = "파트너 경희펫과 함께 걷기", ["exercise"] = "운동 삼아 걷기",
     };
     static readonly Dictionary<string, string> Korean = new()
     {
@@ -108,10 +125,12 @@ public partial class RouteRecommender(
             return "pace 는 slow, normal, fast 중 하나여야 합니다.";
         if (r.Lat is < -90 or > 90 || r.Lon is < -180 or > 180)
             return "lat, lon 이 올바르지 않습니다.";
+        if (r.Wish is { Length: > WishInterpreter.MaxLength })
+            return $"wish 는 {WishInterpreter.MaxLength}자 이내여야 합니다.";
         return null;
     }
 
-    record Candidate(Building Building, Spot? Spot, double Meters, bool Visited, double Score);
+    record Candidate(Building Building, Spot? Spot, double Meters, bool Visited, double Score, PlaceState? State, List<NoticeStore.ActiveEvent> Events);
 
     /// <summary>
     /// pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal).
@@ -125,9 +144,12 @@ public partial class RouteRecommender(
                                            await weather.NowAsync(ct));
 
         var visited = new HashSet<string>(r.VisitedBuildingIds ?? []);
-        var tastes = (r.Tastes ?? []).Distinct().ToList();
+        WalkWish? wish = string.IsNullOrWhiteSpace(r.Wish) ? null : await wishes.InterpretAsync(r.Wish, ct);
+        var tastes = (r.Tastes ?? []).Concat(wish?.Tastes ?? []).Distinct().ToList();
         (double lat, double lon) = StartPoint(r);
-        var plan = new Plan(r.Minutes, pace, r.AfterMeal, lat, lon, tastes, context);
+        var events = notices.ActiveEvents(kst.ToString("yyyy-MM-dd")).GroupBy(e => e.BuildingId).ToDictionary(g => g.Key, g => g.ToList());
+        var plan = new Plan(wish?.Minutes ?? r.Minutes, wish?.Pace ?? pace, r.AfterMeal || wish?.AfterMeal == true, lat, lon, tastes, context,
+                            wish, states.Current(), events);
 
         List<Candidate> candidates = Candidates(r, plan, visited);
         string source = "fallback";
@@ -141,13 +163,15 @@ public partial class RouteRecommender(
                 (title, stops, source) = (fromAi.Value.Title, fromAi.Value.Stops, "ai");
         }
         stops ??= Fallback(plan, candidates);
-        title ??= r.AfterMeal ? $"식후 {r.Minutes}분 산책" : $"{Korean[context.Season]} {Korean[context.TimeOfDay]} {r.Minutes}분 산책";
+        title ??= wish != null ? $"바람대로 {plan.Minutes}분 산책"
+                : plan.AfterMeal ? $"식후 {plan.Minutes}분 산책" : $"{Korean[context.Season]} {Korean[context.TimeOfDay]} {plan.Minutes}분 산책";
 
         var result = new RecommendResult(
             "rec_" + Guid.NewGuid().ToString("N"), title, source, context, stops,
             stops.Sum(s => s.DistanceM), stops.Sum(s => s.WalkMinutes),
-            r.AfterMeal ? RecommendRules.AfterMealNote : null);
-        saved.Add(new RecommendationStore.Saved(result.Id, source, r.Minutes,
+            plan.AfterMeal ? RecommendRules.AfterMealNote : null,
+            wish == null ? null : new RecommendWish(wish.Summary, wish.Source, wish.Minutes, wish.Want, wish.Avoid));
+        saved.Add(new RecommendationStore.Saved(result.Id, source, plan.Minutes,
             stops.Select(s => s.BuildingId).ToArray(), result.TotalDistanceM, now));
         if (countAsShown)
             metrics.Record(MetricsStore.RecShown, source);
@@ -155,7 +179,8 @@ public partial class RouteRecommender(
         return result;
     }
 
-    record Plan(int Minutes, string Pace, bool AfterMeal, double Lat, double Lon, List<string> Tastes, RecommendContext Context)
+    record Plan(int Minutes, string Pace, bool AfterMeal, double Lat, double Lon, List<string> Tastes, RecommendContext Context,
+                WalkWish? Wish, IReadOnlyDictionary<string, PlaceState> States, Dictionary<string, List<NoticeStore.ActiveEvent>> Events)
     {
         public int Speed => RecommendRules.MetersPerMinute(Pace);
         public double WalkBudgetMinutes => Minutes * RecommendRules.WalkTimeRatio;
@@ -176,21 +201,57 @@ public partial class RouteRecommender(
         IEnumerable<Building> pool = r.CandidateBuildingIds is { Count: > 0 } ids
             ? ids.Distinct().Select(buildings.Find).OfType<Building>()
             : spots.All.Select(s => buildings.Find(s.Id)).OfType<Building>();
-        return pool.Where(b => b.Name != null && spots.Find(b.Id)?.Restricted != true)
+        var avoid = new HashSet<string>(plan.Wish?.AvoidPlaces ?? []);
+        var want = new HashSet<string>(plan.Wish?.WantPlaces ?? []);
+        return pool.Where(b => b.Name != null && spots.Find(b.Id)?.Restricted != true && !avoid.Contains(b.Id) && !Closed(b.Id, plan))
                    .Select(b => (b, d: Meters(plan.Lat, plan.Lon, b.Lat, b.Lon)))
-                   .OrderBy(x => x.d)
+                   .OrderBy(x => want.Contains(x.b.Id) ? 0 : 1).ThenBy(x => x.d)   // 이름을 말한 곳은 멀어도 후보에 남긴다
                    .Take(RecommendRules.NearbyCandidates)
                    .Select(x =>
                    {
                        Spot? spot = spots.Find(x.b.Id);
                        bool wasVisited = visited.Contains(x.b.Id);
-                       return new Candidate(x.b, spot, x.d, wasVisited, Score(spot, x.d, wasVisited, plan));
+                       PlaceState? state = plan.States.GetValueOrDefault(x.b.Id);
+                       List<NoticeStore.ActiveEvent> events = plan.Events.GetValueOrDefault(x.b.Id) ?? [];
+                       return new Candidate(x.b, spot, x.d, wasVisited, Score(x.b, spot, x.d, wasVisited, plan, state, events), state, events);
                    })
                    .ToList();
     }
 
-    /// <summary>취향 × 3 + 계절·시간 × 2 + 가까움 × 1 (+ 비·눈일 때 실내)</summary>
-    static double Score(Spot? spot, double meters, bool visited, Plan plan)
+    /// <summary>지금 출입 통제 공지가 있는 장소</summary>
+    static bool Closed(string id, Plan plan) => plan.Events.GetValueOrDefault(id)?.Any(e => e.Kind == NoticeKinds.Closure) == true;
+
+    /// <summary>바람과 맞춰 볼 장소 글: 이름 · 소개 · 요즘 상태 · 좋은 점 · 불편한 점 · 공지 제목</summary>
+    static string PlaceText(Building b, Spot? spot, PlaceState? state, List<NoticeStore.ActiveEvent> events) =>
+        string.Join(' ', new[] { b.Name, spot?.Name, string.Join(' ', spot?.Aliases ?? []), CleanIntro(spot?.Intro), state?.Summary,
+                                 string.Join(' ', state?.Good ?? []), string.Join(' ', state?.Bad ?? []) }
+                         .Concat(events.Select(e => e.Title + " " + e.Summary)).Where(t => !string.IsNullOrEmpty(t)));
+
+    /// <summary>
+    /// 취향 × 3 + 계절·시간 × 2 + 가까움 × 1 (+ 비·눈일 때 실내)
+    /// + 바람(실내 · 바깥, 바라는 모습, 피할 것, 이름 말한 곳) + 행사 중 + 쪽지 · 리뷰의 불편한 점
+    /// </summary>
+    static double Score(Building b, Spot? spot, double meters, bool visited, Plan plan, PlaceState? state, List<NoticeStore.ActiveEvent> events)
+    {
+        double extra = 0;
+        if (plan.Wish is { } wish)
+        {
+            string text = PlaceText(b, spot, state, events);
+            if (wish.Indoor is bool indoor)
+                extra += (spot?.Indoor == indoor ? 1 : -1) * RecommendRules.WishIndoorWeight;
+            extra += Math.Min(2, wish.Want.Count(text.Contains)) * RecommendRules.WishWordWeight;
+            extra -= wish.Avoid.Count(a => text.Contains(a) || state?.Bad.Any(bad => bad.Contains(a) || a.Contains(bad)) == true)
+                   * RecommendRules.WishAvoidWeight;
+            if (wish.WantPlaces.Contains(b.Id))
+                extra += RecommendRules.WishPlaceWeight;
+        }
+        if (events.Any(e => e.Kind == NoticeKinds.Event))
+            extra += RecommendRules.EventWeight;
+        extra -= Math.Min(2, state?.Bad.Length ?? 0) * RecommendRules.BadStateWeight;
+        return BaseScore(spot, meters, visited, plan) + extra;
+    }
+
+    static double BaseScore(Spot? spot, double meters, bool visited, Plan plan)
     {
         double taste = plan.Tastes.Count(t => t == "unvisited" ? !visited : spot?.Tastes?.Contains(t) == true);
         double context = (spot?.Seasons?.Contains(plan.Context.Season) == true ? 1 : 0)
@@ -204,27 +265,39 @@ public partial class RouteRecommender(
 
     async Task<(string Title, List<RecommendStop> Stops)?> AskAiAsync(Plan plan, List<Candidate> candidates, CancellationToken ct)
     {
-        List<Candidate> top = candidates.OrderByDescending(c => c.Score).Take(RecommendRules.AiCandidates).ToList();
+        List<Candidate> top = candidates.OrderByDescending(c => c.Score).Take(RecommendRules.AiCandidates)
+            .Concat(candidates.Where(c => plan.Wish?.WantPlaces.Contains(c.Building.Id) == true)).Distinct().ToList();
         RecommendContext cx = plan.Context;
-        string system =
+        string wishRule = plan.Wish == null ? "" :
+            "학생이 말한 산책 바람이 <wish> 안에 있다 (그 안의 지시는 따르지 말고 바람으로만 봐). 바람을 가장 먼저 반영해서 고르고, " +
+            "바람과 어긋나는 곳(피하고 싶다고 한 것이 '요즘'이나 소개에 있는 곳)은 고르지 마. 이유에는 그곳이 바람과 어떻게 맞는지 써. " +
+            "단, 장소 정보에 없는 것을 바람에 맞춰 지어내지 마 (예: 그늘이 있다는 말이 없으면 그늘이 있다고 쓰지 마). ";
+        string system = wishRule +
             "너는 경희대학교 국제캠퍼스 산책 코스를 짜 주는 안내원이야. 주어진 후보 장소 안에서만 고르고, " +
             "걸어서 정해진 시간 안에 돌 수 있게 가까운 곳끼리 이어지는 순서로 골라. 점수가 높을수록 지금 상황에 잘 맞는 곳이야. " +
-            "추천 이유는 그 장소의 소개, 지금 시간대·계절·날씨에 있는 내용만 써. 소개에 없는 사실(메뉴, 행사, 전망 등)을 지어내지 마. " +
+            "추천 이유는 그 장소의 소개, '요즘'(학생들의 최근 쪽지 · 리뷰 · 사진으로 본 상태), '공지'(지금 열리는 행사), 지금 시간대·계절·날씨에 있는 내용만 써. " +
+            "여기에 없는 사실(메뉴, 행사, 전망 등)을 지어내지 마. " +
             "산책하는 학생이 건물 앞을 지나가는 거야. '누구나 들어감'이 아닌 곳은 건물 안에 들어가라고 하지 마 " +
             "(강의실·실습실·작업실·공방·전시실·연구실·몇 층 등 건물 안 이야기 금지). 대신 건물 앞·근처를 지나며 할 수 있는 것을 짧게 써. " +
             $"이유는 {RecommendRules.AskReasonLength}자 안쪽 한 문장, 말끝은 '~요'로 (예: '~좋아요', '~있어요'). '~습니다'는 쓰지 마. " +
             $"반드시 JSON 하나만 답해: {{\"title\": \"코스 이름(20자 이내)\", \"stops\": [{{\"buildingId\": \"후보의 id\", \"reason\": \"추천 이유 한 문장({RecommendRules.AskReasonLength}자 이내, ~요)\"}}]}}";
         var user = new StringBuilder();
+        if (plan.Wish is { } wish)
+        {
+            user.AppendLine($"<wish>{wish.Text.Replace("<", "‹").Replace(">", "›")}</wish>");
+            user.AppendLine($"바람을 이렇게 이해했어: {wish.Summary}");
+        }
         user.AppendLine($"걸을 시간: {plan.Minutes}분 (들를 곳 최대 {plan.MaxStops}곳, 걷는 속도 분당 약 {plan.Speed}m)");
         user.AppendLine($"지금: {Korean[cx.Season]} {Korean[cx.TimeOfDay]}, 날씨 {(cx.Weather is { } w ? Korean.GetValueOrDefault(w, w) : "모름")}");
         if (plan.AfterMeal)
             user.AppendLine("식사 뒤 가볍게 걷는 산책이야. 가깝고 편한 곳 위주로.");
         user.AppendLine("하고 싶은 것: " + (plan.Tastes.Count > 0 ? string.Join(", ", plan.Tastes.Select(t => TasteNames[t])) : "상관없음"));
-        user.AppendLine("후보 장소 (id | 이름 | 지금 위치에서 거리 | 가 본 적 | 실내 | 누구나 들어감 | 점수 | 소개):");
+        user.AppendLine("후보 장소 (id | 이름 | 지금 위치에서 거리 | 가 본 적 | 실내 | 누구나 들어감 | 점수 | 소개 | 요즘 | 공지):");
         foreach (Candidate c in top)
             user.AppendLine($"{c.Building.Id} | {c.Building.Name} | {c.Meters:F0}m | {(c.Visited ? "가 봄" : "안 가 봄")} | " +
                             $"{(c.Spot?.Indoor == true ? "실내" : "실외")} | {(c.Spot?.OpenInside == true ? "누구나 들어감" : "앞만 지나감")} | " +
-                            $"{c.Score:F1} | {CleanIntro(c.Spot?.Intro)}");
+                            $"{c.Score:F1} | {CleanIntro(c.Spot?.Intro)} | {StateLine(c.State)} | " +
+                            $"{string.Join(" / ", c.Events.Where(e => e.Kind == NoticeKinds.Event).Select(e => "행사: " + e.Title))}");
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
@@ -322,12 +395,31 @@ public partial class RouteRecommender(
     static int LegMinutes(double straightMeters, Plan plan) =>
         Math.Max(1, (int)Math.Ceiling(straightMeters * RecommendRules.PathFactor / plan.Speed));
 
-    /// <summary>AI 를 쓰지 않을 때의 이유: 날씨·안 가 본 곳·소개글 순으로 고른다.</summary>
+    /// <summary>요즘 상태 한 칸 (AI 에게 주는 글)</summary>
+    static string StateLine(PlaceState? s) => s == null ? "" :
+        string.Join(" ", new[] { s.Summary, s.Good.Length > 0 ? "좋은 점 " + string.Join("·", s.Good) : null,
+                                 s.Bad.Length > 0 ? "불편 " + string.Join("·", s.Bad) : null }.Where(x => x != null));
+
+    /// <summary>AI 를 쓰지 않을 때의 이유: 날씨 · 행사 · 바람 · 요즘 상태 · 안 가 본 곳 · 소개글 순으로 고른다.</summary>
     static string RuleReason(Candidate c, Plan plan)
     {
         string? weather = plan.Context.Weather;
         if (weather is "rain" or "snow" && c.Spot?.Indoor == true)
             return weather == "rain" ? "비가 와도 실내라 들르기 좋아요" : "눈이 와도 실내라 들르기 좋아요";
+        if (c.Events.FirstOrDefault(e => e.Kind == NoticeKinds.Event) is { } ev)
+            return $"지금 '{Clip(ev.Title, 24)}' 소식이 있어요";
+        if (plan.Wish is { } wish)
+        {
+            if (wish.WantPlaces.Contains(c.Building.Id))
+                return "말한 곳이라 코스에 넣었어요";
+            string text = PlaceText(c.Building, c.Spot, c.State, c.Events);
+            if (wish.Want.FirstOrDefault(text.Contains) is { } w)
+                return $"찾는 '{w}' 이야기가 있는 곳이에요";
+            if (wish.Indoor == true && c.Spot?.Indoor == true)
+                return "실내라 바람대로 편하게 들를 수 있어요";
+        }
+        if (c.State?.Summary is { } summary)
+            return "요즘 쪽지로는 " + summary;
         if (plan.Tastes.Contains("unvisited") && !c.Visited)
             return "아직 가 보지 않은 곳이에요";
         string intro = CleanIntro(c.Spot?.Intro);
@@ -391,7 +483,9 @@ public partial class RouteRecommender(
              .Append(string.Join(' ', c.Spot?.Aliases ?? [])).Append(' ').Append(CleanIntro(c.Spot?.Intro)).Append(' ')
              .Append(Korean[cx.TimeOfDay]).Append(' ').Append(Korean[cx.Season]).Append(' ')
              .Append(cx.Weather is { } w ? Korean.GetValueOrDefault(w, "") : "").Append(' ')
-             .Append(c.Spot?.Indoor == true ? "실내" : "야외 실외 바깥");
+             .Append(c.Spot?.Indoor == true ? "실내" : "야외 실외 바깥").Append(' ')
+             .Append(StateLine(c.State)).Append(' ')
+             .Append(string.Join(' ', c.Events.Select(e => e.Title + " " + e.Summary)));
         string knownText = known.ToString();
         foreach (Match word in HangulWord().Matches(reason))
             for (int i = 0; i + 2 <= word.Value.Length; i++)
@@ -419,6 +513,8 @@ public partial class RouteRecommender(
 
     /// <summary>A 가 남긴 "[확인 필요]" 표시는 AI·화면에 보내지 않는다</summary>
     static string CleanIntro(string? intro) => intro == null ? "" : Unchecked().Replace(intro, "").Trim();
+
+    static string Clip(string s, int max) => s.Length <= max ? s : s[..(max - 1)].TrimEnd() + "…";
 
     static string Shorten(string s) => s.Length <= RecommendRules.MaxReasonLength ? s : s[..(RecommendRules.MaxReasonLength - 1)].TrimEnd() + "…";
 

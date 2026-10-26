@@ -7,6 +7,7 @@ namespace KucaMemoServer.Services;
 /// 장소 공지를 메모와 같은 SQLite 파일(Memos:DatabasePath)에 저장한다.
 ///   notices        공지 한 건 (원문 링크는 겹치지 않는다)
 ///   notice_places  공지 ↔ 경희스팟 연결 (한 공지에 최대 3곳)
+///   notice_events  출입 통제 · 행사 공지가 해당하는 장소와 기간 (산책 추천이 피하거나 더 친다)
 /// </summary>
 public class NoticeStore
 {
@@ -46,6 +47,14 @@ public class NoticeStore
                 PRIMARY KEY (notice_id, building_id)
             );
             CREATE INDEX IF NOT EXISTS notice_places_building ON notice_places (building_id);
+            CREATE TABLE IF NOT EXISTS notice_events (
+                notice_id   TEXT NOT NULL,
+                building_id TEXT NOT NULL,
+                kind        TEXT NOT NULL,
+                starts_on   TEXT,
+                ends_on     TEXT,
+                PRIMARY KEY (notice_id, building_id)
+            );
             """;
         cmd.ExecuteNonQuery();
     }
@@ -139,6 +148,54 @@ public class NoticeStore
         return rows;
     }
 
+    /// <summary>통제 · 행사 공지의 장소와 기간을 남긴다 (general 은 남기지 않음)</summary>
+    public void AddEvent(string noticeId, IEnumerable<string> buildingIds, string kind, string? startsOn, string? endsOn)
+    {
+        if (kind == NoticeKinds.General)
+            return;
+        using var conn = Open();
+        foreach (string buildingId in buildingIds)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = """
+                INSERT OR REPLACE INTO notice_events (notice_id, building_id, kind, starts_on, ends_on)
+                VALUES ($id, $building, $kind, $starts, $ends)
+                """;
+            cmd.Parameters.AddWithValue("$id", noticeId);
+            cmd.Parameters.AddWithValue("$building", buildingId);
+            cmd.Parameters.AddWithValue("$kind", kind);
+            cmd.Parameters.AddWithValue("$starts", (object?)startsOn ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$ends", (object?)endsOn ?? DBNull.Value);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
+    public record ActiveEvent(string BuildingId, string Kind, string Title, string Summary);
+
+    /// <summary>
+    /// 오늘(yyyy-MM-dd) 해당하는 통제 · 행사. 기간이 있으면 그 안일 때, 기간이 없으면 게시일부터 undatedDays 일 동안.
+    /// </summary>
+    public List<ActiveEvent> ActiveEvents(string today, int undatedDays = 14)
+    {
+        string since = DateOnly.ParseExact(today, "yyyy-MM-dd").AddDays(-undatedDays).ToString("yyyy-MM-dd");
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT e.building_id, e.kind, n.title, n.summary
+            FROM notice_events e JOIN notices n ON n.id = e.notice_id
+            WHERE (e.starts_on IS NOT NULL AND e.starts_on <= $today AND COALESCE(e.ends_on, e.starts_on) >= $today)
+               OR (e.starts_on IS NULL AND n.posted_at >= $since AND n.posted_at <= $today)
+            ORDER BY n.posted_at DESC
+            """;
+        cmd.Parameters.AddWithValue("$today", today);
+        cmd.Parameters.AddWithValue("$since", since);
+        using var reader = cmd.ExecuteReader();
+        var rows = new List<ActiveEvent>();
+        while (reader.Read())
+            rows.Add(new ActiveEvent(reader.GetString(0), reader.GetString(1), reader.GetString(2), reader.GetString(3)));
+        return rows;
+    }
+
     /// <summary>공지를 모든 장소에서 지운다. 없으면 false.</summary>
     public bool Delete(string id)
     {
@@ -148,6 +205,8 @@ public class NoticeStore
         cmd.Transaction = tx;
         cmd.Parameters.AddWithValue("$id", id);
         cmd.CommandText = "DELETE FROM notice_places WHERE notice_id = $id";
+        cmd.ExecuteNonQuery();
+        cmd.CommandText = "DELETE FROM notice_events WHERE notice_id = $id";
         cmd.ExecuteNonQuery();
         cmd.CommandText = "DELETE FROM notices WHERE id = $id";
         bool deleted = cmd.ExecuteNonQuery() > 0;

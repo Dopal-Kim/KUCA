@@ -41,6 +41,10 @@ public class Memo
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? FlagNote { get; set; }
 
+    /// <summary>AI 가 본 사진 속 장소 모습 한 문장 (장소의 요즘 상태 정리용). API 응답에는 내보내지 않는다.</summary>
+    [JsonIgnore]
+    public string? PhotoCaption { get; set; }
+
     /// <summary>작성한 기기 ID. 삭제 권한 확인용으로 서버에만 저장하고 API 응답에는 내보내지 않는다.</summary>
     [JsonIgnore]
     public string DeviceId { get; set; } = "";

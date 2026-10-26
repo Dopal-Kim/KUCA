@@ -19,6 +19,7 @@ public class AiModerator : IContentModerator
 {
     public const string DefaultEndpoint = "https://factchat-cloud.mindlogic.ai/v1/gateway/chat/completions";
     public const string DefaultModel = "claude-haiku-5-5";
+    public const int MaxCaptionLength = 60;
 
     const string SystemPrompt = """
         너는 대학 캠퍼스 산책 앱의 "쪽지"(장소에 남기는 짧은 글과 사진) 내용 검사기다.
@@ -32,8 +33,11 @@ public class AiModerator : IContentModerator
         캠퍼스 일상 이야기, 시설 고장 제보, 맛집·장소 추천, 가벼운 감탄이나 농담은 통과(allow)다.
         기준에 확실히 해당하면 block, 해당할 수도 있지만 확실하지 않으면 review 로 답한다.
 
+        사진이 있으면 caption 에 사진에 보이는 장소의 모습을 한 문장(40자 이내)으로 쓴다 (예: "단풍이 든 나무 아래 벤치", "공사 가림막이 쳐진 건물 입구").
+        사람의 얼굴 · 옷차림 · 신원은 쓰지 않는다. 사진이 없으면 caption 은 null.
+
         반드시 아래 JSON 한 개만 출력한다. 다른 글은 쓰지 않는다.
-        {"verdict": "allow" | "block" | "review", "reason": "abusive" | "personal_info" | "advertising" | "none", "note": "판단 이유 한 문장"}
+        {"verdict": "allow" | "block" | "review", "reason": "abusive" | "personal_info" | "advertising" | "none", "note": "판단 이유 한 문장", "caption": "사진 속 장소 모습" | null}
         """;
 
     readonly HttpClient http;
@@ -155,10 +159,12 @@ public class AiModerator : IContentModerator
             string? verdict = json?["verdict"]?.GetValue<string>()?.Trim().ToLowerInvariant();
             string? reason = json?["reason"]?.GetValue<string>()?.Trim().ToLowerInvariant();
             string? note = json?["note"]?.GetValue<string>()?.Trim();
+            string? caption = json?["caption"] is JsonValue cv && cv.TryGetValue(out string? c) && c.Trim() is { Length: > 0 and <= MaxCaptionLength } ct
+                              && !ct.Contains("http") ? ct : null;
 
             return verdict switch
             {
-                "allow" => ModerationResult.Allowed(usedFallback: false),
+                "allow" => ModerationResult.Allowed(usedFallback: false) with { Caption = caption },
                 // 거절인데 이유를 모르면 확실하지 않은 것으로 보고 검토 대기로 돌린다.
                 "block" when ModerationReasons.IsKnown(reason) => new ModerationResult(Verdict.Block, reason, note, false),
                 "block" or "review" => new ModerationResult(Verdict.Review, ModerationReasons.IsKnown(reason) ? reason : null, note, false),

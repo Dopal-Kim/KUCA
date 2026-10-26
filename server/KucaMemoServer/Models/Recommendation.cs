@@ -11,7 +11,8 @@ public record RecommendRequest(
     List<string>? VisitedBuildingIds,
     List<string>? CandidateBuildingIds,
     string? Pace = null,          // "slow" · "normal" · "fast" (없으면 계정 취향, 그것도 없으면 normal)
-    bool AfterMeal = false);      // 식후 걷기 버튼으로 요청
+    bool AfterMeal = false,       // 식후 걷기 버튼으로 요청
+    string? Wish = null);         // 말로 한 산책 바람 (200자 이내). 있으면 해석해서 시간 · 취향 · 피할 것에 반영
 
 /// <param name="WalkMinutes">앞 장소(첫 곳은 지금 위치)에서 걸어서 몇 분</param>
 /// <param name="DistanceM">앞 장소에서 걷는 거리 (m)</param>
@@ -29,4 +30,8 @@ public record RecommendResult(
     List<RecommendStop> Stops,
     int TotalDistanceM,
     int TotalMinutes,
-    string? HealthNote);
+    string? HealthNote,
+    RecommendWish? Wish = null);
+
+/// <summary>바람을 어떻게 이해했는지 (앱이 "이렇게 이해했어요" 로 보여 준다). Source: "ai" 또는 "fallback"</summary>
+public record RecommendWish(string Summary, string Source, int? Minutes, List<string> Want, List<string> Avoid);

@@ -62,6 +62,7 @@ public class MemoStore
             AddColumnIfMissing(conn, table, "status", "TEXT NOT NULL DEFAULT 'visible'");
             AddColumnIfMissing(conn, table, "flag_note", "TEXT");
         }
+        AddColumnIfMissing(conn, "memos", "photo_caption", "TEXT");
     }
 
     static void AddColumnIfMissing(SqliteConnection conn, string table, string column, string definition)
@@ -138,8 +139,8 @@ public class MemoStore
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            INSERT INTO memos (id, building_id, author, text, photo_url, device_id, created_at, status, flag_note)
-            VALUES ($id, $building, $author, $text, $photo, $device, $created, $status, $note)
+            INSERT INTO memos (id, building_id, author, text, photo_url, device_id, created_at, status, flag_note, photo_caption)
+            VALUES ($id, $building, $author, $text, $photo, $device, $created, $status, $note, $caption)
             """;
         cmd.Parameters.AddWithValue("$id", memo.Id);
         cmd.Parameters.AddWithValue("$building", memo.BuildingId);
@@ -150,7 +151,32 @@ public class MemoStore
         cmd.Parameters.AddWithValue("$created", memo.CreatedAt.ToUniversalTime().Ticks);
         cmd.Parameters.AddWithValue("$status", memo.Status);
         cmd.Parameters.AddWithValue("$note", (object?)memo.FlagNote ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$caption", (object?)memo.PhotoCaption ?? DBNull.Value);
         cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>
+    /// 장소의 요즘 상태를 정리할 재료: since 뒤에 공개된 메모의 글과 사진 설명, 장소마다 최신 perBuilding 개.
+    /// 닉네임 · 기기는 넣지 않는다.
+    /// </summary>
+    public List<(string BuildingId, string Text, string? PhotoCaption)> RecentForPlaces(DateTime since, int perBuilding)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = """
+            SELECT building_id, text, photo_caption FROM (
+                SELECT building_id, text, photo_caption,
+                       ROW_NUMBER() OVER (PARTITION BY building_id ORDER BY created_at DESC) AS rn
+                FROM memos WHERE status = 'visible' AND created_at >= $since)
+            WHERE rn <= $per
+            """;
+        cmd.Parameters.AddWithValue("$since", since.ToUniversalTime().Ticks);
+        cmd.Parameters.AddWithValue("$per", perBuilding);
+        using var reader = cmd.ExecuteReader();
+        var rows = new List<(string, string, string?)>();
+        while (reader.Read())
+            rows.Add((reader.GetString(0), reader.GetString(1), reader.IsDBNull(2) ? null : reader.GetString(2)));
+        return rows;
     }
 
     /// <summary>메모를 지운다. 그 메모의 좋아요·댓글도 함께 지운다.</summary>

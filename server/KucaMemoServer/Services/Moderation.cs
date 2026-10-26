@@ -15,7 +15,8 @@ public enum Verdict
 /// <param name="Reason">거절·검토 이유 코드: abusive, personal_info, advertising. 통과면 null.</param>
 /// <param name="Note">관리자가 볼 판단 메모 (사용자에게는 보이지 않음)</param>
 /// <param name="UsedFallback">AI 대신 금지어·패턴 검사로 판단했으면 true</param>
-public record ModerationResult(Verdict Verdict, string? Reason, string? Note, bool UsedFallback)
+/// <param name="Caption">사진에 보이는 장소 모습 한 문장 (AI 가 사진을 봤을 때만). 장소의 요즘 상태를 정리할 때 쓴다</param>
+public record ModerationResult(Verdict Verdict, string? Reason, string? Note, bool UsedFallback, string? Caption = null)
 {
     public static ModerationResult Allowed(bool usedFallback) => new(Verdict.Allow, null, null, usedFallback);
 

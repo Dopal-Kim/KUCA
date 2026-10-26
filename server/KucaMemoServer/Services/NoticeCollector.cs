@@ -160,14 +160,25 @@ public partial class NoticeCollector
             string? page = await fetcher.GetAsync(item.Url, ct);
             string body = page != null ? ParseBody(source.Kind, page) : "";
             string summary = "";
+            NoticeClassification c;
             if (body.Length < 20)
+            {
                 body = item.Title;   // 포스터 그림만 있는 공지: 요약 없이 제목만 보인다
+                c = NoticeEvents.Fill(new NoticeClassification([], "", "fallback"), item.Title, "");   // 제목만으로 통제 · 행사 판단
+            }
             else
             {
-                NoticeClassification c = await classifier.ClassifyAsync(item.Title, body, ct);
+                c = await classifier.ClassifyAsync(item.Title, body, ct);
                 summary = c.Summary == item.Title ? "" : c.Summary;
             }
-            notices.Add(Guid.NewGuid().ToString(), item.Title, body, item.Url, summary, item.PostedAt, source.BuildingIds);
+            string id = Guid.NewGuid().ToString();
+            notices.Add(id, item.Title, body, item.Url, summary, item.PostedAt, source.BuildingIds);
+            // 통제 · 행사는 공지에 나온 장소에. 장소가 안 나온 행사만 그 게시판의 단과대 건물로
+            // (통제는 추천에서 장소를 빼므로, 다른 건물 공사 공지로 단과대 건물을 빼지 않게)
+            if (c.BuildingIds.Count > 0)
+                notices.AddEvent(id, c.BuildingIds, c.Kind, c.StartsOn, c.EndsOn);
+            else if (c.Kind == NoticeKinds.Event)
+                notices.AddEvent(id, source.BuildingIds, c.Kind, c.StartsOn, c.EndsOn);
             added++;
         }
         return new(source.Id, items.Count, added, null);
