@@ -772,6 +772,7 @@ public class MatchScreen : MonoBehaviour
         proposeWhyBox = why.gameObject;
         proposeCard = card;
         proposeTastes = UIKit.Text(card, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        proposeTastes.supportRichText = true;   // 값만 <b> (CommonTastes)
         proposeTime = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Label, TextAnchor.MiddleLeft, Accent));
         UIKit.Size(proposeTime, 56f);
         UIKit.PrimaryButton(b, "같이 걸을래요", () => Respond(true));
