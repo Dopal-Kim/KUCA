@@ -164,6 +164,8 @@ public static partial class WishRules
         bool? indoor = new[] { "실내", "안에서", "비 와", "비와", "비 오", "비오", "추워", "더워" }.Any(text.Contains) ? true
                      : new[] { "바깥", "야외", "밖에서", "햇빛", "햇볕", "바람 쐬" }.Any(text.Contains) ? false : null;
         bool afterMeal = new[] { "밥 먹고", "밥먹고", "식후", "점심 먹고", "저녁 먹고", "소화" }.Any(text.Contains);
+        if (afterMeal && !text.Contains("카페") && !text.Contains("커피") && !text.Contains("간식"))
+            tastes.Remove("food");   // "밥 먹고 걷기" 는 식후 산책이지 밥집을 찾는 게 아니다
         string? pace = new[] { "천천히", "느긋", "여유롭", "다리 아파", "피곤" }.Any(text.Contains) ? "slow"
                      : new[] { "빠르게", "빨리", "속보" }.Any(text.Contains) ? "fast" : null;
 

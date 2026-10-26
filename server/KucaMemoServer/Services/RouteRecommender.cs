@@ -415,8 +415,6 @@ public partial class RouteRecommender(
             string text = PlaceText(c.Building, c.Spot, c.State, c.Events);
             if (wish.Want.FirstOrDefault(text.Contains) is { } w)
                 return $"찾는 '{w}' 이야기가 있는 곳이에요";
-            if (wish.Indoor == true && c.Spot?.Indoor == true)
-                return "실내라 바람대로 편하게 들를 수 있어요";
         }
         if (c.State?.Summary is { } summary)
             return "요즘 쪽지로는 " + summary;
@@ -430,6 +428,8 @@ public partial class RouteRecommender(
             .FirstOrDefault(sentence => sentence.Contains("좋"));
         if (pick != null)
             return Polite(pick); // 화면 말투(~요)에 맞춤
+        if (plan.Wish?.Indoor == true && c.Spot?.Indoor == true)
+            return "실내라 바람대로 편하게 들를 수 있어요";   // 소개 문장이 없을 때만 (모든 곳이 같은 이유로 보이지 않게)
         return "가는 길에 들르기 좋아요";
     }
 
