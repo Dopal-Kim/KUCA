@@ -1,1 +1,1 @@
-﻿Assets\Scripts\Route\WalkCompleteScreen.cs(147,20): error CS0103: The name 'Pill' does not exist in the current context
+﻿096cf2c: error CS 0, Shader error 0, EditMode 37/37 passed (2462875 had WalkCompleteScreen Pill error, fixed)

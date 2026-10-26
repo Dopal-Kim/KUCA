@@ -277,6 +277,9 @@ public static class UiCapture
             PlayerPrefs.SetString("memo_server_url", "");
             if (CallStatic("WalkCompleteScreen", "Show", done)) { yield return 3f; yield return Shot("산책_완료"); yield return ShotBottom("산책_완료_아래"); }
             yield return CloseAll();
+            // 로컬(KUCA-check) 전용: 방금 남긴 기록으로 산책 기록 요약 줄 · 상세 확인 (카카오 버튼은 누르지 않음)
+            if (CallStatic("WalkHistoryScreen", "Show")) { yield return 1.5f; yield return Shot("산책_기록_기록있음"); yield return ShotBottom("산책_기록_기록있음_아래"); }
+            yield return CloseAll();
             PlayerPrefs.DeleteKey("memo_server_url");
         }
 
@@ -290,9 +293,14 @@ public static class UiCapture
         yield return CloseAll();
 
         object hud = Find("GameHUD");
-        if (Call(hud, "OpenSettings")) { yield return 1f; yield return Shot("설정"); }
+        if (Call(hud, "OpenSettings")) { yield return 1f; yield return Shot("설정");
+            // 로컬(KUCA-check) 전용: 아래까지 · 로그아웃 확인 창 (확인은 누르지 않고 취소)
+            yield return ShotBottom("설정_아래");
+            if (Click("로그아웃") || Click("로그인하기 (체험 끝내기)")) { yield return 1f; yield return Shot("설정_로그아웃_확인"); Click("취소"); yield return 0.6f; } }
         yield return CloseAll();
-        if (Call(hud, "OpenAlbum")) { yield return 1.5f; yield return Shot("기록_앨범"); }
+        if (Call(hud, "OpenAlbum")) { yield return 1.5f; yield return Shot("기록_앨범");
+            // 로컬(KUCA-check) 전용: 빈 사진첩 버튼 → 메모판이 열리는지
+            if (Click("가까운 경희스팟 메모판 열기")) { yield return 2f; yield return Shot("기록_앨범_메모판_열기"); } }
         yield return CloseAll();
 
         object spots = Get(Find("KyungHeeSpots"), "Spots");
