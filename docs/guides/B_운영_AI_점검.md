@@ -34,7 +34,9 @@
 ## 해 줄 일 (순서대로)
 
 ### 1. 배포 확인 · 배포
-1. 팀 main 최신(fee64e2 이후)을 받는다.
+1. 팀 main 최신을 받는다.
+   - A 의 후속 PR(점검 스크립트 `tools/prod_check.sh` · 관리자 지표에 `wish` · `place_state` 추가 · 이 문서)이 병합된 상태여야 한다.
+   - 아직이면 스크립트만 받는다: `git fetch https://github.com/Dopal-Kim/KUCA claude/dreamy-wozniak-9q95up && git checkout FETCH_HEAD -- tools/prod_check.sh`
 2. 읽기 점검: `ADMIN_KEY=<관리자 키> ./tools/prod_check.sh`
    - "wish 칸: 없음" 이면 배포가 안 된 것이다.
 3. 배포: `cd server && ./deploy-azure.sh`
