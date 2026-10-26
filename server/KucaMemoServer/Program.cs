@@ -46,6 +46,8 @@ builder.Services.AddScoped<RouteRecommender>();
 builder.Services.AddSingleton<MatchStore>();
 builder.Services.AddSingleton<MatchService>();
 builder.Services.AddTransient<ISmalltalkGenerator, SmalltalkGenerator>();
+// 상대 제안 화면의 "왜 연결했는지" 한 줄 (AI, 실패하면 틀 문장). 짝은 여전히 서버 규칙이 정한다
+builder.Services.AddTransient<IMatchExplainer, MatchExplainer>();
 // 지표 (C-V6): 누가 했는지 없이 이벤트 수만 센다. 관리자 집계 /api/admin/stats · /api/admin/health
 builder.Services.AddSingleton<MetricsStore>();
 builder.Services.AddSingleton<StatsService>();

@@ -84,7 +84,7 @@ public class RecommendApiTests : IDisposable
         JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations", Body(30)));
         Assert.Equal("fallback", r.GetProperty("source").GetString());
         JsonElement[] stops = r.GetProperty("stops").EnumerateArray().ToArray();
-        Assert.InRange(stops.Length, 1, 3);
+        Assert.InRange(stops.Length, 1, RecommendRules.MaxStops(30));
         foreach (JsonElement s in stops)
         {
             Assert.Contains(s.GetProperty("buildingId").GetString(), Spots);
@@ -219,6 +219,25 @@ public class RecommendApiTests : IDisposable
             new { minutes, tastes = new[] { "unvisited" }, lat = Lat, lon = Lon }));
         Assert.InRange(r.GetProperty("totalMinutes").GetInt32(), 1, (int)(minutes * RecommendRules.WalkTimeRatio));
         Assert.InRange(r.GetProperty("stops").GetArrayLength(), 1, RecommendRules.MaxStops(minutes));
+    }
+
+    [Theory]
+    [InlineData(15, 2)]
+    [InlineData(30, 4)]
+    [InlineData(60, 6)]
+    public void 들를_곳은_15분_2곳_30분_4곳_60분_6곳까지(int minutes, int stops)
+    {
+        Assert.Equal(stops, RecommendRules.MaxStops(minutes));
+    }
+
+    [Fact]
+    public async Task 시간이_넉넉하면_30분_코스는_3곳보다_많이_들른다()
+    {
+        // 캠퍼스 한가운데(중앙도서관 근처)에서 30분: 걷는 예산 24분이면 가까운 스팟을 4곳까지 잇는다
+        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations",
+            new { minutes = 30, lat = 37.2421, lon = 127.0796 }));
+        Assert.Equal(RecommendRules.MaxStops(30), r.GetProperty("stops").GetArrayLength());
+        Assert.True(r.GetProperty("totalMinutes").GetInt32() <= 30 * RecommendRules.WalkTimeRatio);
     }
 
     [Fact]

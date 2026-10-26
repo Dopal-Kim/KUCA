@@ -13,14 +13,15 @@ public static class MatchEndpoints
     {
         var match = app.MapGroup("/api/match").WithTags("Match");
 
-        match.MapPost("/queue", (MatchJoinRequest? body, HttpRequest req, AccountStore accounts, MatchService service) =>
-            Run(req, accounts, user => Results.Ok(service.Join(user, body))));
+        match.MapPost("/queue", (MatchJoinRequest? body, HttpRequest req, AccountStore accounts, MatchService service,
+                                 IMatchExplainer explainer, CancellationToken ct) =>
+            RunAsync(req, accounts, async user => Results.Ok(await service.JoinAsync(user, body, explainer, ct))));
 
         match.MapDelete("/queue", (HttpRequest req, AccountStore accounts, MatchService service) =>
             Run(req, accounts, user => { service.Leave(user.Id); return Results.NoContent(); }));
 
-        match.MapGet("/", (HttpRequest req, AccountStore accounts, MatchService service) =>
-            Run(req, accounts, user => Results.Ok(service.Get(user.Id))));
+        match.MapGet("/", (HttpRequest req, AccountStore accounts, MatchService service, IMatchExplainer explainer, CancellationToken ct) =>
+            RunAsync(req, accounts, async user => Results.Ok(await service.GetAsync(user.Id, explainer, ct))));
 
         match.MapPost("/{matchId}/accept", (string matchId, HttpRequest req, AccountStore accounts, MatchService service,
                                             ISmalltalkGenerator smalltalk, RouteRecommender recommender, CancellationToken ct) =>

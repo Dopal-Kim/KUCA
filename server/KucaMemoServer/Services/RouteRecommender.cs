@@ -34,8 +34,8 @@ public static class RecommendRules
     public const double PathFactor = 1.3;
     /// <summary>[가정] 걷는 시간은 고른 시간의 이 비율까지 (나머지는 둘러보는 시간)</summary>
     public const double WalkTimeRatio = 0.8;
-    /// <summary>들를 곳 최대 개수: 15분 2 · 30분 3 · 60분 5</summary>
-    public static int MaxStops(int minutes) => minutes <= 15 ? 2 : minutes <= 30 ? 3 : 5;
+    /// <summary>들를 곳 최대 개수: 15분 2 · 30분 4 · 60분 6 (코스가 짧다는 피드백으로 늘림, 10/26)</summary>
+    public static int MaxStops(int minutes) => minutes <= 15 ? 2 : minutes <= 30 ? 4 : 6;
     /// <summary>[가정] AI 에게 주는 후보 수 (점수 상위)</summary>
     public const int AiCandidates = 10;
     /// <summary>위치 근처 후보 수 (가까운 순)</summary>

@@ -176,6 +176,9 @@ public class StatsApiTests : IDisposable
         Assert.Equal(1, I(s, "matching.endReasons.no_partner"));
         Assert.Equal(2, I(s, "walks.match.completed"));
         Assert.True(I(s, "ai.smalltalk.fallback") >= 1);   // AI 키가 없으니 예시로 대체
+        Assert.Equal(1.0, D(s, "matching.acceptRateByReason.fallback"));   // 틀 문장 이유로 제안 → 둘 다 수락
+        Assert.Null(D(s, "matching.acceptRateByReason.ai"));
+        Assert.Equal(1, I(s, "ai.match_reason.fallback"));
     }
 
     [Fact]
