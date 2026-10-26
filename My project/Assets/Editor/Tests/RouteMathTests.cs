@@ -58,4 +58,13 @@ public class RouteMathTests
         Assert.AreEqual("비", RouteMath.WeatherName(r.context.weather));
         Assert.IsNull(RouteMath.WeatherName(null));
     }
+
+    [Test]
+    public void 순서만_다르거나_한쪽이_포함되면_같은_코스()
+    {
+        var abc = new HashSet<string> { "A", "B", "C" };
+        Assert.IsTrue(RoutePlanner.SamePlaces(abc, new HashSet<string> { "C", "B", "A" }));   // 순서만 다름
+        Assert.IsTrue(RoutePlanner.SamePlaces(new HashSet<string> { "A", "C" }, abc));       // 가볍게 걷는 코스가 일부만
+        Assert.IsFalse(RoutePlanner.SamePlaces(abc, new HashSet<string> { "A", "B", "D" }));  // 한 곳이라도 다르면 다른 코스
+    }
 }

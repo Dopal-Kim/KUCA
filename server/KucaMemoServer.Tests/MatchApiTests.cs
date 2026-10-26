@@ -188,17 +188,16 @@ public class MatchApiTests : IDisposable
         string a = await User("가"), b = await User("나"), c = await User("다");
         await Join(a, minutes: 30);
         Assert.Equal("waiting", S(await Join(b, minutes: 60), "state"));
-        Assert.Equal("waiting", S(await Join(c, minutes: 15), "state"));
+        Assert.Equal("proposed", S(await Join(c, minutes: 30), "state"));
     }
 
     [Fact]
-    public async Task 십오분끼리도_짝이_된다()
+    public async Task 함께_걷기는_최소_30분이다()
     {
-        string a = await User("가"), b = await User("나");
-        await Join(a, minutes: 15);
-        JsonElement p = await Join(b, minutes: 15);
-        Assert.Equal("proposed", S(p, "state"));
-        Assert.Equal(15, p.GetProperty("minutes").GetInt32());
+        string a = await User("가");
+        JsonElement r = await Send(HttpMethod.Post, "/api/match/queue", a, new { minutes = 15, buildingId = StudentHall }, HttpStatusCode.BadRequest);
+        Assert.Contains("30분", r.GetProperty("error").GetString());
+        Assert.Equal("idle", S(await State(a), "state"));
     }
 
     /// <summary>B 와 C 가 서로 거절해서 둘 다 기다리는 상태를 만든다 (거절한 둘은 1시간 동안 다시 안 묶임)</summary>
@@ -343,6 +342,111 @@ public class MatchApiTests : IDisposable
     public void AI_주제_답은_3개가_맞을_때만_쓴다(string answer, int expected)
     {
         Assert.Equal(expected, SmalltalkGenerator.Parse(answer)?.Count ?? 0);
+    }
+
+    // ───── 함께 걸을 코스 · 생동감 (10/25 피드백) ─────
+
+    static JsonElement Course(JsonElement state) => state.GetProperty("course");
+    static string[] StopIds(JsonElement course) => course.GetProperty("stops").EnumerateArray().Select(x => S(x, "buildingId")).ToArray();
+
+    [Fact]
+    public async Task 매칭되면_만남_스팟에서_출발하는_코스가_나오고_둘_다_동의하면_확정된다()
+    {
+        (string a, string b, string id, JsonElement m) = await Meet();
+        JsonElement course = Course(m);
+        string spot = S(m.GetProperty("meetSpot"), "buildingId");
+        Assert.NotEmpty(StopIds(course));
+        Assert.DoesNotContain(spot, StopIds(course));                                       // 만남 스팟은 코스에서 뺀다
+        Assert.InRange(course.GetProperty("totalMinutes").GetInt32(), 1, (int)(30 * RecommendRules.WalkTimeRatio));
+        Assert.False(course.GetProperty("myAgree").GetBoolean());
+        Assert.False(course.GetProperty("confirmed").GetBoolean());
+        Assert.Equal(MatchRules.MaxCourseChanges, course.GetProperty("changesLeft").GetInt32());
+        Assert.Equal(S(course, "recommendationId"), S(Course(await State(b)), "recommendationId"));   // 두 사람이 같은 코스
+
+        JsonElement mine = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", a, null, HttpStatusCode.OK));
+        Assert.True(mine.GetProperty("myAgree").GetBoolean());
+        Assert.False(mine.GetProperty("confirmed").GetBoolean());
+        Assert.True(Course(await State(b)).GetProperty("partnerAgree").GetBoolean());
+
+        JsonElement both = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", b, null, HttpStatusCode.OK));
+        Assert.True(both.GetProperty("confirmed").GetBoolean());
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/next", a, null, HttpStatusCode.Conflict);   // 확정 뒤엔 못 바꿈
+    }
+
+    [Fact]
+    public async Task 다른_코스는_세_번까지이고_동의를_다시_받는다()
+    {
+        (string a, string b, string id, JsonElement m) = await Meet();
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", a, null, HttpStatusCode.OK);
+        string[] before = StopIds(Course(m));
+
+        JsonElement next = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/next", b, null, HttpStatusCode.OK));
+        Assert.NotEqual(S(Course(m), "recommendationId"), S(next, "recommendationId"));
+        Assert.Empty(StopIds(next).Intersect(before));                                       // 실제로 다른 장소
+        Assert.False(next.GetProperty("partnerAgree").GetBoolean());                         // a 의 동의가 지워짐
+        Assert.Equal(MatchRules.MaxCourseChanges - 1, next.GetProperty("changesLeft").GetInt32());
+
+        for (int i = 1; i < MatchRules.MaxCourseChanges; i++)
+            await Send(HttpMethod.Post, $"/api/match/{id}/course/next", a, null, HttpStatusCode.OK);
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/next", a, null, HttpStatusCode.TooManyRequests);
+    }
+
+    [Fact]
+    public async Task 출발하면_그_코스로_완료를_판정한다()
+    {
+        (string a, string b, string id, JsonElement m) = await Meet();
+        JsonElement course = Course(m);
+        string spot = S(m.GetProperty("meetSpot"), "buildingId");
+        await Send(HttpMethod.Post, $"/api/match/{id}/arrived", a, new { buildingId = spot }, HttpStatusCode.OK);
+        JsonElement w = await Send(HttpMethod.Post, $"/api/match/{id}/arrived", b, new { buildingId = spot }, HttpStatusCode.OK);
+        Assert.True(Course(w).GetProperty("confirmed").GetBoolean());                        // 동의를 다 안 해도 출발하면 확정
+
+        WalkStore walks = server.Services.GetRequiredService<WalkStore>();
+        WalkStore.Walk walk = walks.Find(S(w, "walkId"), UserIdOf(a))!;
+        Assert.Equal(course.GetProperty("totalDistanceM").GetInt32(), walk.PlannedDistanceM);
+        Assert.Equal(StopIds(course), walk.Stops);
+
+        int planned = course.GetProperty("totalDistanceM").GetInt32();
+        JsonElement done = await Send(HttpMethod.Post, $"/api/walks/{S(w, "walkId")}/finish", a,
+            new { distanceM = (int)(planned * 0.5), durationSec = 1800 }, HttpStatusCode.OK);
+        Assert.False(done.GetProperty("completed").GetBoolean());                            // 코스의 80% 미만이면 미완료
+    }
+
+    [Fact]
+    public async Task 대기_중에는_지금_찾는_사람_수를_보여_준다()
+    {
+        string a = await User("가"), b = await User("나");
+        Assert.Equal(0, (await Join(a, minutes: 30)).GetProperty("nowSearching").GetInt32());
+        Assert.Equal(1, (await Join(b, minutes: 60)).GetProperty("nowSearching").GetInt32());
+        Assert.Equal(1, (await State(a)).GetProperty("nowSearching").GetInt32());
+    }
+
+    [Fact]
+    public async Task 스몰토크_카드에는_분류와_이모지가_붙는다()
+    {
+        (string a, _, string id, JsonElement m) = await Meet();
+        JsonElement[] cards = m.GetProperty("smalltalkCards").EnumerateArray().ToArray();
+        Assert.Equal(3, cards.Length);
+        Assert.Equal(m.GetProperty("smalltalk").EnumerateArray().Select(x => x.GetString()), cards.Select(c => S(c, "text")));
+        Assert.All(cards, c =>
+        {
+            Assert.Contains(S(c, "topic"), SmalltalkCard.Topics);
+            Assert.False(string.IsNullOrEmpty(S(c, "emoji")));
+        });
+        Assert.Contains(cards, c => S(c, "topic") != "대화");                                  // 예시는 원래 분류(공강·학식…)를 그대로
+
+        JsonElement next = await Send(HttpMethod.Post, $"/api/match/{id}/smalltalk", a, null, HttpStatusCode.OK);
+        Assert.Equal(3, next.GetProperty("smalltalkCards").GetArrayLength());
+    }
+
+    [Fact]
+    public void AI_주제_카드는_분류를_읽고_모르는_분류는_대화로()
+    {
+        var cards = SmalltalkGenerator.Parse("""
+            {"topics":[{"topic":"학식","text":"학식 뭐 좋아해요?"},{"topic":"이상한분류","text":"요즘 어때요?"},{"topic":"날씨","text":"흐린 날 뭐 해요?"}]}
+            """)!;
+        Assert.Equal(["학식", "대화", "날씨"], cards.Select(c => c.Topic));
+        Assert.Equal("🍚", cards[0].Emoji);
     }
 
     // ───── 권한 · 안전 ─────

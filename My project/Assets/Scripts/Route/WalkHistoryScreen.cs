@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,6 +15,16 @@ public class WalkHistoryScreen : MonoBehaviour
     RawImage detailMap;
     RectTransform detailOverlay;
     RenderTexture detailTexture;
+    RectTransform detailFrame;
+    Button detailShare;
+    WalkHistory.Entry detailEntry;
+    bool sharing;
+
+    IEnumerator UnlockAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        sharing = false;
+    }
 
     public static void Show()
     {
@@ -35,7 +46,10 @@ public class WalkHistoryScreen : MonoBehaviour
         int weekCount = 0, weekMeters = 0;
         foreach (WalkHistory.Entry e in all)
             if (e.EndedAt >= monday) { weekCount++; weekMeters += e.meters; }
-        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요";
+        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요   " +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Course, 3, 1))}>■</color> 코스  " +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(FreeWalk.TrackColor)}>■</color> 자유  " +
+            $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Mate, 0, 0))}>■</color> 산책메이트";
         if (all.Count == 0)
             UIKit.EmptyState(list, "첫 산책을 시작해 보세요", "코스를 걷거나 자유 산책을 끝내면\n여기에 기록이 남아요.", "산책 코스 고르기",
                 () => { Close(); RoutePlanner.Open(); });
@@ -106,8 +120,25 @@ public class WalkHistoryScreen : MonoBehaviour
             UIKit.StatRow(card, (RouteMath.Distance(e.meters), "거리"), ($"{e.minutes}분", "시간"));
     }
 
+    void ShareToKakao()
+    {
+        WalkHistory.Entry e = detailEntry;
+        if (sharing || e == null)
+            return;
+        sharing = true;
+        FindAnyObjectByType<GameHUD>()?.Toast("공유 준비 중…");
+        StartCoroutine(UnlockAfter(10f));   // 중간에 예외가 나도 버튼이 묶여 있지 않게
+        StartCoroutine(WalkShare.Share(detailFrame, WalkShare.KindOf(e.kind, e.stopsTotal, 0), e.meters, e.minutes, e.visitedBuildingIds, error =>
+        {
+            sharing = false;
+            var hud = FindAnyObjectByType<GameHUD>();
+            if (hud != null && error != null) hud.Toast(error);
+        }));
+    }
+
     void OpenDetail(WalkHistory.Entry e)
     {
+        detailEntry = e;
         detailTitle.text = e.title;
         detailStats.text = $"{When(e.EndedAt)}\n{Stats(e)}" + (e.completed ? "  ·  완료" : "  ·  중간에 끝냄");
         detail.SetActive(true);
@@ -115,6 +146,7 @@ public class WalkHistoryScreen : MonoBehaviour
         Canvas.ForceUpdateCanvases();
         List<Vector3> track = e.Track;
         TopMap.Clear(detailOverlay);
+        detailShare.gameObject.SetActive(track.Count >= 2);
         if (track.Count >= 2)
             WalkCompleteScreen.DrawTrack(detailMap, ref detailTexture, detailOverlay, track, WalkCompleteScreen.LineColor(e.kind, e.stopsTotal, 0));
         else
@@ -157,7 +189,10 @@ public class WalkHistoryScreen : MonoBehaviour
         detailStats = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
         Box(detailStats.rectTransform, 56f, 140f, 56f, 110f);
         Image frame = TopMap.Frame(cr, "Map", out detailMap, out detailOverlay);
-        Box(frame.rectTransform, 40f, 270f, 40f, 1130f);
+        Box(frame.rectTransform, 40f, 270f, 40f, 1010f);
+        detailFrame = frame.rectTransform;
+        detailShare = WalkCompleteScreen.KakaoButton(cr, () => ShareToKakao());
+        Box((RectTransform)detailShare.transform, 40f, 1296f, 40f, 104f);
         detail.SetActive(false);
     }
 

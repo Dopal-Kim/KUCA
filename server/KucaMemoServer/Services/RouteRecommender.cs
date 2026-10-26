@@ -41,6 +41,8 @@ public static class RecommendRules
     /// <summary>위치 근처 후보 수 (가까운 순)</summary>
     public const int NearbyCandidates = 30;
     public const int MaxReasonLength = 60;
+    /// <summary>AI 에게 부탁하는 이유 길이 (넘쳐도 MaxReasonLength 까지는 그대로 쓴다)</summary>
+    public const int AskReasonLength = 40;
 
     /// <summary>
     /// 근거 (A-V2): Reynolds 외, Diabetologia 2016 (식사마다 10분 걷기 → 식후 혈당 평균 12% 낮음, 2형 당뇨 41명),
@@ -111,8 +113,11 @@ public partial class RouteRecommender(
 
     record Candidate(Building Building, Spot? Spot, double Meters, bool Visited, double Score);
 
-    /// <summary>pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal)</summary>
-    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct)
+    /// <summary>
+    /// pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal).
+    /// countAsShown: 매칭 코스처럼 혼자 걷기 추천이 아닌 경우 false (추천 수락률 집계에서 뺀다)
+    /// </summary>
+    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct, bool countAsShown = true)
     {
         DateTimeOffset now = clock.GetUtcNow();
         DateTimeOffset kst = now.ToOffset(TimeSpan.FromHours(9));
@@ -144,7 +149,8 @@ public partial class RouteRecommender(
             r.AfterMeal ? RecommendRules.AfterMealNote : null);
         saved.Add(new RecommendationStore.Saved(result.Id, source, r.Minutes,
             stops.Select(s => s.BuildingId).ToArray(), result.TotalDistanceM, now));
-        metrics.Record(MetricsStore.RecShown, source);
+        if (countAsShown)
+            metrics.Record(MetricsStore.RecShown, source);
         metrics.Record(MetricsStore.AiCall, "recommend", source == "ai" ? 1 : 0);
         return result;
     }
@@ -204,17 +210,21 @@ public partial class RouteRecommender(
             "너는 경희대학교 국제캠퍼스 산책 코스를 짜 주는 안내원이야. 주어진 후보 장소 안에서만 고르고, " +
             "걸어서 정해진 시간 안에 돌 수 있게 가까운 곳끼리 이어지는 순서로 골라. 점수가 높을수록 지금 상황에 잘 맞는 곳이야. " +
             "추천 이유는 그 장소의 소개, 지금 시간대·계절·날씨에 있는 내용만 써. 소개에 없는 사실(메뉴, 행사, 전망 등)을 지어내지 마. " +
-            $"반드시 JSON 하나만 답해: {{\"title\": \"코스 이름(20자 이내)\", \"stops\": [{{\"buildingId\": \"후보의 id\", \"reason\": \"추천 이유 한 문장({RecommendRules.MaxReasonLength}자 이내, 존댓말)\"}}]}}";
+            "산책하는 학생이 건물 앞을 지나가는 거야. '누구나 들어감'이 아닌 곳은 건물 안에 들어가라고 하지 마 " +
+            "(강의실·실습실·작업실·공방·전시실·연구실·몇 층 등 건물 안 이야기 금지). 대신 건물 앞·근처를 지나며 할 수 있는 것을 짧게 써. " +
+            $"이유는 {RecommendRules.AskReasonLength}자 안쪽 한 문장, 말끝은 '~요'로 (예: '~좋아요', '~있어요'). '~습니다'는 쓰지 마. " +
+            $"반드시 JSON 하나만 답해: {{\"title\": \"코스 이름(20자 이내)\", \"stops\": [{{\"buildingId\": \"후보의 id\", \"reason\": \"추천 이유 한 문장({RecommendRules.AskReasonLength}자 이내, ~요)\"}}]}}";
         var user = new StringBuilder();
         user.AppendLine($"걸을 시간: {plan.Minutes}분 (들를 곳 최대 {plan.MaxStops}곳, 걷는 속도 분당 약 {plan.Speed}m)");
         user.AppendLine($"지금: {Korean[cx.Season]} {Korean[cx.TimeOfDay]}, 날씨 {(cx.Weather is { } w ? Korean.GetValueOrDefault(w, w) : "모름")}");
         if (plan.AfterMeal)
             user.AppendLine("식사 뒤 가볍게 걷는 산책이야. 가깝고 편한 곳 위주로.");
         user.AppendLine("하고 싶은 것: " + (plan.Tastes.Count > 0 ? string.Join(", ", plan.Tastes.Select(t => TasteNames[t])) : "상관없음"));
-        user.AppendLine("후보 장소 (id | 이름 | 지금 위치에서 거리 | 가 본 적 | 실내 | 점수 | 소개):");
+        user.AppendLine("후보 장소 (id | 이름 | 지금 위치에서 거리 | 가 본 적 | 실내 | 누구나 들어감 | 점수 | 소개):");
         foreach (Candidate c in top)
             user.AppendLine($"{c.Building.Id} | {c.Building.Name} | {c.Meters:F0}m | {(c.Visited ? "가 봄" : "안 가 봄")} | " +
-                            $"{(c.Spot?.Indoor == true ? "실내" : "실외")} | {c.Score:F1} | {CleanIntro(c.Spot?.Intro)}");
+                            $"{(c.Spot?.Indoor == true ? "실내" : "실외")} | {(c.Spot?.OpenInside == true ? "누구나 들어감" : "앞만 지나감")} | " +
+                            $"{c.Score:F1} | {CleanIntro(c.Spot?.Intro)}");
 
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(20));
@@ -237,7 +247,11 @@ public partial class RouteRecommender(
                 string reason = s.TryGetProperty("reason", out JsonElement re) ? re.GetString()?.Trim() ?? "" : "";
                 picked.Add((c, reason));
             }
-            List<RecommendStop> stops = Walk(plan, picked, (c, reason) => IsGrounded(reason, c, cx) ? reason : RuleReason(c, plan));
+            List<RecommendStop> stops = Walk(plan, picked, (c, reason) =>
+            {
+                reason = Polite(reason);
+                return IsGrounded(reason, c, cx) && !GoesInside(reason, c) ? reason : RuleReason(c, plan);
+            });
             if (stops.Count == 0)
                 throw new JsonException("고른 장소가 없음");
             string title = doc.RootElement.TryGetProperty("title", out JsonElement t) && t.GetString() is { Length: > 0 } tt
@@ -318,13 +332,48 @@ public partial class RouteRecommender(
             return "아직 가 보지 않은 곳이에요";
         string intro = CleanIntro(c.Spot?.Intro);
         // 소개에서 "~하기 좋다" 같은 추천 문장을 고른다. "출입 제한" 같은 주의 문장은 이유로 쓰지 않는다
+        // 누구나 들어가는 곳이 아니면 건물 안 이야기 문장도 쓰지 않는다 (실사용자 피드백 10/24)
         string? pick = intro.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .Where(sentence => !CautionWords.Any(sentence.Contains))
+            .Where(sentence => !CautionWords.Any(sentence.Contains) && !GoesInside(sentence, c))
             .FirstOrDefault(sentence => sentence.Contains("좋"));
         if (pick != null)
-            return pick.EndsWith("좋다") ? pick[..^1] + "아요" : pick; // 화면 말투(존댓말)에 맞춤
+            return Polite(pick); // 화면 말투(~요)에 맞춤
         return "가는 길에 들르기 좋아요";
     }
+
+    /// <summary>
+    /// 건물 안으로 들어가라는 이유인지 (실사용자 피드백 10/24: 다른 단과대 건물 안에 들어가 사진을 찍으라는 이유가 부담스럽다).
+    /// 누구나 들어가 쉬는 곳 (spots.json openInside) 은 괜찮다.
+    /// </summary>
+    static bool GoesInside(string reason, Candidate c) =>
+        c.Spot?.OpenInside != true && (InsideWords.Any(reason.Contains) || FloorWord().IsMatch(reason));
+
+    /// <summary>건물 안 이야기에 나오는 말</summary>
+    static readonly string[] InsideWords =
+    [
+        "안에서", "안으로", "안에 ", "들어가", "들어와", "실내에서", "내부",
+        "강의실", "실습실", "작업실", "작업 공간", "공방", "전시실", "연구실", "연습실", "실험실", "동아리방", "열람실", "복도", "라운지",
+    ];
+
+    [GeneratedRegex(@"\d\s*층|지하")]
+    private static partial Regex FloorWord();
+
+    /// <summary>"~습니다" 같은 말끝을 화면 말투 "~요" 로 바꾼다 (자주 나오는 것만)</summary>
+    public static string Polite(string s)
+    {
+        s = s.Trim();
+        foreach ((string from, string to) in PoliteEndings)
+            if (s.EndsWith(from + ".") || s.EndsWith(from))
+                return s[..s.LastIndexOf(from, StringComparison.Ordinal)] + to;
+        return s;
+    }
+
+    static readonly (string From, string To)[] PoliteEndings =
+    [
+        ("좋습니다", "좋아요"), ("있습니다", "있어요"), ("없습니다", "없어요"), ("됩니다", "돼요"), ("합니다", "해요"),
+        ("드립니다", "드려요"), ("보입니다", "보여요"), ("어울립니다", "어울려요"),
+        ("곳입니다", "곳이에요"), ("길입니다", "길이에요"), ("좋다", "좋아요"),
+    ];
 
     /// <summary>이유로 쓰면 안 되는 주의 문장의 말</summary>
     static readonly string[] CautionWords = ["제한", "피하기", "주의", "들어갈 수는 없", "어두우니"];

@@ -283,6 +283,8 @@
 ### GET /api/notices
 
 학교 공지 중 특정 장소와 연결된 것, **최신순**. `?buildingId=` 를 주면 그 장소 것만.
+게시일이 45일(`Notices:ShowDays`)보다 오래된 공지는 보내지 않는다. `summary` 는 빈 값일 수 있다 (포스터 그림만 있는 공지).
+이 요청이 오면 서버가 단과대 게시판을 마지막으로 읽은 지 6시간이 지났는지 보고, 지났으면 뒤에서 새로 모은다 (아래 "공지 자동 모으기").
 
 `200 PlaceNotice[]`
 
@@ -528,7 +530,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 
 | 필드 | 설명 |
 | --- | --- |
-| `minutes` | 15 · 30 · 60 (추천과 같음, 10/24 결정) |
+| `minutes` | **30 · 60** (함께 걷기는 최소 30분, 10/25 피드백). 15분은 `400`. 혼자 걷는 추천은 15분도 됩니다 |
 | `matchGender` | `same`(동성만) · `any`(상관없음). 없으면 계정 취향의 값, 그것도 없으면 `any` |
 | `buildingId` | 지금 가장 가까운 **건물 ID**. GPS 좌표는 보내지 않고, 서버도 건물 단위로만 저장합니다 |
 
@@ -572,16 +574,27 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   "myAppearance": "회색 맨투맨, 파란 백팩",
   "arrived": { "me": true, "partner": false },
   "walkId": null,
-  "endReason": null
+  "endReason": null,
+  "smalltalkCards": [
+    { "text": "학식 최애 메뉴 있어요?", "topic": "학식", "emoji": "🍚" },
+    { "text": "요즘 날씨에 걷기 좋은 길 알아요?", "topic": "계절", "emoji": "🍂" },
+    { "text": "아직 한 번도 안 가 본 건물 있어요?", "topic": "캠퍼스 장소", "emoji": "🏛️" }
+  ],
+  "course": {
+    "recommendationId": "rec_3b9a…", "title": "가을 오후 함께 걷는 30분", "source": "ai",
+    "stops": [ { "buildingId": "way-474085534", "name": "중앙도서관", "reason": "…", "walkMinutes": 4, "distanceM": 310, "lat": 37.2421, "lon": 127.0796 } ],
+    "totalDistanceM": 1450, "totalMinutes": 21,
+    "myAgree": true, "partnerAgree": false, "confirmed": false, "changesLeft": 2
+  }
 }
 ```
 
 | `state` | 뜻 | 채워지는 필드 |
 | --- | --- | --- |
 | `idle` | 매칭 안 함 | 없음 |
-| `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`) |
+| `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`), `nowSearching` (나 말고 지금 짝을 찾는 사람 수 — 대기 화면의 실시간 느낌용) |
 | `proposed` | 상대를 찾음, 수락 기다림 | `partner.nickname`, `partner.commonTastes`, `respondBy` (60초 `[가정]`), `myAnswer` (`null` · `accepted`) |
-| `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `myAppearance`, `partner.appearance`, `arrived` |
+| `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `smalltalkCards`, `myAppearance`, `partner.appearance`, `arrived`, `course` (함께 걸을 코스, 만드는 몇 초 동안은 `null`) |
 | `walking` | 만나서 산책 중 | `walkId` (산책 완료 API 에 씀) |
 | `ended` | 끝남 | `endReason` |
 
@@ -618,9 +631,27 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 - **상대에게만** 보이고, 매칭이 끝나면 지웁니다.
 - `200 MatchState`. `meeting` 에서만 쓸 수 있고, 다른 상태면 `409` 입니다.
 
+### 함께 걸을 코스 (10/25 피드백)
+
+둘 다 수락하는 순간 서버가 **만남 스팟에서 출발하는 코스**를 만들어 두 사람에게 똑같이 보여 줍니다 (`MatchState.course`).
+- 고른 시간(30 · 60분), 두 사람의 공통 취향, 지금 시간대 · 계절 · 날씨로 추천 v2 가 짭니다 (AI 키가 있으면 AI). 만남 스팟은 코스에 넣지 않습니다.
+- 만드는 데 몇 초 걸리므로 그동안 `course` 는 `null` 입니다 ("코스 준비 중"). 폴링으로 받습니다.
+
+`POST /api/match/{matchId}/course/agree` — "이 코스 좋아요"
+- 본문 없음. `200 MatchState`. **두 사람 모두 누르면 `course.confirmed: true`** (확정).
+- `myAgree` · `partnerAgree` 로 누가 눌렀는지 보여 줍니다. 가상 상대는 바로 동의합니다.
+
+`POST /api/match/{matchId}/course/next` — "다른 코스 보기"
+- 본문 없음. `200 MatchState`. 새 코스로 바뀌고 **두 사람의 동의가 지워집니다** (다시 함께 골라야 함).
+- 이미 보여 준 장소는 빼고 짜서 실제로 다른 코스가 나옵니다.
+- 매칭마다 **3번까지** (`changesLeft`). 넘으면 `429`, 확정된 뒤에는 `409`, 코스를 아직 만드는 중이면 `409`.
+
+출발 (둘 다 `arrived`) 하면 그때의 코스로 확정되고, 산책 기록(`walkId`)의 계획 거리 · 장소가 됩니다. 완료 판정은 혼자 걷는 추천 코스와 같습니다 (마지막 장소 도착 또는 계획 거리의 80%).
+
 ### POST /api/match/{matchId}/smalltalk (다음 주제)
 
-- 본문 없음. `200 { "smalltalk": ["…", "…", "…"], "source": "ai" }`. `meeting`·`walking` 에서만 됩니다 (아니면 `409`)
+- 본문 없음. `200 { "smalltalk": ["…", "…", "…"], "source": "ai", "smalltalkCards": [ … ] }`. `meeting`·`walking` 에서만 됩니다 (아니면 `409`)
+- `smalltalkCards`: 같은 주제에 분류(`topic`: 공강 · 학식 · 전공 · 캠퍼스 장소 · 계절 · 날씨 · 취향 · 대화)와 `emoji` 를 붙인 것. 앱은 이걸로 대화 카드를 꾸밉니다
 - 새 주제 3개를 돌려주고, 두 사람 모두 같은 카드를 봅니다.
 - 앱의 "다음 주제" 버튼은 받은 3개를 먼저 넘기고, 다 보면 이걸 부릅니다.
 - AI 는 공통 취향 + 만남 스팟 + 날씨로 씁니다. AI 가 실패하면 `Data/smalltalk.json` 예시 20개 중에서 고릅니다 (`source: "fallback"`).
@@ -679,7 +710,8 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 ```
 
 - **완료 판정 (서버):** 추천 코스면 마지막 스팟 도착(`visitedBuildingIds` 에 있음) 또는 계획 거리의 80% 이상
-  - 자유 산책 · 매칭 산책은 500m 이상이면 완료 `[가정]`
+  - 매칭 산책은 함께 정한 코스 기준 (위와 같음)
+  - 자유 산책은 500m 이상이면 완료 `[가정]`
 - 걸은 거리가 시간에 비해 너무 길면(초속 2.5m 초과) 거리를 깎습니다 `[가정]`. 탈것으로 이동한 경우를 막기 위해서입니다.
 - 매칭 산책은 한 사람이 `finish` 하면 그 사람 산책이 끝납니다. 두 사람 모두 끝나면 매칭이 `ended` (`completed`) 가 됩니다.
 
@@ -791,6 +823,21 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 - `200`: `{"saved": false, "reason": "no_place", "source": "ai"}` — 어느 경희스팟과도 관련이 없어 저장하지 않음
 - `source`: `ai` 또는 `fallback`(AI 실패 시 제목·본문에 경희스팟 이름이 나오는지로 판단하고, 요약은 본문 앞부분)
 - `400` 필드 규칙 위반, `409` 같은 `url` 의 공지가 이미 있음
+
+### 공지 자동 모으기 (10/25, B)
+
+경희스팟 건물을 쓰는 단과대 · 학과 · 도서관 공지 게시판 12곳(`Data/notice_sources.json`)에서 최근 공지를 모아 위와 같은 장소 공지로 넣는다.
+
+- 게시판마다 연결할 경희스팟이 정해져 있다 (예: 공과대학 → 공학관 · 공학실험동). AI 는 요약만 한다.
+- 서울캠퍼스 표시 글, 다른 사이트로 가는 학교 전체 공지, 30일보다 오래된 글, 이미 넣은 링크는 건너뛴다.
+- 같은 제목이 여러 게시판에 있으면 (학교 전체 공지) 한 공지에 건물만 더한다.
+- 한 번에 게시판마다 새 글 5건까지, 요청 사이 0.8초를 띄운다. 원문은 링크로만 보여 준다 (본문은 앱에 보내지 않음).
+- 따로 예약 작업은 없다: `GET /api/notices` 가 6시간(`Notices:IntervalHours`)마다 한 번 뒤에서 모으기를 시작한다. `Notices:AutoCollect=false` 면 끈다.
+
+| 요청 | 하는 일 | 응답 |
+| --- | --- | --- |
+| `POST /api/admin/notices/collect` | 지금 모으기 (끝날 때까지 기다림) | `200` 게시판마다 `{source, listed, added, error}` / `409` 이미 모으는 중 |
+| `GET /api/admin/notices/collect` | 게시판 목록과 마지막 결과 | `200` |
 
 ### 지표 (C-V6)
 

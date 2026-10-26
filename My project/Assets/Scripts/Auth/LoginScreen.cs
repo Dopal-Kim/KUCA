@@ -249,7 +249,9 @@ public class LoginScreen : MonoBehaviour
             codeInput.text = devCode ?? "";
             codeHint.text = devCode != null
                 ? $"개발용 서버라 번호를 바로 채웠어요 ({devCode})"
-                : $"{EmailAddress} 로 보낸 6자리 번호를 넣어 주세요. 메일이 안 오면 스팸함도 확인해 주세요.";
+                : AuthService.LastEmailExisting
+                    ? $"이미 가입한 메일이에요. {EmailAddress} 로 보낸 번호를 넣으면 기존 계정으로 이어서 로그인해요."
+                    : $"{EmailAddress} 로 보낸 6자리 번호를 넣어 주세요. 메일이 안 오면 스팸함도 확인해 주세요.";
             codeInput.ActivateInputField();
         }));
     }
@@ -399,7 +401,11 @@ public class LoginScreen : MonoBehaviour
         kakao.gameObject.AddComponent<PressScale>();
         AddIcon(kakao, HudIcons.Bubble, KakaoInk);
         if (AuthConfig.AppleLoginEnabled)
-            UIKit.BigButton(actions, "Apple로 계속하기", () => LoginWith("apple"), Color.black, Color.white).gameObject.AddComponent<PressScale>();
+        {
+            Button apple = UIKit.BigButton(actions, "Apple로 계속하기", () => LoginWith("apple"), Color.black, Color.white);
+            apple.gameObject.AddComponent<PressScale>();
+            AddIcon(apple, HudIcons.AppleLogo, Color.white);   // Apple 버튼은 로고 + 글자 (Apple 디자인 가이드)
+        }
         // 보조 버튼 하나로 통일 (글자만 있어 눌리는지 애매했음, REVIEW_v14)
         UIKit.SecondaryButton(actions, "로그인 없이 둘러보기", StartGuest);
         Text guestHint = UIKit.Text(actions, "체험 계정은 7일 뒤 지워져요. 나중에 로그인해도 진행은 이어져요.", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft);

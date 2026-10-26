@@ -17,6 +17,7 @@ builder.Services.AddSingleton<BuildingStore>();
 // 메모 저장소 (SQLite 파일 memos.db) 와 사진 저장소 (wwwroot/photos)
 builder.Services.AddSingleton<MemoStore>();
 builder.Services.AddSingleton<PhotoStore>();
+builder.Services.AddSingleton<WalkShareStore>();
 
 // 로그인 · 계정: 카카오 / Apple 로그인 확인, 경희대 메일 인증 (Kakao:AppId, Email:User/Password 설정)
 builder.Services.AddSingleton<AccountStore>();
@@ -55,6 +56,8 @@ builder.Services.AddSingleton<WalkService>();
 builder.Services.AddSingleton<SpotStore>();
 builder.Services.AddSingleton<NoticeStore>();
 builder.Services.AddHttpClient<INoticeClassifier, AiNoticeClassifier>();
+builder.Services.AddHttpClient<INoticePageFetcher, HttpNoticePageFetcher>(c => c.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<NoticeCollector>();
 
 // 메모 작성 본문 크기 제한: 사진 10MB + 글자 여유분
 builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoStore.MaxBytes + 1024 * 1024);
@@ -85,6 +88,7 @@ app.MapReactionEndpoints();
 app.MapRecommendEndpoints();
 app.MapMatchEndpoints();
 app.MapWalkEndpoints();
+app.MapWalkShareEndpoints();
 app.MapNoticeEndpoints();
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();

@@ -128,7 +128,7 @@ public partial class MemoBoard
         ids.Reverse(); // 나중에 올린 것이 앞에
         int request = ++albumRequest;
         albumCount.text = "";
-        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n지도의 경희스팟 깃발을 누르면\n그곳 메모판에 사진을 남길 수 있어요" : "불러오는 중…";
+        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n지도의 경희스팟 핀을 누르면\n그곳 메모판에 사진을 남길 수 있어요" : "불러오는 중…";
         albumEmptyAction.SetActive(ids.Count == 0);
         if (ids.Count == 0)
             return;
@@ -168,7 +168,7 @@ public partial class MemoBoard
                 albumCount.text = $"내가 남긴 사진 {currentMemos.Count}장";
                 AlbumEmpty = currentMemos.Count > 0 ? ""
                     : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
-                    : "아직 올린 사진이 없어요\n지도의 경희스팟 깃발을 누르면\n그곳 메모판에 사진을 남길 수 있어요";
+                    : "아직 올린 사진이 없어요\n지도의 경희스팟 핀을 누르면\n그곳 메모판에 사진을 남길 수 있어요";
                 albumEmptyAction.SetActive(currentMemos.Count == 0 && failed == 0);
                 if (currentMemos.Count > 0)
                 {
@@ -210,8 +210,8 @@ public partial class MemoBoard
         album = page.root;
         albumCount = page.subtitle;
 
-        // 빈 상태에서 할 일: 지도로 돌아가 경희스팟 찾기 (REVIEW_v14: 안내만 있고 버튼이 없었음)
-        RectTransform empty = UIKit.EmptyState(page.content, " ", " ", "지도에서 경희스팟 찾기", Close);
+        // 빈 상태에서 할 일: 가까운 경희스팟 메모판 바로 열기 (REVIEW_v14: 안내만 있고 버튼이 없었음)
+        RectTransform empty = UIKit.EmptyState(page.content, " ", " ", "가까운 경희스팟 메모판 열기", OpenNearestSpot);
         albumEmptyCard = empty.gameObject;
         albumEmptyAction = empty.GetComponentInChildren<Button>(true).gameObject;
         Text[] texts = empty.GetComponentsInChildren<Text>(true);
@@ -222,5 +222,29 @@ public partial class MemoBoard
         UIKit.Size(area).flexibleHeight = 1f;
         albumGrid = BuildGrid(area);
         albumGrid.GetComponent<GridLayoutGroup>().spacing = new Vector2(12f, 12f);
+    }
+
+    /// <summary>지금 위치에서 가장 가까운 경희스팟의 메모판을 연다</summary>
+    void OpenNearestSpot()
+    {
+        Transform player = collectController != null && collectController.campusMap != null ? collectController.campusMap.player : null;
+        if (spots == null || player == null)
+        {
+            Close();   // 지도가 없으면 지도로 돌아가 직접 찾게
+            return;
+        }
+        KyungHeeSpot best = null;
+        float bestD = float.MaxValue;
+        foreach (KyungHeeSpot s in spots.Spots)
+        {
+            if (s == null || s.Building == null) continue;
+            Vector3 c = s.BuildingBounds.center;
+            float d = new Vector2(c.x - player.position.x, c.z - player.position.z).sqrMagnitude;
+            if (d < bestD) { bestD = d; best = s; }
+        }
+        if (best != null)
+            OpenSpot(best);
+        else
+            Close();
     }
 }

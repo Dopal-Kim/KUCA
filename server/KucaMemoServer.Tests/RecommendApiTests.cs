@@ -305,6 +305,51 @@ public class RecommendApiTests : IDisposable
         Assert.DoesNotContain("확인 필요", ai.LastPrompt);
     }
 
+    const string ArtDesign = "way-474085536", Ceramics = "way-474521123";   // 예술디자인대학 · 도예관 (누구나 들어가는 곳 아님)
+
+    [Fact]
+    public async Task AI_이유가_건물_안에_들어가라고_하면_규칙_이유로_바꾸고_말끝은_요로()
+    {
+        var ai = new FakeAi("""
+            {"title":"가을 산책","stops":[
+              {"buildingId":"way-474085536","reason":"2층 전시실에서 학생 작품 사진을 찍기 좋습니다."},
+              {"buildingId":"way-474085534","reason":"공강에 열람실에서 잠깐 쉬기 좋습니다."}]}
+            """);
+        HttpClient client = Client(ai);
+        var at = await Midpoint(client, ArtDesign, Library);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [ArtDesign, Library])));
+        JsonElement[] stops = r.GetProperty("stops").EnumerateArray().ToArray();
+        string art = stops.First(x => x.GetProperty("buildingId").GetString() == ArtDesign).GetProperty("reason").GetString()!;
+        string lib = stops.First(x => x.GetProperty("buildingId").GetString() == Library).GetProperty("reason").GetString()!;
+        Assert.DoesNotContain("전시실", art);   // 예디대는 앞만 지나가는 곳
+        Assert.DoesNotContain("층", art);
+        Assert.Equal("공강에 열람실에서 잠깐 쉬기 좋아요", lib);   // 도서관은 누구나 들어가는 곳, 말끝만 ~요
+        Assert.Contains("앞만 지나감", ai.LastPrompt);
+        Assert.Contains("누구나 들어감", ai.LastPrompt);
+    }
+
+    [Theory]
+    [InlineData(ArtDesign)]
+    [InlineData(Ceramics)]
+    public async Task 규칙_이유도_건물_안_이야기는_쓰지_않는다(string spot)
+    {
+        HttpClient client = Client();
+        var at = await Midpoint(client, spot, spot);
+        JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [spot])));
+        string reason = r.GetProperty("stops")[0].GetProperty("reason").GetString()!;
+        foreach (string word in new[] { "전시실", "작업", "공방", "층", "안에서" })
+            Assert.DoesNotContain(word, reason);
+        Assert.EndsWith("요", reason);
+    }
+
+    [Theory]
+    [InlineData("조용히 걷기 좋습니다.", "조용히 걷기 좋아요")]
+    [InlineData("벤치가 있습니다", "벤치가 있어요")]
+    [InlineData("쉬어 가기 좋다", "쉬어 가기 좋아요")]
+    [InlineData("노을이 예뻐요", "노을이 예뻐요")]
+    public void 말끝을_요로_바꾼다(string from, string expected) =>
+        Assert.Equal(expected, RouteRecommender.Polite(from));
+
     [Fact]
     public async Task AI_가_먼_곳을_이어도_시간_안에서_자른다()
     {

@@ -921,8 +921,14 @@ public class GameHUD : MonoBehaviour
         // 체험 계정이면 "로그인하기": 로그아웃하고 로그인 화면으로 (게임 진행은 기기에 있어 그대로 이어진다)
         logoutButton = UIKit.ListRow(accountGroup, "로그아웃", chevron: false, onClick: () =>
         {
-            CloseSettings();
-            StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+            bool guest = AuthService.Current != null && AuthService.Current.isGuest;
+            ConfirmDialog.Show(guest ? "체험을 끝내고 로그인할까요?" : "로그아웃할까요?",
+                guest ? "경희펫 · 걸은 기록은 이 기기에 남아 로그인한 뒤에도 이어져요." : "다시 로그인하면 이어서 쓸 수 있어요.",
+                guest ? "로그인하기" : "로그아웃", () =>
+                {
+                    CloseSettings();
+                    StartCoroutine(AuthService.Logout(LoginScreen.Begin));
+                }, danger: !guest);
         });
 
         // 메모 서버 주소 (비우면 이 기기 안의 가짜 서버)
@@ -940,6 +946,10 @@ public class GameHUD : MonoBehaviour
         check.GetComponentInChildren<Text>().color = KucaTheme.PrimaryDeep;
         UIKit.Size(check, KucaTheme.TouchMin, 200f);
         serverStatus = UIKit.Text(server, "", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        // 개발용이라 에디터 · 개발 빌드에서만 보인다 (일반 사용자가 잘못 바꾸면 서버와 끊긴다, 팀 main 10/25)
+        bool dev = Application.isEditor || Debug.isDebugBuild;
+        advanced.gameObject.SetActive(dev);
+        settingsList.GetChild(advanced.GetSiblingIndex() - 1).gameObject.SetActive(dev);   // "고급" 제목
 
         RectTransform danger = UIKit.ListGroup(settingsList, null);
         deleteAccountButton = UIKit.ListRow(danger, "회원 탈퇴", DeleteAccount, danger: true);

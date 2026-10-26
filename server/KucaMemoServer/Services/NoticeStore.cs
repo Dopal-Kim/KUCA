@@ -59,6 +59,30 @@ public class NoticeStore
         return cmd.ExecuteScalar() is not null;
     }
 
+    /// <summary>같은 제목의 공지 ID (여러 게시판에 함께 올라온 학교 전체 공지를 한 번만 넣으려고)</summary>
+    public string? FindByTitle(string title)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id FROM notices WHERE title = $title LIMIT 1";
+        cmd.Parameters.AddWithValue("$title", title);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    /// <summary>이미 있는 공지에 장소를 더한다 (있던 연결은 그대로)</summary>
+    public void AddPlaces(string id, IEnumerable<string> buildingIds)
+    {
+        using var conn = Open();
+        foreach (string buildingId in buildingIds)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "INSERT OR IGNORE INTO notice_places (notice_id, building_id) VALUES ($id, $building)";
+            cmd.Parameters.AddWithValue("$id", id);
+            cmd.Parameters.AddWithValue("$building", buildingId);
+            cmd.ExecuteNonQuery();
+        }
+    }
+
     /// <summary>공지와 장소 연결을 한 번에 저장한다.</summary>
     public void Add(string id, string title, string body, string url, string summary, string postedAt, IEnumerable<string> buildingIds)
     {
@@ -94,19 +118,20 @@ public class NoticeStore
     /// 장소별 공지 줄, 최신순 (게시일 → 넣은 시각). buildingId 가 있으면 그 장소만.
     /// 건물 이름은 호출하는 쪽이 SpotStore 로 채운다.
     /// </summary>
-    public List<(string Id, string BuildingId, string Title, string Summary, string Url, string PostedAt)> List(string? buildingId, int limit)
+    public List<(string Id, string BuildingId, string Title, string Summary, string Url, string PostedAt)> List(string? buildingId, int limit, string? postedSince = null)
     {
         using var conn = Open();
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
             SELECT n.id, p.building_id, n.title, n.summary, n.url, n.posted_at
             FROM notices n JOIN notice_places p ON p.notice_id = n.id
-            WHERE $building IS NULL OR p.building_id = $building
+            WHERE ($building IS NULL OR p.building_id = $building) AND ($since IS NULL OR n.posted_at >= $since)
             ORDER BY n.posted_at DESC, n.created_at DESC, p.building_id
             LIMIT $limit
             """;
         cmd.Parameters.AddWithValue("$building", (object?)buildingId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$limit", limit);
+        cmd.Parameters.AddWithValue("$since", (object?)postedSince ?? DBNull.Value);
         using var reader = cmd.ExecuteReader();
         var rows = new List<(string, string, string, string, string, string)>();
         while (reader.Read())

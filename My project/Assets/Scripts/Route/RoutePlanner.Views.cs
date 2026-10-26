@@ -461,7 +461,7 @@ public partial class RoutePlanner
         pathToggleText = toggle.GetComponentInChildren<Text>();
         Place((RectTransform)toggle.transform, new Vector2(1f, 1f), new Vector2(-224f, -24f));
         ((RectTransform)toggle.transform).sizeDelta = new Vector2(200f, 92f);
-        Button end = UIKit.Button(pr, "끝내기", () => EndRoute(true), KucaTheme.Fill, KucaTheme.Caption);
+        Button end = UIKit.Button(pr, "끝내기", ConfirmEnd, KucaTheme.Fill, KucaTheme.Caption);
         end.GetComponentInChildren<Text>().color = Ink;
         Place((RectTransform)end.transform, new Vector2(1f, 1f), new Vector2(-24f, -24f));
         ((RectTransform)end.transform).sizeDelta = new Vector2(184f, 92f);
@@ -480,6 +480,17 @@ public partial class RoutePlanner
         walkProgress = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
         Box(walkProgress.rectTransform, 12f, 184f, 12f, 52f);
         walkPanel.SetActive(false);
+    }
+
+    /// <summary>끝내기는 한 번 묻는다 (경로 켜기 버튼 옆이라 잘못 누르기 쉽다)</summary>
+    void ConfirmEnd()
+    {
+        if (active == null)
+            return;
+        int count = done.FindAll(x => x).Count, total = active.result.stops.Count;
+        string walked = RouteMath.Distance(WalkSession.WalkedMeters);
+        string note = count >= total ? "" : $"\n{total - count}곳이 남았어요. 지금 끝내면 들른 곳까지만 기록돼요.";
+        ConfirmDialog.Show("산책을 끝낼까요?", $"지금까지 {walked} · {count}/{total}곳{note}", "끝내기", () => EndRoute(true), "계속 걷기");
     }
 
     // ---------- 장소 팝업 (미니맵 + 공지) ----------

@@ -24,6 +24,8 @@ public sealed class TestServer : WebApplicationFactory<Program>
     public string PhotosDir => Path.Combine(Root, "wwwroot", "photos");
     public FakeModerator Moderator { get; } = new();
     public FakeNoticeClassifier NoticeClassifier { get; } = new();
+    /// <summary>단과대 공지 게시판 대신 쓰는 페이지 (주소 → HTML). 테스트는 실제 학교 사이트에 접속하지 않는다</summary>
+    public FakeNoticePages NoticePages { get; } = new();
 
     public TestServer() => Directory.CreateDirectory(Path.Combine(Root, "wwwroot"));
 
@@ -33,10 +35,15 @@ public sealed class TestServer : WebApplicationFactory<Program>
         builder.UseSetting(WebHostDefaults.WebRootKey, Path.Combine(Root, "wwwroot"));
         builder.UseSetting("Kma:ServiceKey", "");   // 테스트는 기상청을 부르지 않는다
         builder.UseSetting("Admin:Key", AdminKey);
+        builder.UseSetting("Notices:AutoCollect", "false");   // 공지 목록을 봐도 게시판을 읽으러 가지 않는다
+        builder.UseSetting("Notices:RequestDelayMs", "0");
+        builder.UseSetting("Notices:ShowDays", "0");          // 고정 날짜로 넣는 테스트가 날이 지나도 깨지지 않게
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IContentModerator>();
             services.AddSingleton<IContentModerator>(Moderator);
+            services.RemoveAll<INoticePageFetcher>();
+            services.AddSingleton<INoticePageFetcher>(NoticePages);
             services.RemoveAll<INoticeClassifier>();
             services.AddSingleton<INoticeClassifier>(sp =>
             {

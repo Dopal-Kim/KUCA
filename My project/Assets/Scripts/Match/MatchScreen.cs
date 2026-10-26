@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 실시간 산책 매칭 화면 (B-V3). 지도 오른쪽 위 산책메이트 버튼으로 연다.
-/// 흐름: 조건 (15/30/60분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
+/// 흐름: 조건 (30/60분 — 함께 걷기는 최소 30분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
 ///      → 상대 수락 기다림 → 만남 스팟 → 인상착의 → 스몰토크 → 산책 시작 → 산책 중 (끝내기).
 /// 어느 단계든 신고 · 차단 · 취소를 할 수 있고, 만나기로 한 뒤 10분 안에 시작하지 않으면 노쇼로 취소된다 (서버 판정).
 /// 화면을 닫아도 매칭은 계속되고 (상태를 계속 물어봄), 상대가 나타나면 화면이 다시 열린다.
@@ -245,9 +245,8 @@ public class MatchScreen : MonoBehaviour
 
     void RefreshChips()
     {
-        SetChip(minuteChips[0], minutes == 15);
-        SetChip(minuteChips[1], minutes == 30);
-        SetChip(minuteChips[2], minutes == 60);
+        SetChip(minuteChips[0], minutes == 30);
+        SetChip(minuteChips[1], minutes == 60);
         SetChip(genderChips[0], sameGender);
         SetChip(genderChips[1], !sameGender);
     }
@@ -354,7 +353,12 @@ public class MatchScreen : MonoBehaviour
                 Toast(s.message);
         }));
     }
-    void EndWalk() { if (!busy) Call(service.End(state.matchId, Apply)); }
+    void EndWalk()
+    {
+        if (busy) return;
+        ConfirmDialog.Show("함께 산책을 끝낼까요?", $"지금까지 {RouteMath.Distance(WalkSession.WalkedMeters)} 같이 걸었어요.", "끝내기",
+            () => { if (!busy) Call(service.End(state.matchId, Apply)); }, "계속 걷기");
+    }
 
     void CancelMatch()
     {
@@ -530,7 +534,6 @@ public class MatchScreen : MonoBehaviour
         RectTransform minutesRow = ChipRow(c);
         minuteChips = new[]
         {
-            Chip(minutesRow, "15분", () => { minutes = 15; RefreshChips(); }),
             Chip(minutesRow, "30분", () => { minutes = 30; RefreshChips(); }),
             Chip(minutesRow, "1시간", () => { minutes = 60; RefreshChips(); }),
         };
@@ -552,8 +555,10 @@ public class MatchScreen : MonoBehaviour
         UIKit.SectionTitle(card, "안심하고 걸어요");
         foreach (string line in new[]
         {
+            "누구나 오가는 공개 스팟에서만 만나요",
             "위치는 건물 단위로만 써요",
             "성별은 상대에게 보이지 않아요",
+            "10분 안에 못 만나면 자동으로 끝나요",
             "매칭이 끝나면 기록을 지워요",
             "불편하면 언제든 신고 · 차단할 수 있어요",
         })
@@ -704,6 +709,11 @@ public class MatchScreen : MonoBehaviour
         BackButton.Attach(reportPanel, () => reportPanel.SetActive(false));
         reportPanel.SetActive(false);
     }
+
+    /// <summary>
+    /// 처음 보는 학생과 만나는 기능이라, 찾기 전에 흐름과 안전장치를 먼저 보여 준다 (디자인 평가 10/25:
+    /// 기획서의 안전 설계가 화면에서는 회색 두 줄뿐이었다)
+    /// </summary>
 
     // ---------- 작은 도우미 ----------
 

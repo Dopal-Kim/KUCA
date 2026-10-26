@@ -30,7 +30,6 @@ public partial class KhuMenus : MonoBehaviour
     static readonly Color PGold = new Color(0.96f, 0.79f, 0.45f);
     static readonly Color PCircle = new Color(0.84f, 0.64f, 0.32f);
 
-    const int MonsterStorage = 300;
     const int ItemStorage = 350;
 
     GameHUD hud;

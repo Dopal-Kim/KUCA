@@ -51,6 +51,18 @@ public class FreeWalk : MonoBehaviour
         Toast("자유 산책을 시작해요. 걸은 길이 기록돼요");
     }
 
+    /// <summary>끝내기는 한 번 묻는다 (경로 켜기 버튼 옆이라 잘못 누르기 쉽다)</summary>
+    void ConfirmEnd()
+    {
+        if (!Active)
+            return;
+        int seconds = Mathf.RoundToInt(WalkSession.Seconds);
+        int left = LocalWalkService.MateMeters - Mathf.RoundToInt(WalkSession.WalkedMeters);
+        string note = left > 0 ? $"\n{left}m 더 걸으면 완료 보상을 받아요." : "";
+        ConfirmDialog.Show("자유 산책을 끝낼까요?", $"지금까지 {RouteMath.Distance(WalkSession.WalkedMeters)} · {seconds / 60}분{note}",
+                           "끝내기", End, "계속 걷기");
+    }
+
     void End()
     {
         if (!Active)
@@ -139,7 +151,7 @@ public class FreeWalk : MonoBehaviour
         toggleText = t.GetComponentInChildren<Text>();
         Place((RectTransform)t.transform, new Vector2(1f, 1f), new Vector2(-40f, -40f));
         ((RectTransform)t.transform).sizeDelta = new Vector2(240f, 88f);
-        Button end = UIKit.Button(pr, "끝내기", End, KucaTheme.Primary, KucaTheme.Label);
+        Button end = UIKit.Button(pr, "끝내기", ConfirmEnd, KucaTheme.Primary, KucaTheme.Label);
         Place((RectTransform)end.transform, new Vector2(1f, 0f), new Vector2(-40f, 40f));
         ((RectTransform)end.transform).sizeDelta = new Vector2(240f, 112f);
         panel.SetActive(false);

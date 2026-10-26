@@ -13,7 +13,15 @@ public record BlockRequest(string? MatchId);
 public record MatchPartner(string Nickname, List<string> CommonTastes, string? Appearance);
 public record MeetSpotView(string BuildingId, string Name, double Lat, double Lon, string? MeetSpecies);
 public record MatchArrived(bool Me, bool Partner);
-public record SmalltalkResult(List<string> Smalltalk, string Source);
+public record SmalltalkResult(List<string> Smalltalk, string Source, List<KucaMemoServer.Services.SmalltalkCard> SmalltalkCards);
+
+/// <summary>
+/// 두 사람이 함께 걸을 코스 (만남 스팟에서 출발). 둘 다 "이 코스 좋아요"(agree)를 누르면 확정.
+/// "다른 코스"는 매칭마다 3번까지, 누르면 두 사람의 동의가 지워진다.
+/// </summary>
+public record MatchCourse(
+    string RecommendationId, string Title, string Source, List<RecommendStop> Stops, int TotalDistanceM, int TotalMinutes,
+    bool MyAgree, bool PartnerAgree, bool Confirmed, int ChangesLeft);
 
 /// <summary>
 /// GET /api/match 가 돌려주는 지금 상태. State 에 따라 채워지는 필드가 다르다 (나머지는 null).
@@ -36,4 +44,7 @@ public record MatchState(
     MatchArrived? Arrived = null,
     string? WalkId = null,
     string? EndReason = null,
-    string? CancelledBy = null);
+    string? CancelledBy = null,
+    int? NowSearching = null,                                         // waiting: 나 말고 지금 짝을 찾는 사람 수
+    List<KucaMemoServer.Services.SmalltalkCard>? SmalltalkCards = null, // smalltalk 와 같은 주제 + 분류 · 이모지
+    MatchCourse? Course = null);                                      // meeting · walking: 함께 걸을 코스 (준비 중이면 null)

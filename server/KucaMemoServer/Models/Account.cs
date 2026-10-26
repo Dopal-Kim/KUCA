@@ -24,6 +24,9 @@ public record Account(
 
 public record LoginResult(string Token, Account User);
 
+/// <summary>메일 인증에서 이미 있는 계정에 이어 붙였을 때: 그 계정의 새 토큰 (앱은 토큰을 바꿔 끼운다)</summary>
+public record LinkedResult(string Token, Account User, bool Linked);
+
 public record KakaoLoginRequest(string? AccessToken);
 public record AppleLoginRequest(string? IdentityToken);
 public record DevLoginRequest(string? Name);

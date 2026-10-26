@@ -34,7 +34,7 @@ public class WalkCompleteScreen : MonoBehaviour
     int partnerStars, courseStars;
     static readonly Color StarOff = Color.Lerp(KucaTheme.Line, KucaTheme.InkSoft, 0.35f);   // 빈 별: 흰 카드 위에서 보이는 회색
 
-    GameObject root, partnerRow, reviewCard, rewardCard, recap;
+    GameObject root, partnerRow, reviewCard, rewardCard, recap, shareRow;
     RawImage recapMap;
     RectTransform recapOverlay;
     RenderTexture recapTexture;
@@ -115,6 +115,7 @@ public class WalkCompleteScreen : MonoBehaviour
         // 걸은 길 돌아보기 + 산책 기록에 남기기
         bool hasTrack = walk.track != null && walk.track.Count >= 2;
         recap.SetActive(hasTrack);
+        shareRow.SetActive(hasTrack);
         if (hasTrack)
             StartCoroutine(DrawRecap(walk.track, LineColor(walk)));
         saved = walk.meters > 0 || hasTrack ? WalkHistory.Add(walk, System.DateTime.Now) : null;
@@ -133,11 +134,63 @@ public class WalkCompleteScreen : MonoBehaviour
             result = r;
             if (saved != null) WalkHistory.SetCompleted(saved.id, r.completed);
             title.text = r.completed ? (mate ? "함께 산책 완료!" : "산책 완료!") : "산책을 마쳤어요";
-            reason.text = r.reason;
-            reason.color = r.completed ? Green : InkQuiet;
+            reason.text = r.completed ? r.reason : AlmostThere(walk);
+            reason.color = r.completed ? Green : Ink;
             ApplyReward(r.xp, r.tickets, r.growth);
             StartCoroutine(FillLevel(score, r));
         }));
+    }
+
+    /// <summary>카카오톡 노란 버튼 (말풍선 + 글자)</summary>
+    public static Button KakaoButton(Transform parent, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = Pill(parent, "카카오톡으로 자랑하기", new Color(1f, 0.9f, 0f), new Color(0.1f, 0.1f, 0.12f), onClick);
+        Image icon = UIKit.Image(b.transform, "Icon", new Color(0.1f, 0.1f, 0.12f));
+        icon.sprite = HudIcons.Bubble;
+        icon.raycastTarget = false;
+        icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0f, 0.5f);
+        icon.rectTransform.anchoredPosition = new Vector2(44f, 0f);
+        icon.rectTransform.sizeDelta = new Vector2(48f, 48f);
+        return b;
+    }
+
+    bool sharing;
+
+    IEnumerator UnlockAfter(float seconds)
+    {
+        yield return new WaitForSecondsRealtime(seconds);
+        sharing = false;
+    }
+
+    void ShareToKakao(RectTransform frame)
+    {
+        if (sharing || walk == null)
+            return;
+        sharing = true;
+        FindAnyObjectByType<GameHUD>()?.Toast("공유 준비 중…");
+        StartCoroutine(UnlockAfter(10f));   // 중간에 예외가 나도 버튼이 묶여 있지 않게
+        StartCoroutine(WalkShare.Share(frame, WalkShare.KindOf(walk.kind, walk.stopsTotal, walk.plannedMeters),
+            walk.meters, walk.minutes, walk.visitedBuildingIds, error =>
+            {
+                sharing = false;
+                var hud = FindAnyObjectByType<GameHUD>();
+                if (hud != null && error != null) hud.Toast(error);
+            }));
+    }
+
+    /// <summary>완료를 못 했을 때: 얼마나 더 했으면 됐는지 (다음에 다시 걷게)</summary>
+    static string AlmostThere(WalkCompleteRequest w)
+    {
+        if (w.kind == WalkSession.Mate || w.stopsTotal <= 0 && w.plannedMeters <= 0)
+        {
+            int left = Mathf.Max(0, LocalWalkService.MateMeters - w.meters);
+            return $"{left}m만 더 걸었으면 완료였어요";
+        }
+        int stops = Mathf.Max(0, w.stopsTotal - w.stopsDone);
+        int meters = Mathf.Max(0, Mathf.RoundToInt(w.plannedMeters * LocalWalkService.CourseRatio) - w.meters);
+        return stops > 0 && meters > 0 ? $"{stops}곳 더 들르거나 {RouteMath.Distance(meters)} 더 걸었으면 완료였어요"
+             : stops > 0 ? $"{stops}곳 더 들렀으면 완료였어요"
+             : $"{RouteMath.Distance(meters)} 더 걸었으면 완료였어요";
     }
 
     /// <summary>산책 종류별 길 색 (자유 산책 · 코스 · 산책메이트)</summary>
@@ -211,7 +264,12 @@ public class WalkCompleteScreen : MonoBehaviour
         if (parts.Count > 0)
             rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts).Replace("   \n", "\n");
         else if (rewardText.text.Length == 0)
-            rewardText.text = "이번 산책은 보상이 없어요";
+        {
+            // 완료 보상은 없어도 걸은 거리는 티켓 · 경험치에 이미 쌓였다는 것을 보여 준다 (실망만 주지 않게)
+            int toTicket = Mathf.Max(0, Mathf.RoundToInt(GachaRules.TicketMeters - p.ticketMeters));
+            string next = toTicket > 0 ? $"다음 티켓까지 {RouteMath.Distance(toTicket)}" : "오늘 받을 티켓은 다 받았어요";
+            rewardText.text = $"완료 보상은 다음 기회에! 걸은 거리는 그대로 쌓였어요\n<size=28>{next}</size>";
+        }
     }
 
     /// <summary>레벨 막대가 보상 전 값에서 보상 뒤 값으로 차오른다</summary>
@@ -323,6 +381,9 @@ public class WalkCompleteScreen : MonoBehaviour
         UIKit.SectionTitle(recapCard, "걸은 길");
         Image frame = TopMap.Frame(recapCard, "Recap", out recapMap, out recapOverlay);
         UIKit.Size(frame, 640f);
+        Button kakao = KakaoButton(recapCard, () => ShareToKakao(frame.rectTransform));
+        UIKit.Size(kakao, 104f);
+        shareRow = kakao.gameObject;
         recap = recapCard.gameObject;
 
         // 보상 (듀오링고: 받은 것을 크게 + 레벨 막대)
