@@ -1,1 +1,1 @@
-﻿3e37e89: error CS 0, Shader error 0, Shader warning 0, EditMode 36/36 passed
+﻿Assets\Scripts\Route\WalkCompleteScreen.cs(147,20): error CS0103: The name 'Pill' does not exist in the current context
