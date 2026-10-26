@@ -197,7 +197,10 @@ public class WalkCompleteScreen : MonoBehaviour
     public static Color LineColor(WalkCompleteRequest w) => LineColor(w.kind, w.stopsTotal, w.plannedMeters);
 
     public static Color LineColor(string kind, int stopsTotal, int plannedMeters) =>
-        kind == WalkSession.Mate ? Green : stopsTotal <= 0 && plannedMeters <= 0 ? FreeWalk.TrackColor : Accent;
+        kind == WalkSession.Mate ? MateColor : stopsTotal <= 0 && plannedMeters <= 0 ? FreeWalk.TrackColor : Accent;
+
+    /// <summary>산책메이트와 걸은 길 (코스 초록 · 자유 청록과 구분되게 주황, 계절과 상관없이 고정)</summary>
+    static readonly Color MateColor = new Color(0.93f, 0.50f, 0.13f);
 
     /// <summary>위에서 본 지도에 걸은 길을 그린다 (흰 테두리 + 색 선 + 방향 화살표, 출발 · 끝 표시)</summary>
     public static void DrawTrack(RawImage map, ref RenderTexture texture, RectTransform overlay, List<Vector3> track, Color color)

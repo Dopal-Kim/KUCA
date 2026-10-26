@@ -142,6 +142,11 @@ public class FreeWalk : MonoBehaviour
         title = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink));
         title.horizontalOverflow = HorizontalWrapMode.Overflow;
         Box(title.rectTransform, 120f, 40f, 300f, 64f);
+        title.horizontalOverflow = HorizontalWrapMode.Wrap;   // 좁은 판(가상 산책 중)에서 넘치지 않게 한 줄 · 글자 줄이기
+        title.verticalOverflow = VerticalWrapMode.Truncate;
+        title.resizeTextForBestFit = true;
+        title.resizeTextMaxSize = KucaTheme.Label;
+        title.resizeTextMinSize = KucaTheme.Caption - 4;
         stats = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
         stats.horizontalOverflow = HorizontalWrapMode.Overflow;
         Box(stats.rectTransform, 48f, 128f, 300f, 100f);
