@@ -546,6 +546,12 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 4. **성별 조건**: 한쪽이라도 `same` 이면 성별이 같아야 함
 5. **제외**: 서로 차단한 사람, 신고를 3번 이상 받은 사람 `[가정]`, 1시간 안에 서로 거절한 사람 `[가정]`. 상대 별점은 없으므로 별점으로 빼지 않습니다
 - 실제 순서: 위 조건(2·4·5)을 통과한 사람 중 **건물 거리 − 공통 취향 수 × 100m** `[가정]` 가 가장 작은 사람. 먼저 기다린 사람부터 짝을 찾습니다
+- **AI 짝 고르기 (10/26):** 들어오거나 폴링할 때 조건을 통과한 후보가 **2명 이상**이면, 위 점수 상위 5명 중 AI 가 가장 잘 맞는 한 명을 고릅니다.
+  - AI 가 고르는 동안(최대 10초 `[가정]`) 그 사람은 다른 짝 찾기에서 잠깐 빠집니다.
+  - AI 에게는 후보마다 Label(A·B…), 겹치는 취향 · 시간대 · 대화 스타일, 거리만 보냅니다 (닉네임 · 성별 · 계정 · 위치 없음).
+  - AI 가 고른 이유가 그대로 `partner.whyMatched` 가 됩니다.
+  - AI 가 못 고르거나(키 없음 · 실패 · 후보에 없는 답) 그사이 후보가 사라지면 같은 후보 중 점수 1등과 짝이 됩니다.
+  - 안전 조건(시간 · 동성만 · 차단 · 신고 · 방금 거절)은 AI 가 바꿀 수 없습니다. AI 는 이미 걸러진 후보 안에서만 고릅니다
 
 ### DELETE /api/match/queue (대기 취소)
 
@@ -863,12 +869,14 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
     "requests": 30, "proposed": 14, "met": 11, "walking": 9, "completed": 8,
     "successRate": 0.367, "completionRate": 0.727,
     "endReasons": { "completed": 8, "no_partner": 9, "declined": 3, "noshow": 1 },
-    "acceptRateByReason": { "ai": 0.82, "fallback": 0.64 }
+    "acceptRateByReason": { "ai": 0.82, "fallback": 0.64 },
+    "acceptRateByPick": { "ai": 0.85, "rule": 0.7 }
   },
   "ai": {
     "recommend":  { "ai": 40, "fallback": 12, "fallbackRate": 0.231 },
     "smalltalk":  { "ai": 20, "fallback": 2, "fallbackRate": 0.091 },
     "match_reason": { "ai": 14, "fallback": 1, "fallbackRate": 0.067 },
+    "match_pick": { "ai": 6, "fallback": 0, "fallbackRate": 0.0 },
     "moderation": { "ai": 85, "fallback": 3, "fallbackRate": 0.034 }
   }
 }
@@ -883,6 +891,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 | `matching.completionRate` | 함께 산책을 끝낸 매칭 ÷ 성사된 매칭 |
 | `fallbackRate` | AI 대신 규칙 · 예시 · 금지어로 처리한 비율. 높으면 AI 키 · 게이트웨이를 확인 |
 | `acceptRateByReason` | 제안 화면의 매칭 이유가 AI 문장일 때 / 틀 문장일 때, 두 사람 모두 수락한 비율 (AI 매칭 이유의 효과) |
+| `acceptRateByPick` | AI 가 고른 짝 / 규칙이 고른 짝의 두 사람 모두 수락한 비율 (AI 짝 고르기의 효과) |
 
 - 분모가 0 이면 비율은 `null` 입니다.
 - `walks` 의 종류: `ai` · `fallback` (추천 코스), `free` (추천 없이), `match` (매칭 산책)

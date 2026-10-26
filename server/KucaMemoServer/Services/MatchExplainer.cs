@@ -6,7 +6,17 @@ namespace KucaMemoServer.Services;
 public interface IMatchExplainer
 {
     Task<(string Text, string Source)> ExplainAsync(MatchReasonInput input, CancellationToken ct);
+
+    /// <summary>AI 가 짝을 고를 수 있는지 (키가 있는지)</summary>
+    bool CanPick { get; }
+
+    /// <summary>후보 중 가장 잘 맞는 한 명의 Label 과 한 줄 이유. 못 고르면 (null, null)</summary>
+    Task<(string? Label, string? Reason)> PickAsync(PickInput input, CancellationToken ct);
 }
+
+/// <summary>AI 짝 고르기의 후보 한 명. Label(A·B·C…) 말고는 겹치는 것과 거리뿐이다 (닉네임 · 성별 · 계정 없음)</summary>
+public record PickCandidate(string Label, IReadOnlyList<string> CommonTastes, IReadOnlyList<string> CommonWalkTimes, string? SameTalkStyle, int DistanceM);
+public record PickInput(int Minutes, IReadOnlyList<PickCandidate> Candidates);
 
 /// <summary>
 /// AI 에게 주는 것은 두 사람이 겹치는 것뿐이다 (닉네임 · 성별 · 계정 · 위치는 보내지 않음).
@@ -39,6 +49,62 @@ public class MatchExplainer(IRouteAi ai, MetricsStore metrics, ILogger<MatchExpl
     {
         ["chatty"] = "수다 떨며 걷기", ["some"] = "가끔 이야기하며 걷기", ["quiet"] = "조용히 함께 걷기",
     };
+
+    public bool CanPick => ai.IsConfigured;
+
+    /// <summary>
+    /// 서버가 안전 조건(시간 · 동성만 · 차단 · 신고)으로 거른 후보 2~5명 중 AI 가 가장 잘 맞는 한 명을 고르고 이유를 쓴다.
+    /// 답이 틀리거나 늦으면 (null, null) → 서버 규칙(가까움 · 공통 취향)으로 고른다.
+    /// </summary>
+    public async Task<(string? Label, string? Reason)> PickAsync(PickInput input, CancellationToken ct)
+    {
+        (string? label, string? reason) = await PickCoreAsync(input, ct);
+        metrics.Record(MetricsStore.AiCall, "match_pick", label != null ? 1 : 0);
+        return (label, reason);
+    }
+
+    async Task<(string?, string?)> PickCoreAsync(PickInput input, CancellationToken ct)
+    {
+        if (!ai.IsConfigured || input.Candidates.Count == 0)
+            return (null, null);
+        string system =
+            "너는 경희대학교 국제캠퍼스 산책 앱에서 함께 걸을 산책 메이트를 이어 주는 안내원이야. " +
+            "후보 중 나와 가장 잘 맞을 한 명을 골라. 공통 취향 · 걷는 시간대 · 대화 스타일이 잘 맞을수록, 그리고 가까울수록 좋아. " +
+            "주어진 공통점만 보고, 주어지지 않은 사실은 지어내지 마. " +
+            $"reason 은 고른 사람과 나의 공통점을 담은 따뜻한 존댓말 한 문장 ({MaxLength}자 이내, 이모지 없이). " +
+            "반드시 JSON 하나만 답해: {\"pick\": \"후보 Label\", \"reason\": \"…\"}";
+        string user = $"함께 걸을 시간: {input.Minutes}분\n후보 (Label | 공통 취향 | 둘 다 즐겨 걷는 시간대 | 같은 대화 스타일 | 거리):\n" +
+            string.Join("\n", input.Candidates.Select(c =>
+                $"{c.Label} | {Names(c.CommonTastes, Tastes)} | {Names(c.CommonWalkTimes, Times)} | " +
+                $"{(c.SameTalkStyle is { } t ? Talk.GetValueOrDefault(t, t) : "없음")} | 약 {c.DistanceM}m"));
+
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(8));
+        return ParsePick(await ai.CompleteAsync(system, user, timeout.Token), input.Candidates.Select(c => c.Label).ToHashSet());
+    }
+
+    /// <summary>{"pick":"B","reason":"…"}. 후보에 없는 Label 이면 (null, null), 이유만 이상하면 (Label, null)</summary>
+    public static (string? Label, string? Reason) ParsePick(string? answer, ISet<string> labels)
+    {
+        if (answer == null)
+            return (null, null);
+        int start = answer.IndexOf('{'), end = answer.LastIndexOf('}');
+        if (start < 0 || end <= start)
+            return (null, null);
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(answer[start..(end + 1)]);
+            string label = doc.RootElement.GetProperty("pick").GetString()?.Trim() ?? "";
+            if (!labels.Contains(label))
+                return (null, null);
+            string? reason = doc.RootElement.TryGetProperty("reason", out JsonElement r) ? r.GetString()?.Trim() : null;
+            return (label, reason is { Length: > 0 and <= MaxLength } && !reason.Contains("http") ? reason : null);
+        }
+        catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
+        {
+            return (null, null);
+        }
+    }
 
     public async Task<(string Text, string Source)> ExplainAsync(MatchReasonInput input, CancellationToken ct)
     {
