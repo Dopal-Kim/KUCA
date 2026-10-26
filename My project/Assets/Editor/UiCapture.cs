@@ -257,6 +257,15 @@ public static class UiCapture
             Set(done, "plannedMeters", 1900);
             Set(done, "stopsDone", 3);
             Set(done, "stopsTotal", 3);
+            // 걸은 길이 있어야 "걸은 길" 지도 · 카카오톡 공유 버튼이 뜬다 (REVIEW_v39): 플레이어 둘레 ㄱ 자 몇 점
+            if (Get(Find("CampusMap"), "player") is Transform pl)
+            {
+                Vector3 p0 = pl.position;
+                Set(done, "track", new List<Vector3>
+                {
+                    p0, p0 + new Vector3(60f, 0f, 0f), p0 + new Vector3(120f, 0f, 20f), p0 + new Vector3(140f, 0f, 90f), p0 + new Vector3(150f, 0f, 160f),
+                });
+            }
             // 지금은 walkId 가 비고 로그인 토큰이 없어 HttpWalkService 가 POST 없이 기기 판정한다. 나중에 캡처가 로그인하거나
             // walkId 를 넣어도 prod 에 완료 기록이 쌓이지 않게 이 단계만 서버 주소를 비운다 (REVIEW_v15 지적)
             PlayerPrefs.SetString("memo_server_url", "");
