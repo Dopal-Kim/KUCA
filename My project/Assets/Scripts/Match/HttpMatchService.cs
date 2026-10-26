@@ -26,8 +26,8 @@ public class HttpMatchService : IMatchService
     [Serializable] class BuildingBody { public string buildingId; }
     [Serializable] class ReportBody { public string matchId; public string reason; public string text; }
     [Serializable] class BlockBody { public string matchId; }
-    [Serializable] class SmalltalkBody { public List<string> smalltalk = new List<string>(); public string source; }
-    [Serializable] class ServerPartner { public string nickname; public List<string> commonTastes = new List<string>(); public string appearance; }
+    [Serializable] class SmalltalkBody { public List<string> smalltalk = new List<string>(); public List<TopicCard> smalltalkCards = new List<TopicCard>(); public string source; }
+    [Serializable] class ServerPartner { public string nickname; public List<string> commonTastes = new List<string>(); public string appearance; public string whyMatched; }
     [Serializable] class ServerSpot { public string buildingId; public string name; public double lat, lon; public string meetSpecies; }
     [Serializable] class Arrived { public bool me, partner; }
 
@@ -44,6 +44,9 @@ public class HttpMatchService : IMatchService
         public ServerSpot meetSpot;
         public string meetBy;
         public List<string> smalltalk = new List<string>();
+        public List<TopicCard> smalltalkCards = new List<TopicCard>();
+        public MatchCourse course;
+        public int nowSearching = -1;
         public string myAppearance;
         public Arrived arrived;
         public string walkId;
@@ -52,7 +55,7 @@ public class HttpMatchService : IMatchService
     }
 
     MatchState last = new MatchState();
-    readonly Queue<string> topics = new Queue<string>();   // "다음 주제" 로 받은 3개 중 아직 안 보여 준 것
+    readonly Queue<TopicCard> topics = new Queue<TopicCard>();   // "다음 주제" 로 받은 3개 중 아직 안 보여 준 것
 
     public HttpMatchService(string baseUrl, MockMatchService fallback)
     {
@@ -83,9 +86,9 @@ public class HttpMatchService : IMatchService
         {
             case 401: return "로그인이 필요해요";
             case 403: return e?.reason == "not_ready" ? "닉네임 · 성별 설정을 먼저 마쳐 주세요" : "할 수 없는 매칭이에요";
-            case 409: return "지금은 할 수 없어요. 매칭 상태가 바뀌었어요";
+            case 409: return !string.IsNullOrEmpty(e?.error) ? e.error : "지금은 할 수 없어요. 매칭 상태가 바뀌었어요";
             case 422: return "쓸 수 없는 내용이 있어요. 고쳐서 다시 보내 주세요";
-            case 429: return "주제를 다 봤어요. 이제 서로 이야기해 보세요";
+            case 429: return !string.IsNullOrEmpty(e?.error) ? e.error : "주제를 다 봤어요. 이제 서로 이야기해 보세요";
         }
         if (!string.IsNullOrEmpty(e?.error)) return e.error;
         if (!string.IsNullOrEmpty(e?.message)) return e.message;
@@ -127,6 +130,7 @@ public class HttpMatchService : IMatchService
         MatchState c = JsonUtility.FromJson<MatchState>(JsonUtility.ToJson(s));
         if (s.partner == null) c.partner = null;
         if (s.spot == null) c.spot = null;
+        if (!s.HasCourse) c.course = null;
         return c;
     }
 
@@ -156,13 +160,21 @@ public class HttpMatchService : IMatchService
             minutes = s.minutes,
             walkId = s.walkId,
             smalltalk = s.smalltalk ?? new List<string>(),
+            cards = Cards(s.smalltalk, s.smalltalkCards),
+            course = s.course != null && !string.IsNullOrEmpty(s.course.recommendationId) ? s.course : null,
+            nowSearching = s.nowSearching,
             myLook = s.myAppearance,
             meArrived = s.arrived != null && s.arrived.me,
             partnerArrived = s.arrived != null && s.arrived.partner,
         };
         if (s.partner != null && !string.IsNullOrEmpty(s.partner.nickname))
         {
-            a.partner = new MatchPartner { nickname = s.partner.nickname, commonTastes = s.partner.commonTastes ?? new List<string>() };
+            a.partner = new MatchPartner
+            {
+                nickname = s.partner.nickname,
+                commonTastes = s.partner.commonTastes ?? new List<string>(),
+                whyMatched = s.partner.whyMatched,
+            };
             a.partnerLook = s.partner.appearance;
         }
         if (s.meetSpot != null && !string.IsNullOrEmpty(s.meetSpot.buildingId))
@@ -194,6 +206,19 @@ public class HttpMatchService : IMatchService
                 break;
         }
         return a;
+    }
+
+    /// <summary>주제 카드: 서버가 smalltalkCards 를 주면 그대로, 아니면 글만으로 만든다 (예전 서버)</summary>
+    static List<TopicCard> Cards(List<string> texts, List<TopicCard> cards)
+    {
+        var result = new List<TopicCard>();
+        if (cards != null)
+            foreach (TopicCard c in cards)
+                if (c != null && !string.IsNullOrEmpty(c.text)) result.Add(c);
+        if (result.Count == 0 && texts != null)
+            foreach (string t in texts)
+                if (!string.IsNullOrEmpty(t)) result.Add(TopicCard.Plain(t));
+        return result;
     }
 
     static void EndOf(ServerState s, MatchState a)
@@ -308,8 +333,14 @@ public class HttpMatchService : IMatchService
         onDone(Remember(s), null);
     }
 
+    public IEnumerator AgreeCourse(string matchId, Action<MatchState, string> onDone) =>
+        Send("POST", $"/api/match/{M(matchId)}/course/agree", "{}", () => fallback.AgreeCourse(matchId, onDone), onDone, false);
+
+    public IEnumerator NextCourse(string matchId, Action<MatchState, string> onDone) =>
+        Send("POST", $"/api/match/{M(matchId)}/course/next", "{}", () => fallback.NextCourse(matchId, onDone), onDone, false);
+
     /// <summary>"다음 주제": 서버가 주는 3개를 하나씩 넘기고, 다 보면 다시 부른다 (매칭 하나에 5번까지)</summary>
-    public IEnumerator NextTopic(string matchId, Action<string, string> onDone)
+    public IEnumerator NextTopic(string matchId, Action<TopicCard, string> onDone)
     {
         if (useFallback) { yield return fallback.NextTopic(matchId, onDone); yield break; }
         if (topics.Count == 0)
@@ -320,9 +351,9 @@ public class HttpMatchService : IMatchService
             SmalltalkBody t = null;
             try { t = JsonUtility.FromJson<SmalltalkBody>(req.downloadHandler.text); }
             catch (ArgumentException) { }
-            if (t?.smalltalk != null)
-                foreach (string topic in t.smalltalk)
-                    if (!string.IsNullOrEmpty(topic)) topics.Enqueue(topic);
+            if (t != null)
+                foreach (TopicCard card in Cards(t.smalltalk, t.smalltalkCards))
+                    topics.Enqueue(card);
             if (topics.Count == 0) { onDone(null, "서버 응답을 읽지 못했어요"); yield break; }
         }
         onDone(topics.Dequeue(), null);

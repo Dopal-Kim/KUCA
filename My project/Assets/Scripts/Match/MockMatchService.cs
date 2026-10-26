@@ -17,11 +17,25 @@ public class MockMatchService : IMatchService
     static readonly string[] Looks = { "회색 맨투맨, 남색 백팩", "흰 셔츠, 검은 에코백", "베이지 코트, 운동화", "초록 후드티, 안경" };
     // 스몰토크 예시 20개 (A-V3, MeetSpotCatalog). 처음 3개는 서로 다른 주제에서 하나씩
     static string[] Topics => MeetSpotCatalog.SmallTalk;
+    // A 의 예시는 4개씩 공강 · 학식 · 전공 · 캠퍼스 장소 · 계절 순서 (Data/smalltalk.json 과 같음)
+    static readonly string[] TopicNames = { "공강", "학식", "전공", "캠퍼스 장소", "계절" };
+
+    /// <summary>가상 상대가 보여 줄 코스 후보 (만남 스팟에서 출발). "다른 코스" 를 누르면 다음 묶음</summary>
+    static readonly CourseStop[][] Courses =
+    {
+        new[] { Stop("중앙도서관", "열람실 창가에서 잠깐 쉬어 가요", 4, 300), Stop("노천극장", "계단에 앉아 이야기하기 좋아요", 6, 450), Stop("외국어대학관", "여러 나라 말이 들리는 복도를 지나요", 5, 380), Stop("학생회관", "따뜻한 음료로 마무리해요", 5, 360) },
+        new[] { Stop("체육대학관", "운동장 옆길을 따라 걸어요", 5, 400), Stop("예술디자인대학", "걸려 있는 작품을 구경해요", 6, 470), Stop("멀티미디어교육관", "언덕길에서 캠퍼스를 내려다봐요", 6, 450) },
+        new[] { Stop("정문", "캠퍼스 입구의 큰 길을 걸어요", 7, 520), Stop("선승관", "비가 와도 실내로 이어져요", 5, 380), Stop("공학관", "건물 사이 긴 길을 이어 걸어요", 6, 430) },
+    };
+    public const int CourseChanges = 3;
+
+    static CourseStop Stop(string name, string reason, int minutes, int meters) =>
+        new CourseStop { buildingId = "mock-" + name, name = name, reason = reason, walkMinutes = minutes, distanceM = meters };
 
     readonly Func<MeetSpot> nearestSpot;
     readonly MatchState state = new MatchState();
-    float joinedAt, acceptedAt, matchedAt;
-    int topic;
+    float joinedAt, acceptedAt, matchedAt, courseAt;
+    int topic, courseIndex;
     List<string> myTastes = new List<string>();
 
     readonly Func<float> clock;
@@ -96,18 +110,74 @@ public class MockMatchService : IMatchService
         onDone(Tick(), null);
     }
 
-    public IEnumerator NextTopic(string matchId, Action<string, string> onDone)
+    public IEnumerator NextTopic(string matchId, Action<TopicCard, string> onDone)
     {
         yield return null;
         topic = (topic + 1) % Topics.Length;
-        onDone(Topics[topic], null);
+        onDone(Card(topic), null);
+    }
+
+    static TopicCard Card(int index) =>
+        new TopicCard { text = Topics[index], topic = TopicNames[Mathf.Clamp(index / 4, 0, TopicNames.Length - 1)], emoji = "" };
+
+    public IEnumerator AgreeCourse(string matchId, Action<MatchState, string> onDone)
+    {
+        yield return null;
+        if (!state.HasCourse)
+        {
+            onDone(Tick(), "코스를 준비하고 있어요. 잠시 뒤에 다시 눌러 주세요.");
+            yield break;
+        }
+        state.course.myAgree = true;
+        state.course.confirmed = state.course.partnerAgree;
+        onDone(Tick(), null);
+    }
+
+    public IEnumerator NextCourse(string matchId, Action<MatchState, string> onDone)
+    {
+        yield return null;
+        if (!state.HasCourse || state.course.confirmed)
+        {
+            onDone(Tick(), "두 사람이 이미 정한 코스예요.");
+            yield break;
+        }
+        if (state.course.changesLeft <= 0)
+        {
+            onDone(Tick(), $"다른 코스는 {CourseChanges}번까지 볼 수 있어요. 지금 코스 중에서 골라 주세요.");
+            yield break;
+        }
+        int left = state.course.changesLeft - 1;
+        courseIndex = (courseIndex + 1) % Courses.Length;
+        state.course = MakeCourse(left);
+        courseAt = Now;
+        onDone(Tick(), null);
+    }
+
+    MatchCourse MakeCourse(int changesLeft)
+    {
+        var stops = new List<CourseStop>(Courses[courseIndex]);
+        int total = 0, meters = 0;
+        foreach (CourseStop s in stops) { total += s.walkMinutes; meters += s.distanceM; }
+        return new MatchCourse
+        {
+            recommendationId = "mock_rec_" + courseIndex,
+            title = $"함께 걷는 {state.minutes}분 코스",
+            source = "fallback",
+            stops = stops,
+            totalMinutes = total,
+            totalDistanceM = meters,
+            changesLeft = changesLeft,
+        };
     }
 
     public IEnumerator StartWalk(string matchId, Action<MatchState, string> onDone)
     {
         yield return null;
         if (state.status == MatchState.Matched)
+        {
             state.status = MatchState.Walking;
+            if (state.HasCourse) state.course.confirmed = true;   // 만나서 출발하면 지금 코스로 정해진다 (서버와 같게)
+        }
         onDone(Tick(), null);
     }
 
@@ -150,6 +220,7 @@ public class MockMatchService : IMatchService
         {
             case MatchState.Waiting:
                 state.waitSecondsLeft = Mathf.Max(0, WaitSeconds - Mathf.FloorToInt(now - joinedAt));
+                state.nowSearching = 1 + Mathf.FloorToInt(now - joinedAt) % 3;   // 실시간 느낌만 내는 가짜 숫자
                 if (now - joinedAt >= ProposeAfter)
                 {
                     state.status = MatchState.Proposed;
@@ -162,6 +233,7 @@ public class MockMatchService : IMatchService
                         nickname = Nicknames[rng.Next(Nicknames.Length)],
                         commonTastes = common,
                         talkStyle = "some",
+                        whyMatched = "둘 다 가끔 이야기하며 걷는 걸 좋아해서 연결했어요",
                     };
                     joinedAt = now; // 여기부터 결정 시간
                 }
@@ -182,14 +254,25 @@ public class MockMatchService : IMatchService
                     state.partnerAccepted = true;
                     state.spot = nearestSpot?.Invoke() ?? new MeetSpot { name = "중앙도서관 앞" };
                     var rng2 = new System.Random(state.matchId.GetHashCode());
-                    state.smalltalk = new List<string> { Topics[rng2.Next(4)], Topics[4 + rng2.Next(4)], Topics[12 + rng2.Next(4)] };
-                    matchedAt = now;
+                    int[] picks = { rng2.Next(4), 4 + rng2.Next(4), 12 + rng2.Next(4) };
+                    state.smalltalk = new List<string>();
+                    state.cards = new List<TopicCard>();
+                    foreach (int i in picks) { state.smalltalk.Add(Topics[i]); state.cards.Add(Card(i)); }
+                    courseIndex = 0;
+                    state.course = MakeCourse(CourseChanges);
+                    matchedAt = courseAt = now;
                 }
                 break;
             case MatchState.Matched:
                 state.noShowSecondsLeft = Mathf.Max(0, NoShowSeconds - Mathf.FloorToInt(now - matchedAt));
                 if (string.IsNullOrEmpty(state.partnerLook) && now - matchedAt >= PartnerLookAfter)
                     state.partnerLook = Looks[Mathf.Abs(state.matchId.GetHashCode()) % Looks.Length];
+                // 가상 상대는 코스를 받고 조금 뒤 동의한다 (내가 먼저 눌렀으면 그때 확정)
+                if (state.HasCourse && !state.course.partnerAgree && now - courseAt >= PartnerLookAfter)
+                {
+                    state.course.partnerAgree = true;
+                    state.course.confirmed = state.course.myAgree;
+                }
                 if (state.noShowSecondsLeft == 0)
                 {
                     Reset();
@@ -209,11 +292,19 @@ public class MockMatchService : IMatchService
         state.partnerAccepted = false;
         state.spot = null;
         state.smalltalk = new List<string>();
+        state.cards = new List<TopicCard>();
+        state.course = null;
+        state.nowSearching = -1;
         state.myLook = state.partnerLook = null; // 인상착의는 끝나면 지운다
         state.message = "";
         state.waitSecondsLeft = state.decideSecondsLeft = state.noShowSecondsLeft = 0;
         topic = 15;
     }
 
-    MatchState Copy() => JsonUtility.FromJson<MatchState>(JsonUtility.ToJson(state));
+    MatchState Copy()
+    {
+        MatchState c = JsonUtility.FromJson<MatchState>(JsonUtility.ToJson(state));
+        if (!state.HasCourse) c.course = null;   // JsonUtility 는 없는 코스도 빈 객체로 만든다
+        return c;
+    }
 }
