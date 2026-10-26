@@ -551,6 +551,7 @@ public partial class KhuMenus : MonoBehaviour
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = 3;
         g.childAlignment = TextAnchor.UpperLeft;
+        FitGridColumns.Attach(g);   // 세로로 긴 폰에서 3열째가 잘리지 않게 실제 폭으로 나눈다
         return section;
     }
 
@@ -837,6 +838,7 @@ public partial class KhuMenus : MonoBehaviour
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = 3;
         g.childAlignment = TextAnchor.UpperCenter;
+        FitGridColumns.Attach(g);
         scrapEmpty = T(area, "", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         UIKit.Stretch(scrapEmpty.rectTransform, 60f, 100f);
         Button close = UIKit.SecondaryButton(card, "닫기", CloseScrapbook);

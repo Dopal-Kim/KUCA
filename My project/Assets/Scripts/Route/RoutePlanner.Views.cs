@@ -71,8 +71,9 @@ public partial class RoutePlanner
             SetChip(tasteChips[i], tastes.Contains(TasteChoices[i].id));
         string meal = RouteMath.MealOf(System.DateTime.Now);
         SetChip(mealChip, afterMeal);
-        UIKit.SetLabel(mealChip.GetComponent<Button>(), meal != null ? $"식후 걷기  ·  지금 {meal}시간" : "식후 걷기");
-        mealNote.text = afterMeal ? $"가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : "";
+        UIKit.SetLabel(mealChip.GetComponent<Button>(), "식후 걷기");   // "지금 점심시간" 은 칩 아래 안내로 (칩 안에 넣으면 세 줄로 넘쳤다)
+        string now = meal != null ? $"지금 {meal}시간이에요. " : "";
+        mealNote.text = afterMeal ? $"{now}식후 걷기: 가까운 평지 위주로 골라요.  {RouteMath.HealthNote}" : meal != null ? $"{now}식후 걷기를 켜면 가까운 곳 위주로 골라요." : "";
         startValue.text = Escape(StartLabel);
         destValue.text = roundTrip ? "출발지로 돌아오기"
             : destSpot != null ? Escape(destSpot.Building.buildingName) : "AI 가 정해요";   // "추천대로" 는 뜻을 몰랐음 (REVIEW_v22_day)
