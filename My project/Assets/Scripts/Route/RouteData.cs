@@ -27,6 +27,18 @@ public class RouteRequest
     public string pace = "normal";
     /// <summary>식후 걷기 버튼으로 요청함 (가까운 곳 위주, 응답에 healthNote)</summary>
     public bool afterMeal;
+    /// <summary>말로 한 산책 바람 (200자 이내, 비우면 칩 선택만). 서버가 해석해 시간 · 취향 · 피할 곳에 반영한다</summary>
+    public string wish;
+}
+
+/// <summary>서버가 바람을 어떻게 이해했는지 (RouteResult.wish)</summary>
+[Serializable]
+public class RouteWish
+{
+    /// <summary>"20분 · 조용한 곳 · 오르막 피하기" 같은 한 줄</summary>
+    public string summary;
+    /// <summary>"ai"(AI 가 해석) 또는 "fallback"(말 찾기)</summary>
+    public string source;
 }
 
 [Serializable]
@@ -72,6 +84,8 @@ public class RouteResult
     public int totalMinutes;
     /// <summary>식후 걷기 안내 (afterMeal 일 때만, 의료 조언 아님 문구 포함)</summary>
     public string healthNote;
+    /// <summary>바람을 보냈을 때만: 어떻게 이해했는지</summary>
+    public RouteWish wish;
 }
 
 /// <summary>학교 공지 중 특정 장소와 관련된 것 (GET /api/notices)</summary>

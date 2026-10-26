@@ -322,7 +322,7 @@ public partial class RoutePlanner : MonoBehaviour
 
     RouteRequest RequestFor(Variant v, int mins)
     {
-        var req = new RouteRequest { minutes = mins, pace = Pace, afterMeal = afterMeal || v.id == "light" };
+        var req = new RouteRequest { minutes = mins, pace = Pace, afterMeal = afterMeal || v.id == "light", wish = Wish };
         req.tastes = v.id == "new" ? new List<string> { "unvisited" } : new List<string>(tastes);
         if (Map != null)
         {
