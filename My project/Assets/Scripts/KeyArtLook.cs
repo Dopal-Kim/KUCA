@@ -229,6 +229,16 @@ public class KeyArtLook : MonoBehaviour
     {
         Preset p = Current();
         if (p == null) return;
+        ApplyShaderGlobals(p);
+        ApplyRest(p);
+    }
+
+    /// <summary>
+    /// 3D 미리보기(NeutralAmbient)가 그리는 동안만 낮 값으로 바꿨다가 되돌릴 때 쓴다: 캐릭터 · 경희펫 셰이더(PlayerToy · CreatureToy)는
+    /// 주변광 프로브가 아니라 이 전역 값을 읽어, 밤 캡처 미리보기가 낮보다 약 20% 어두웠음 (REVIEW_v22_day)
+    /// </summary>
+    public void ApplyShaderGlobals(Preset p)
+    {
         Shader.SetGlobalVector(SkyId, p.skyAmbient);
         Shader.SetGlobalVector(GroundId, p.groundAmbient);
         Shader.SetGlobalFloat(ShadowId, p.shadowStrength);
@@ -246,7 +256,10 @@ public class KeyArtLook : MonoBehaviour
         Shader.SetGlobalFloat(GroundLightId, groundLight);
         if (lightMap != null) Shader.SetGlobalTexture(LightMapId, lightMap);
         Shader.SetGlobalVector(MapSizeId, lightMap != null ? new Vector4(mapSize.x, mapSize.y, 0f, 0f) : Vector4.zero);
+    }
 
+    void ApplyRest(Preset p)
+    {
         SeasonPalette sp = CurrentSeason();
         // leaf.x 가 0 이면 셰이더가 계절을 건너뛰므로 최소값을 둔다
         Shader.SetGlobalVector(LeafId, new Vector4(Mathf.Max(sp.leaf.x, 0.001f), sp.leaf.y, sp.leaf.z, 1f));

@@ -5,7 +5,7 @@ using UnityEngine;
 /// 선택한 부위 FBX들을 하나의 뼈대로 합쳐 캐릭터를 만든다.
 /// 상의(Body) 파트의 뼈대를 기준으로 쓰고, 나머지 파트의 SkinnedMeshRenderer 뼈를 이름으로 다시 연결한다.
 /// 이동 속도에 따라 Animator의 Speed 값을 넣어 Idle / Walk / Run 을 재생한다.
-/// 경희몬과 어울리게 머리를 키우고 (headScale), 재질을 파스텔 비닐 토이(KUCA/PlayerToy)로 바꾼다.
+/// 경희펫과 어울리게 머리를 키우고 (headScale), 재질을 파스텔 비닐 토이(KUCA/PlayerToy)로 바꾼다.
 /// </summary>
 public class ModularCharacter : MonoBehaviour
 {
@@ -33,6 +33,9 @@ public class ModularCharacter : MonoBehaviour
     public float lookUpDegrees = 22f;
 
     public CharacterAppearance Appearance { get; private set; }
+
+    /// <summary>0 이상이면 이동량 대신 이 걷기 속도를 쓴다 (캡처 도구가 꾸미기 미리보기에서 걷는 자세를 찍을 때)</summary>
+    [System.NonSerialized] public float speedOverride = -1f;
 
     static readonly int SpeedId = Animator.StringToHash("Speed");
 
@@ -248,7 +251,7 @@ public class ModularCharacter : MonoBehaviour
         d.y = 0f;
         lastPos = p;
 
-        float target = d.magnitude * metersPerUnit / Time.deltaTime;
+        float target = speedOverride >= 0f ? speedOverride : d.magnitude * metersPerUnit / Time.deltaTime;
         speed = Mathf.Lerp(speed, target, 1f - Mathf.Exp(-Time.deltaTime / Mathf.Max(0.01f, speedDamping)));
         animator.SetFloat(SpeedId, speed);
         FaceCameraWhenIdle();

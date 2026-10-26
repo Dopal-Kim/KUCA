@@ -5,10 +5,10 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
-/// 포켓몬 GO 식 전체 화면들.
-/// - 메인 메뉴 (가운데 경희 로고를 누르면): 도감 · 경희몬 · 도구
-/// - 컬렉션 (탭 3개): 도감(종류별 발견), 경희몬(잡은 개체, CP), 도구(가방)
-/// - 경희몬 상세: 파트너로 지정
+/// 경희펫 전체 화면들 (디자인 v4, docs/디자인_v4.md: 회색 바탕 · 흰 카드 · 큰 왼쪽 제목 · 왼쪽 위 ‹ 뒤로).
+/// - 메인 메뉴 (가운데 경희 로고를 누르면): 도감 · 경희펫 · 도구
+/// - 컬렉션 (탭 3개): 도감(종류별 발견), 경희펫(잡은 개체, CP), 도구(가방)
+/// - 경희펫 상세: 파트너로 지정
 /// - 프로필 (프로필 사진을 누르면): 캐릭터와 파트너, 레벨, 메뉴 4개, 활동 기록
 /// 걷은 거리와 방문한 경희스팟도 여기서 기록한다. GameHUD 가 같은 캔버스에 만든다.
 /// </summary>
@@ -16,15 +16,15 @@ public partial class KhuMenus : MonoBehaviour
 {
     public enum Tab { Dex, Monsters, Items }
 
-    static readonly Color Teal = new Color(0.17f, 0.45f, 0.49f);
-    static readonly Color TealDeep = new Color(0.10f, 0.33f, 0.37f);
+    static readonly Color Teal = KucaTheme.Primary;
+    static readonly Color TealDeep = KucaTheme.PrimaryDeep;
     static readonly Color Mint = new Color(0.38f, 0.86f, 0.70f);
-    static readonly Color Gray = new Color(0.42f, 0.47f, 0.49f);
+    static readonly Color Gray = KucaTheme.InkMuted;
     static readonly Color Orange = new Color(0.96f, 0.58f, 0.10f);
-    static readonly Color Green = new Color(0.33f, 0.78f, 0.55f);
-    static readonly Color ValueGreen = new Color(0.22f, 0.66f, 0.52f);
+    static readonly Color Green = KucaTheme.Primary;
+    static readonly Color ValueGreen = KucaTheme.Primary;
     // 메인 메뉴 (파란 그라데이션)
-    static readonly Color MenuNavy = new Color(0.10f, 0.22f, 0.52f);
+    static readonly Color MenuNavy = KucaTheme.PrimaryDeep;
     // 프로필 (버건디 그라데이션)
     static readonly Color PText = new Color(1f, 0.94f, 0.90f);
     static readonly Color PGold = new Color(0.96f, 0.79f, 0.45f);
@@ -45,24 +45,25 @@ public partial class KhuMenus : MonoBehaviour
     GameProgress progress;
     IList<CollectibleType> types;
 
-    // 메인 메뉴
+    // 메인 메뉴 (허브)
     GameObject mainMenu;
     readonly List<Transform> menuButtons = new List<Transform>();
+    Text hubMonsters, hubDex;
 
     // 컬렉션
     GameObject collection;
+    UIKit.Page collectionPage;
     Tab tab;
     readonly Text[] tabLabels = new Text[3];
     readonly Text[] tabCounts = new Text[3];
-    readonly RectTransform[] tabLines = new RectTransform[3];
+    readonly Image[] tabSegs = new Image[3];
     InputField search;
     RectTransform grid;
     ScrollRect gridScroll;
-    Text emptyText;
     GameObject sortButton;
-    int sortMode; // 0 최근, 1 등급, 2 이름
-    // v3 에는 잡기 · 쿠옹력(CP)이 없다: 화면에는 등급 · 진화 단계만 보인다 (값은 저장에 남김, 디자인 평가 10/25)
-    static readonly string[] SortNames = { "최근 만난 순", "등급 높은 순", "이름 순" };
+    Button sortChip;
+    int sortMode; // 0 최근, 1 이름
+    static readonly string[] SortNames = { "최근 만난 순", "이름 순" };   // "힘 센 순" 은 힘을 숨기며 뺌 (10/26)
 
     // 상세 / 목록 팝업
     GameObject detail;
@@ -84,10 +85,7 @@ public partial class KhuMenus : MonoBehaviour
 
     // 프로필
     GameObject profile;
-    GameObject profileMe, profileOther;
-    Text profileOtherText;
-    readonly Text[] profileTabs = new Text[3];
-    readonly RectTransform[] profileLines = new RectTransform[3];
+    GameObject profileMe;
     RawImage profileView;
     RectTransform profileHero;
     RectTransform profileRays;
@@ -180,6 +178,8 @@ public partial class KhuMenus : MonoBehaviour
                 hud.Toast($"레벨 {level} 달성!");
         }
 
+        if (mainMenu != null && mainMenu.activeSelf)
+            FillHub();
         if (collection != null && collection.activeSelf)
             FillCollection();
         if (gachaScreen != null && gachaScreen.activeSelf)
@@ -266,7 +266,7 @@ public partial class KhuMenus : MonoBehaviour
         if (r.tickets > 0)
         {
             progress.Save();
-            hud?.Toast($"티켓 {r.tickets}장을 받았어요!  오늘 {progress.TicketsToday}/{GachaRules.TicketsPerDay}");
+            hud?.Toast($"티켓 {r.tickets}장을 받았어요!  오늘 받은 티켓 {progress.TicketsToday}/{GachaRules.TicketsPerDay}");
         }
         if (r.evolved && progress.Partner != null)
         {
@@ -290,59 +290,93 @@ public partial class KhuMenus : MonoBehaviour
 
     public void OpenMainMenu()
     {
+        FillHub();
         Show(mainMenu, true);
-        // 버튼이 살짝 작게 시작해서 PressScale 이 원래 크기로 되돌리며 튀어나온다.
+        // 카드가 살짝 작게 시작해서 PressScale 이 원래 크기로 되돌리며 톡 나온다.
         foreach (Transform b in menuButtons)
-            b.localScale = Vector3.one * 0.75f;
+            b.localScale = Vector3.one * 0.96f;
     }
 
+    /// <summary>
+    /// 경희펫 허브 (참조: 토스 전체 탭 · 포켓몬 GO 메뉴). 원형 아이콘 4개 대신 큰 카드 목록:
+    /// 아이콘 · 이름 · 한 줄 설명 · 오른쪽 숫자 알약 (마리 수 · 가진 티켓 · 도감 진행).
+    /// v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
+    /// </summary>
     void BuildMainMenu()
     {
-        mainMenu = FullScreen("MainMenu", new Color(0.62f, 0.82f, 1f), new Color(0.08f, 0.24f, 0.62f), out RectTransform inner);
-        // 위 줄 경희몬 · 뽑기, 아래 줄 도감 · 산책 기록. v2 에서 퀘스트 · 도구는 숨김 (코드는 남김, 결정 D3 · D4)
-        MenuButton(inner, "경희몬", HudIcons.Monster, new Vector2(-160f, 600f), () => OpenCollection(Tab.Monsters));
-        MenuButton(inner, "뽑기", HudIcons.Ticket, new Vector2(160f, 600f), OpenGacha);
-        MenuButton(inner, "도감", HudIcons.Dex, new Vector2(-160f, 270f), () => OpenCollection(Tab.Dex));
-        MenuButton(inner, "산책 기록", HudIcons.Footprints, new Vector2(160f, 270f), () => { Show(mainMenu, false); WalkHistoryScreen.Show(); });
-        // 뽑기 버튼의 빨간 원: 가진 티켓 수
-        gachaMenuBadge = Circle(menuButtons[1], "Badge", new Color(0.93f, 0.25f, 0.33f), 56f);
-        Place(gachaMenuBadge.rectTransform, new Vector2(1f, 0f), new Vector2(-14f, 176f));
-        gachaMenuBadgeText = T(gachaMenuBadge.transform, "", 30, TextAnchor.MiddleCenter, Color.white, bold: true);
-        UIKit.Stretch(gachaMenuBadgeText.rectTransform);
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "MainMenu", "경희펫", () => Show(mainMenu, false), "걸어서 만나고, 함께 걸으며 키워요");
+        mainMenu = page.root;
+        hubMonsters = HubCard(page.content, HudIcons.Monster, "내 경희펫", "파트너 정하기 · 꾸미기", KucaTheme.Fill, KucaTheme.Ink,
+            () => OpenCollection(Tab.Monsters)).GetComponentInChildren<Text>(true);
+        gachaMenuBadge = HubCard(page.content, HudIcons.Ticket, "새 친구 만나기", "티켓으로 새 경희펫 만나기", KucaTheme.Primary, Color.white, OpenGacha);
+        gachaMenuBadgeText = gachaMenuBadge.GetComponentInChildren<Text>(true);
         gachaMenuBadge.gameObject.SetActive(false);
-        CloseFab(inner, () => Show(mainMenu, false), filled: false, MenuNavy);
-        BackButton.Attach(mainMenu, () => Show(mainMenu, false));
+        hubDex = HubCard(page.content, HudIcons.Dex, "도감", "만난 경희펫 모아 보기", KucaTheme.Fill, KucaTheme.Ink,
+            () => OpenCollection(Tab.Dex)).GetComponentInChildren<Text>(true);
+        HubCard(page.content, HudIcons.Footprints, "산책 기록", "지금까지 걸은 길", KucaTheme.Fill, KucaTheme.Ink,
+            () => { Show(mainMenu, false); WalkHistoryScreen.Show(); }).gameObject.SetActive(false);   // 숫자 칸 없음
     }
 
-    void MenuButton(RectTransform parent, string label, Sprite icon, Vector2 pos, UnityEngine.Events.UnityAction onClick)
+    /// <summary>허브 카드 한 장. 반환값은 오른쪽 숫자 알약 (글자는 그 안의 Text)</summary>
+    Image HubCard(Transform parent, Sprite icon, string title, string desc, Color pillBg, Color pillFg, UnityEngine.Events.UnityAction onClick)
     {
-        const float size = 210f;
-        Button b = InvisibleButton(parent, label, onClick, new Vector2(size + 20f, size + 90f));
-        RectTransform rt = (RectTransform)b.transform;
-        Place(rt, new Vector2(0.5f, 0f), pos);
-        rt.pivot = new Vector2(0.5f, 0f);
-        menuButtons.Add(rt);
+        Button b = CardButton(parent, title, onClick);
+        UIKit.Size(b, 240f);
+        menuButtons.Add(b.transform);
+        RectTransform r = (RectTransform)b.transform;
 
-        Image halo = Circle(rt, "Halo", new Color(1f, 1f, 1f, 0.55f), size + 22f);
-        Place(halo.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, -11f));
-        halo.rectTransform.pivot = new Vector2(0.5f, 0f);
-        Image ring = Circle(rt, "Ring", MenuNavy, size);
-        Place(ring.rectTransform, new Vector2(0.5f, 0f), Vector2.zero);
-        ring.rectTransform.pivot = new Vector2(0.5f, 0f);
-        Image face = Circle(ring.transform, "Face", new Color(0.97f, 0.99f, 0.97f), size - 14f);
-        Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image ic = UIKit.Image(face.transform, "Icon", MenuNavy);
+        Image tile = UIKit.Image(r, "Tile", KucaTheme.PrimarySoft);
+        tile.sprite = HudIcons.Rounded;
+        tile.type = Image.Type.Sliced;
+        tile.pixelsPerUnitMultiplier = 0.5f;
+        Place(tile.rectTransform, new Vector2(0f, 0.5f), new Vector2(44f, 0f));
+        tile.rectTransform.sizeDelta = new Vector2(148f, 148f);
+        Image ic = UIKit.Image(tile.transform, "Icon", KucaTheme.PrimaryDeep);
         ic.sprite = icon;
         Place(ic.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        ic.rectTransform.sizeDelta = new Vector2(size * 0.56f, size * 0.56f);
+        ic.rectTransform.sizeDelta = new Vector2(92f, 92f);
 
-        Text t = T(rt, label, 42, TextAnchor.LowerCenter, Color.white, bold: true);
-        Shadow(t);
-        Place(t.rectTransform, new Vector2(0.5f, 1f), Vector2.zero);
-        t.rectTransform.sizeDelta = new Vector2(size + 40f, 70f);
+        Text t = T(r, title, KucaTheme.Heading, TextAnchor.LowerLeft, KucaTheme.Ink, bold: true);
+        Corners(t.rectTransform, new Vector2(0f, 0.5f), Vector2.one, new Vector2(228f, 0f), new Vector2(-280f, -30f));
+        Text d = T(r, desc, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+        Corners(d.rectTransform, Vector2.zero, new Vector2(1f, 0.5f), new Vector2(228f, 24f), new Vector2(-280f, -10f));
+
+        Image chev = UIKit.Image(r, "Chevron", KucaTheme.InkSoft);
+        chev.sprite = HudIcons.Chevron;
+        Place(chev.rectTransform, new Vector2(1f, 0.5f), new Vector2(-40f, 0f));
+        chev.rectTransform.sizeDelta = new Vector2(44f, 44f);
+
+        Image pill = UIKit.Image(r, "Value", pillBg);
+        pill.sprite = HudIcons.Pill;
+        pill.type = Image.Type.Sliced;
+        pill.pixelsPerUnitMultiplier = 1.4f;
+        Place(pill.rectTransform, new Vector2(1f, 0.5f), new Vector2(-104f, 0f));
+        pill.rectTransform.sizeDelta = new Vector2(176f, 84f);
+        Text v = T(pill.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter, pillFg, bold: true);
+        UIKit.Stretch(v.rectTransform);
+        return pill;
     }
 
-    // ---------- 컬렉션 (도감 / 경희몬 / 도구) ----------
+    void FillHub()
+    {
+        if (progress == null || hubDex == null)
+            return;
+        hubDex.text = $"{FoundSpecies()} / {CreatureLibrary.AllSpecies.Count}";
+        hubMonsters.text = $"{progress.caught.Count}마리";
+        RefreshGachaBadge();
+    }
+
+    /// <summary>한 번이라도 만난 종 수 (도감 진행)</summary>
+    int FoundSpecies()
+    {
+        int n = 0;
+        foreach (string id in CreatureLibrary.AllSpecies)
+            if (progress.SpeciesCountOf(id) > 0)
+                n++;
+        return n;
+    }
+
+    // ---------- 컬렉션 (도감 / 내 경희펫 / 도구) ----------
 
     public void OpenCollection(Tab which)
     {
@@ -352,106 +386,43 @@ public partial class KhuMenus : MonoBehaviour
         SelectTab(which);
     }
 
+    /// <summary>
+    /// 도감 · 내 경희펫 (참조: 포켓몬 HOME 박스 · 도감): 큰 제목 + 진행 한 줄, 세그먼트 탭, 검색 · 정렬, 3열 흰 카드 격자.
+    /// 못 만난 경희펫은 실루엣, 비었으면 다음 행동(뽑기 하러 가기)이 있는 빈 상태.
+    /// </summary>
     void BuildCollection()
     {
-        collection = FullScreen("Collection", new Color(0.96f, 0.99f, 0.97f), new Color(0.85f, 0.95f, 0.90f), out RectTransform inner);
-        Frame(collection.transform, new Color(0.56f, 0.86f, 0.56f));
+        collectionPage = UIKit.CreatePage(canvasRoot, "Collection", "도감", () => Show(collection, false), " ");
+        collection = collectionPage.root;
+        RectTransform content = collectionPage.content;
+        gridScroll = content.GetComponentInParent<ScrollRect>(true);
 
-        // 탭
-        RectTransform tabs = UIKit.Rect(inner, "Tabs");
-        tabs.anchorMin = new Vector2(0f, 1f);
-        tabs.anchorMax = new Vector2(1f, 1f);
-        tabs.pivot = new Vector2(0.5f, 1f);
-        tabs.offsetMin = tabs.offsetMax = Vector2.zero;
-        tabs.sizeDelta = new Vector2(0f, 210f);
-        string[] names = { "도감", "경희몬", "도구" };
-        const int shownTabs = 2; // v2: 도구 탭은 숨김 (결정 D4)
-        for (int i = 0; i < 3; i++)
-        {
-            Tab which = (Tab)i;
-            Button b = InvisibleButton(tabs, names[i], () => SelectTab(which), Vector2.zero);
-            RectTransform br = (RectTransform)b.transform;
-            b.gameObject.SetActive(i < shownTabs);
-            br.anchorMin = new Vector2(i / (float)shownTabs, 0f);
-            br.anchorMax = new Vector2((i + 1) / (float)shownTabs, 1f);
-            br.offsetMin = br.offsetMax = Vector2.zero;
-            tabLabels[i] = T(br, names[i], 42, TextAnchor.MiddleCenter, Gray, bold: true);
-            SetBox(tabLabels[i].rectTransform, 0f, 0.5f, 0.85f, 0f);
-            tabCounts[i] = T(br, "", 34, TextAnchor.MiddleCenter, Gray);
-            SetBox(tabCounts[i].rectTransform, 0f, 0.2f, 0.5f, 0f);
-            Image line = UIKit.Image(br, "Line", TealDeep);
-            line.sprite = HudIcons.Pill;
-            line.type = Image.Type.Sliced;
-            line.pixelsPerUnitMultiplier = 20f;
-            Place(line.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 14f));
-            line.rectTransform.sizeDelta = new Vector2(160f, 7f);
-            tabLines[i] = line.rectTransform;
-        }
+        // 탭 (v2: 도구 탭은 숨김, 결정 D4)
+        Segmented(content, new[] { "도감", "내 경희펫", "도구" }, 2, i => SelectTab((Tab)i), tabLabels, tabCounts, tabSegs);
 
-        // 검색
-        Image bar = UIKit.Image(inner, "Search", new Color(0.86f, 0.93f, 0.86f), raycast: true);
-        bar.sprite = HudIcons.Pill;
-        bar.type = Image.Type.Sliced;
-        bar.pixelsPerUnitMultiplier = 120f / 96f;
-        RectTransform sr = bar.rectTransform;
-        sr.anchorMin = new Vector2(0f, 1f);
-        sr.anchorMax = new Vector2(1f, 1f);
-        sr.pivot = new Vector2(0.5f, 1f);
-        sr.offsetMin = new Vector2(44f, -326f);
-        sr.offsetMax = new Vector2(-44f, -230f);
-        Image glass = UIKit.Image(bar.transform, "Icon", TealDeep);
-        glass.sprite = HudIcons.Search;
-        Place(glass.rectTransform, new Vector2(0f, 0.5f), new Vector2(36f, 0f));
-        glass.rectTransform.sizeDelta = new Vector2(52f, 52f);
-        search = bar.gameObject.AddComponent<InputField>();
-        Text input = T(bar.transform, "", 38, TextAnchor.MiddleLeft, TealDeep);
-        input.supportRichText = false;
-        UIKit.Stretch(input.rectTransform, 0f, 0f);
-        input.rectTransform.offsetMin = new Vector2(104f, 0f);
-        Text hint = T(bar.transform, "검색", 38, TextAnchor.MiddleLeft, new Color(Gray.r, Gray.g, Gray.b, 0.7f), bold: true);
-        UIKit.Stretch(hint.rectTransform, 0f, 0f);
-        hint.rectTransform.offsetMin = new Vector2(104f, 0f);
-        search.textComponent = input;
-        search.placeholder = hint;
-        search.characterLimit = 20;
+        // 검색 + 정렬 (정렬은 내 경희펫 탭에서만)
+        RectTransform tools = UIKit.Rect(content, "Tools");
+        UIKit.Size(tools, KucaTheme.TouchMin);
+        HorizontalLayoutGroup h = UIKit.Horizontal(tools, KucaTheme.Space2);
+        h.childForceExpandWidth = false;
+        search = UIKit.Input(tools, "이름으로 찾기", KucaTheme.Body, false, 20);
+        search.GetComponent<Image>().color = KucaTheme.Card;
+        UIKit.Size(search, KucaTheme.TouchMin, -1f, 1f);
         search.onValueChanged.AddListener(_ => FillCollection());
+        sortChip = UIKit.Button(tools, SortNames[0], CycleSort, KucaTheme.Card, KucaTheme.Label);
+        sortChip.GetComponentInChildren<Text>(true).color = KucaTheme.Ink;
+        UIKit.Size(sortChip, KucaTheme.TouchMin, 330f);
+        sortButton = sortChip.gameObject;
 
-        // 그리드
-        RectTransform area = UIKit.Rect(inner, "Grid");
-        UIKit.StretchBetween(area, 0f, 346f);
-        // 내용: 등급별 구역(제목 + 3열 그리드)을 세로로 쌓는다. 경희몬·도구 탭은 제목 없는 구역 하나.
-        grid = ScrollContent(area, out gridScroll);
-        UIKit.Vertical(grid, 8f, new RectOffset(0, 0, 4, 280));
-
-        emptyText = T(area, "", 38, TextAnchor.MiddleCenter, Gray);
-        UIKit.Stretch(emptyText.rectTransform, 80f, 200f);
-
-        // 정렬 버튼 (경희몬 탭)
-        Button sort = InvisibleButton(inner, "Sort", CycleSort, new Vector2(124f, 124f));
-        Place((RectTransform)sort.transform, new Vector2(1f, 0f), new Vector2(-50f, 60f));
-        Image sRing = Circle(sort.transform, "Ring", Teal, 124f);
-        Place(sRing.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image sFace = Circle(sRing.transform, "Face", Color.white, 112f);
-        Place(sFace.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image sIcon = UIKit.Image(sFace.transform, "Icon", Teal);
-        sIcon.sprite = HudIcons.Sort;
-        Place(sIcon.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        sIcon.rectTransform.sizeDelta = new Vector2(60f, 60f);
-        sortButton = sort.gameObject;
-
-        CloseFab(inner, () => Show(collection, false), filled: true);
-        BackButton.Attach(collection, () => Show(collection, false));
+        grid = UIKit.Rect(content, "Grid");
+        UIKit.Vertical(grid, KucaTheme.Space2);
     }
 
     void SelectTab(Tab which)
     {
         tab = which;
-        for (int i = 0; i < 3; i++)
-        {
-            bool on = i == (int)which;
-            tabLabels[i].color = tabCounts[i].color = on ? TealDeep : new Color(Gray.r, Gray.g, Gray.b, 0.55f);
-            tabLines[i].gameObject.SetActive(on);
-        }
+        PaintSegments((int)which, tabLabels, tabCounts, tabSegs);
+        collectionPage.title.text = which == Tab.Dex ? "도감" : which == Tab.Monsters ? "내 경희펫" : "가방";
         sortButton.SetActive(which == Tab.Monsters);
         gridScroll.verticalNormalizedPosition = 1f;
         FillCollection();
@@ -460,7 +431,7 @@ public partial class KhuMenus : MonoBehaviour
     void CycleSort()
     {
         sortMode = (sortMode + 1) % SortNames.Length;
-        hud?.Toast($"정렬: {SortNames[sortMode]}");
+        UIKit.SetLabel(sortChip, SortNames[sortMode]);
         FillCollection();
     }
 
@@ -472,13 +443,12 @@ public partial class KhuMenus : MonoBehaviour
         string q = search != null ? search.text.Trim() : "";
 
         IReadOnlyList<string> all = CreatureLibrary.AllSpecies;
-        int found = 0;
-        foreach (string id in all)
-            if (progress.SpeciesCountOf(id) > 0)
-                found++;
+        int found = FoundSpecies();
         tabCounts[0].text = $"{found} / {all.Count}";
         tabCounts[1].text = $"{progress.caught.Count}마리";
-        tabCounts[2].text = $"{progress.TotalItems} / {ItemStorage}";
+        tabCounts[2].text = $"{progress.TotalItems}개";
+        collectionPage.subtitle.text = tab == Tab.Dex ? $"{all.Count}종 중 {found}종을 만났어요"
+            : tab == Tab.Monsters ? "누르면 파트너로 정하거나 꾸밀 수 있어요" : "레벨을 올리면 도구를 받아요";
 
         int shown = 0;
         switch (tab)
@@ -499,7 +469,7 @@ public partial class KhuMenus : MonoBehaviour
                     }
                     if (visible.Count == 0)
                         continue;
-                    RectTransform section = Section($"{GachaRules.Label(grade)} 등급", GachaRules.ColorOf(grade),
+                    RectTransform section = Section(GachaRules.Label(grade), GachaRules.ColorOf(grade),
                         $"{tierFound} / {species.Count} 발견");
                     foreach (string id in visible)
                     {
@@ -507,13 +477,13 @@ public partial class KhuMenus : MonoBehaviour
                         shown++;
                     }
                 }
-                emptyText.text = shown == 0 ? "검색 결과가 없어요" : "";
+                if (shown == 0)
+                    UIKit.EmptyState(grid, "검색 결과가 없어요", "만난 경희펫의 이름으로 찾아보세요");
                 break;
 
             case Tab.Monsters:
                 var list = new List<GameProgress.Caught>(progress.caught);
                 if (sortMode == 0) list.Sort((x, y) => y.caughtAt.CompareTo(x.caughtAt));
-                else if (sortMode == 1) list.Sort((x, y) => GachaRules.GradeOf(y.speciesId).CompareTo(GachaRules.GradeOf(x.speciesId)));
                 else list.Sort((x, y) => string.CompareOrdinal(NameOf(x), NameOf(y)));
                 // 파트너는 항상 맨 앞
                 int pi = list.FindIndex(c => c.uid == progress.partnerUid);
@@ -526,8 +496,14 @@ public partial class KhuMenus : MonoBehaviour
                     MonsterCell(mons, c);
                     shown++;
                 }
-                emptyText.text = shown > 0 ? "" : q.Length > 0 ? "검색 결과가 없어요"
-                    : "아직 경희몬이 없어요\n걸어서 티켓을 모아 뽑아 보세요";
+                if (shown == 0 && q.Length > 0)
+                    UIKit.EmptyState(grid, "검색 결과가 없어요", "다른 이름으로 찾아보세요");
+                else if (shown == 0)
+                    UIKit.EmptyState(grid, "아직 경희펫이 없어요", "1km 걸을 때마다 티켓 1장.\n티켓으로 새 경희펫을 만나요", "만나러 가기",
+                        () => { Show(collection, false); OpenGacha(); });
+                else if (shown < 4 && q.Length == 0)   // 한두 마리면 화면 대부분이 비어 보였음 (REVIEW_v14)
+                    UIKit.EmptyState(grid, "산책하며 더 만나요", "1km 걸을 때마다 티켓 1장.\n티켓으로 새 경희펫을 만나요", "만나러 가기",
+                        () => { Show(collection, false); OpenGacha(); });
                 break;
 
             case Tab.Items:
@@ -540,7 +516,8 @@ public partial class KhuMenus : MonoBehaviour
                     ItemCell(items, item, n);
                     shown++;
                 }
-                emptyText.text = shown > 0 ? "" : q.Length > 0 ? "검색 결과가 없어요" : "가방이 비어 있어요\n레벨을 올리면 도구를 받아요";
+                if (shown == 0)
+                    UIKit.EmptyState(grid, q.Length > 0 ? "검색 결과가 없어요" : "가방이 비어 있어요", "레벨을 올리면 도구를 받아요");
                 break;
         }
     }
@@ -559,57 +536,46 @@ public partial class KhuMenus : MonoBehaviour
         if (title != null)
         {
             RectTransform head = UIKit.Rect(grid, "Header_" + title);
-            UIKit.Size(head, 92f);
-            Image dot = Circle(head, "Dot", color, 30f);
-            Place(dot.rectTransform, new Vector2(0f, 0.5f), new Vector2(52f, -6f));
-            Text t = T(head, title, 40, TextAnchor.MiddleLeft, TealDeep, bold: true);
-            SetBox(t.rectTransform, 98f, 0f, 1f, 300f);
-            t.rectTransform.offsetMin += new Vector2(0f, -12f);
-            Text s2 = T(head, sub ?? "", 32, TextAnchor.MiddleRight, Gray);
-            SetBox(s2.rectTransform, 0f, 0f, 1f, 52f);
-            s2.rectTransform.offsetMin = new Vector2(400f, -12f);
+            UIKit.Size(head, 104f);
+            Image dot = Circle(head, "Dot", color, 28f);
+            Place(dot.rectTransform, new Vector2(0f, 0.5f), new Vector2(4f, 0f));
+            Text t = T(head, title, KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
+            SetBox(t.rectTransform, 52f, 0f, 1f, 340f);
+            Text s2 = T(head, sub ?? "", KucaTheme.Label, TextAnchor.MiddleRight, KucaTheme.InkMuted);
+            SetBox(s2.rectTransform, 420f, 0f, 1f, 0f);
         }
         RectTransform section = UIKit.Rect(grid, "Grid_" + (title ?? "All"));
         var g = section.gameObject.AddComponent<GridLayoutGroup>();
-        g.cellSize = new Vector2(310f, 350f);
-        g.spacing = new Vector2(16f, 18f);
-        g.padding = new RectOffset(20, 20, 6, 6);
+        g.cellSize = new Vector2(304f, 400f);   // 960 너비 (Gutter 60 양쪽) 를 3열로
+        g.spacing = new Vector2(24f, 24f);
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = 3;
-        g.childAlignment = TextAnchor.UpperCenter;
+        g.childAlignment = TextAnchor.UpperLeft;
         return section;
     }
 
     void MonsterCell(RectTransform parent, GameProgress.Caught c)
     {
-        Button b = InvisibleButton(parent, c.uid, () => OpenDetail(c), Vector2.zero);
-        Transform cell = b.transform;
-
-        GachaRules.Grade grade = GachaRules.GradeOf(c.speciesId);
-        Text cp = T(cell, $"<color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(grade))}>{GachaRules.Label(grade)}</color> <size=30>등급</size>", 52, TextAnchor.MiddleCenter, Gray, bold: true);
-        TopBox(cp.rectTransform, 0f, 74f);
-        Thumb(cell, c.speciesId, true, 190f, new Vector2(0f, -172f));
-        Text name = T(cell, NameOf(c), 38, TextAnchor.MiddleCenter, Gray);
-        BottomBox(name.rectTransform, 40f, 60f);
-        FitOneLine(name, 38);
-        StageDots(cell, progress.StageOf(c.speciesId), new Vector2(-96f, -96f));
-        // 막대 색 = 등급 (C · B · A · S)
-        Image bar = UIKit.Image(cell, "Bar", GachaRules.ColorOf(GachaRules.GradeOf(c.speciesId)));
-        bar.sprite = HudIcons.Pill;
-        bar.type = Image.Type.Sliced;
-        bar.pixelsPerUnitMultiplier = 12f;
-        Place(bar.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 22f));
-        bar.rectTransform.sizeDelta = new Vector2(150f, 10f);
+        Transform cell = CardButton(parent, c.uid, () => OpenDetail(c)).transform;
+        GradeChip(cell, GachaRules.GradeOf(c.speciesId));
+        Thumb(cell, c.speciesId, true, 220f, new Vector2(0f, -156f));
+        Text name = T(cell, NameOf(c), KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
+        BottomBox(name.rectTransform, 84f, 56f);
+        FitOneLine(name, KucaTheme.Label);
+        // 진화 단계는 같은 줄에: 따로 둔 주황 글자가 카드 아래 끝에 걸려 대비 약하고 겹쳐 보였음 (REVIEW_v25)
+        Text cp = T(cell, $"성장 {progress.StageOf(c.speciesId) + 1}/{GachaRules.MaxStage + 1}", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+        BottomBox(cp.rectTransform, 40f, 44f);
+        FitOneLine(cp, KucaTheme.Caption);
 
         if (c.uid == progress.partnerUid)
         {
-            Image tag = UIKit.Image(cell, "Partner", Orange);
+            Image tag = UIKit.Image(cell, "Partner", KucaTheme.Primary);
             tag.sprite = HudIcons.Pill;
             tag.type = Image.Type.Sliced;
-            tag.pixelsPerUnitMultiplier = 120f / 44f;
-            Place(tag.rectTransform, new Vector2(1f, 1f), new Vector2(-12f, -84f));
-            tag.rectTransform.sizeDelta = new Vector2(110f, 44f);
-            Text tt = T(tag.transform, "파트너", 26, TextAnchor.MiddleCenter, Color.white, bold: true);
+            tag.pixelsPerUnitMultiplier = 2.4f;
+            Place(tag.rectTransform, new Vector2(1f, 1f), new Vector2(-16f, -20f));
+            tag.rectTransform.sizeDelta = new Vector2(132f, 52f);
+            Text tt = T(tag.transform, "파트너", KucaTheme.Caption - 4, TextAnchor.MiddleCenter, Color.white, bold: true);
             UIKit.Stretch(tt.rectTransform);
         }
     }
@@ -617,49 +583,43 @@ public partial class KhuMenus : MonoBehaviour
     void DexCell(RectTransform parent, int number, string species, bool known)
     {
         GachaRules.Grade grade = GachaRules.GradeOf(species);
-        Button b = InvisibleButton(parent, species, () =>
+        Transform cell = CardButton(parent, species, () =>
         {
             if (known)
                 ShowList(CreatureLibrary.NameOf(species), DexRows(species));
             else
-                hud?.Toast(grade >= GachaRules.Grade.B ? $"아직 만나지 못한 {GachaRules.Label(grade)} 등급이에요. 5장 뽑기에서 나와요"
-                                                       : "아직 만나지 못한 경희몬이에요. 1장 뽑기에서 나와요");
-        }, Vector2.zero);
-        Transform cell = b.transform;
-        Text no = T(cell, $"No.{number:000}", 32, TextAnchor.MiddleCenter, Gray, bold: true);
-        TopBox(no.rectTransform, 8f, 56f);
-        Thumb(cell, species, known, 200f, new Vector2(0f, -170f));
-        Text name = T(cell, known ? CreatureLibrary.NameOf(species) : "???", 34, TextAnchor.MiddleCenter, Gray);
-        BottomBox(name.rectTransform, 40f, 56f);
-        FitOneLine(name, 34);
-        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}" : "", 28, TextAnchor.MiddleCenter, ValueGreen);
-        BottomBox(cnt.rectTransform, 6f, 36f);
-        GradeChip(cell, grade);
-        if (known)
-            StageDots(cell, progress.StageOf(species), new Vector2(104f, -36f));
+                hud?.Toast(grade >= GachaRules.Grade.B ? $"아직 만나지 못한 {GachaRules.Label(grade)} 친구예요. 티켓 5장으로 만나기에서 나와요"
+                                                       : "아직 만나지 못한 경희펫이에요. 티켓 1장으로 만나기에서 나와요");
+        }).transform;
+        Text no = T(cell, $"{number:000}",   // "No." 를 빼 희귀도 알약("아주 드묾")과 붙지 않게 (REVIEW_v31)
+            KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft, bold: true);
+        TopBox(no.rectTransform, 24f, 48f);
+        no.rectTransform.offsetMin = new Vector2(24f, no.rectTransform.offsetMin.y);
+        GradeChip(cell, grade, right: true);
+        Thumb(cell, species, known, 220f, new Vector2(0f, -170f));
+        Text name = T(cell, known ? CreatureLibrary.NameOf(species) : "???", KucaTheme.Label, TextAnchor.MiddleCenter,
+            known ? KucaTheme.Ink : KucaTheme.InkSoft, bold: true);
+        BottomBox(name.rectTransform, 84f, 56f);
+        FitOneLine(name, KucaTheme.Label);
+        Text cnt = T(cell, known ? $"만난 수 {progress.SpeciesCountOf(species)}  ·  성장 {progress.StageOf(species) + 1}/{GachaRules.MaxStage + 1}" : "", KucaTheme.Caption, TextAnchor.MiddleCenter,
+            known ? KucaTheme.PrimaryDeep : KucaTheme.InkSoft);
+        BottomBox(cnt.rectTransform, 40f, 44f);
+        FitOneLine(cnt, KucaTheme.Caption);
     }
 
-    /// <summary>칸 왼쪽 위 등급 표시 (C · B · A · S)</summary>
-    static void GradeChip(Transform cell, GachaRules.Grade grade)
+    /// <summary>칸 위 모서리 희귀도 알약 ("흔함" · "조금 드묾" …). 작은 원에 넣으니 글자가 넘치고 뭉갰음 (REVIEW_v30)</summary>
+    static void GradeChip(Transform cell, GachaRules.Grade grade, bool right = false)
     {
-        Image chip = Circle(cell, "Grade", GachaRules.ColorOf(grade), 52f);
-        Place(chip.rectTransform, new Vector2(0f, 1f), new Vector2(34f, -34f));
-        Text g = T(chip.transform, GachaRules.Label(grade), 30, TextAnchor.MiddleCenter, Color.white, bold: true);
+        Image chip = UIKit.Image(cell, "Grade", GachaRules.ColorOf(grade));
+        chip.sprite = HudIcons.Pill;
+        chip.type = Image.Type.Sliced;
+        chip.pixelsPerUnitMultiplier = 2f;
+        Text g = T(chip.transform, GachaRules.Label(grade), KucaTheme.Caption, TextAnchor.MiddleCenter, Color.white, bold: true);
         UIKit.Stretch(g.rectTransform);
-    }
-
-    /// <summary>진화 단계 점 ●●○ (0~2단계 → 1~3개 채움)</summary>
-    static void StageDots(Transform cell, int stage, Vector2 pos)
-    {
-        RectTransform row = UIKit.Rect(cell, "Stage");
-        row.anchorMin = row.anchorMax = row.pivot = new Vector2(0.5f, 1f);
-        row.anchoredPosition = pos;
-        row.sizeDelta = new Vector2(90f, 22f);
-        for (int i = 0; i <= GachaRules.MaxStage; i++)
-        {
-            Image dot = Circle(row, "Dot" + i, i <= stage ? Orange : new Color(0f, 0f, 0f, 0.14f), 20f);
-            Place(dot.rectTransform, new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 30f, 0f));
-        }
+        RectTransform cr = chip.rectTransform;
+        cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(right ? 1f : 0f, 1f);
+        cr.anchoredPosition = new Vector2(right ? -14f : 14f, -14f);
+        cr.sizeDelta = new Vector2(g.preferredWidth + 32f, 52f);
     }
 
     List<(string, string)> DexRows(string species)
@@ -673,84 +633,81 @@ public partial class KhuMenus : MonoBehaviour
         int next = GachaRules.NextThreshold(growth);
         var rows = new List<(string, string)>
         {
-            ("등급", $"{GachaRules.Label(grade)} 등급"),
-            ("진화 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
+            ("희귀도", GachaRules.Label(grade)),
+            ("성장 단계", $"{progress.StageOf(species)}단계" + (next > 0 ? $"  ·  경험치 {growth}/{next}" : "  ·  최종")),
             ("만난 수", $"{progress.SpeciesCountOf(species)}마리"),
             ("가지고 있는 수", $"{mine.Count}마리"),
             ("처음 만난 날", first != long.MaxValue ? new DateTime(first).ToString("yyyy.MM.dd") : "-"),
-            ("진화하려면", "함께 걷기 또는 뽑기에서 또 만나기"),
+            ("자라려면", "함께 걷기 또는 티켓으로 또 만나기"),
         };
         return rows;
     }
 
     void ItemCell(RectTransform parent, ItemCatalog.Item item, int count)
     {
-        Button b = InvisibleButton(parent, item.id, () => ShowList(item.name, new List<(string, string)>
+        Transform cell = CardButton(parent, item.id, () => ShowList(item.name, new List<(string, string)>
         {
             ("가지고 있는 수", $"{count}개"),
             (item.description, ""),
-        }), Vector2.zero);
-        Transform cell = b.transform;
-        Text n = T(cell, $"×{count}", 50, TextAnchor.MiddleCenter, Gray, bold: true);
-        TopBox(n.rectTransform, 0f, 74f);
+        })).transform;
+        Text n = T(cell, $"×{count}", KucaTheme.Heading, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
+        TopBox(n.rectTransform, 16f, 70f);
         Image icon = UIKit.Image(cell, "Icon", Color.white);
         icon.sprite = HudIcons.ItemIcon(item.id);
         icon.preserveAspect = true;
         Place(icon.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -170f));
         icon.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         icon.rectTransform.sizeDelta = new Vector2(150f, 150f);
-        Text name = T(cell, item.name, 40, TextAnchor.MiddleCenter, Gray);
-        BottomBox(name.rectTransform, 30f, 60f);
+        Text name = T(cell, item.name, KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
+        BottomBox(name.rectTransform, 40f, 60f);
     }
 
-    // ---------- 경희몬 상세 ----------
+    // ---------- 경희펫 상세 ----------
 
+    /// <summary>경희펫 상세 카드: 큰 그림 · 이름 · 힘 · 등급/단계, 아래 "파트너로 지정" 하나 + 꾸미기 · 닫기</summary>
     void BuildDetail()
     {
-        detail = Overlay(collection.transform, "Detail", new Vector2(880f, 1160f), out RectTransform card);
+        detail = Overlay(collection.transform, "Detail", new Vector2(940f, 1420f), out RectTransform card);
         detailThumb = new GameObject("Thumb", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         detailThumb.transform.SetParent(card, false);
         detailThumb.raycastTarget = false;
-        Place(detailThumb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -40f));
+        Place(detailThumb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -48f));
         detailThumb.rectTransform.sizeDelta = new Vector2(420f, 420f);
 
-        detailCp = T(card, "", 76, TextAnchor.MiddleCenter, Gray, bold: true);
-        TopBox(detailCp.rectTransform, 470f, 100f);
-        detailName = T(card, "", 60, TextAnchor.MiddleCenter, TealDeep, bold: true);
-        TopBox(detailName.rectTransform, 580f, 80f);
-        detailInfo = T(card, "", 32, TextAnchor.UpperCenter, Gray);
-        TopBox(detailInfo.rectTransform, 680f, 120f);
-        detailPartner = T(card, "", 36, TextAnchor.MiddleCenter, Orange, bold: true);
-        TopBox(detailPartner.rectTransform, 810f, 60f);
+        detailName = T(card, "", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
+        TopBox(detailName.rectTransform, 484f, 90f);
+        detailCp = T(card, "", KucaTheme.Heading, TextAnchor.MiddleCenter, KucaTheme.PrimaryDeep, bold: true);
+        TopBox(detailCp.rectTransform, 580f, 70f);
+        detailInfo = T(card, "", KucaTheme.Label, TextAnchor.UpperCenter, KucaTheme.InkMuted);
+        TopBox(detailInfo.rectTransform, 670f, 120f);
+        detailPartner = T(card, "", KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.PrimaryDeep, bold: true);
+        TopBox(detailPartner.rectTransform, 800f, 60f);
 
-        detailPartnerButton = PillButton(card, "파트너로 지정", Teal, Color.white, SetDetailAsPartner);
-        Place((RectTransform)detailPartnerButton.transform, new Vector2(0.5f, 0f), new Vector2(-180f, 60f));
-        ((RectTransform)detailPartnerButton.transform).sizeDelta = new Vector2(380f, 116f);
-        Button dress = PillButton(card, "꾸미기", Orange, Color.white, () => OpenAccessories(detailTarget));
-        Place((RectTransform)dress.transform, new Vector2(0.5f, 0f), new Vector2(0f, 196f));
-        ((RectTransform)dress.transform).sizeDelta = new Vector2(700f, 104f);
-        Button close = PillButton(card, "닫기", new Color(0.88f, 0.92f, 0.9f), Gray, () => SetActive(detail, false));
+        detailPartnerButton = UIKit.PrimaryButton(card, "파트너로 지정", SetDetailAsPartner);
+        Dock((RectTransform)detailPartnerButton.transform, 48f + KucaTheme.ButtonHeight + KucaTheme.Space2, KucaTheme.ButtonHeight);
+        Button dress = UIKit.SecondaryButton(card, "꾸미기", () => OpenAccessories(detailTarget));
+        Dock((RectTransform)dress.transform, 48f, KucaTheme.ButtonHeight, 0f, 0.5f);
+        Button close = UIKit.SecondaryButton(card, "닫기", () => SetActive(detail, false));
+        Dock((RectTransform)close.transform, 48f, KucaTheme.ButtonHeight, 0.5f, 1f);
         BackButton.Attach(detail, () => SetActive(detail, false));
-        Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(210f, 60f));
-        ((RectTransform)close.transform).sizeDelta = new Vector2(300f, 116f);
     }
 
     void OpenDetail(GameProgress.Caught c)
     {
         detailTarget = c;
         detailThumb.texture = ThumbOf(c.speciesId);
-        GachaRules.Grade dg = GachaRules.GradeOf(c.speciesId);
-        detailCp.text = $"<color=#{ColorUtility.ToHtmlStringRGB(GachaRules.ColorOf(dg))}>{GachaRules.Label(dg)}</color> <size=40>등급</size>";
+        detailCp.text = "";   // 힘은 화면에서 숨김 (사용자 결정 10/26)
         detailName.text = string.IsNullOrEmpty(c.speciesId) ? NameOf(c) : CreatureLibrary.StageName(c.speciesId, progress.StageOf(c.speciesId));
         int growth = progress.GrowthOf(c.speciesId);
         int next = GachaRules.NextThreshold(growth);
-        string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (진화 경험치 {growth}/{next})" : " (최종)");
-        detailInfo.text = $"{GachaRules.Label(GachaRules.GradeOf(c.speciesId))} 등급  ·  {stage}\n만난 날짜  {c.CaughtAt:yyyy.MM.dd HH:mm}";
+        string stage = $"{progress.StageOf(c.speciesId)}단계" + (next > 0 ? $" (성장 경험치 {growth}/{next})" : " (최종)");
+        detailInfo.text = $"{GachaRules.Label(GachaRules.GradeOf(c.speciesId))}  ·  {stage}\n만난 날짜  {c.CaughtAt:yyyy.MM.dd HH:mm}";
         bool isPartner = c.uid == progress.partnerUid;
         detailPartner.text = isPartner ? "♥ 지금 함께 다니는 파트너예요" : "";
         detailPartnerButton.interactable = !isPartner;
         UIKit.SetLabel(detailPartnerButton, isPartner ? "현재 파트너" : "파트너로 지정");
-        detailPartnerButton.GetComponent<Image>().color = isPartner ? new Color(0.7f, 0.76f, 0.77f) : Teal;
+        detailPartnerButton.GetComponent<Image>().color = isPartner ? KucaTheme.Line : KucaTheme.Primary;
+        detailPartnerButton.GetComponentInChildren<Text>(true).color = isPartner ? KucaTheme.InkMuted : Color.white;
         SetActive(detail, true);
     }
 
@@ -783,12 +740,12 @@ public partial class KhuMenus : MonoBehaviour
     /// <summary>파트너가 진화했을 때 (완료 화면 보상 등 메뉴 밖에서) 지도 위 파트너를 다시 그린다</summary>
     public void RefreshPartner() => RefreshBuddy();
 
-    /// <summary>"아기 비둘기가 함께 걸어서 비둘기로 진화했어요!" (단계 이름은 A 의 CreatureLibrary.StageName)</summary>
+    /// <summary>"아기 비둘기가 함께 걸어서 비둘기로 자랐어요!" (단계 이름은 A 의 CreatureLibrary.StageName)</summary>
     public static string EvolvedMessage(string species, int stage, string how = "")
     {
         string before = CreatureLibrary.StageName(species, stage - 1);
         string after = CreatureLibrary.StageName(species, stage);
-        return $"{before}{CatchCameraScreen.Josa(before, "이", "가")} {how}{after}{Ro(after)} 진화했어요!";
+        return $"{before}{CatchCameraScreen.Josa(before, "이", "가")} {how}{after}{Ro(after)} 자랐어요!";   // 펫은 "진화" 보다 "자라요" (REVIEW_v29)
     }
 
     /// <summary>"으로" / "로" (받침이 없거나 ㄹ 받침이면 "로")</summary>
@@ -805,20 +762,20 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildListPopup()
     {
-        listPopup = Overlay(canvasRoot, "ListPopup", new Vector2(900f, 1300f), out RectTransform card);
-        listTitle = T(card, "", 52, TextAnchor.MiddleCenter, TealDeep, bold: true);
-        TopBox(listTitle.rectTransform, 40f, 90f);
+        listPopup = Overlay(canvasRoot, "ListPopup", new Vector2(940f, 1440f), out RectTransform card);
+        listTitle = T(card, "", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
+        TopBox(listTitle.rectTransform, 48f, 96f);
+        listTitle.rectTransform.offsetMin = new Vector2(56f, listTitle.rectTransform.offsetMin.y);
         RectTransform area = UIKit.Rect(card, "List");
         area.anchorMin = Vector2.zero;
         area.anchorMax = Vector2.one;
-        area.offsetMin = new Vector2(30f, 190f);
-        area.offsetMax = new Vector2(-30f, -150f);
+        area.offsetMin = new Vector2(24f, 48f + KucaTheme.ButtonHeight + KucaTheme.Space3);
+        area.offsetMax = new Vector2(-24f, -160f);
         listContent = ScrollContent(area, out _);
-        UIKit.Vertical(listContent, 6f, new RectOffset(20, 20, 10, 20));
-        Button close = PillButton(card, "닫기", Teal, Color.white, () => SetActive(listPopup, false));
+        UIKit.Vertical(listContent, 0f, new RectOffset(32, 32, 0, 24));
+        Button close = UIKit.SecondaryButton(card, "닫기", () => SetActive(listPopup, false));
+        Dock((RectTransform)close.transform, 48f, KucaTheme.ButtonHeight);
         BackButton.Attach(listPopup, () => SetActive(listPopup, false));
-        Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f));
-        ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
     }
 
     void ShowList(string title, List<(string left, string right)> rows)
@@ -826,29 +783,29 @@ public partial class KhuMenus : MonoBehaviour
         listTitle.text = title;
         Clear(listContent);
         if (rows.Count == 0)
-            UIKit.Size(T(listContent, "아직 기록이 없어요", 36, TextAnchor.MiddleCenter, Gray), 160f);
+            UIKit.Size(T(listContent, "아직 기록이 없어요", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted), 200f);
         foreach (var (left, right) in rows)
         {
             RectTransform row = UIKit.Rect(listContent, "Row");
             if (string.IsNullOrEmpty(right))
             {
-                T(row, left, 34, TextAnchor.UpperLeft, Gray);
-                UIKit.Vertical(row, 0f, new RectOffset(0, 0, 16, 16));
+                T(row, left, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+                UIKit.Vertical(row, 0f, new RectOffset(0, 0, 20, 20));
                 continue;
             }
-            UIKit.Size(row, 96f);
-            Text l = T(row, left, 36, TextAnchor.MiddleLeft, Gray);
+            UIKit.Size(row, 124f);
+            Text l = T(row, left, KucaTheme.Body, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
             UIKit.Stretch(l.rectTransform);
-            Text r = T(row, right, 38, TextAnchor.MiddleRight, ValueGreen, bold: true);
+            Text r = T(row, right, KucaTheme.Body, TextAnchor.MiddleRight, KucaTheme.Ink, bold: true);
             UIKit.Stretch(r.rectTransform);
             // 값은 이름 오른쪽 남은 칸에만. 길면 칸에 맞게 글자를 줄인다 (두 줄까지).
             r.rectTransform.offsetMin = new Vector2(l.preferredWidth + 28f, 0f);
             r.horizontalOverflow = HorizontalWrapMode.Wrap;
             r.verticalOverflow = VerticalWrapMode.Truncate;
             r.resizeTextForBestFit = true;
-            r.resizeTextMinSize = 24;
-            r.resizeTextMaxSize = 38;
-            Image line = UIKit.Image(row, "Line", new Color(Gray.r, Gray.g, Gray.b, 0.15f));
+            r.resizeTextMinSize = KucaTheme.Caption - 6;
+            r.resizeTextMaxSize = KucaTheme.Body;
+            Image line = UIKit.Image(row, "Line", KucaTheme.Line);
             line.rectTransform.anchorMin = new Vector2(0f, 0f);
             line.rectTransform.anchorMax = new Vector2(1f, 0f);
             line.rectTransform.offsetMin = Vector2.zero;
@@ -863,14 +820,15 @@ public partial class KhuMenus : MonoBehaviour
 
     void BuildScrapbook()
     {
-        scrapbook = Overlay(canvasRoot, "Scrapbook", new Vector2(960f, 1560f), out RectTransform card);
-        Text t = T(card, "스크랩북", 52, TextAnchor.MiddleCenter, TealDeep, bold: true);
-        TopBox(t.rectTransform, 40f, 90f);
+        scrapbook = Overlay(canvasRoot, "Scrapbook", new Vector2(960f, 1640f), out RectTransform card);
+        Text t = T(card, "스크랩북", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
+        TopBox(t.rectTransform, 48f, 96f);
+        t.rectTransform.offsetMin = new Vector2(56f, t.rectTransform.offsetMin.y);
         RectTransform area = UIKit.Rect(card, "Grid");
         area.anchorMin = Vector2.zero;
         area.anchorMax = Vector2.one;
-        area.offsetMin = new Vector2(24f, 190f);
-        area.offsetMax = new Vector2(-24f, -150f);
+        area.offsetMin = new Vector2(24f, 48f + KucaTheme.ButtonHeight + KucaTheme.Space3);
+        area.offsetMax = new Vector2(-24f, -160f);
         scrapGrid = ScrollContent(area, out _);
         var g = scrapGrid.gameObject.AddComponent<GridLayoutGroup>();
         g.cellSize = new Vector2(280f, 360f);
@@ -879,12 +837,11 @@ public partial class KhuMenus : MonoBehaviour
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = 3;
         g.childAlignment = TextAnchor.UpperCenter;
-        scrapEmpty = T(area, "", 36, TextAnchor.MiddleCenter, Gray);
+        scrapEmpty = T(area, "", KucaTheme.Body, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         UIKit.Stretch(scrapEmpty.rectTransform, 60f, 100f);
-        Button close = PillButton(card, "닫기", Teal, Color.white, CloseScrapbook);
+        Button close = UIKit.SecondaryButton(card, "닫기", CloseScrapbook);
+        Dock((RectTransform)close.transform, 48f, KucaTheme.ButtonHeight);
         BackButton.Attach(scrapbook, CloseScrapbook);
-        Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 50f));
-        ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
 
         // 사진 크게 보기
         Image dim = UIKit.Image(canvasRoot, "ScrapViewer", new Color(0f, 0f, 0f, 0.92f), raycast: true);
@@ -901,12 +858,11 @@ public partial class KhuMenus : MonoBehaviour
         scrapPhoto.raycastTarget = false;
         scrapFitter = photo.GetComponent<AspectRatioFitter>();
         scrapFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
-        scrapCaption = T(dim.transform, "", 36, TextAnchor.MiddleCenter, Color.white, bold: true);
-        BottomBox(scrapCaption.rectTransform, 210f, 100f);
-        Button back = PillButton(dim.transform, "닫기", new Color(1f, 1f, 1f, 0.15f), Color.white, () => scrapViewer.SetActive(false));
+        scrapCaption = T(dim.transform, "", KucaTheme.Label, TextAnchor.MiddleCenter, Color.white, bold: true);
+        BottomBox(scrapCaption.rectTransform, 230f, 90f);
+        Button back = UIKit.SecondaryButton(dim.transform, "닫기", () => scrapViewer.SetActive(false));
+        Dock((RectTransform)back.transform, 60f, KucaTheme.ButtonHeight);
         BackButton.Attach(scrapViewer, () => scrapViewer.SetActive(false));
-        Place((RectTransform)back.transform, new Vector2(0.5f, 0f), new Vector2(0f, 80f));
-        ((RectTransform)back.transform).sizeDelta = new Vector2(320f, 110f);
         scrapViewer.SetActive(false);
     }
 
@@ -934,7 +890,7 @@ public partial class KhuMenus : MonoBehaviour
             RectTransform box = UIKit.Rect(b.transform, "Box");
             TopBox(box, 0f, 270f);
             box.gameObject.AddComponent<RectMask2D>();
-            Image bg = UIKit.Image(box, "Bg", new Color(0.88f, 0.92f, 0.9f));
+            Image bg = UIKit.Image(box, "Bg", KucaTheme.Fill);
             UIKit.Stretch(bg.rectTransform);
             var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
             go.transform.SetParent(box, false);
@@ -943,13 +899,13 @@ public partial class KhuMenus : MonoBehaviour
             var fit = go.GetComponent<AspectRatioFitter>();
             fit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
             fit.aspectRatio = (float)tex.width / tex.height;
-            Text name = T(b.transform, NameOf(c), 32, TextAnchor.MiddleCenter, Gray, bold: true);
-            BottomBox(name.rectTransform, 34f, 50f);
-            Text date = T(b.transform, c.CaughtAt.ToString("yyyy.MM.dd"), 26, TextAnchor.MiddleCenter, new Color(Gray.r, Gray.g, Gray.b, 0.75f));
-            BottomBox(date.rectTransform, 2f, 34f);
+            Text name = T(b.transform, NameOf(c), KucaTheme.Label - 4, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
+            BottomBox(name.rectTransform, 38f, 50f);
+            Text date = T(b.transform, c.CaughtAt.ToString("yyyy.MM.dd"), KucaTheme.Caption - 4, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+            BottomBox(date.rectTransform, 2f, 36f);
             shown++;
         }
-        scrapEmpty.text = shown == 0 ? "아직 사진이 없어요\n경희몬을 잡을 때 찍은 사진이 여기에 모여요" : "";
+        scrapEmpty.text = shown == 0 ? "아직 사진이 없어요\n경희펫과 함께 찍은 사진이 여기에 모여요" : "";
         SetActive(scrapbook, true);
     }
 
@@ -982,7 +938,6 @@ public partial class KhuMenus : MonoBehaviour
     public void OpenProfile()
     {
         Show(profile, true);
-        SelectProfileTab(0);
         profileYaw = 0f;
         FillProfile();
         EnsureProfileCamera();
@@ -999,218 +954,111 @@ public partial class KhuMenus : MonoBehaviour
             buddy.profilePose = false;
     }
 
+    /// <summary>
+    /// 프로필 (참조: 애플 피트니스 요약 · 토스 내 정보): 캐릭터 3D 카드(이름 아래에서 시작),
+    /// 레벨 큰 숫자 + 경험치 막대, 활동 숫자 3개, 아래 목록(지난 파트너 · 스크랩북 · 모험노트 · 꾸미기).
+    /// </summary>
     void BuildProfile()
     {
-        profile = FullScreen("Profile", new Color(0.62f, 0.13f, 0.22f), new Color(0.24f, 0.02f, 0.08f), out RectTransform inner);
-        BackButton.Attach(profile, CloseProfile);
-        Frame(profile.transform, new Color(0.40f, 0.05f, 0.12f));
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Profile", "내 프로필", CloseProfile);
+        profile = page.root;
+        RectTransform content = page.content;
+        ScrollRect scroll = content.GetComponentInParent<ScrollRect>(true);
 
-        // 탭: 나 / 프렌드 / 소셜
-        RectTransform tabs = UIKit.Rect(inner, "Tabs");
-        tabs.anchorMin = new Vector2(0f, 1f);
-        tabs.anchorMax = new Vector2(1f, 1f);
-        tabs.pivot = new Vector2(0.5f, 1f);
-        tabs.offsetMin = tabs.offsetMax = Vector2.zero;
-        tabs.sizeDelta = new Vector2(0f, 190f);
-        string[] names = { "내 프로필", "프렌드", "소셜" };
-        for (int i = 0; i < 3; i++)
-        {
-            // 프렌드 · 소셜은 아직 없어 탭을 숨긴다 (제출용 앱에 "준비 중" 화면을 두지 않음). 코드는 남김
-            if (i > 0)
-            {
-                profileTabs[i] = T(tabs, "", 1, TextAnchor.MiddleCenter, PText);
-                profileTabs[i].gameObject.SetActive(false);
-                profileLines[i] = UIKit.Rect(tabs, "HiddenLine");
-                continue;
-            }
-            int idx = i;
-            Button b = InvisibleButton(tabs, names[i], () => SelectProfileTab(idx), Vector2.zero);
-            RectTransform br = (RectTransform)b.transform;
-            br.anchorMin = new Vector2(0f, 0f);   // 탭이 하나뿐이라 가운데 제목처럼
-            br.anchorMax = new Vector2(1f, 1f);
-            br.offsetMin = br.offsetMax = Vector2.zero;
-            profileTabs[i] = T(br, names[i], 42, TextAnchor.MiddleCenter, PText, bold: true);
-            SetBox(profileTabs[i].rectTransform, 0f, 0.3f, 0.8f, 0f);
-            Image line = UIKit.Image(br, "Line", PGold);
-            Place(line.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 16f));
-            line.rectTransform.sizeDelta = new Vector2(230f, 6f);
-            profileLines[i] = line.rectTransform;
-        }
-
-        // "나" 탭: 세로로 스크롤되는 내용
-        RectTransform area = UIKit.Rect(inner, "Me");
-        UIKit.StretchBetween(area, 0f, 190f);
-        profileMe = area.gameObject;
-        RectTransform content = ScrollContent(area, out ScrollRect scroll);
-        UIKit.Vertical(content, 0f, new RectOffset(0, 0, 0, 240));
-
-        BuildProfileHero(Section(content, "Hero", 960f), scroll);
-        BuildProfileLevel(Section(content, "Level", 200f));
-        BuildProfileButtons(Section(content, "Buttons", 300f));
-        BuildProfileStats(content);
-
-        // 프렌드 / 소셜 (준비 중)
-        RectTransform other = UIKit.Rect(inner, "Other");
-        UIKit.StretchBetween(other, 0f, 190f);
-        profileOther = other.gameObject;
-        profileOtherText = T(other, "", 40, TextAnchor.MiddleCenter, PText);
-        UIKit.Stretch(profileOtherText.rectTransform, 80f, 200f);
-
-        CloseFab(inner, CloseProfile, filled: true, PCircle);
+        // 세로로 쌓인 카드들
+        RectTransform me = UIKit.Rect(content, "Me");
+        UIKit.Vertical(me, KucaTheme.Space4);
+        profileMe = me.gameObject;
+        BuildProfileHero(me, scroll);
+        BuildProfileLevel(me);
+        BuildProfileStats(me);
+        RectTransform more = UIKit.ListGroup(me, "기록과 꾸미기");
+        UIKit.ListRow(more, "지난 파트너", ShowPartnerHistory);
+        UIKit.ListRow(more, "스크랩북", ShowScrapbook);
+        UIKit.ListRow(more, "모험노트", ShowAdventureNote);
+        UIKit.ListRow(more, "캐릭터 꾸미기", () => { if (customizer != null) customizer.SetOpen(true); });
     }
 
-    void BuildProfileHero(RectTransform s, ScrollRect scroll)
+    /// <summary>캐릭터 카드: 위에 이름 · 파트너 · "파트너 바꾸기", 그 아래에 3D 캐릭터 (끌어서 돌리기)</summary>
+    void BuildProfileHero(RectTransform parent, ScrollRect scroll)
     {
-        Image rays = UIKit.Image(s, "Rays", new Color(1f, 0.85f, 0.6f, 0.22f));
-        rays.sprite = HudIcons.Rays;
-        Place(rays.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(40f, 0f));
-        rays.rectTransform.sizeDelta = new Vector2(900f, 900f); // 영역(높이 960) 안에서 사라지도록
-        profileRays = rays.rectTransform;
+        Image card = UIKit.Image(parent, "Hero", KucaTheme.Card);
+        card.sprite = HudIcons.Rounded;
+        card.type = Image.Type.Sliced;
+        card.pixelsPerUnitMultiplier = 0.34f;
+        UIKit.Size(card, 1000f);
+        RectTransform s = card.rectTransform;
         s.gameObject.AddComponent<RectMask2D>();
+
+        Image rays = UIKit.Image(s, "Rays", new Color(KucaTheme.Gold.r, KucaTheme.Gold.g, KucaTheme.Gold.b, 0.16f));
+        rays.sprite = HudIcons.Rays;
+        Place(rays.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -120f));
+        rays.rectTransform.sizeDelta = new Vector2(860f, 860f);
+        profileRays = rays.rectTransform;
 
         profileView = new GameObject("View", typeof(RectTransform), typeof(RawImage), typeof(ProfileDragArea)).GetComponent<RawImage>();
         profileView.transform.SetParent(s, false);
         UIKit.Stretch(profileView.rectTransform);
-        // 위쪽 이름 · 파트너 · "파트너 정하기" 자리는 비워 둔다 (캐릭터 모자가 이름을 가리던 것, 디자인 평가 10/25)
-        profileView.rectTransform.offsetMax = new Vector2(0f, -270f);
+        profileView.rectTransform.offsetMax = new Vector2(0f, -250f);   // 이름 · 파트너 아래에서 캐릭터가 시작 (머리와 안 겹치게)
         var drag = profileView.GetComponent<ProfileDragArea>();
         drag.scroll = scroll;
         drag.onDragX = dx => profileYaw += dx * 0.4f;
         profileHero = s;
 
-        profileName = T(s, "", 66, TextAnchor.UpperLeft, PGold, bold: true);
+        profileName = T(s, "", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
         profileName.horizontalOverflow = HorizontalWrapMode.Overflow;
-        TopBox(profileName.rectTransform, 30f, 90f);
-        profileName.rectTransform.offsetMin = new Vector2(56f, profileName.rectTransform.offsetMin.y);
-        profilePartner = T(s, "", 44, TextAnchor.UpperLeft, PGold);
+        TopBox(profileName.rectTransform, 48f, 90f);
+        profileName.rectTransform.offsetMin = new Vector2(48f, profileName.rectTransform.offsetMin.y);
+        profilePartner = T(s, "", KucaTheme.Body, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
         profilePartner.horizontalOverflow = HorizontalWrapMode.Overflow;
-        TopBox(profilePartner.rectTransform, 112f, 60f);
-        profilePartner.rectTransform.offsetMin = new Vector2(58f, profilePartner.rectTransform.offsetMin.y);
+        TopBox(profilePartner.rectTransform, 140f, 60f);
+        profilePartner.rectTransform.offsetMin = new Vector2(48f, profilePartner.rectTransform.offsetMin.y);
 
-        Button change = PillButton(s, "파트너 정하기", new Color(1f, 1f, 1f, 0.14f), PGold, () => OpenCollection(Tab.Monsters));
-        Place((RectTransform)change.transform, new Vector2(0f, 1f), new Vector2(56f, -190f));
-        ((RectTransform)change.transform).sizeDelta = new Vector2(250f, 70f);
-        change.GetComponentInChildren<Text>().fontSize = 30;
+        Button change = UIKit.Chip(s, "파트너 바꾸기", false, () => OpenCollection(Tab.Monsters));
+        RectTransform cr = (RectTransform)change.transform;
+        Place(cr, new Vector2(1f, 1f), new Vector2(-40f, -48f));
+        cr.sizeDelta = new Vector2(change.GetComponent<LayoutElement>().preferredWidth, 104f);
+
+        Text hint = T(s, "좌우로 끌어서 돌려 보기", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft);
+        BottomBox(hint.rectTransform, 24f, 50f);
     }
 
-    void BuildProfileLevel(RectTransform s)
+    /// <summary>레벨 카드: "레벨 5" 큰 숫자 + 오른쪽 경험치, 아래 막대</summary>
+    void BuildProfileLevel(RectTransform parent)
     {
-        profileLevel = T(s, "1", 130, TextAnchor.LowerLeft, PGold, bold: true);
+        RectTransform card = UIKit.CardBox(parent, "Level", KucaTheme.Space2);
+        RectTransform row = UIKit.Rect(card, "Row");
+        UIKit.Size(row, 120f);
+        profileLevel = T(row, "", KucaTheme.Display - 20, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
         profileLevel.horizontalOverflow = HorizontalWrapMode.Overflow;
-        Place(profileLevel.rectTransform, new Vector2(0f, 1f), new Vector2(52f, 0f));
-        profileLevel.rectTransform.sizeDelta = new Vector2(220f, 140f);
-        Text lv = T(s, "레벨", 34, TextAnchor.UpperLeft, PGold, bold: true);
-        Place(lv.rectTransform, new Vector2(0f, 1f), new Vector2(60f, -140f));
-        lv.rectTransform.sizeDelta = new Vector2(200f, 50f);
+        UIKit.Stretch(profileLevel.rectTransform);
+        profileXp = T(row, "", KucaTheme.Label, TextAnchor.MiddleRight, KucaTheme.InkMuted, bold: true);
+        UIKit.Stretch(profileXp.rectTransform);
 
-        Image bar = UIKit.Image(s, "Bar", new Color(1f, 1f, 1f, 0.15f));
+        Image bar = UIKit.Image(card, "Bar", KucaTheme.Line);
         bar.sprite = HudIcons.Pill;
         bar.type = Image.Type.Sliced;
         bar.pixelsPerUnitMultiplier = 6f;
-        RectTransform br = bar.rectTransform;
-        br.anchorMin = new Vector2(0f, 1f);
-        br.anchorMax = new Vector2(1f, 1f);
-        br.offsetMin = new Vector2(250f, -92f);
-        br.offsetMax = new Vector2(-120f, -72f);
-        Image fill = UIKit.Image(bar.transform, "Fill", PGold);
+        UIKit.Size(bar, 24f);
+        Image fill = UIKit.Image(bar.transform, "Fill", KucaTheme.Primary);
         fill.sprite = HudIcons.Pill;
         fill.type = Image.Type.Sliced;
         fill.pixelsPerUnitMultiplier = 6f;
         profileXpFill = fill.rectTransform;
         profileXpFill.anchorMin = Vector2.zero;
         profileXpFill.offsetMin = profileXpFill.offsetMax = Vector2.zero;
-
-        Image chev = UIKit.Image(s, "Chevron", PGold);
-        chev.sprite = HudIcons.Chevron;
-        Place(chev.rectTransform, new Vector2(1f, 1f), new Vector2(-50f, -50f));
-        chev.rectTransform.sizeDelta = new Vector2(64f, 64f);
-
-        profileXp = T(s, "", 44, TextAnchor.MiddleRight, PGold, bold: true);
-        RectTransform xr = profileXp.rectTransform;
-        xr.anchorMin = new Vector2(0f, 1f);
-        xr.anchorMax = new Vector2(1f, 1f);
-        xr.offsetMin = new Vector2(250f, -170f);
-        xr.offsetMax = new Vector2(-120f, -104f);
+        UIKit.Size(T(card, "걸을수록 · 리뷰를 남길수록 경험치가 쌓여요", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkSoft), 50f);
     }
 
-    void BuildProfileButtons(RectTransform s)
+    /// <summary>활동 숫자 3개 (애플 피트니스 요약)</summary>
+    void BuildProfileStats(RectTransform parent)
     {
-        var items = new (string label, Sprite icon, UnityEngine.Events.UnityAction action)[]
-        {
-            ("역대\n파트너", HudIcons.Partner, ShowPartnerHistory),
-            ("스크랩북", HudIcons.Scrapbook, ShowScrapbook),
-            ("모험노트", HudIcons.Notebook, ShowAdventureNote),
-            ("꾸미기", HudIcons.Hanger, () => { if (customizer != null) customizer.SetOpen(true); }),
-        };
-        for (int i = 0; i < items.Length; i++)
-        {
-            Button b = InvisibleButton(s, items[i].label, items[i].action, new Vector2(220f, 290f));
-            RectTransform rt = (RectTransform)b.transform;
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2((i + 0.5f) / 4f, 1f);
-            rt.anchoredPosition = new Vector2(0f, -10f);
-            Image c = Circle(rt, "Circle", PCircle, 148f);
-            Place(c.rectTransform, new Vector2(0.5f, 1f), Vector2.zero);
-            Image hi = Circle(c.transform, "Shine", new Color(1f, 1f, 1f, 0.16f), 120f);
-            Place(hi.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-8f, 8f));
-            Image ic = UIKit.Image(c.transform, "Icon", Color.white);
-            ic.sprite = items[i].icon;
-            Place(ic.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-            ic.rectTransform.sizeDelta = new Vector2(80f, 80f);
-            Text t = T(rt, items[i].label, 30, TextAnchor.UpperCenter, PText);
-            Place(t.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -160f));
-            t.rectTransform.sizeDelta = new Vector2(220f, 100f);
-        }
-    }
-
-    void BuildProfileStats(RectTransform content)
-    {
-        RectTransform div = Section(content, "Divider", 70f);
-        Image l1 = UIKit.Image(div, "L", new Color(PText.r, PText.g, PText.b, 0.25f));
-        l1.rectTransform.anchorMin = new Vector2(0f, 0.5f);
-        l1.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-        l1.rectTransform.offsetMin = new Vector2(30f, -1f);
-        l1.rectTransform.offsetMax = new Vector2(-70f, 1f);
-        Image l2 = UIKit.Image(div, "R", new Color(PText.r, PText.g, PText.b, 0.25f));
-        l2.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-        l2.rectTransform.anchorMax = new Vector2(1f, 0.5f);
-        l2.rectTransform.offsetMin = new Vector2(70f, -1f);
-        l2.rectTransform.offsetMax = new Vector2(-30f, 1f);
-        Text dt = T(div, "활 동", 30, TextAnchor.MiddleCenter, new Color(PText.r, PText.g, PText.b, 0.7f));
-        UIKit.Stretch(dt.rectTransform);
-
-        statWalk = StatRow(content, HudIcons.Footprints, "걸은 거리");
-        statCaught = StatRow(content, HudIcons.Monster, "모은 경희몬");
-        statSpots = StatRow(content, HudIcons.Pin, "방문한 경희스팟");
-    }
-
-    Text StatRow(RectTransform content, Sprite icon, string label)
-    {
-        RectTransform row = Section(content, label, 110f);
-        Image ic = UIKit.Image(row, "Icon", PGold);
-        ic.sprite = icon;
-        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(90f, 0f));
-        ic.rectTransform.sizeDelta = new Vector2(66f, 66f);
-        Text l = T(row, label, 40, TextAnchor.MiddleLeft, PText);
-        SetBox(l.rectTransform, 190f, 0f, 1f, 400f);
-        Text v = T(row, "", 42, TextAnchor.MiddleLeft, PGold, bold: true);
-        SetBox(v.rectTransform, 0f, 0f, 1f, 60f);
-        v.rectTransform.anchorMin = new Vector2(0.6f, 0f);
-        return v;
-    }
-
-    void SelectProfileTab(int i)
-    {
-        for (int k = 0; k < 3; k++)
-        {
-            profileTabs[k].color = k == i ? PGold : new Color(PText.r, PText.g, PText.b, 0.55f);
-            profileLines[k].gameObject.SetActive(k == i);
-        }
-        profileMe.SetActive(i == 0);
-        profileOther.SetActive(i != 0);
-        profileOtherText.text = i == 1 ? "프렌드 기능은 준비 중이에요\n같이 캠퍼스를 걷는 친구를 곧 추가할 수 있어요"
-                                       : "소셜 기능은 준비 중이에요";
-        if (profileView != null)
-            profileView.enabled = i == 0;
+        RectTransform card = UIKit.CardBox(parent, "Stats", KucaTheme.Space2);
+        UIKit.SectionTitle(card, "활동");
+        RectTransform row = UIKit.StatRow(card, ("0 m", "걸은 거리"), ("0", "함께하는 경희펫"), ("0", "들른 경희스팟"));
+        statWalk = row.GetChild(0).GetComponentInChildren<Text>(true);
+        statCaught = row.GetChild(1).GetComponentInChildren<Text>(true);
+        statSpots = row.GetChild(2).GetComponentInChildren<Text>(true);
     }
 
     void FillProfile()
@@ -1219,11 +1067,11 @@ public partial class KhuMenus : MonoBehaviour
             return;
         profileName.text = hud != null ? hud.Nickname : "";
         GameProgress.Caught partner = progress.Partner;
-        profilePartner.text = partner != null ? $"& {NameOf(partner)}" : "& 파트너를 정해 보세요";
+        profilePartner.text = partner != null ? $"파트너  {NameOf(partner)}" : "파트너를 정해 보세요";
 
         GameHUD.LevelOf(progress.score, out int level, out int xpIn, out int xpNeed);
-        profileLevel.text = level.ToString();
-        profileXp.text = $"{xpIn:N0} / {xpNeed:N0}";
+        profileLevel.text = $"레벨 {level}";
+        profileXp.text = $"{xpIn:N0} / {xpNeed:N0} XP";
         profileXpFill.anchorMax = new Vector2(Mathf.Max(0.03f, xpNeed > 0 ? (float)xpIn / xpNeed : 0f), 1f);
 
         statWalk.text = progress.walkedMeters >= 1000f ? $"{progress.walkedMeters / 1000f:F1} km" : $"{progress.walkedMeters:F0} m";
@@ -1238,7 +1086,7 @@ public partial class KhuMenus : MonoBehaviour
         {
             var r = progress.partnerHistory[i];
             GameProgress.Caught c = progress.Find(r.uid);
-            string name = c != null ? NameOf(c) : "떠나간 경희몬";
+            string name = c != null ? NameOf(c) : "떠나간 경희펫";
             rows.Add((name, new DateTime(r.since).ToString("yyyy.MM.dd") + (r.uid == progress.partnerUid ? " ~ 지금" : "")));
         }
         ShowList("역대 파트너", rows);
@@ -1250,7 +1098,7 @@ public partial class KhuMenus : MonoBehaviour
         list.Sort((a, b) => b.caughtAt.CompareTo(a.caughtAt));
         var rows = new List<(string, string)>();
         for (int i = 0; i < list.Count && i < 50; i++)
-            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"{GachaRules.Label(GachaRules.GradeOf(list[i].speciesId))} 등급"));
+            rows.Add(($"{list[i].CaughtAt:MM.dd HH:mm}  {NameOf(list[i])}", $"성장 {progress.StageOf(list[i].speciesId) + 1}/{GachaRules.MaxStage + 1}"));
         ShowList("모험노트", rows);
     }
 
@@ -1260,7 +1108,7 @@ public partial class KhuMenus : MonoBehaviour
             return;
         if (profileCam == null)
         {
-            var camGo = new GameObject("ProfileCamera", typeof(Camera));
+            var camGo = new GameObject("ProfileCamera", typeof(Camera), typeof(NeutralAmbient));
             camGo.transform.SetParent(transform, false);
             profileCam = camGo.GetComponent<Camera>();
             profileCam.clearFlags = CameraClearFlags.SolidColor;
@@ -1274,7 +1122,7 @@ public partial class KhuMenus : MonoBehaviour
             lightGo.transform.SetParent(transform, false);
             profileLight = lightGo.GetComponent<Light>();
             profileLight.type = LightType.Directional;
-            profileLight.intensity = 1.1f;
+            profileLight.intensity = 1.45f;   // 1.1 은 캡처에서 탁하고 어두웠음
             profileLight.shadows = LightShadows.None;
             profileLight.cullingMask = 1 << character.gameObject.layer;
         }
@@ -1315,11 +1163,11 @@ public partial class KhuMenus : MonoBehaviour
 
     CollectibleType TypeOf(string id) => spawner != null ? spawner.TypeOf(id) : null;
 
-    static string NameOf(GameProgress.Caught c) => string.IsNullOrEmpty(c.speciesId) ? "경희몬" : CreatureLibrary.NameOf(c.speciesId);
+    static string NameOf(GameProgress.Caught c) => string.IsNullOrEmpty(c.speciesId) ? "경희펫" : CreatureLibrary.NameOf(c.speciesId);
 
     static Texture ThumbOf(string species) => MonsterThumbnails.Get(species);
 
-    void Thumb(Transform cell, string species, bool known, float size, Vector2 pos)
+    RawImage Thumb(Transform cell, string species, bool known, float size, Vector2 pos)
     {
         var raw = new GameObject("Thumb", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         raw.transform.SetParent(cell, false);
@@ -1332,6 +1180,7 @@ public partial class KhuMenus : MonoBehaviour
         rt.pivot = new Vector2(0.5f, 0.5f);
         rt.anchoredPosition = pos;
         rt.sizeDelta = new Vector2(size, size);
+        return raw;
     }
 
     void Show(GameObject screen, bool open)
@@ -1349,46 +1198,15 @@ public partial class KhuMenus : MonoBehaviour
             go.transform.SetAsLastSibling();
     }
 
-    /// <summary>그라데이션 배경의 전체 화면. inner 는 안전 영역.</summary>
-    GameObject FullScreen(string name, Color topLeft, Color bottomRight, out RectTransform inner)
-    {
-        var raw = new GameObject(name, typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-        raw.transform.SetParent(canvasRoot, false);
-        raw.texture = HudIcons.Gradient(topLeft, bottomRight);
-        raw.raycastTarget = true;
-        UIKit.Stretch(raw.rectTransform);
-        inner = UIKit.Rect(raw.transform, "Inner");
-        inner.anchorMin = safe.anchorMin;
-        inner.anchorMax = safe.anchorMax;
-        inner.offsetMin = inner.offsetMax = Vector2.zero;
-        raw.gameObject.SetActive(false);
-        return raw.gameObject;
-    }
-
-    /// <summary>화면 양옆의 색 띠</summary>
-    static void Frame(Transform parent, Color color)
-    {
-        for (int i = 0; i < 2; i++)
-        {
-            Image bar = UIKit.Image(parent, i == 0 ? "FrameL" : "FrameR", color);
-            RectTransform r = bar.rectTransform;
-            r.anchorMin = new Vector2(i, 0f);
-            r.anchorMax = new Vector2(i, 1f);
-            r.pivot = new Vector2(i, 0.5f);
-            r.offsetMin = r.offsetMax = Vector2.zero;
-            r.sizeDelta = new Vector2(16f, 0f);
-        }
-    }
-
-    /// <summary>화면을 어둡게 덮고 가운데에 흰 카드를 띄운다.</summary>
+    /// <summary>화면을 어둡게 덮고 가운데에 흰 둥근 카드를 띄운다.</summary>
     static GameObject Overlay(Transform parent, string name, Vector2 size, out RectTransform card)
     {
-        Image dim = UIKit.Image(parent, name, new Color(0.05f, 0.1f, 0.12f, 0.45f), raycast: true);
+        Image dim = UIKit.Image(parent, name, KucaTheme.Scrim, raycast: true);
         UIKit.Stretch(dim.rectTransform);
-        Image c = UIKit.Image(dim.transform, "Card", new Color(0.98f, 1f, 0.99f));
-        c.sprite = HudIcons.Pill;
+        Image c = UIKit.Image(dim.transform, "Card", KucaTheme.Card);
+        c.sprite = HudIcons.Rounded;
         c.type = Image.Type.Sliced;
-        c.pixelsPerUnitMultiplier = 1.4f;
+        c.pixelsPerUnitMultiplier = 0.34f;
         c.raycastTarget = true;
         Place(c.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         c.rectTransform.sizeDelta = size;
@@ -1397,24 +1215,84 @@ public partial class KhuMenus : MonoBehaviour
         return dim.gameObject;
     }
 
-    /// <summary>아래 가운데의 둥근 닫기 버튼</summary>
-    static void CloseFab(RectTransform parent, UnityEngine.Events.UnityAction onClick, bool filled, Color? accent = null)
+    /// <summary>카드 아래에서 bottom 만큼 올라온 곳, 높이 height. 가로는 x0~x1 비율 (바깥쪽 여백 48)</summary>
+    static void Dock(RectTransform rt, float bottom, float height, float x0 = 0f, float x1 = 1f)
     {
-        Color ringColor = accent ?? Teal;
-        Color fillColor = accent.HasValue ? Color.Lerp(accent.Value, Color.black, 0.12f) : new Color(0.2f, 0.56f, 0.58f);
-        const float size = 124f;
-        Button b = InvisibleButton(parent, "Close", onClick, new Vector2(size, size));
-        Place((RectTransform)b.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
-        Image halo = Circle(b.transform, "Halo", new Color(1f, 1f, 1f, filled ? 0.9f : 0.55f), size + 16f);
-        Place(halo.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image ring = Circle(b.transform, "Ring", ringColor, size);
-        Place(ring.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image face = Circle(ring.transform, "Face", filled ? fillColor : new Color(0.97f, 0.99f, 0.97f), size - 10f);
-        Place(face.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        Image x = UIKit.Image(face.transform, "X", filled ? Color.white : ringColor);
-        x.sprite = HudIcons.Close;
-        Place(x.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        x.rectTransform.sizeDelta = new Vector2(64f, 64f);
+        rt.anchorMin = new Vector2(x0, 0f);
+        rt.anchorMax = new Vector2(x1, 0f);
+        rt.pivot = new Vector2(0.5f, 0f);
+        rt.offsetMin = new Vector2(x0 <= 0f ? 48f : 8f, bottom);
+        rt.offsetMax = new Vector2(x1 >= 1f ? -48f : -8f, bottom + height);
+    }
+
+    static void Corners(RectTransform rt, Vector2 min, Vector2 max, Vector2 offMin, Vector2 offMax)
+    {
+        rt.anchorMin = min;
+        rt.anchorMax = max;
+        rt.offsetMin = offMin;
+        rt.offsetMax = offMax;
+    }
+
+    /// <summary>누를 수 있는 흰 둥근 카드 (격자 칸 · 허브 카드)</summary>
+    static Button CardButton(Transform parent, string name, UnityEngine.Events.UnityAction onClick)
+    {
+        Button b = InvisibleButton(parent, name, onClick, Vector2.zero);
+        Image img = b.GetComponent<Image>();
+        img.color = KucaTheme.Card;
+        img.sprite = HudIcons.Rounded;
+        img.type = Image.Type.Sliced;
+        img.pixelsPerUnitMultiplier = 0.34f;
+        return b;
+    }
+
+    /// <summary>세그먼트 탭 (토스 · iOS): 회색 홈 안에서 고른 칸만 흰색. 앞의 shown 개만 보인다. counts 가 있으면 이름 아래 숫자</summary>
+    static void Segmented(Transform parent, string[] names, int shown, Action<int> onSelect, Text[] labels, Text[] counts, Image[] segs)
+    {
+        Image track = UIKit.Image(parent, "Segments", KucaTheme.Line);
+        track.sprite = HudIcons.Rounded;
+        track.type = Image.Type.Sliced;
+        track.pixelsPerUnitMultiplier = 0.45f;
+        UIKit.Size(track, counts != null ? 156f : 124f);
+        HorizontalLayoutGroup h = UIKit.Horizontal(track, 8f);
+        h.padding = new RectOffset(8, 8, 8, 8);
+        for (int i = 0; i < names.Length; i++)
+        {
+            int idx = i;
+            Image seg = UIKit.Image(track.transform, names[i], new Color(1f, 1f, 1f, 0f), raycast: true);
+            seg.sprite = HudIcons.Rounded;
+            seg.type = Image.Type.Sliced;
+            seg.pixelsPerUnitMultiplier = 0.5f;
+            seg.gameObject.SetActive(i < shown);
+            var b = seg.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(() => onSelect(idx));
+            segs[i] = seg;
+            labels[i] = T(seg.transform, names[i], KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+            if (counts != null)
+            {
+                Corners(labels[i].rectTransform, new Vector2(0f, 0.42f), Vector2.one, Vector2.zero, Vector2.zero);
+                counts[i] = T(seg.transform, "", KucaTheme.Caption, TextAnchor.UpperCenter, KucaTheme.InkSoft);
+                Corners(counts[i].rectTransform, Vector2.zero, new Vector2(1f, 0.42f), Vector2.zero, Vector2.zero);
+            }
+            else
+                UIKit.Stretch(labels[i].rectTransform);
+        }
+    }
+
+    static void PaintSegments(int on, Text[] labels, Text[] counts, Image[] segs)
+    {
+        for (int i = 0; i < segs.Length; i++)
+        {
+            if (segs[i] == null)
+                continue;
+            bool sel = i == on;
+            segs[i].color = sel ? KucaTheme.Card : new Color(1f, 1f, 1f, 0f);
+            labels[i].color = sel ? KucaTheme.Ink : KucaTheme.InkMuted;
+            if (sel) UIKit.Bold(labels[i]);
+            else labels[i].font = UIKit.Font;
+            if (counts != null && counts[i] != null)
+                counts[i].color = sel ? KucaTheme.PrimaryDeep : KucaTheme.InkSoft;
+        }
     }
 
     static Button PillButton(Transform parent, string label, Color bg, Color fg, UnityEngine.Events.UnityAction onClick)
@@ -1424,9 +1302,9 @@ public partial class KhuMenus : MonoBehaviour
         img.sprite = HudIcons.Pill;
         img.type = Image.Type.Sliced;
         img.pixelsPerUnitMultiplier = 1.1f;
-        Text t = b.GetComponentInChildren<Text>();
+        Text t = b.GetComponentInChildren<Text>(true);
         t.color = fg;
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         b.targetGraphic = img;
         return b;
     }
@@ -1451,20 +1329,13 @@ public partial class KhuMenus : MonoBehaviour
         return img;
     }
 
-    static void Shadow(Text t)
-    {
-        var o = t.gameObject.AddComponent<Outline>();
-        o.effectColor = new Color(0f, 0f, 0.15f, 0.35f);
-        o.effectDistance = new Vector2(2f, -2f);
-    }
-
     /// <summary>"체육대학관 아기 사자"처럼 긴 이름은 한 줄에 들어가도록 글자를 줄인다.</summary>
     static void FitOneLine(Text t, int maxSize)
     {
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
         t.verticalOverflow = VerticalWrapMode.Truncate;
         t.resizeTextForBestFit = true;
-        t.resizeTextMinSize = 20;
+        t.resizeTextMinSize = KucaTheme.Caption - 8;
         t.resizeTextMaxSize = maxSize;
         t.rectTransform.offsetMin = new Vector2(10f, t.rectTransform.offsetMin.y);
         t.rectTransform.offsetMax = new Vector2(-10f, t.rectTransform.offsetMax.y);
@@ -1474,7 +1345,7 @@ public partial class KhuMenus : MonoBehaviour
     {
         Text t = UIKit.Text(parent, text, size, anchor, color);
         if (bold)
-            t.fontStyle = FontStyle.Bold;
+            UIKit.Bold(t);
         return t;
     }
 

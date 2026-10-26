@@ -135,7 +135,7 @@ public class EvolutionScreen : MonoBehaviour
         rays.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -time * 30f);
 
         captionGroup.alpha = after ? 1f : Smooth(0.2f, 0.8f, time);
-        if (after) caption.text = "축하해요! 진화했어요";
+        if (after) caption.text = "축하해요! 한 뼘 자랐어요";
         namesGroup.alpha = Smooth(RevealEnd, RevealEnd + 0.6f, time);
         for (int i = 0; i < dots.Length; i++)
             dots[i].color = i <= stage ? new Color(1f, 0.72f, 0.2f) : new Color(1f, 1f, 1f, 0.25f);
@@ -178,7 +178,13 @@ public class EvolutionScreen : MonoBehaviour
     void Close()
     {
         if (t < ButtonAt)
-            return; // 버튼이 나오기 전에는 닫지 않는다
+        {
+            // 연출 중 뒤로 가기 · 화면 누르기: 끝 모습(앞을 보고 멈춤 + 확인 버튼)으로 건너뛴다
+            t = Duration;
+            Sample(t);
+            playing = false;
+            return;
+        }
         playing = false;
         root.SetActive(false);
         UIInputBlocker.SetModal(this, false);
@@ -240,7 +246,7 @@ public class EvolutionScreen : MonoBehaviour
         const float fov = 26f;
         float radius = b.extents.magnitude * CreatureLibrary.StageScales[CreatureLibrary.StageScales.Length - 1] * 1.15f;
         float dist = radius / Mathf.Sin(fov * 0.5f * Mathf.Deg2Rad);
-        var camGo = new GameObject("Camera", typeof(Camera));
+        var camGo = new GameObject("Camera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(stageRoot.transform, false);
         camGo.transform.localPosition = new Vector3(0f, radius * 0.2f, -dist);
         camGo.transform.LookAt(stageRoot.transform.position);
@@ -280,10 +286,14 @@ public class EvolutionScreen : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "EvolutionCanvas", 56);
         var bg = new GameObject("Evolution", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
         bg.transform.SetParent(canvas.transform, false);
-        bg.texture = HudIcons.Gradient(new Color(0.22f, 0.16f, 0.42f), new Color(0.06f, 0.05f, 0.16f));
+        bg.texture = HudIcons.Gradient(Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.25f), Color.Lerp(KucaTheme.PrimaryDeep, Color.black, 0.8f));   // 밤 숲 무대
         bg.raycastTarget = true;
         UIKit.Stretch(bg.rectTransform);
         root = bg.gameObject;
+        Button skip = root.AddComponent<Button>();
+        skip.transition = Selectable.Transition.None;
+        skip.onClick.AddListener(() => { if (t < ButtonAt) Close(); });
+        BackButton.Attach(root, Close);   // 뒤로 가기로도 닫힌다 (연출 중이면 건너뛰기)
         RectTransform r = bg.rectTransform;
 
         glow = UIKit.Image(r, "Glow", new Color(1f, 0.85f, 0.45f, 0.3f));
@@ -301,15 +311,17 @@ public class EvolutionScreen : MonoBehaviour
 
         captionGroup = Group(r, "Caption", out RectTransform cr);
         Place(cr, new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(1000f, 100f));
-        caption = UIKit.Text(cr, "", 50, TextAnchor.MiddleCenter, Color.white);
-        caption.fontStyle = FontStyle.Bold;
+        caption = UIKit.Text(cr, "", KucaTheme.Title, TextAnchor.MiddleCenter, Color.white);
+        UIKit.Bold(caption);
         UIKit.Stretch(caption.rectTransform);
+        Shade(caption);
 
         namesGroup = Group(r, "Names", out RectTransform nr);
-        Place(nr, new Vector2(0.5f, 0f), new Vector2(0f, 560f), new Vector2(1060f, 180f));
-        names = UIKit.Text(nr, "", 46, TextAnchor.UpperCenter, Color.white);
+        Place(nr, new Vector2(0.5f, 0f), new Vector2(0f, 420f), new Vector2(1060f, 180f));
+        names = UIKit.Text(nr, "", KucaTheme.Heading, TextAnchor.UpperCenter, Color.white);
         names.supportRichText = true;
         UIKit.Stretch(names.rectTransform);
+        Shade(names);   // 노란 빛줄기 위에서도 읽히게
         dots = new Image[3];
         for (int i = 0; i < dots.Length; i++)
         {
@@ -318,20 +330,29 @@ public class EvolutionScreen : MonoBehaviour
             Place(dots[i].rectTransform, new Vector2(0.5f, 0f), new Vector2((i - 1) * 64f, 20f), new Vector2(40f, 40f));
         }
 
-        ok = UIKit.Button(r, "멋져요!", Close, new Color(1f, 0.72f, 0.2f), 42);
-        Image oi = ok.GetComponent<Image>();
-        oi.sprite = HudIcons.Pill;
-        oi.type = Image.Type.Sliced;
-        oi.pixelsPerUnitMultiplier = 120f / 120f;
-        Text ot = ok.GetComponentInChildren<Text>();
-        ot.color = new Color(0.2f, 0.12f, 0.02f);
-        ot.fontStyle = FontStyle.Bold;
-        Place((RectTransform)ok.transform, new Vector2(0.5f, 0f), new Vector2(0f, 300f), new Vector2(600f, 120f));
+        // v4: 아래 꽉 찬 주요 버튼 하나 (금색 바탕 + 진한 글자: 어두운 무대 위에서 가장 눈에 띄게)
+        ok = UIKit.BigButton(r, "멋져요!", Close, KucaTheme.Gold, KucaTheme.Ink);
+        RectTransform okr = (RectTransform)ok.transform;
+        okr.anchorMin = Vector2.zero;
+        okr.anchorMax = new Vector2(1f, 0f);
+        okr.pivot = new Vector2(0.5f, 0f);
+        okr.offsetMin = new Vector2(KucaTheme.Gutter, 160f);
+        okr.offsetMax = new Vector2(-KucaTheme.Gutter, 160f + KucaTheme.ButtonHeight);
         ok.gameObject.AddComponent<PressScale>();
 
         flash = UIKit.Image(r, "Flash", new Color(1f, 1f, 1f, 0f));
         UIKit.Stretch(flash.rectTransform);
         root.SetActive(false);
+    }
+
+    static void Shade(Text t)
+    {
+        var s = t.gameObject.AddComponent<Shadow>();
+        s.effectColor = new Color(0f, 0f, 0f, 0.6f);
+        s.effectDistance = new Vector2(0f, -4f);
+        var o = t.gameObject.AddComponent<Outline>();
+        o.effectColor = new Color(0.05f, 0.15f, 0.08f, 0.55f);
+        o.effectDistance = new Vector2(2f, -2f);
     }
 
     static CanvasGroup Group(RectTransform parent, string name, out RectTransform rt)

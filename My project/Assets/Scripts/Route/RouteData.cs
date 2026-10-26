@@ -13,7 +13,7 @@ public class RouteRequest
 {
     /// <summary>걸을 시간 (분): 15, 30, 60</summary>
     public int minutes;
-    /// <summary>"photo"(사진 명소) · "quiet"(조용한 곳) · "food"(맛집·카페) · "unvisited"(안 가 본 곳)</summary>
+    /// <summary>"photo"(사진 명소) · "quiet"(조용한 곳) · "food"(맛집·카페) · "unvisited"(처음 가는 곳)</summary>
     public List<string> tastes = new List<string>();
     /// <summary>지금 위치 (GPS)</summary>
     public double lat, lon;

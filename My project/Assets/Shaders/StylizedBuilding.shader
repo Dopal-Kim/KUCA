@@ -68,6 +68,15 @@ Shader "KUCA/StylizedBuilding"
                 return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
             }
 
+            // M30: 밤에 켜질 창 — 벽(길이로 만든 seed) · 층마다 켜진 비율을 달리 (_KucaLitWindows × 0.25 ~ 1.35, 평균 0.8 배).
+            // 예전엔 모든 벽이 같은 (칸, 층) 해시 · 한 비율이라 벽마다 같은 무늬였음. 낮 무늬(커튼 · 반사)는 원래 해시 그대로
+            half KucaWindowLit(float col, float fl, float seed)
+            {
+                float hf = frac(sin(dot(float2(fl, seed), float2(39.346, 11.135))) * 43758.5453);
+                float h = frac(sin(dot(float2(col + seed * 7.0, fl), float2(12.9898, 78.233))) * 43758.5453);
+                return step(h, _KucaLitWindows * lerp(0.25, 1.35, hf));
+            }
+
             half3 BuildingAlbedo(float3 p, float3 n, float2 wall, half3 roofTint, out half3 emit)
             {
                 emit = 0;
@@ -75,16 +84,26 @@ Shader "KUCA/StylizedBuilding"
                 if (n.y > 0.6)
                 {
                     float2 g = abs(frac(p.xz / 5.0) - 0.5);
-                    half3 roof = _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * smoothstep(0.46, 0.49, max(g.x, g.y)));
+                    float gw = max(fwidth(p.x), fwidth(p.z)) / 5.0;   // 멀리서는 지붕 격자선을 평균으로 (지글거림 방지)
+                    float gline = lerp(smoothstep(0.46, 0.49, max(g.x, g.y)), 0.1, saturate((gw - 0.01) / 0.03));
+                    half3 roof = _RoofColor.rgb * roofTint * 1.1 * (1.0 - 0.035 * gline);
                     return lerp(roof, half3(0.90, 0.94, 1.0), _KucaSnow * 0.9);   // 겨울: 지붕 눈
                 }
                 half3 c = _WallColor.rgb * lerp(0.93h, 1.04h, saturate(p.y / 24.0));
-                if (_Brick > 0.5) c *= 1.0 - 0.06 * step(frac(p.y / 0.34), 0.12);
+                // 가는 가로선(벽돌 줄눈 · 층 띠)은 한 픽셀보다 가늘어지면 평균 농도로 바꾼다 (멀리서 무늬가 지글거리지 않게)
+                float py = fwidth(p.y);
+                // M18: 창 줄 대신 쓰는 층 줄은 기울기 길이로 (fwidth 는 비스듬한 층 줄에서 √2 배까지 크게 잼)
+                float pyRow = length(float2(ddx(p.y), ddy(p.y)));
+                if (_Brick > 0.5) c *= 1.0 - 0.06 * lerp(step(frac(p.y / 0.34), 0.12), 0.12, saturate((py - 0.02) / 0.04));
                 float fv = frac(p.y / _FloorHeight), fl = floor(p.y / _FloorHeight);
-                if (fv < 0.05 && p.y > 2.0) c = lerp(c, _TrimColor.rgb, 0.55);
+                float trimW = (fv < 0.05 && p.y > 2.0) ? 0.55 : 0.0;
+                c = lerp(c, _TrimColor.rgb, lerp(trimW, 0.55 * 0.05, saturate((py - 0.06) / 0.12)));
 
-                float wl = wall.y, wu = wall.x;
+                // M11: 벽 길이는 0.1 m 단위로 저장되니 보간 오차를 되돌린다. 그대로 쓰면 (길이 - 여백)/창 간격이 딱 정수인 벽
+                // (생명과학대 S 40.6 m: (40.6 - 6.4)/3.8 = 9) 에서 floor 가 픽셀마다 8 · 9 로 뒤바뀌어 창 배치가 얼룩졌음
+                float wl = round(wall.y * 10.0) * 0.1, wu = wall.x;
                 bool infinite = wl < 0.5;
+                float seed = frac(wl * 0.618) * 97.0;
                 if (infinite)
                 {
                     float2 side = normalize(float2(-n.z, n.x) + 1e-5);
@@ -103,28 +122,34 @@ Shader "KUCA/StylizedBuilding"
                         if (lu2 < 0.0 || lu2 >= nS) return s * ao;
                         float ci = floor(lu2), qx = (frac(lu2) - 0.5) * sp;
                         half3 resS = s * ao;
+                        half3 glowS = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * 0.8 * KucaWindowLit(ci, fl, seed);
                         if (abs(qx) < 0.42 && fv > 0.1)
                         {
-                            float h = frac(sin(dot(float2(ci, fl), float2(12.9898, 78.233))) * 43758.5453);
                             resS = lerp(_WindowColor.rgb * 0.7, lerp(_WindowColor.rgb, half3(0.88, 0.95, 1.0), 0.5), fv) * lerp(1.0, 0.45, _KucaNight);
-                            if (h < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * 0.8;
+                            emit = glowS;
                         }
                         else if (abs(qx) < 0.58) resS = _TrimColor.rgb;
-                        float fadeS = saturate(fwidth(qx) * 3.0 - 0.6);
-                        emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.25, fadeS);
+                        float pxS = fwidth(qx);
+                        float fadeS = saturate((pxS - 0.06) / 0.18);
+                        // M30: 멀리서도 켜진 슬릿은 슬릿 하나씩 (최소 1.5 px) — 벽 전체 평균 불빛은 1 m/px 넘게 멀 때만
+                        emit = lerp(emit, glowS * step(abs(qx), max(0.42, pxS * 0.75)) * step(0.1, fv), fadeS);
+                        emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.25, saturate((pxS - 0.8) / 0.8));
                         return lerp(resS, lerp(s * ao, _WindowColor.rgb, 0.25), fadeS);
                     }
                     if (min(wu, wl - wu) < 0.7) return _TrimColor.rgb * ao;
                     float mu = frac(wu / 1.6), cg = floor(wu / 1.6);
-                    float hg = frac(sin(dot(float2(cg, fl), float2(12.9898, 78.233))) * 43758.5453);
+                    half3 glowG = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * KucaWindowLit(cg, fl, seed);
                     half3 gl = lerp(_WindowColor.rgb * 0.62, lerp(_WindowColor.rgb, half3(0.86, 0.94, 1.0), 0.6), fv);
                     gl = lerp(gl, half3(0.96, 0.99, 1.0), 0.22 * step(0.88, frac((wu * 0.5 + p.y) * 0.035)));
                     gl *= lerp(1.0, 0.45, _KucaNight);
-                    if (hg < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (0.6 + 0.4 * fv);
+                    emit = glowG * (0.6 + 0.4 * fv);
                     half3 resG = gl;
                     if (abs(mu - 0.5) > 0.46 || fv < 0.06) resG = _TrimColor.rgb * 0.94;
-                    float fadeG = saturate(fwidth(wu) * 2.0 - 0.6);
-                    emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.7, fadeG);
+                    float pxG = fwidth(wu);
+                    float fadeG = saturate((pxG - 0.05) / 0.15);
+                    // M30: 멀리서도 켜진 유리 칸(1.6 m)은 칸째로 — 벽 전체 평균 불빛은 1.2 m/px 넘게 멀 때만
+                    emit = lerp(emit, glowG * 0.8 * step(0.06, fv), fadeG);
+                    emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * 0.7, saturate((pxG - 0.6) / 0.6));
                     return lerp(resG, lerp(gl, _TrimColor.rgb, 0.15), fadeG);
                 }
                 float margin = infinite ? 0.0 : clamp(wl * 0.12, 1.8, 3.2);
@@ -133,6 +158,7 @@ Shader "KUCA/StylizedBuilding"
                 float lu = (wu - (infinite ? 0.0 : (wl - nWin * _WindowSpacing) * 0.5)) / _WindowSpacing;
                 if (lu < 0.0 || lu >= nWin) return lerp(c, _TrimColor.rgb, 0.22) * ao;          // 모서리 기둥
                 float colI = floor(lu), fu = frac(lu);
+                half3 glowW = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * KucaWindowLit(colI, fl, seed);
                 if (_PilasterEvery > 0.5 && fmod(abs(colI), _PilasterEvery) > _PilasterEvery - 1.5)
                     return lerp(c, _TrimColor.rgb, 0.3) * ao;                                   // 창 묶음 사이 벽
 
@@ -142,6 +168,8 @@ Shader "KUCA/StylizedBuilding"
                 if (_Arch > 0.5 && qq.y > hb.y - hb.x) d = length(qq - float2(0.0, hb.y - hb.x)) - hb.x;
                 else d = SdRoundBox(qq, hb, min(hb.x, hb.y) * (_Arch > 0.5 ? 0.2 : 0.42));
 
+                // 화면 미분은 분기 밖에서 (분기 안 fwidth 는 픽셀 묶음마다 값이 틀어질 수 있음)
+                float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 res = c * ao;
                 if (qq.y < -hb.y && qq.y > -hb.y - 0.24 && abs(qq.x) < hb.x + 0.22) res = _TrimColor.rgb * ao;   // 창턱
                 else if (d < 0.0)
@@ -149,20 +177,34 @@ Shader "KUCA/StylizedBuilding"
                     float t = saturate((qq.y + hb.y) / (2.0 * hb.y));
                     float h = frac(sin(dot(float2(colI, fl), float2(12.9898, 78.233))) * 43758.5453);
                     half3 glass = lerp(_WindowColor.rgb * 0.72, lerp(_WindowColor.rgb, half3(0.88, 0.95, 1.0), 0.55), t);
-                    glass = lerp(glass, half3(0.97, 0.99, 1.0), 0.4 * step(0.86, frac((qq.x * 0.7 + qq.y) * 0.45 + h)));
+                    // 유리 반사 줄무늬는 창보다 잘아서 먼저 없앤다 (M6: 생명과학대 · 우정원 넓은 벽 잔여 얼룩)
+                    glass = lerp(glass, half3(0.97, 0.99, 1.0), 0.4 * step(0.86, frac((qq.x * 0.7 + qq.y) * 0.45 + h)) * (1.0 - saturate((px - 0.02) / 0.05)));
                     if (h > 0.8 && t > 0.5) glass = lerp(glass, half3(1.0, 0.93, 0.84), 0.55);   // 커튼
                     if (_WindowWidth > 0.8 && abs(qq.x) < 0.06) glass = _TrimColor.rgb * 0.95;    // 넓은 창 멀리언
                     glass *= lerp(1.0, 0.45, _KucaNight);
-                    if (h < _KucaLitWindows) emit = _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * (0.65 + 0.35 * t);   // 밤: 불 켜진 창
+                    emit = glowW * (0.65 + 0.35 * t);   // 밤: 불 켜진 창
                     res = glass;
                 }
                 else if (d < 0.16) res = _TrimColor.rgb;   // 창틀
 
                 // 멀리서 창이 몇 픽셀보다 작아지면 평균색으로 (지글거림 방지)
-                float px = max(fwidth(qq.x), fwidth(qq.y));
                 half3 avg = lerp(c * ao, lerp(_WindowColor.rgb, _TrimColor.rgb, 0.35), min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7));
-                float fade = saturate(px * 3.0 - 0.6);
-                emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7), fade);
+                // M10: 바로 평균색으로 가지 않고 먼저 층마다 가로 창 줄 (가로로만 평균, 층 높이는 아직 여러 픽셀).
+                // 큰 건물(공학관 캡처 거리 260 m) · 45° 돌아앉은 면(제2기숙사 남자동)은 창이 통째로 평균색이 되어 민짜 벽이었음
+                // M18: 층 줄이 사라지는 구간 0.3 → 0.8 을 0.45 → 1.2 m/px 로 (전자정보대 중정 옆벽처럼 거의 모로 보이는 벽이
+                //      층 줄 없이 평균색 민짜였음, REVIEW_v22_day). 정면 벽은 층 줄이 수평이라 기울기 길이 = fwidth
+                float rowIn = 1.0 - smoothstep(hb.y - pyRow, hb.y + pyRow, abs(qq.y));
+                half3 row = lerp(c * ao, lerp(_WindowColor.rgb * 0.82, _TrimColor.rgb, 0.12), rowIn * min(_WindowWidth * 1.1, 0.92));
+                avg = lerp(row, avg, saturate((pyRow - 0.45) / 0.75));
+                // 창틀(0.16 m)이 한 픽셀보다 가늘어질 때부터 서서히 (예전 0.2 m/px 부터는 늦어 960×720 캡처에서 긴 면이 지글거렸음)
+                // M6: 0.07 → 0.05 시작, 폭 0.2 → 0.15 (Unity 캡처에 남은 얼룩무늬)
+                float fade = saturate((px - 0.05) / 0.15);
+                // M30: 불빛은 창틀보다 늦게 평균으로 — 예전엔 같은 fade(0.2 m/px)로 벽 전체에 고르게 번져, 넓게 본 밤 지도
+                //      (REVIEW_v35, 0.2 ~ 0.4 m/px)에서 켜진 창 대신 창 줄이 고른 베이지 띠였음 (캠퍼스가 꺼진 듯).
+                //      창 사각형(최소 1.5 px)째로 켜고 끄다가 1 ~ 2 m/px 에서야 벽 평균 불빛으로
+                float2 eb = max(hb, px * 0.75);
+                emit = lerp(emit, glowW * 0.8 * step(abs(qq.x), eb.x) * step(abs(qq.y), eb.y), fade);
+                emit = lerp(emit, _KucaGlowColor.rgb * _KucaGlowStrength * _KucaNight * _KucaLitWindows * min(saturate(_WindowWidth * _WindowHeight * 1.4), 0.7), saturate((px - 1.0) / 1.0));
                 return lerp(res, avg, fade);
             }
 

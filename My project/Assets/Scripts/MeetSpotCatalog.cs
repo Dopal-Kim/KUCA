@@ -1,13 +1,13 @@
 using System.Collections.Generic;
 
 /// <summary>
-/// A-V3 산책 매칭 콘텐츠: 만남 스팟 10곳과 그 앞에 서 있는 경희몬, 스몰토크 예시 20개.
-/// - 만남 스팟: 경희스팟 중 찾기 쉽고 공개된 곳 (기숙사·천문대처럼 들어가기 어렵거나 먼 곳은 뺐다). 경희몬은 그 장소의 랜드마크 동물.
+/// A-V3 산책 매칭 콘텐츠: 만남 스팟 10곳과 그 앞에 서 있는 경희펫, 스몰토크 예시 20개.
+/// - 만남 스팟: 경희스팟 중 찾기 쉽고 공개된 곳 (기숙사·천문대처럼 들어가기 어렵거나 먼 곳은 뺐다). 경희펫은 그 장소의 랜드마크 동물.
 /// - 서버(C)는 같은 값을 server/KucaMemoServer/Data/spots.json 의 meetSpecies 와 Data/smalltalk.json 에서 읽는다 → 바꿀 때 두 곳을 같이.
 /// </summary>
 public static class MeetSpotCatalog
 {
-    /// <summary>만남 스팟 건물 id → 그 앞에 서 있는 경희몬 (CreatureLibrary id)</summary>
+    /// <summary>만남 스팟 건물 id → 그 앞에 서 있는 경희펫 (CreatureLibrary id)</summary>
     public static readonly Dictionary<string, string> SpeciesByBuilding = new Dictionary<string, string>
     {
         { "way-473963422", "gate_magpie" },          // 정문
@@ -24,7 +24,7 @@ public static class MeetSpotCatalog
 
     public static bool IsMeetSpot(string buildingId) => buildingId != null && SpeciesByBuilding.ContainsKey(buildingId);
 
-    /// <summary>그 만남 스팟의 경희몬 (만남 스팟이 아니면 null)</summary>
+    /// <summary>그 만남 스팟의 경희펫 (만남 스팟이 아니면 null)</summary>
     public static string SpeciesAt(string buildingId) =>
         buildingId != null && SpeciesByBuilding.TryGetValue(buildingId, out string s) ? s : null;
 

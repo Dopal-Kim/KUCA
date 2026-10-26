@@ -174,7 +174,7 @@ public static class TopMap
         c.rectTransform.anchorMin = c.rectTransform.anchorMax = c.rectTransform.pivot = new Vector2(0.5f, 0.5f);
         c.rectTransform.sizeDelta = new Vector2(size, size);
         Text t = UIKit.Text(c.transform, label, Mathf.RoundToInt(size * 0.48f), TextAnchor.MiddleCenter, Color.white);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         UIKit.Stretch(t.rectTransform);
         return c;
     }
@@ -185,7 +185,7 @@ public static class TopMap
         Image frame = UIKit.Image(parent, name, new Color(0.55f, 0.72f, 0.42f));
         frame.sprite = HudIcons.Rounded;
         frame.type = Image.Type.Sliced;
-        frame.pixelsPerUnitMultiplier = 1f;
+        frame.pixelsPerUnitMultiplier = 0.34f;   // v4 카드와 같은 모서리 (약 48)
         frame.gameObject.AddComponent<Mask>().showMaskGraphic = true;
         var mm = new GameObject("Texture", typeof(RectTransform), typeof(RawImage));
         mm.transform.SetParent(frame.transform, false);

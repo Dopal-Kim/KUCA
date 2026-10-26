@@ -67,7 +67,7 @@ public static class KeyArtMapSetup
         public float[] wall, trim, window, roof;
         public float floorHeight, spacing, windowWidth, windowHeight, pilasterEvery, brick, arch;
     }
-    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick, Outside; }
+    [System.Serializable] class Styles { public Style Default, Classical, Modern, Glass, Brick, Outside, Stone, Granite; }
     [System.Serializable]
     class Sunny
     {
@@ -204,6 +204,11 @@ public static class KeyArtMapSetup
         };
         if (look.styles.Outside != null)
             styleMats["Outside"] = StyleMaterial(Dir + "/KeyArtBuilding_Outside.mat", look.styles.Outside, hs);
+        // 실사 비교로 더한 외벽: 연분홍 석재 (전자정보 · 국제경영 · 국제학관), 회색 석재 (멀티미디어 · 글로벌관)
+        if (look.styles.Stone != null)
+            styleMats["Stone"] = StyleMaterial(Dir + "/KeyArtBuilding_Stone.mat", look.styles.Stone, hs);
+        if (look.styles.Granite != null)
+            styleMats["Granite"] = StyleMaterial(Dir + "/KeyArtBuilding_Granite.mat", look.styles.Granite, hs);
         Material vertexColor = LoadOrCreate(VertexColorMat, "KUCA/VertexColorLit");
         vertexColor.SetColor("_Tint", Color.white);
         EditorUtility.SetDirty(vertexColor);

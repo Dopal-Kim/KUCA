@@ -7,10 +7,12 @@ using UnityEngine.InputSystem.UI;
 #endif
 
 /// <summary>
-/// 캐릭터 꾸미기 화면 (거울). 위쪽은 캐릭터만 찍는 미리보기 (드래그로 돌려 보기), 아래쪽은 탭 세 개.
-/// - 얼굴: 눈 · 눈썹 · 입 · 코 · 볼 모양 고르기 + 눈 크기 · 간격 · 높이 슬라이더 (얼굴 가까이 확대)
-/// - 색: 피부 8 · 머리 8 · 눈 6 색 칸
-/// - 옷: 성별 · 머리 · 상의 · 하의 · 신발 · 가방
+/// 캐릭터 꾸미기 화면 (디자인 v4, 참조: 동물의 숲 꾸미기 · 제페토 아바타 편집).
+/// 위 절반은 밝은 무대 (캐릭터 + 둥근 바닥 그림자, 드래그로 돌려 보기), 아래는 흰 시트:
+/// 세그먼트 탭(얼굴 · 색 · 옷) → 큰 선택 칩 · 원 견본 격자 → 아래 고정 "랜덤" · "완료".
+/// - 얼굴: 눈 · 눈썹 · 입 · 코 · 볼 모양 칩 + 눈 크기 · 간격 · 높이 슬라이더 (얼굴 가까이 확대)
+/// - 색: 피부 8 · 머리 8 · 눈 6 원 견본
+/// - 옷: 성별 · 머리 · 상의 · 하의 · 신발 · 가방 칩 (성별이 바뀌면 그 성별의 옷으로 다시 만든다)
 /// 얼굴 · 색 · 슬라이더는 캐릭터를 다시 만들지 않고 바로 입혀 (CharacterLook) 움직이는 대로 미리보기에 보인다.
 /// 저장된 캐릭터가 없으면(첫 실행) 자동으로 열리고, 이후에는 HUD 왼쪽 위 프로필을 눌러 연다.
 /// </summary>
@@ -24,8 +26,8 @@ public class CharacterCustomizer : MonoBehaviour
     [Tooltip("미리보기 카메라가 바라보는 높이 (캐릭터 로컬 단위) — 옷 탭")]
     public float previewLookHeight = 0.9f;
     [Tooltip("얼굴 · 색 탭에서 얼굴 가까이 갈 때의 거리와 높이")]
-    public float faceDistance = 2.1f;
-    public float faceLookHeight = 1.3f;
+    public float faceDistance = 3.4f;     // 2.6 은 캡처에서 모자 · 어깨가 잘렸음: 머리 + 어깨까지
+    public float faceLookHeight = 1.5f;
     public float previewFov = 30f;
     public float previewRotateSpeed = 0.4f;
 
@@ -34,14 +36,6 @@ public class CharacterCustomizer : MonoBehaviour
     enum Tab { Face, Color, Clothes }
     static readonly string[] TabNames = { "얼굴", "색", "옷" };
 
-    static readonly (CharacterSlot slot, string label)[] SlotRows =
-    {
-        (CharacterSlot.Head, "머리"),
-        (CharacterSlot.Body, "상의"),
-        (CharacterSlot.Legs, "하의"),
-        (CharacterSlot.Feet, "신발"),
-        (CharacterSlot.Accessory, "가방"),
-    };
 
     CharacterAppearance editing;
     GameObject screen;
@@ -52,24 +46,25 @@ public class CharacterCustomizer : MonoBehaviour
     float previewYaw = 180f;
     float zoom;   // 0 = 전신, 1 = 얼굴
     Tab tab;
-    Text genderValue;
-    readonly Dictionary<CharacterSlot, Text> slotValues = new Dictionary<CharacterSlot, Text>();
-    readonly Dictionary<CharacterLook.Part, Text> faceValues = new Dictionary<CharacterLook.Part, Text>();
     readonly Slider[] eyeSliders = new Slider[3];
     readonly GameObject[] pages = new GameObject[3];
     readonly Image[] tabButtons = new Image[3];
     readonly List<(Image ring, System.Func<bool> selected)> swatchRings = new List<(Image, System.Func<bool>)>();
     readonly Dictionary<string, Text> swatchNames = new Dictionary<string, Text>();
+    /// <summary>선택 칩: 고른 것은 초록 바탕 + 흰 글자 (Refresh 가 칠한다). 옷 칩은 성별이 바뀌면 다시 만든다</summary>
+    readonly List<(Image bg, Text label, System.Func<bool> selected)> faceChips = new List<(Image, Text, System.Func<bool>)>();
+    readonly List<(Image bg, Text label, System.Func<bool> selected)> clothesChips = new List<(Image, Text, System.Func<bool>)>();
+    RectTransform clothesContent;
+    int clothesGender = -1;
     GameObject faceRows;
+    Text lead;
     Text faceNote;
-    Font font;
 
     CharacterPartsDatabase Db => character != null ? character.database : null;
 
     void Start()
     {
         EnsureEventSystem();
-        font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
         BuildUI();
 
         CharacterAppearance saved = CharacterAppearance.Load();
@@ -79,6 +74,8 @@ public class CharacterCustomizer : MonoBehaviour
             saved = DefaultAppearance(saved.gender);
             saved.Save();
         }
+        if (saved != null && Normalize(saved))
+            saved.Save();   // 예전 부위 섞기 · 색 8개 시절 저장을 지금 선택지 안으로
         if (saved != null)
         {
             character.Build(saved);
@@ -104,7 +101,8 @@ public class CharacterCustomizer : MonoBehaviour
         if (!IsOpen || previewCam == null || character == null)
             return;
         // 얼굴 · 색 탭에서는 얼굴 가까이, 옷 탭에서는 전신 (부드럽게 옮겨 간다)
-        zoom = Mathf.MoveTowards(zoom, tab == Tab.Clothes ? 0f : 1f, Time.unscaledDeltaTime * 3f);
+        // 옷 = 전신, 색 = 반신 (피부 · 머리 · 옷 색이 함께 보이게), 얼굴 = 얼굴
+        zoom = Mathf.MoveTowards(zoom, tab == Tab.Clothes ? 0f : tab == Tab.Color ? 0.5f : 1f, Time.unscaledDeltaTime * 3f);
         float k = Mathf.SmoothStep(0f, 1f, zoom);
         float distance = Mathf.Lerp(previewDistance, faceDistance, k);
         float height = Mathf.Lerp(previewLookHeight, faceLookHeight, k);
@@ -155,86 +153,117 @@ public class CharacterCustomizer : MonoBehaviour
         Refresh();
     }
 
-    void CycleFace(CharacterLook.Part part, int dir)
-    {
-        int n = CharacterLook.Shapes[(int)part].Length;
-        CharacterLook.Set(editing, part, ((CharacterLook.Get(editing, part) + dir) % n + n) % n);
-        ApplyLook();
-    }
-
     void SetTab(Tab t)
     {
         tab = t;
+        lead.enabled = t != Tab.Clothes;   // 옷 탭은 전신이라 모자가 안내 문구를 덮었음 (REVIEW_v16)
         for (int i = 0; i < pages.Length; i++)
         {
-            pages[i].SetActive(i == (int)t);
-            KucaTheme.PaintToggle(tabButtons[i], tabButtons[i].GetComponentInChildren<Text>(), i == (int)t);
+            bool on = i == (int)t;
+            pages[i].SetActive(on);
+            // 세그먼트: 고른 칸은 흰 알약 + 진한 글자, 나머지는 회색 바탕에 흐린 글자 (iOS 세그먼트 컨트롤)
+            tabButtons[i].color = on ? KucaTheme.Card : new Color(1f, 1f, 1f, 0f);
+            tabButtons[i].GetComponentInChildren<Text>().color = on ? KucaTheme.Ink : KucaTheme.InkMuted;
         }
     }
 
-    void CycleGender(int dir)
+    void SetGender(int gender)
     {
-        int n = Db.genders.Count;
-        editing.gender = ((editing.gender + dir) % n + n) % n;
-        Apply();
-    }
-
-    void Cycle(CharacterSlot slot, int dir)
-    {
-        List<CharacterPartsDatabase.PartOption> options = Db.genders[editing.gender].Options(slot);
-        if (options.Count == 0)
+        if (editing.gender == gender)
             return;
-        int i = Mathf.Max(0, options.FindIndex(o => o.id == editing.Get(slot)));
-        i = ((i + dir) % options.Count + options.Count) % options.Count;
-        editing.Set(slot, options[i].id);
+        // 성별이 바뀌어도 같은 스타일 · 가방 · 얼굴 · 색을 이어 입는다
+        CharacterAppearance a = DefaultAppearance(gender);
+        WearStyle(a, Mathf.Max(0, StyleOf(editing)));
+        if (Has(a.gender, CharacterSlot.Accessory, editing.accessory))
+            a.accessory = editing.accessory;
+        a.skin = editing.skin; a.hairColor = editing.hairColor; a.eyeColor = editing.eyeColor;
+        a.eyes = editing.eyes; a.brows = editing.brows; a.mouth = editing.mouth; a.nose = editing.nose; a.cheeks = editing.cheeks;
+        a.eyeSize = editing.eyeSize; a.eyeSpacing = editing.eyeSpacing; a.eyeHeight = editing.eyeHeight;
+        editing = a;
         Apply();
     }
 
-    /// <summary>기본 캐릭터: 경희 모험가 한 벌 (없으면 첫 선택지)</summary>
+    void SetStyle(int style)
+    {
+        WearStyle(editing, style);
+        Apply();
+    }
+
+    void SetPart(CharacterSlot slot, string id)
+    {
+        editing.Set(slot, id);
+        Apply();
+    }
+
+    bool Has(int gender, CharacterSlot slot, string id) => Db.genders[gender].Options(slot).Exists(o => o.id == id);
+
+    /// <summary>스타일 i 를 입힌다: 머리는 경희 모험가, 상의 · 하의 · 신발은 그 성별의 스타일 부품 (없으면 경희 모험가)</summary>
+    void WearStyle(CharacterAppearance a, int i)
+    {
+        var st = CharacterLook.Styles[Mathf.Clamp(i, 0, CharacterLook.Styles.Length - 1)];
+        bool women = Db.genders[a.gender].id == "women";
+        string top = women ? st.womenTop : st.menTop, bottom = women ? st.womenBottom : st.menBottom;
+        string fallback = CharacterAppearance.DefaultOutfit;
+        a.head = fallback;
+        a.body = Has(a.gender, CharacterSlot.Body, top) ? top : fallback;
+        a.legs = Has(a.gender, CharacterSlot.Legs, bottom) ? bottom : fallback;
+        a.feet = Has(a.gender, CharacterSlot.Feet, bottom) ? bottom : fallback;
+    }
+
+    /// <summary>지금 입은 옷이 몇 번 스타일인지 (어느 스타일과도 다르면 -1)</summary>
+    int StyleOf(CharacterAppearance a)
+    {
+        var t = new CharacterAppearance { gender = a.gender };
+        for (int i = 0; i < CharacterLook.Styles.Length; i++)
+        {
+            WearStyle(t, i);
+            if (t.head == a.head && t.body == a.body && t.legs == a.legs && t.feet == a.feet)
+                return i;
+        }
+        return -1;
+    }
+
+    /// <summary>선택지 밖의 저장(스타일에 없는 부위 조합 · 없어진 색 번호)을 기본으로 되돌린다. 바뀌었으면 true</summary>
+    bool Normalize(CharacterAppearance a)
+    {
+        bool changed = false;
+        if (a.gender < 0 || a.gender >= Db.genders.Count) { a.gender = 0; changed = true; }
+        if (StyleOf(a) < 0) { WearStyle(a, 0); changed = true; }
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0 && !Has(a.gender, CharacterSlot.Accessory, a.accessory)) { a.accessory = bags[0].id; changed = true; }
+        if (a.skin >= CharacterLook.Skins.Length) { a.skin = 0; changed = true; }
+        if (a.hairColor >= CharacterLook.Hairs.Length) { a.hairColor = 0; changed = true; }
+        if (a.eyeColor >= CharacterLook.EyeColors.Length) { a.eyeColor = 0; changed = true; }
+        return changed;
+    }
+
+    /// <summary>기본 캐릭터: 경희 모험가 스타일, 가방 첫 선택지</summary>
     CharacterAppearance DefaultAppearance(int gender)
     {
         var a = new CharacterAppearance { gender = Mathf.Clamp(gender, 0, Db.genders.Count - 1) };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count == 0)
-                continue;
-            var match = options.Find(o => o.id == CharacterAppearance.DefaultOutfit);
-            a.Set(slot, slot == CharacterSlot.Accessory ? options[0].id : (match ?? options[0]).id);
-        }
+        WearStyle(a, 0);
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0)
+            a.accessory = bags[0].id;
         return a;
     }
 
     CharacterAppearance RandomAppearance()
     {
-        var a = new CharacterAppearance { gender = Random.Range(0, Db.genders.Count) };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        // 머리·상의·하의·신발은 같은 의상 세트에서 시작해 어울리게 만든다.
-        string outfit = set.bodies[Random.Range(0, set.bodies.Count)].id;
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count == 0)
-                continue;
-            var match = options.Find(o => o.id == outfit);
-            a.Set(slot, slot == CharacterSlot.Accessory ? options[0].id : (match ?? options[0]).id);
-        }
+        CharacterAppearance a = DefaultAppearance(Random.Range(0, Db.genders.Count));
+        WearStyle(a, Random.Range(0, CharacterLook.Styles.Length));
         return a;
     }
 
     void Randomize()
     {
-        CharacterAppearance a = new CharacterAppearance { gender = editing.gender };
-        CharacterPartsDatabase.GenderSet set = Db.genders[a.gender];
-        foreach (var (slot, _) in SlotRows)
-        {
-            List<CharacterPartsDatabase.PartOption> options = set.Options(slot);
-            if (options.Count > 0)
-                a.Set(slot, options[Random.Range(0, options.Count)].id);
-        }
-        // 얼굴 · 색도 섞는다 (피부는 자연색 6 안에서, 슬라이더는 기본)
-        a.skin = Random.Range(0, 6);
+        CharacterAppearance a = DefaultAppearance(editing.gender);
+        WearStyle(a, Random.Range(0, CharacterLook.Styles.Length));
+        var bags = Db.genders[a.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 0)
+            a.accessory = bags[Random.Range(0, bags.Count)].id;
+        // 얼굴 · 색도 섞는다 (슬라이더는 기본)
+        a.skin = Random.Range(0, CharacterLook.Skins.Length);
         a.hairColor = Random.Range(0, CharacterLook.Hairs.Length);
         a.eyeColor = Random.Range(0, CharacterLook.EyeColors.Length);
         foreach (CharacterLook.Part part in System.Enum.GetValues(typeof(CharacterLook.Part)))
@@ -245,23 +274,15 @@ public class CharacterCustomizer : MonoBehaviour
 
     void Refresh()
     {
-        CharacterPartsDatabase.GenderSet set = Db.genders[editing.gender];
-        genderValue.text = set.displayName;
-        foreach (var (slot, _) in SlotRows)
-        {
-            var o = set.Options(slot).Find(x => x.id == editing.Get(slot));
-            slotValues[slot].text = o != null ? o.displayName : "-";
-        }
-        foreach (var pair in faceValues)
-        {
-            string[] shapes = CharacterLook.Shapes[(int)pair.Key];
-            pair.Value.text = shapes[Mathf.Clamp(CharacterLook.Get(editing, pair.Key), 0, shapes.Length - 1)];
-        }
+        if (clothesGender != editing.gender)
+            BuildClothesChips();
+        PaintChips(faceChips);
+        PaintChips(clothesChips);
         eyeSliders[0].SetValueWithoutNotify(editing.eyeSize);
         eyeSliders[1].SetValueWithoutNotify(editing.eyeSpacing);
         eyeSliders[2].SetValueWithoutNotify(editing.eyeHeight);
         foreach (var (ring, selected) in swatchRings)
-            ring.enabled = selected();
+            ring.color = selected() ? KucaTheme.Primary : new Color(1f, 1f, 1f, 0f);
         swatchNames["피부"].text = "피부  ·  " + CharacterLook.Skins[Mathf.Clamp(editing.skin, 0, CharacterLook.Skins.Length - 1)].name;
         swatchNames["머리"].text = "머리 · 눈썹  ·  " + CharacterLook.Hairs[Mathf.Clamp(editing.hairColor, 0, CharacterLook.Hairs.Length - 1)].name;
         swatchNames["눈"].text = "눈  ·  " + CharacterLook.EyeColors[Mathf.Clamp(editing.eyeColor, 0, CharacterLook.EyeColors.Length - 1)].name;
@@ -270,129 +291,179 @@ public class CharacterCustomizer : MonoBehaviour
         faceNote.gameObject.SetActive(!face);
     }
 
+    static void PaintChips(List<(Image bg, Text label, System.Func<bool> selected)> chips)
+    {
+        foreach (var (bg, label, selected) in chips)
+        {
+            bool on = selected();
+            bg.color = on ? KucaTheme.Primary : KucaTheme.Fill;
+            label.color = on ? Color.white : KucaTheme.Ink;
+        }
+    }
+
     // ---------- UI 생성 ----------
+
+    const float PanelHeight = 1300f;   // 1120 은 항목이 3줄 남짓만 보였음: 시트를 키우고 위 무대를 줄임
+    const float ChipHeight = 104f;
 
     void BuildUI()
     {
-        var canvasGo = new GameObject("CustomizerCanvas", typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        canvasGo.transform.SetParent(transform, false);
-        var canvas = canvasGo.GetComponent<Canvas>();
-        canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 20;
-        var scaler = canvasGo.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1080, 1920);
-        scaler.matchWidthOrHeight = 0.5f;
+        Canvas canvas = UIKit.CreateCanvas(transform, "CustomizerCanvas", 20);
 
-        // 꾸미기 화면 전체: 산뜻한 연두빛 바탕 + 위쪽 미리보기 + 아래쪽 흰 카드
-        screen = new GameObject("Screen", typeof(RectTransform), typeof(Image));
+        // 화면 전체: 밝은 무대(회색 바탕) + 아래 흰 시트
+        Image bg = UIKit.Image(canvas.transform, "Screen", KucaTheme.Surface, raycast: true);
+        UIKit.Stretch(bg.rectTransform);
+        screen = bg.gameObject;
         BackButton.Attach(screen, () => SetOpen(false));
-        screen.transform.SetParent(canvasGo.transform, false);
-        screen.GetComponent<Image>().color = KucaTheme.PrimarySoft;
-        var sr = (RectTransform)screen.transform;
-        sr.anchorMin = Vector2.zero;
-        sr.anchorMax = Vector2.one;
-        sr.offsetMin = sr.offsetMax = Vector2.zero;
-        UIInputBlocker.Register(sr);
+        UIInputBlocker.Register(bg.rectTransform);
 
-        BuildPreview(screen.transform);
+        Rect sa = Screen.safeArea;
+        RectTransform safe = UIKit.Rect(bg.transform, "Safe");
+        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
+        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
+        safe.offsetMin = safe.offsetMax = Vector2.zero;
 
-        // 아래쪽 패널
-        panel = new GameObject("Panel", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(screen.transform, false);
-        var panelImage = panel.GetComponent<Image>();
-        panelImage.color = KucaTheme.Card;
-        panelImage.sprite = HudIcons.Rounded;
-        panelImage.type = Image.Type.Sliced;
-        var pr = (RectTransform)panel.transform;
-        pr.anchorMin = new Vector2(0f, 0f);
+        BuildPreview(bg.rectTransform);
+        safe.SetAsLastSibling();   // 제목 · 안내가 미리보기 흰 원 위에 그려지게 (원에 덮여 "나를 닮은 ㄷ" 로 잘렸음, REVIEW_v15)
+
+        // 위: ‹ 뒤로 (저장 안 하고 닫기) + 제목
+        UIKit.IconButton(safe, HudIcons.Chevron, () => SetOpen(false), KucaTheme.Ink, new Vector2(KucaTheme.Gutter - 30f, -12f), flip: true);
+        Text title = UIKit.Bold(UIKit.Text(safe, "꾸미기", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        RectTransform tr = title.rectTransform;
+        tr.anchorMin = new Vector2(0f, 1f);
+        tr.anchorMax = Vector2.one;
+        tr.pivot = new Vector2(0.5f, 1f);
+        tr.offsetMin = new Vector2(KucaTheme.Gutter + 110f, -144f);
+        tr.offsetMax = new Vector2(-KucaTheme.Gutter, -12f);
+        // 첫 실행에 무엇을 하는 화면인지 한 줄 (REVIEW_v14: "꾸미기" 제목뿐이었음)
+        lead = UIKit.Text(safe, "나를 닮은 탐험가를 만들어요", KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        RectTransform lr = lead.rectTransform;
+        lr.anchorMin = new Vector2(0f, 1f);
+        lr.anchorMax = Vector2.one;
+        lr.pivot = new Vector2(0.5f, 1f);
+        lr.offsetMin = new Vector2(KucaTheme.Gutter + 110f, -208f);
+        lr.offsetMax = new Vector2(-KucaTheme.Gutter, -144f);
+
+        // 아래 흰 시트 (위 모서리만 둥글게: 아래는 화면 밖으로)
+        Image sheet = UIKit.Image(bg.transform, "Panel", KucaTheme.Card, raycast: true);
+        sheet.sprite = HudIcons.Rounded;
+        sheet.type = Image.Type.Sliced;
+        sheet.pixelsPerUnitMultiplier = 0.25f;
+        panel = sheet.gameObject;
+        RectTransform pr = sheet.rectTransform;
+        pr.anchorMin = Vector2.zero;
         pr.anchorMax = new Vector2(1f, 0f);
         pr.pivot = new Vector2(0.5f, 0f);
-        pr.anchoredPosition = new Vector2(0f, -40f);   // 아래 모서리는 화면 밖으로 (위만 둥글게)
-        pr.sizeDelta = new Vector2(0f, PanelHeight + 40f);
+        pr.anchoredPosition = new Vector2(0f, -60f);
+        pr.sizeDelta = new Vector2(0f, PanelHeight + 60f);
+        UIKit.Vertical(sheet, KucaTheme.Space4, new RectOffset(48, 48, 40, 60 + 100));   // 아래 100: 홈 표시줄
 
-        var layout = panel.AddComponent<VerticalLayoutGroup>();
-        layout.padding = new RectOffset(40, 40, 32, 100);
-        layout.spacing = KucaTheme.Space2;
-        layout.childControlWidth = layout.childControlHeight = true;
-        layout.childForceExpandWidth = true;
-        layout.childForceExpandHeight = false;
-
-        // 탭
-        var tabs = new GameObject("Tabs", typeof(RectTransform));
-        tabs.transform.SetParent(panel.transform, false);
-        SetHeight(tabs, KucaTheme.TouchMin);
-        var th = tabs.AddComponent<HorizontalLayoutGroup>();
-        th.spacing = KucaTheme.Space2;
-        th.childControlWidth = th.childControlHeight = true;
-        th.childForceExpandWidth = th.childForceExpandHeight = true;
+        // 세그먼트 탭 (회색 알약 안에 흰 알약이 고른 칸)
+        Image seg = UIKit.Image(sheet.transform, "Tabs", KucaTheme.Fill);
+        seg.sprite = HudIcons.Pill;
+        seg.type = Image.Type.Sliced;
+        seg.pixelsPerUnitMultiplier = 1.2f;
+        UIKit.Size(seg, 116f);
+        var th = UIKit.Horizontal(seg, 0f);
+        th.padding = new RectOffset(8, 8, 8, 8);
         for (int i = 0; i < TabNames.Length; i++)
         {
             Tab t = (Tab)i;
-            GameObject b = CreateButton(tabs.transform, TabNames[i], () => SetTab(t), KucaTheme.PrimarySoft, KucaTheme.Body);
-            Pill(b.GetComponent<Image>());
-            tabButtons[i] = b.GetComponent<Image>();
+            Image cell = UIKit.Image(seg.transform, TabNames[i], new Color(1f, 1f, 1f, 0f), raycast: true);
+            cell.sprite = HudIcons.Pill;
+            cell.type = Image.Type.Sliced;
+            cell.pixelsPerUnitMultiplier = 1.4f;
+            var b = cell.gameObject.AddComponent<Button>();
+            b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(() => SetTab(t));
+            Text label = UIKit.Bold(UIKit.Text(cell.transform, TabNames[i], KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.InkMuted));
+            UIKit.Stretch(label.rectTransform);
+            tabButtons[i] = cell;
         }
 
-        var pageArea = new GameObject("Pages", typeof(RectTransform));
-        pageArea.transform.SetParent(panel.transform, false);
-        var pageLayout = pageArea.AddComponent<LayoutElement>();
-        pageLayout.flexibleHeight = 1f;
-        pages[(int)Tab.Face] = BuildFacePage(pageArea.transform);
-        pages[(int)Tab.Color] = BuildColorPage(pageArea.transform);
-        pages[(int)Tab.Clothes] = BuildClothesPage(pageArea.transform);
+        RectTransform pageArea = UIKit.Rect(sheet.transform, "Pages");
+        pageArea.gameObject.AddComponent<LayoutElement>().flexibleHeight = 1f;
+        pages[(int)Tab.Face] = BuildFacePage(pageArea);
+        pages[(int)Tab.Color] = BuildColorPage(pageArea);
+        pages[(int)Tab.Clothes] = BuildClothesPage(pageArea);
 
-        var bottom = new GameObject("Buttons", typeof(RectTransform));
-        bottom.transform.SetParent(panel.transform, false);
-        SetHeight(bottom, 110f);
-        var h = bottom.AddComponent<HorizontalLayoutGroup>();
-        h.spacing = KucaTheme.Space3;
-        h.childControlWidth = h.childControlHeight = true;
-        h.childForceExpandWidth = h.childForceExpandHeight = true;
-        GameObject random = CreateButton(bottom.transform, "랜덤", Randomize, KucaTheme.PrimarySoft, KucaTheme.Heading);
-        random.GetComponentInChildren<Text>().color = KucaTheme.PrimaryDeep;
-        Pill(random.GetComponent<Image>());
-        Pill(CreateButton(bottom.transform, "완료", Confirm, KucaTheme.Primary, KucaTheme.Heading).GetComponent<Image>());
+        // 아래 고정: 랜덤(보조) + 완료(주요)
+        RectTransform bottom = UIKit.Rect(sheet.transform, "Buttons");
+        UIKit.Size(bottom, KucaTheme.ButtonHeight);
+        var h = UIKit.Horizontal(bottom, KucaTheme.Space2);
+        h.childForceExpandWidth = false;
+        UIKit.Size(UIKit.SecondaryButton(bottom, "랜덤", Randomize), -1f, -1f, 1f);
+        UIKit.Size(UIKit.PrimaryButton(bottom, "완료", Confirm), -1f, -1f, 2f);
     }
 
-    const float PanelHeight = 1080f;
-
-    GameObject Page(Transform parent, string name)
+    /// <summary>탭 한 장: 세로로 스크롤되는 내용 (반환: 페이지, out content 에 쌓는다)</summary>
+    static GameObject Page(RectTransform parent, string name, out RectTransform content)
     {
-        var page = new GameObject(name, typeof(RectTransform));
-        page.transform.SetParent(parent, false);
-        var rt = (RectTransform)page.transform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        var v = page.AddComponent<VerticalLayoutGroup>();
-        v.spacing = KucaTheme.Space1;
-        v.childControlWidth = v.childControlHeight = true;
-        v.childForceExpandWidth = true;
-        v.childForceExpandHeight = false;
-        return page;
+        RectTransform page = UIKit.Rect(parent, name);
+        UIKit.Stretch(page);
+        content = UIKit.ScrollList(page, KucaTheme.Space2, new RectOffset(0, 0, 0, (int)KucaTheme.Space4));
+        return page.gameObject;
     }
 
-    GameObject BuildFacePage(Transform parent)
+    static Text Label(Transform parent, string text)
     {
-        GameObject page = Page(parent, "FacePage");
-        faceRows = new GameObject("FaceRows", typeof(RectTransform));
-        faceRows.transform.SetParent(page.transform, false);
-        var v = faceRows.AddComponent<VerticalLayoutGroup>();
-        v.spacing = KucaTheme.Space1;
-        v.childControlWidth = v.childControlHeight = true;
-        v.childForceExpandWidth = true;
-        v.childForceExpandHeight = false;
+        Text t = UIKit.Bold(UIKit.Text(parent, text, KucaTheme.Label, TextAnchor.LowerLeft, KucaTheme.Ink));
+        UIKit.Size(t, 64f);
+        return t;
+    }
+
+    /// <summary>칩 격자 (열 수 고정, 줄은 개수만큼). 칩 너비 = (시트 안 너비 984 - 간격) / 열</summary>
+    static RectTransform ChipGrid(Transform parent, int columns)
+    {
+        RectTransform grid = UIKit.Rect(parent, "Chips");
+        var g = grid.gameObject.AddComponent<GridLayoutGroup>();
+        float inner = 1080f - 96f;
+        g.cellSize = new Vector2((inner - (columns - 1) * KucaTheme.Space2) / columns, ChipHeight);
+        g.spacing = new Vector2(KucaTheme.Space2, KucaTheme.Space2);
+        g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        g.constraintCount = columns;
+        return grid;
+    }
+
+    static (Image, Text) ChipCell(Transform grid, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        Image bg = UIKit.Image(grid, label, KucaTheme.Fill, raycast: true);
+        bg.sprite = HudIcons.Rounded;
+        bg.type = Image.Type.Sliced;
+        bg.pixelsPerUnitMultiplier = 0.5f;
+        var b = bg.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        bg.gameObject.AddComponent<PressScale>();
+        Text t = UIKit.Bold(UIKit.Text(bg.transform, label, KucaTheme.Label, TextAnchor.MiddleCenter, KucaTheme.Ink));
+        UIKit.Stretch(t.rectTransform, 12f, 0f);
+        return (bg, t);
+    }
+
+    GameObject BuildFacePage(RectTransform parent)
+    {
+        GameObject page = Page(parent, "FacePage", out RectTransform content);
+        faceRows = UIKit.Rect(content, "FaceRows").gameObject;
+        UIKit.Vertical(faceRows.GetComponent<RectTransform>(), KucaTheme.Space2);
+        Transform rows = faceRows.transform;
         foreach (CharacterLook.Part part in System.Enum.GetValues(typeof(CharacterLook.Part)))
         {
             CharacterLook.Part p = part;
-            faceValues[part] = CreateRow(faceRows.transform, CharacterLook.PartNames[(int)part], () => CycleFace(p, -1), () => CycleFace(p, 1), 84f);
+            Label(rows, CharacterLook.PartNames[(int)part]);
+            RectTransform grid = ChipGrid(rows, 4);
+            string[] shapes = CharacterLook.Shapes[(int)part];
+            for (int i = 0; i < shapes.Length; i++)
+            {
+                int index = i;
+                var (bg, label) = ChipCell(grid, shapes[i], () => { CharacterLook.Set(editing, p, index); ApplyLook(); });
+                faceChips.Add((bg, label, () => CharacterLook.Get(editing, p) == index));
+            }
         }
         string[] labels = { "눈 크기", "눈 간격", "눈 높이" };
         for (int i = 0; i < labels.Length; i++)
         {
             int index = i;
-            eyeSliders[i] = CreateSlider(faceRows.transform, labels[i], value =>
+            eyeSliders[i] = CreateSlider(rows, labels[i], value =>
             {
                 if (index == 0) editing.eyeSize = value;
                 else if (index == 1) editing.eyeSpacing = value;
@@ -400,73 +471,90 @@ public class CharacterCustomizer : MonoBehaviour
                 character.ApplyLook(editing);
             });
         }
-        faceNote = CreateText(page.transform, "얼굴 모양은 \"경희 모험가\" 머리에서 고를 수 있어요.\n옷 탭에서 머리를 바꿔 보세요.", KucaTheme.Body, TextAnchor.MiddleCenter);
-        faceNote.color = KucaTheme.InkMuted;
-        SetHeight(faceNote.gameObject, 200f);
+        faceNote = UIKit.Paragraph(content, "얼굴 모양은 \"경희 모험가\" 머리에서 고를 수 있어요.\n옷 탭에서 머리를 바꿔 보세요.");
         return page;
     }
 
-    GameObject BuildColorPage(Transform parent)
+    GameObject BuildColorPage(RectTransform parent)
     {
-        GameObject page = Page(parent, "ColorPage");
-        SwatchRow(page.transform, "피부", CharacterLook.Skins, i => editing.skin = i, () => editing.skin);
-        SwatchRow(page.transform, "머리", CharacterLook.Hairs, i => editing.hairColor = i, () => editing.hairColor);
-        SwatchRow(page.transform, "눈", CharacterLook.EyeColors, i => editing.eyeColor = i, () => editing.eyeColor);
+        GameObject page = Page(parent, "ColorPage", out RectTransform content);
+        SwatchRow(content, "피부", CharacterLook.Skins, i => editing.skin = i, () => editing.skin);
+        SwatchRow(content, "머리", CharacterLook.Hairs, i => editing.hairColor = i, () => editing.hairColor);
+        SwatchRow(content, "눈", CharacterLook.EyeColors, i => editing.eyeColor = i, () => editing.eyeColor);
         return page;
     }
 
-    GameObject BuildClothesPage(Transform parent)
+    GameObject BuildClothesPage(RectTransform parent)
     {
-        GameObject page = Page(parent, "ClothesPage");
-        genderValue = CreateRow(page.transform, "성별", () => CycleGender(-1), () => CycleGender(1), 96f);
-        foreach (var (slot, label) in SlotRows)
+        GameObject page = Page(parent, "ClothesPage", out clothesContent);
+        return page;
+    }
+
+    /// <summary>옷 탭 칩: 성별 + 칸마다 그 성별의 선택지 (성별이 바뀌면 다시 만든다)</summary>
+    void BuildClothesChips()
+    {
+        clothesGender = editing.gender;
+        clothesChips.Clear();
+        for (int i = clothesContent.childCount - 1; i >= 0; i--)
+            Destroy(clothesContent.GetChild(i).gameObject);
+
+        // 썸네일 대신: 이름만 있는 칩을 눌러 보면 위 캐릭터가 바로 바뀐다는 것을 먼저 알린다 (REVIEW_v14 · v15)
+        Text hint = UIKit.Text(clothesContent, "누르면 위 캐릭터에 바로 입혀 봐요. 마음에 들면 완료", KucaTheme.Caption, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+        UIKit.Size(hint, 56f);
+        Label(clothesContent, "성별");
+        RectTransform genders = ChipGrid(clothesContent, 3);
+        for (int g = 0; g < Db.genders.Count; g++)
         {
-            CharacterSlot s = slot;
-            slotValues[slot] = CreateRow(page.transform, label, () => Cycle(s, -1), () => Cycle(s, 1), 96f);
+            int gi = g;
+            var (bg, label) = ChipCell(genders, Db.genders[g].displayName, () => SetGender(gi));
+            clothesChips.Add((bg, label, () => editing.gender == gi));
         }
-        return page;
+        // 스타일 5 (상의 · 하의 · 신발 한 벌씩) + 가방
+        Label(clothesContent, "스타일");
+        RectTransform styles = ChipGrid(clothesContent, 3);
+        for (int i = 0; i < CharacterLook.Styles.Length; i++)
+        {
+            int si = i;
+            var (bg, label) = ChipCell(styles, CharacterLook.Styles[i].name, () => SetStyle(si));
+            clothesChips.Add((bg, label, () => StyleOf(editing) == si));
+        }
+        List<CharacterPartsDatabase.PartOption> bags = Db.genders[editing.gender].Options(CharacterSlot.Accessory);
+        if (bags.Count > 1)
+        {
+            Label(clothesContent, "가방");
+            RectTransform grid = ChipGrid(clothesContent, 3);
+            foreach (var o in bags)
+            {
+                string id = o.id;
+                var (bg, label) = ChipCell(grid, o.displayName, () => SetPart(CharacterSlot.Accessory, id));
+                clothesChips.Add((bg, label, () => editing.accessory == id));
+            }
+        }
     }
 
-    /// <summary>이름 줄 + 동그란 색 칸 한 줄. 고른 칸에는 진한 테두리</summary>
+    /// <summary>이름 줄 + 큰 원 견본 격자. 고른 칸에는 초록 테</summary>
     void SwatchRow(Transform parent, string key, CharacterLook.Swatch[] swatches, System.Action<int> set, System.Func<int> get)
     {
-        Text title = CreateText(parent, key, KucaTheme.Label, TextAnchor.LowerLeft);
-        title.color = KucaTheme.InkMuted;
-        SetHeight(title.gameObject, 52f);
-        swatchNames[key] = title;
-
-        var row = new GameObject(key + "Swatches", typeof(RectTransform));
-        row.transform.SetParent(parent, false);
-        SetHeight(row, 104f);
-        var h = row.AddComponent<HorizontalLayoutGroup>();
-        h.spacing = KucaTheme.Space2;
-        h.childAlignment = TextAnchor.MiddleLeft;
-        h.childControlWidth = h.childControlHeight = false;
-        h.childForceExpandWidth = h.childForceExpandHeight = false;
+        swatchNames[key] = Label(parent, key);
+        RectTransform row = UIKit.Rect(parent, key + "Swatches");
+        var g = row.gameObject.AddComponent<GridLayoutGroup>();
+        const float cell = 108f;   // 8칸 × 108 + 간격 7 × 16 = 976 ≤ 시트 안 너비 984
+        g.cellSize = new Vector2(cell, cell);
+        g.spacing = new Vector2(KucaTheme.Space2, KucaTheme.Space2);
+        g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
+        g.constraintCount = 8;
         for (int i = 0; i < swatches.Length; i++)
         {
             int index = i;
-            var cell = new GameObject(swatches[i].name, typeof(RectTransform), typeof(Image), typeof(Button));
-            cell.transform.SetParent(row.transform, false);
-            ((RectTransform)cell.transform).sizeDelta = new Vector2(KucaTheme.TouchMin, KucaTheme.TouchMin);
-            var ring = cell.GetComponent<Image>();
+            Image ring = UIKit.Image(row, swatches[i].name, new Color(1f, 1f, 1f, 0f), raycast: true);
             ring.sprite = HudIcons.Circle;
-            ring.color = KucaTheme.Ink;
-            var dot = new GameObject("Color", typeof(RectTransform), typeof(Image));
-            dot.transform.SetParent(cell.transform, false);
-            var dotRect = (RectTransform)dot.transform;
-            dotRect.anchorMin = Vector2.zero;
-            dotRect.anchorMax = Vector2.one;
-            dotRect.offsetMin = new Vector2(9f, 9f);
-            dotRect.offsetMax = new Vector2(-9f, -9f);
-            var dotImage = dot.GetComponent<Image>();
-            dotImage.sprite = HudIcons.Circle;
-            dotImage.color = swatches[i].color;
-            // 색 점이 터치를 받는다: 고르지 않은 칸은 테두리(ring)를 꺼 두므로, 테두리만 받으면 고른 칸 말고는 눌리지 않는다
-            dotImage.raycastTarget = true;
-            var button = cell.GetComponent<Button>();
-            button.targetGraphic = dotImage;
+            Image dot = UIKit.Image(ring.transform, "Color", swatches[i].color, raycast: true);
+            dot.sprite = HudIcons.Circle;
+            UIKit.Stretch(dot.rectTransform, 10f, 10f);
+            var button = ring.gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
             button.onClick.AddListener(() => { set(index); ApplyLook(); });
+            ring.gameObject.AddComponent<PressScale>();
             swatchRings.Add((ring, () => get() == index));
         }
     }
@@ -474,31 +562,28 @@ public class CharacterCustomizer : MonoBehaviour
     /// <summary>-1 ~ 1 슬라이더 (가운데 눈금 = 기본). 움직이는 동안 바로 캐릭터에 입힌다</summary>
     Slider CreateSlider(Transform parent, string label, UnityEngine.Events.UnityAction<float> onChange)
     {
-        var row = new GameObject(label, typeof(RectTransform));
-        row.transform.SetParent(parent, false);
-        SetHeight(row, 84f);
-        var h = row.AddComponent<HorizontalLayoutGroup>();
-        h.spacing = KucaTheme.Space3;
-        h.childControlWidth = h.childControlHeight = true;
+        RectTransform row = UIKit.Rect(parent, label);
+        UIKit.Size(row, KucaTheme.TouchMin);
+        var h = UIKit.Horizontal(row, KucaTheme.Space3);
         h.childForceExpandWidth = false;
-        h.childForceExpandHeight = true;
-        Text l = CreateText(row.transform, label, KucaTheme.Body, TextAnchor.MiddleLeft);
-        l.color = KucaTheme.Ink;
-        SetWidth(l.gameObject, 180f, 0f);
+        Text l = UIKit.Bold(UIKit.Text(row, label, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        UIKit.Size(l, -1f, 200f, 0f);
 
         var go = new GameObject("Slider", typeof(RectTransform), typeof(Slider));
-        go.transform.SetParent(row.transform, false);
-        SetWidth(go, 0f, 1f);
-        Image track = Child(go.transform, "Track", KucaTheme.Line, HudIcons.Pill);
-        Place(track.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 14f));
+        go.transform.SetParent(row, false);
+        UIKit.Size(go.transform as RectTransform, -1f, -1f, 1f);
+        Image track = Child(go.transform, "Track", KucaTheme.Fill, HudIcons.Pill);
+        Place(track.rectTransform, new Vector2(0f, 0.5f), new Vector2(1f, 0.5f), new Vector2(0f, 24f));
         track.type = Image.Type.Sliced;
+        track.raycastTarget = true;   // 트랙을 눌러도 그 자리로
         Image tick = Child(go.transform, "Default", KucaTheme.InkSoft, null);
-        Place(tick.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(4f, 34f));
+        Place(tick.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(4f, 44f));
         var area = new GameObject("HandleArea", typeof(RectTransform));
         area.transform.SetParent(go.transform, false);
-        Place((RectTransform)area.transform, Vector2.zero, Vector2.one, new Vector2(-56f, 0f));
-        Image handle = Child(area.transform, "Handle", KucaTheme.Accent, HudIcons.Circle);
-        handle.rectTransform.sizeDelta = new Vector2(56f, -28f);
+        Place((RectTransform)area.transform, Vector2.zero, Vector2.one, new Vector2(-72f, 0f));
+        Image handle = Child(area.transform, "Handle", KucaTheme.Primary, HudIcons.Circle);
+        handle.raycastTarget = true;
+        handle.rectTransform.sizeDelta = new Vector2(72f, -60f);
 
         var slider = go.GetComponent<Slider>();
         slider.handleRect = handle.rectTransform;
@@ -530,17 +615,11 @@ public class CharacterCustomizer : MonoBehaviour
         rt.sizeDelta = size;
     }
 
-    static void Pill(Image image)
-    {
-        image.sprite = HudIcons.Pill;
-        image.type = Image.Type.Sliced;
-    }
-
-    void BuildPreview(Transform parent)
+    void BuildPreview(RectTransform parent)
     {
         previewTexture = new RenderTexture(1024, 1024, 24, RenderTextureFormat.ARGB32) { name = "CharacterPreview", antiAliasing = 2 };
 
-        var camGo = new GameObject("CharacterPreviewCamera", typeof(Camera));
+        var camGo = new GameObject("CharacterPreviewCamera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(transform, false);
         previewCam = camGo.GetComponent<Camera>();
         previewCam.targetTexture = previewTexture;
@@ -557,12 +636,12 @@ public class CharacterCustomizer : MonoBehaviour
         lightGo.transform.SetParent(transform, false);
         previewLight = lightGo.GetComponent<Light>();
         previewLight.type = LightType.Directional;
-        previewLight.intensity = 0.8f;
+        previewLight.intensity = 1.4f;   // 미리보기에서 얼굴이 어둡게 보이지 않게
         previewLight.shadows = LightShadows.None;
         previewLight.cullingMask = 1 << character.gameObject.layer;
         previewLight.enabled = false;
 
-        // 패널 위쪽 영역 (정사각형으로 맞춰 가운데 배치)
+        // 무대: 시트 위 영역 전체 (드래그로 돌려 보기)
         var area = new GameObject("PreviewArea", typeof(RectTransform), typeof(Image), typeof(PreviewDragArea));
         area.transform.SetParent(parent, false);
         area.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f); // 드래그 입력만 받는 투명 영역
@@ -570,12 +649,15 @@ public class CharacterCustomizer : MonoBehaviour
         var ar = (RectTransform)area.transform;
         ar.anchorMin = Vector2.zero;
         ar.anchorMax = Vector2.one;
-        ar.offsetMin = new Vector2(0f, PanelHeight);
-        ar.offsetMax = new Vector2(0f, -40f);
+        ar.offsetMin = new Vector2(0f, PanelHeight - 40f);
+        ar.offsetMax = new Vector2(0f, -150f);   // 위 제목 줄 아래
 
-        // 캐릭터 뒤 햇살 같은 흰 원 (바탕이 비어 보이지 않게)
-        Image halo = Child(area.transform, "Halo", new Color(1f, 1f, 1f, 0.7f), HudIcons.Circle);
-        Place(halo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(620f, 620f));
+        // 뒤 흰 원 (무대 조명) + 발밑 둥근 그림자 (떠 보이지 않게)
+        Image halo = Child(area.transform, "Halo", KucaTheme.Card, HudIcons.Circle);
+        Place(halo.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(640f, 640f));
+        Image floor = Child(area.transform, "Floor", new Color(0f, 0f, 0f, 0.16f), HudIcons.SoftDisk);
+        Place(floor.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(460f, 90f));
+        floor.rectTransform.anchoredPosition = new Vector2(0f, 120f);
 
         var img = new GameObject("Preview", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
         img.transform.SetParent(area.transform, false);
@@ -586,93 +668,14 @@ public class CharacterCustomizer : MonoBehaviour
         fitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
         fitter.aspectRatio = 1f;
 
-        Text hint = CreateText(area.transform, "좌우로 드래그해서 돌려 보기", KucaTheme.Label, TextAnchor.LowerCenter);
-        hint.color = KucaTheme.InkMuted;
-        var hr = hint.rectTransform;
-        hr.anchorMin = new Vector2(0f, 0f);
-        hr.anchorMax = new Vector2(1f, 0f);
-        hr.pivot = new Vector2(0.5f, 0f);
-        hr.sizeDelta = new Vector2(0f, 60f);
-        hr.anchoredPosition = new Vector2(0f, 10f);
-    }
-
-    Text CreateRow(Transform parent, string label, UnityEngine.Events.UnityAction prev, UnityEngine.Events.UnityAction next, float height)
-    {
-        var row = new GameObject(label, typeof(RectTransform));
-        row.transform.SetParent(parent, false);
-        SetHeight(row, height);
-        var h = row.AddComponent<HorizontalLayoutGroup>();
-        h.spacing = KucaTheme.Space2;
-        h.childControlWidth = h.childControlHeight = true;
-        h.childForceExpandWidth = false;
-        h.childForceExpandHeight = true;
-
-        Text l = CreateText(row.transform, label, KucaTheme.Body, TextAnchor.MiddleLeft);
-        l.color = KucaTheme.Ink;
-        SetWidth(l.gameObject, 180f, 0f);
-        SetWidth(Arrow(row.transform, "<", prev), 110f, 0f);
-        Text value = CreateText(row.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter);
-        value.color = KucaTheme.Ink;
-        value.fontStyle = FontStyle.Bold;
-        SetWidth(value.gameObject, 0f, 1f);
-        SetWidth(Arrow(row.transform, ">", next), 110f, 0f);
-        return value;
-    }
-
-    GameObject Arrow(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
-    {
-        GameObject b = CreateButton(parent, label, onClick, KucaTheme.PrimarySoft, KucaTheme.Heading);
-        b.GetComponentInChildren<Text>().color = KucaTheme.PrimaryDeep;
-        Pill(b.GetComponent<Image>());
-        return b;
-    }
-
-    GameObject CreateButton(Transform parent, string label, UnityEngine.Events.UnityAction onClick, Color color, int fontSize)
-    {
-        var go = new GameObject(label, typeof(RectTransform), typeof(Image), typeof(Button));
-        go.transform.SetParent(parent, false);
-        go.GetComponent<Image>().color = color;
-        go.GetComponent<Button>().onClick.AddListener(onClick);
-        Text t = CreateText(go.transform, label, fontSize, TextAnchor.MiddleCenter);
-        var rt = t.rectTransform;
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.offsetMin = rt.offsetMax = Vector2.zero;
-        return go;
-    }
-
-    Text CreateText(Transform parent, string text, int size, TextAnchor anchor)
-    {
-        var go = new GameObject("Text", typeof(RectTransform), typeof(Text));
-        go.transform.SetParent(parent, false);
-        var t = go.GetComponent<Text>();
-        t.font = font;
-        t.fontSize = size;
-        t.alignment = anchor;
-        t.color = Color.white;
-        t.text = text;
-        t.raycastTarget = false;
-        return t;
-    }
-
-    static void SetHeight(GameObject go, float height)
-    {
-        if (!go.TryGetComponent(out LayoutElement le))
-            le = go.AddComponent<LayoutElement>();
-        le.preferredHeight = height;
-        le.minHeight = height;
-        // 높이를 정한 칸은 늘어나지 않게 (안에 가로 줄 배치가 있으면 기본으로 남는 공간을 나눠 가져
-        // 탭 · 랜덤 · 완료 버튼이 내용 칸만큼 커지던 것)
-        le.flexibleHeight = 0f;
-    }
-
-    static void SetWidth(GameObject go, float width, float flexible)
-    {
-        if (!go.TryGetComponent(out LayoutElement le))
-            le = go.AddComponent<LayoutElement>();
-        le.preferredWidth = width;
-        le.minWidth = width;
-        le.flexibleWidth = flexible;
+        // 안내: 시트 바로 위 흰 칩 (캐릭터 몸 위에 겹쳐도 읽힌다)
+        Image chip = Child(area.transform, "HintChip", KucaTheme.Card, HudIcons.Pill);
+        chip.type = Image.Type.Sliced;
+        Place(chip.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(560f, 80f));
+        chip.rectTransform.pivot = new Vector2(0.5f, 0f);
+        chip.rectTransform.anchoredPosition = new Vector2(0f, 24f);
+        Text hint = UIKit.Text(chip.transform, "좌우로 드래그해서 돌려 보기", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
+        UIKit.Stretch(hint.rectTransform);
     }
 
     static void EnsureEventSystem()

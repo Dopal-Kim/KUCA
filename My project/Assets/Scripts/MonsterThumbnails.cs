@@ -74,7 +74,7 @@ public static class MonsterThumbnails
         const float fov = 26f;
         float radius = b.extents.magnitude;
         float dist = radius / Mathf.Sin(fov * 0.5f * Mathf.Deg2Rad) * 0.9f;
-        var camGo = new GameObject("ThumbCamera", typeof(Camera));
+        var camGo = new GameObject("ThumbCamera", typeof(Camera), typeof(NeutralAmbient));
         camGo.transform.SetParent(root.transform, false);
         camGo.transform.localPosition = new Vector3(0f, radius * 0.25f, -dist);
         camGo.transform.LookAt(root.transform.position);

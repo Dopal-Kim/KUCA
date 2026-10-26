@@ -3,8 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 꾸미기 (A-3 최소 버전): 도감 › 경희몬 상세 › 꾸미기. 머리띠·목걸이·선글라스·귀걸이를 부위마다 하나씩 고른다.
-/// 고른 것은 그 경희몬(GameProgress.Caught.accessories)에 저장되고, 파트너면 지도·프로필의 피규어에 바로 씌워진다.
+/// 꾸미기 (A-3 최소 버전): 도감 › 경희펫 상세 › 꾸미기. 머리띠·목걸이·선글라스·귀걸이를 부위마다 하나씩 고른다.
+/// 고른 것은 그 경희펫(GameProgress.Caught.accessories)에 저장되고, 파트너면 지도·프로필의 피규어에 바로 씌워진다.
 /// 지금은 12종 모두 처음부터 쓸 수 있다 (퀘스트 보상으로 얻는 흐름은 다음 단계).
 /// </summary>
 public partial class KhuMenus
@@ -19,14 +19,15 @@ public partial class KhuMenus
 
     void BuildAccessoryPopup()
     {
-        accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(900f, 1180f), out RectTransform card);
-        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleCenter, KucaTheme.Ink, bold: true);
-        TopBox(accessoryTitle.rectTransform, 40f, 90f);
+        accessoryPopup = Overlay(canvasRoot, "AccessoryPopup", new Vector2(940f, 1320f), out RectTransform card);
+        accessoryTitle = T(card, "꾸미기", KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink, bold: true);
+        TopBox(accessoryTitle.rectTransform, 48f, 96f);
+        accessoryTitle.rectTransform.offsetMin = new Vector2(56f, accessoryTitle.rectTransform.offsetMin.y);
 
         float top = 160f;
         foreach (CreatureAccessories.Slot slot in System.Enum.GetValues(typeof(CreatureAccessories.Slot)))
         {
-            Text label = T(card, CreatureAccessories.SlotName(slot), 38, TextAnchor.MiddleLeft, Gray, bold: true);
+            Text label = T(card, CreatureAccessories.SlotName(slot), KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted, bold: true);
             TopBox(label.rectTransform, top, 60f);
             label.rectTransform.offsetMin = new Vector2(60f, label.rectTransform.offsetMin.y);
 
@@ -39,6 +40,7 @@ public partial class KhuMenus
                 string id = acc?.id;
                 CreatureAccessories.Slot s = slot;
                 Button b = PillButton(card, acc == null ? "없음" : acc.shortName, KucaTheme.PrimarySoft, KucaTheme.PrimaryDeep, () => ChooseAccessory(s, id));
+                b.GetComponentInChildren<Text>(true).fontSize = KucaTheme.Label;
                 var rt = (RectTransform)b.transform;
                 rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
                 rt.pivot = new Vector2(0f, 1f);
@@ -50,12 +52,12 @@ public partial class KhuMenus
             top += 195f;
         }
 
-        accessoryNote = T(card, "", 30, TextAnchor.MiddleCenter, Gray);
+        accessoryNote = T(card, "", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkMuted);
         TopBox(accessoryNote.rectTransform, top + 10f, 60f);
 
-        Button close = PillButton(card, "완료", Teal, Color.white, () => SetActive(accessoryPopup, false));
-        Place((RectTransform)close.transform, new Vector2(0.5f, 0f), new Vector2(0f, 60f));
-        ((RectTransform)close.transform).sizeDelta = new Vector2(360f, 110f);
+        Button close = UIKit.PrimaryButton(card, "완료", () => SetActive(accessoryPopup, false));
+        Dock((RectTransform)close.transform, 48f, KucaTheme.ButtonHeight);
+        BackButton.Attach(accessoryPopup, () => SetActive(accessoryPopup, false));
     }
 
     void OpenAccessories(GameProgress.Caught c)
@@ -95,14 +97,14 @@ public partial class KhuMenus
             string worn = c.accessories.Find(a => CreatureAccessories.Get(a)?.slot == pair.Key);
             int need = CreatureAccessories.UnlockStage(pair.Key);
             if (stage < need && locked == null)
-                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 진화하면 열려요";
+                locked = $"{CreatureAccessories.SlotName(pair.Key)}는 {need}단계로 자라면 열려요";
             foreach ((string id, Button b) in pair.Value)
             {
                 bool on = id == worn;
                 // 이 동물에 맞는 모델이 없거나 (예: 개구리 귀걸이) 아직 진화가 덜 됐으면 고를 수 없다 ("없음"은 늘 가능)
                 bool available = id == null || (stage >= need && CreatureAccessories.TryGetMesh(c.speciesId, id, out _));
                 b.interactable = available;
-                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(), on);   // 켜짐 = 계절 강조색
+                KucaTheme.PaintToggle(b.GetComponent<Image>(), b.GetComponentInChildren<Text>(true), on);   // 켜짐 = 계절 강조색
             }
         }
         accessoryNote.text = locked ?? (c.uid == progress.partnerUid

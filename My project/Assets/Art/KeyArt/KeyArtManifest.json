@@ -2,7 +2,7 @@
  "styles": [
   {
    "id": "relation-8269760",
-   "style": "Brick"
+   "style": "Modern"
   },
   {
    "id": "way-1055000246",
@@ -566,15 +566,23 @@
   },
   {
    "id": "way-474085537",
-   "style": "Glass"
+   "style": "Granite"
   },
   {
    "id": "way-474085538",
-   "style": "Glass"
+   "style": "Granite"
+  },
+  {
+   "id": "way-474085539",
+   "style": "Stone"
   },
   {
    "id": "way-474085540",
-   "style": "Modern"
+   "style": "Stone"
+  },
+  {
+   "id": "way-474085542",
+   "style": "Stone"
   },
   {
    "id": "way-474086849",
@@ -717,8 +725,12 @@
    "style": "Outside"
   },
   {
+   "id": "way-474521122",
+   "style": "Glass"
+  },
+  {
    "id": "way-474521123",
-   "style": "Classical"
+   "style": "Brick"
   },
   {
    "id": "way-474521125",
@@ -914,7 +926,7 @@
   },
   {
    "id": "way-585696506",
-   "style": "Classical"
+   "style": "Brick"
   },
   {
    "id": "way-713435485",
@@ -2583,6 +2595,10 @@
    "scale": 0.75
   },
   {
+   "id": "way-1385686358",
+   "scale": 0.33
+  },
+  {
    "id": "way-1481756494",
    "scale": 0.75
   },
@@ -2628,7 +2644,7 @@
   },
   {
    "id": "way-455725718",
-   "scale": 1.32
+   "scale": 1.98
   },
   {
    "id": "way-455726113",
@@ -2712,15 +2728,15 @@
   },
   {
    "id": "way-474085536",
-   "scale": 0.7333
+   "scale": 1.2833
   },
   {
    "id": "way-474085537",
-   "scale": 2.64
+   "scale": 2.97
   },
   {
    "id": "way-474085539",
-   "scale": 0.9167
+   "scale": 0.7333
   },
   {
    "id": "way-474085540",
@@ -2871,12 +2887,16 @@
    "scale": 0.75
   },
   {
+   "id": "way-474521122",
+   "scale": 0.3667
+  },
+  {
    "id": "way-474521123",
    "scale": 0.3667
   },
   {
    "id": "way-474521125",
-   "scale": 0.66
+   "scale": 0.99
   },
   {
    "id": "way-474531016",

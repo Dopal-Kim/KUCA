@@ -4,25 +4,23 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 실시간 산책 매칭 화면 (B-V3). 지도 오른쪽 위 산책메이트 버튼으로 연다.
-/// 흐름: 조건 (15/30/60분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
+/// 흐름: 조건 (30/60분 — 함께 걷기는 최소 30분 · 동성만/상관없음) → 대기 (남은 시간 · 취소) → 상대 제안 (닉네임 · 공통 취향, 수락/거절)
 ///      → 상대 수락 기다림 → 만남 스팟 → 인상착의 → 스몰토크 → 산책 시작 → 산책 중 (끝내기).
 /// 어느 단계든 신고 · 차단 · 취소를 할 수 있고, 만나기로 한 뒤 10분 안에 시작하지 않으면 노쇼로 취소된다 (서버 판정).
 /// 화면을 닫아도 매칭은 계속되고 (상태를 계속 물어봄), 상대가 나타나면 화면이 다시 열린다.
 /// 서버 호출은 IMatchService: 서버에 API 가 없으면 기기 안 가상 상대 (HttpMatchService → MockMatchService).
+/// v4 (docs/디자인_v4.md): 당근 "같이 해요" + 토스 단계형 — 단계마다 큰 질문 제목 · 칩 선택 · 맨 위 안전 카드, 아래 고정 버튼.
 /// </summary>
 public class MatchScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
-    static readonly Color Warm = new Color(0.96f, 0.52f, 0.16f);
-    static readonly Color ChipOff = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color Danger = new Color(0.86f, 0.25f, 0.25f);
-    static readonly Color Paper = new Color(0.98f, 0.98f, 1f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
+    static readonly Color Danger = KucaTheme.Crimson;
 
     static readonly Dictionary<string, string> TasteNames = new Dictionary<string, string>
     {
-        ["photo"] = "사진 명소", ["quiet"] = "조용한 곳", ["food"] = "맛집·카페", ["unvisited"] = "안 가 본 곳",
+        ["photo"] = "사진 명소", ["quiet"] = "조용한 곳", ["food"] = "맛집·카페", ["unvisited"] = "처음 가는 곳",
         ["partner"] = "파트너와 걷기", ["exercise"] = "운동",
     };
 
@@ -170,7 +168,7 @@ public class MatchScreen : MonoBehaviour
                 ShowPage(waitPage);
                 if (waitPartner.texture == null)
                 {
-                    // 기다리는 동안 내 파트너 경희몬이 통통 뛴다
+                    // 기다리는 동안 내 파트너 경희펫이 통통 뛴다
                     var collect = FindAnyObjectByType<CollectController>();
                     GameProgress.Caught partner = collect != null && collect.Progress != null ? collect.Progress.Partner : null;
                     try { waitPartner.texture = partner != null ? MonsterThumbnails.Get(partner.speciesId) : null; }
@@ -247,17 +245,21 @@ public class MatchScreen : MonoBehaviour
 
     void RefreshChips()
     {
-        SetChip(minuteChips[0], minutes == 15);
-        SetChip(minuteChips[1], minutes == 30);
-        SetChip(minuteChips[2], minutes == 60);
+        SetChip(minuteChips[0], minutes == 30);
+        SetChip(minuteChips[1], minutes == 60);
         SetChip(genderChips[0], sameGender);
         SetChip(genderChips[1], !sameGender);
     }
 
+    /// <summary>v4 칩 (UIKit.Chip) 켜짐 / 꺼짐: 초록 + 흰 굵은 글자 / 흰 바탕 + 회색 테 + 진한 글자</summary>
     static void SetChip(Image chip, bool on)
     {
-        chip.color = on ? Accent : ChipOff;
-        chip.GetComponentInChildren<Text>().color = on ? Color.white : Ink;
+        chip.color = on ? Accent : KucaTheme.Card;
+        Text t = chip.GetComponentInChildren<Text>();
+        t.color = on ? Color.white : Ink;
+        t.font = on && UIKit.BoldFont != null ? UIKit.BoldFont : UIKit.Font;
+        Outline o = chip.GetComponent<Outline>();
+        if (o != null) o.enabled = !on;
     }
 
     void Join()
@@ -291,7 +293,7 @@ public class MatchScreen : MonoBehaviour
         if (spot != null && !string.IsNullOrEmpty(spot.species))
         {
             try { tex = MonsterThumbnails.Get(spot.species); }
-            catch (System.Exception e) { Debug.LogWarning("[Match] 경희몬 그림 실패: " + e.Message); }
+            catch (System.Exception e) { Debug.LogWarning("[Match] 경희펫 그림 실패: " + e.Message); }
         }
         meetCreature.texture = tex;
         meetCreature.enabled = tex != null;
@@ -406,7 +408,7 @@ public class MatchScreen : MonoBehaviour
     /// <summary>지금 위치에서 가장 가까운 경희스팟 (대기열에 보내는 건물 ID)</summary>
     MeetSpot NearestSpot() => Nearest(false);
 
-    /// <summary>가장 가까운 만남 스팟과 그 앞의 경희몬 (A-V3 MeetSpotCatalog, 가상 상대가 쓴다)</summary>
+    /// <summary>가장 가까운 만남 스팟과 그 앞의 경희펫 (A-V3 MeetSpotCatalog, 가상 상대가 쓴다)</summary>
     MeetSpot NearestMeetSpot() => Nearest(true);
 
     MeetSpot Nearest(bool meetSpotsOnly)
@@ -470,27 +472,19 @@ public class MatchScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "MatchCanvas", 50);
-        root = UIKit.Image(canvas.transform, "Match", Paper, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)root.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = UIKit.Rect(root.transform, "Safe");
-        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
-        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
-        safe.offsetMin = safe.offsetMax = Vector2.zero;
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "Match", null, Hide, scroll: false);
+        root = page.root;
 
-        // 위: 닫기 · 제목 · 신고
-        Button close = IconButton(safe, HudIcons.Close, Hide);
-        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(30f, -30f));
-        Text title = UIKit.Text(safe, "산책메이트", 44, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
-        Box(title.rectTransform, 150f, 40f, 150f, 70f);
-        reportButton = UIKit.Button(safe, "신고 · 차단", OpenReport, new Color(0f, 0f, 0f, 0f), 30);
+        // 위 오른쪽: 신고 · 차단 (상대가 있을 때만 보임)
+        reportButton = UIKit.Button(page.header, "신고 · 차단", OpenReport, new Color(1f, 1f, 1f, 0f), KucaTheme.Label);
         reportButton.GetComponentInChildren<Text>().color = Danger;
-        Place((RectTransform)reportButton.transform, new Vector2(1f, 1f), new Vector2(-30f, -40f));
-        ((RectTransform)reportButton.transform).sizeDelta = new Vector2(200f, 70f);
+        RectTransform rr = (RectTransform)reportButton.transform;
+        rr.anchorMin = rr.anchorMax = rr.pivot = Vector2.one;
+        rr.anchoredPosition = new Vector2(-KucaTheme.Gutter + 20f, -12f);
+        rr.sizeDelta = new Vector2(280f, KucaTheme.TouchMin);
 
-        RectTransform body = UIKit.Rect(safe, "Body");
-        UIKit.StretchBetween(body, 0f, 140f);
+        // 단계 화면들은 Content 영역 전체를 하나씩 차지한다 (Step 이 레이아웃에서 빼고 꽉 채움)
+        RectTransform body = page.content;
 
         BuildCondition(body);
         BuildWait(body);
@@ -502,202 +496,217 @@ public class MatchScreen : MonoBehaviour
         BuildWalk(body);
         BuildEnd(body);
         BuildReport(root.transform);
-        root.SetActive(false);
     }
 
-    GameObject Page(RectTransform body, string name)
+    /// <summary>단계 하나: 위는 스크롤 (큰 질문 제목 + 내용), 아래는 고정 버튼 칸 (buttons 개). content 에 카드 · 칩 줄을 쌓는다</summary>
+    GameObject Step(RectTransform body, string name, string title, int buttons, out RectTransform content, out RectTransform bottom, out Text heading)
     {
         RectTransform p = UIKit.Rect(body, name);
+        p.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
         UIKit.Stretch(p);
+        float bottomH = buttons * KucaTheme.ButtonHeight + (buttons - 1) * KucaTheme.Space2 + 2 * KucaTheme.Space4;
+        bottom = UIKit.Rect(p, "Bottom");
+        bottom.anchorMin = Vector2.zero;
+        bottom.anchorMax = new Vector2(1f, 0f);
+        bottom.pivot = new Vector2(0.5f, 0f);
+        bottom.offsetMin = Vector2.zero;
+        bottom.offsetMax = new Vector2(0f, bottomH);
+        int g = (int)KucaTheme.Gutter, s4 = (int)KucaTheme.Space4;
+        UIKit.Vertical(bottom, KucaTheme.Space2, new RectOffset(g, g, s4, s4));
+        RectTransform area = UIKit.Rect(p, "Area");
+        UIKit.StretchBetween(area, bottomH, 0f);
+        content = UIKit.ScrollList(area, KucaTheme.Space4, new RectOffset(g, g, 0, (int)KucaTheme.Space8));
+        heading = UIKit.Bold(UIKit.Text(content, title, KucaTheme.Title, TextAnchor.UpperLeft, Ink));
         p.gameObject.SetActive(false);
         return p.gameObject;
     }
 
+    GameObject Step(RectTransform body, string name, string title, int buttons, out RectTransform content, out RectTransform bottom) =>
+        Step(body, name, title, buttons, out content, out bottom, out _);
+
     void BuildCondition(RectTransform body)
     {
-        conditionPage = Page(body, "Condition");
-        Transform p = conditionPage.transform;
-        Heading(p, "같이 걸을 사람을 찾아요", 20f);
-        Note(p, "공강 시간에 근처에서 함께 걸을 경희대 학생을 이어 드려요.", 110f);
-        Label(p, "얼마나 걸을까요?", 220f);
+        conditionPage = Step(body, "Condition", "같이 걸을 사람을\n찾아 드릴게요", 1, out RectTransform c, out RectTransform b);
+        // 누르면 무슨 일이 생기는지 · AI 가 맡는 일 (REVIEW_v22_day P0 · P1). 짝은 규칙(거리 · 취향)으로 찾고 AI 는 대화 주제만 — 과장하지 않기
+        Note(c, "공강에 근처 경희대 학생과 함께 걸어요. 둘 다 수락하면 만나고, 만나면 AI 가 첫 대화 주제를 골라 줘요.");   // 4줄은 길었음 (REVIEW_v26)
+        SafetyCard(c);
+        Question(c, "얼마나 걸을까요?");
+        RectTransform minutesRow = ChipRow(c);
         minuteChips = new[]
         {
-            ChipAt(p, "15분", () => { minutes = 15; RefreshChips(); }, 60f, 300f, 196f),
-            ChipAt(p, "30분", () => { minutes = 30; RefreshChips(); }, 272f, 300f, 196f),
-            ChipAt(p, "1시간", () => { minutes = 60; RefreshChips(); }, 484f, 300f, 196f),
+            Chip(minutesRow, "30분", () => { minutes = 30; RefreshChips(); }),
+            Chip(minutesRow, "1시간", () => { minutes = 60; RefreshChips(); }),
         };
-        Label(p, "같이 걸을 상대는요?", 440f);
+        Question(c, "같이 걸을 상대는요?");
+        RectTransform genderRow = ChipRow(c);
         genderChips = new[]
         {
-            ChipAt(p, "동성만", () => { sameGender = true; RefreshChips(); }, 60f, 520f, 300f),
-            ChipAt(p, "상관없어요", () => { sameGender = false; RefreshChips(); }, 380f, 520f, 300f),
+            Chip(genderRow, "동성만", () => { sameGender = true; RefreshChips(); }),
+            Chip(genderRow, "상관없어요", () => { sameGender = false; RefreshChips(); }),
         };
-        HowItWorks(p, 650f);
-        serviceLabel = Note(p, "", 1330f);
-        PrimaryAtBottom(p, "산책메이트 찾기", Accent, Join);
+        serviceLabel = Note(c, "");
+        UIKit.PrimaryButton(b, "산책메이트 찾기", Join);
+    }
+
+    /// <summary>안전 카드 (당근 · 토스: 낯선 사람과 만나기 전 약속을 먼저 보여 준다)</summary>
+    static void SafetyCard(RectTransform parent)
+    {
+        RectTransform card = UIKit.CardBox(parent, "Safety", KucaTheme.Space2);
+        UIKit.SectionTitle(card, "안심하고 걸어요");
+        foreach (string line in new[]
+        {
+            "누구나 오가는 공개 스팟에서만 만나요",
+            "위치는 건물 단위로만 써요",
+            "성별은 상대에게 보이지 않아요",
+            "10분 안에 못 만나면 자동으로 끝나요",
+            "매칭이 끝나면 기록을 지워요",
+            "불편하면 언제든 신고 · 차단할 수 있어요",
+        })
+        {
+            Text t = UIKit.Text(card, "✓  " + line, KucaTheme.Body, TextAnchor.MiddleLeft, InkQuiet);
+            UIKit.Size(t, 64f);
+        }
     }
 
     void BuildWait(RectTransform body)
     {
-        waitPage = Page(body, "Wait");
-        Transform p = waitPage.transform;
-        waitPartner = Raw(p, 360f, 320f);
+        waitPage = Step(body, "Wait", "산책메이트를\n찾는 중이에요", 1, out RectTransform c, out RectTransform b);
+        waitPartner = Picture(c, 360f);
         waitPartner.gameObject.AddComponent<Bob>();
-        Heading(p, "산책메이트를 찾는 중…", 560f, TextAnchor.MiddleCenter);
-        waitTime = Note(p, "", 650f, TextAnchor.MiddleCenter);
-        Note(p, "화면을 닫아도 계속 찾아요. 찾으면 알려 드릴게요.", 710f, TextAnchor.MiddleCenter);
-        SecondaryAtBottom(p, "그만 찾기", CancelMatch);
+        waitTime = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Heading, TextAnchor.MiddleCenter, Accent));
+        UIKit.Size(waitTime, 80f);
+        Note(c, "화면을 닫아도 계속 찾아요. 찾으면 알려 드릴게요.").alignment = TextAnchor.UpperCenter;
+        UIKit.SecondaryButton(b, "그만 찾기", CancelMatch);
     }
 
     void BuildPropose(RectTransform body)
     {
-        proposePage = Page(body, "Propose");
-        Transform p = proposePage.transform;
-        Note(p, "이 사람과 같이 걸을까요?", 40f, TextAnchor.MiddleCenter);
-        Image avatar = UIKit.Image(p, "Avatar", new Color(0.85f, 0.90f, 1f));
+        proposePage = Step(body, "Propose", "이 사람과\n같이 걸을까요?", 2, out RectTransform c, out RectTransform b);
+        RectTransform card = UIKit.CardBox(c, "Partner", KucaTheme.Space2);
+        RectTransform holder = UIKit.Rect(card, "AvatarHolder");
+        UIKit.Size(holder, 220f);
+        Image avatar = UIKit.Image(holder, "Avatar", KucaTheme.PrimarySoft);
         avatar.sprite = HudIcons.Circle;
-        Place(avatar.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -240f));
-        avatar.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-        avatar.rectTransform.sizeDelta = new Vector2(220f, 220f);
+        Place(avatar.rectTransform, new Vector2(0f, 0.5f), Vector2.zero);
+        avatar.rectTransform.pivot = new Vector2(0f, 0.5f);
+        avatar.rectTransform.sizeDelta = new Vector2(200f, 200f);
         Image person = UIKit.Image(avatar.transform, "Icon", Accent);
         person.sprite = HudIcons.Person;
-        person.rectTransform.sizeDelta = new Vector2(120f, 120f);
-        proposeName = Heading(p, "", 400f, TextAnchor.MiddleCenter);
-        proposeTastes = Note(p, "", 490f, TextAnchor.MiddleCenter);
-        proposeTastes.rectTransform.sizeDelta = new Vector2(proposeTastes.rectTransform.sizeDelta.x, 100f);
-        proposeTime = Note(p, "", 610f, TextAnchor.MiddleCenter);
-        Button yes = Pill(p, "같이 걸을래요", Accent, Color.white, () => Respond(true));
-        BottomBox((RectTransform)yes.transform, 200f);
-        SecondaryAtBottom(p, "다음에 할게요", () => Respond(false));
+        person.rectTransform.sizeDelta = new Vector2(110f, 110f);
+        proposeName = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Heading, TextAnchor.MiddleLeft, Ink));
+        UIKit.Size(proposeName, 72f);
+        proposeTastes = UIKit.Text(card, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        proposeTime = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Label, TextAnchor.MiddleLeft, Accent));
+        UIKit.Size(proposeTime, 56f);
+        UIKit.PrimaryButton(b, "같이 걸을래요", () => Respond(true));
+        UIKit.SecondaryButton(b, "다음에 할게요", () => Respond(false));
     }
 
     void BuildAcceptWait(RectTransform body)
     {
-        acceptWaitPage = Page(body, "AcceptWait");
-        Transform p = acceptWaitPage.transform;
-        Heading(p, "상대의 수락을 기다리는 중…", 400f, TextAnchor.MiddleCenter);
-        Note(p, "상대도 수락하면 만날 곳을 알려 드려요.", 490f, TextAnchor.MiddleCenter);
-        SecondaryAtBottom(p, "매칭 취소", CancelMatch);
+        acceptWaitPage = Step(body, "AcceptWait", "상대의 수락을\n기다리는 중이에요", 1, out RectTransform c, out RectTransform b);
+        Note(c, "상대도 수락하면 만날 곳을 알려 드려요.");
+        UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
     }
 
     void BuildMeet(RectTransform body)
     {
-        meetPage = Page(body, "Meet");
-        Transform p = meetPage.transform;
-        Note(p, "여기서 만나요", 30f, TextAnchor.MiddleCenter);
-        meetCreature = Raw(p, 300f, 340f);
+        meetPage = Step(body, "Meet", "여기서 만나요", 2, out RectTransform c, out RectTransform b);
+        RectTransform card = UIKit.CardBox(c, "Spot", KucaTheme.Space2);
+        meetCreature = Picture(card, 300f);
         meetCreature.gameObject.AddComponent<Bob>();
-        meetName = Heading(p, "", 490f, TextAnchor.MiddleCenter);
-        meetInfo = Note(p, "", 580f, TextAnchor.MiddleCenter);
-        meetNoShow = Note(p, "", 640f, TextAnchor.MiddleCenter);
-        meetNoShow.color = Warm;
-        Button next = Pill(p, "다음: 인상착의 알려 주기", Accent, Color.white, () => { ShowPage(lookPage); Render(); });
-        BottomBox((RectTransform)next.transform, 200f);
-        SecondaryAtBottom(p, "매칭 취소", CancelMatch);
+        meetName = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Heading, TextAnchor.MiddleLeft, Ink));
+        UIKit.Size(meetName, 72f);
+        meetInfo = UIKit.Text(card, "", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        meetNoShow = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, Danger);
+        UIKit.PrimaryButton(b, "다음: 인상착의 알려 주기", () => { ShowPage(lookPage); Render(); });
+        UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
     }
 
     void BuildLook(RectTransform body)
     {
-        lookPage = Page(body, "Look");
-        Transform p = lookPage.transform;
-        Heading(p, "서로 알아볼 수 있게", 20f);
-        Note(p, "오늘 옷차림을 짧게 알려 주세요. 매칭 상대에게만 보이고, 산책이 끝나면 지워요.", 110f);
-        lookInput = UIKit.Input(p, "예: 검은 후드, 흰 운동화", 36, false, 40);
-        Image ib = lookInput.GetComponent<Image>();
-        ib.color = ChipOff;
-        ib.sprite = HudIcons.Rounded;
-        ib.type = Image.Type.Sliced;
-        ib.pixelsPerUnitMultiplier = 0.8f;
-        lookInput.textComponent.color = Ink;
-        ((Text)lookInput.placeholder).color = InkQuiet;
-        Box((RectTransform)lookInput.transform, 60f, 220f, 280f, 110f);
-        Button send = Pill(p, "보내기", Ink, Color.white, SendLook);
-        RectTransform sr = (RectTransform)send.transform;
-        sr.anchorMin = sr.anchorMax = sr.pivot = new Vector2(1f, 1f);
-        sr.anchoredPosition = new Vector2(-60f, -220f);
-        sr.sizeDelta = new Vector2(200f, 110f);
-        lookMine = Note(p, "", 360f);
-        Label(p, "상대의 인상착의", 450f);
-        lookPartner = Heading(p, "", 520f);
-        lookPartner.fontSize = 40;
-        Button next = Pill(p, "다음: 대화 주제 보기", Accent, Color.white, () => { ShowPage(talkPage); ShowTopic(); });
-        BottomBox((RectTransform)next.transform, 200f);
-        SecondaryAtBottom(p, "매칭 취소", CancelMatch);
+        lookPage = Step(body, "Look", "서로 알아볼 수 있게", 2, out RectTransform c, out RectTransform b);
+        Note(c, "오늘 옷차림을 짧게 알려 주세요. 매칭 상대에게만 보이고, 산책이 끝나면 지워요.");
+        RectTransform row = UIKit.Rect(c, "LookRow");
+        UIKit.Size(row, KucaTheme.TouchMin);
+        var h = UIKit.Horizontal(row, KucaTheme.Space2);
+        h.childForceExpandWidth = false;
+        lookInput = UIKit.Input(row, "예: 검은 후드, 흰 운동화", KucaTheme.Body, false, 40);
+        lookInput.GetComponent<Image>().color = KucaTheme.Card;
+        UIKit.Size(lookInput, KucaTheme.TouchMin, -1f, 1f);
+        Button send = UIKit.Button(row, "보내기", SendLook, Ink, KucaTheme.Body);
+        UIKit.Size(send, KucaTheme.TouchMin, 220f);
+        lookMine = Note(c, "");
+        RectTransform card = UIKit.CardBox(c, "PartnerLook", KucaTheme.Space2);
+        UIKit.Text(card, "상대의 인상착의", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        lookPartner = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Heading, TextAnchor.UpperLeft, Ink));
+        UIKit.PrimaryButton(b, "다음: 대화 주제 보기", () => { ShowPage(talkPage); ShowTopic(); });
+        UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
     }
 
     void BuildTalk(RectTransform body)
     {
-        talkPage = Page(body, "Talk");
-        Transform p = talkPage.transform;
-        Note(p, "어색하면 이 이야기로 시작해 보세요", 30f, TextAnchor.MiddleCenter);
-        Image card = UIKit.Image(p, "Card", new Color(0.93f, 0.95f, 1f));
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
-        Box(card.rectTransform, 60f, 120f, 60f, 420f);
-        card.gameObject.AddComponent<Shadow>().effectColor = new Color(0f, 0f, 0f, 0.08f);
-        talkTopic = UIKit.Text(card.transform, "", 50, TextAnchor.MiddleCenter, Ink);
-        talkTopic.fontStyle = FontStyle.Bold;
-        UIKit.Stretch(talkTopic.rectTransform, 60f, 40f);
-        Button more = Pill(p, "다음 주제", ChipOff, Ink, NextTopic);
-        Box((RectTransform)more.transform, 220f, 580f, 220f, 100f);
-        Button start = Pill(p, "만났어요! 산책 시작", Warm, Color.white, StartWalk);
-        BottomBox((RectTransform)start.transform, 200f);
-        SecondaryAtBottom(p, "매칭 취소", CancelMatch);
+        talkPage = Step(body, "Talk", "어색하면 이 이야기로\n시작해 보세요", 2, out RectTransform c, out RectTransform b);
+        RectTransform card = UIKit.CardBox(c, "Topic", KucaTheme.Space2);
+        talkTopic = UIKit.Bold(UIKit.Text(card, "", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
+        UIKit.Size(talkTopic, 360f);
+        UIKit.SecondaryButton(c, "다음 주제", NextTopic);
+        UIKit.PrimaryButton(b, "만났어요! 산책 시작", StartWalk);
+        UIKit.SecondaryButton(b, "매칭 취소", CancelMatch);
     }
 
     void BuildWalk(RectTransform body)
     {
-        walkPage = Page(body, "Walk");
-        Transform p = walkPage.transform;
-        Image ic = UIKit.Image(p, "Icon", Accent);
+        walkPage = Step(body, "Walk", "", 2, out RectTransform c, out RectTransform b, out walkTitle);
+        RectTransform holder = UIKit.Rect(c, "IconHolder");
+        UIKit.Size(holder, 240f);
+        Image ic = UIKit.Image(holder, "Icon", Accent);
         ic.sprite = HudIcons.Footprints;
-        Place(ic.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -300f));
-        ic.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        Place(ic.rectTransform, new Vector2(0f, 0.5f), Vector2.zero);
+        ic.rectTransform.pivot = new Vector2(0f, 0.5f);
         ic.rectTransform.sizeDelta = new Vector2(200f, 200f);
-        walkTitle = Heading(p, "", 460f, TextAnchor.MiddleCenter);
-        Note(p, "즐겁게 걸어요! 불편한 일이 생기면 오른쪽 위 신고 · 차단을 눌러 주세요.", 550f, TextAnchor.MiddleCenter);
-        Button end = Pill(p, "산책 끝내기", Accent, Color.white, EndWalk);
-        BottomBox((RectTransform)end.transform, 200f);
-        SecondaryAtBottom(p, "지도로 돌아가기", Hide);
+        Note(c, "즐겁게 걸어요! 불편한 일이 생기면 오른쪽 위 신고 · 차단을 눌러 주세요.");
+        UIKit.PrimaryButton(b, "산책 끝내기", EndWalk);
+        UIKit.SecondaryButton(b, "지도로 돌아가기", Hide);
     }
 
     void BuildEnd(RectTransform body)
     {
-        endPage = Page(body, "End");
-        Transform p = endPage.transform;
-        endTitle = Heading(p, "", 400f, TextAnchor.MiddleCenter);
-        endMessage = Note(p, "", 490f, TextAnchor.MiddleCenter);
-        Button again = Pill(p, "다시 찾기", Accent, Color.white, Again);
-        BottomBox((RectTransform)again.transform, 200f);
-        SecondaryAtBottom(p, "닫기", () => { Again(); Show(false); });
+        endPage = Step(body, "End", "", 2, out RectTransform c, out RectTransform b, out endTitle);
+        endMessage = Note(c, "");
+        UIKit.PrimaryButton(b, "다시 찾기", Again);
+        UIKit.SecondaryButton(b, "닫기", () => { Again(); Show(false); });
     }
 
+    /// <summary>신고: 어둡게 덮고 아래에서 올라온 흰 시트 (사유 칩 2×2 · 차단 칩 · 빨간 신고 버튼)</summary>
     void BuildReport(Transform parent)
     {
-        Image dim = UIKit.Image(parent, "Report", new Color(0f, 0f, 0f, 0.45f), raycast: true);
+        Image dim = UIKit.Image(parent, "Report", KucaTheme.Scrim, raycast: true);
         UIKit.Stretch(dim.rectTransform);
         reportPanel = dim.gameObject;
-        Image card = UIKit.Image(dim.transform, "Card", Color.white, raycast: true);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
-        Place(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
-        card.rectTransform.sizeDelta = new Vector2(900f, 1000f);
-        Transform c = card.transform;
-        Heading(c, "신고하기", 50f);
-        Note(c, "무슨 일이 있었나요? 신고하면 이번 매칭은 끝나요.", 140f);
+        RectTransform sheet = UIKit.CardBox(dim.transform, "Sheet", KucaTheme.Space3);
+        sheet.GetComponent<Image>().raycastTarget = true;
+        sheet.anchorMin = Vector2.zero;
+        sheet.anchorMax = new Vector2(1f, 0f);
+        sheet.pivot = new Vector2(0.5f, 0f);
+        sheet.offsetMin = sheet.offsetMax = Vector2.zero;
+        sheet.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        UIKit.Bold(UIKit.Text(sheet, "신고하기", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
+        Note(sheet, "무슨 일이 있었나요? 신고하면 이번 매칭은 끝나요.");
         reasonChips = new Image[Reasons.Length];
+        RectTransform row = null;
         for (int i = 0; i < Reasons.Length; i++)
         {
+            if (i % 2 == 0) row = ChipRow(sheet);
             string id = Reasons[i].id;
-            reasonChips[i] = ChipAt(c, Reasons[i].label, () => { reportReason = id; RefreshReport(); }, 60f + (i % 2) * 400f, 230f + (i / 2) * 120f, 380f);
+            reasonChips[i] = Chip(row, Reasons[i].label, () => { reportReason = id; RefreshReport(); });
         }
-        blockChip = ChipAt(c, "이 사람과 다시 매칭하지 않기 (차단)", () => { reportBlock = !reportBlock; RefreshReport(); }, 60f, 500f, 780f);
-        Button send = Pill(c, "신고하기", Danger, Color.white, SendReport);
-        BottomBox((RectTransform)send.transform, 170f);
-        Button cancel = Pill(c, "닫기", ChipOff, Ink, () => reportPanel.SetActive(false));
-        BottomBox((RectTransform)cancel.transform, 40f);
+        blockChip = Chip(ChipRow(sheet), "이 사람과 다시 매칭하지 않기 (차단)", () => { reportBlock = !reportBlock; RefreshReport(); });
+        UIKit.BigButton(sheet, "신고하기", SendReport, Danger, Color.white);
+        UIKit.SecondaryButton(sheet, "닫기", () => reportPanel.SetActive(false));
+        RectTransform safeGap = UIKit.Rect(sheet, "SafeGap");   // 아래 홈 표시줄과 겹치지 않게
+        UIKit.Size(safeGap, Screen.safeArea.yMin / Mathf.Max(1, Screen.height) * 1920f);
+        BackButton.Attach(reportPanel, () => reportPanel.SetActive(false));
         reportPanel.SetActive(false);
     }
 
@@ -705,161 +714,47 @@ public class MatchScreen : MonoBehaviour
     /// 처음 보는 학생과 만나는 기능이라, 찾기 전에 흐름과 안전장치를 먼저 보여 준다 (디자인 평가 10/25:
     /// 기획서의 안전 설계가 화면에서는 회색 두 줄뿐이었다)
     /// </summary>
-    static void HowItWorks(Transform parent, float top)
-    {
-        Image card = UIKit.Image(parent, "HowItWorks", ChipOff);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.6f;
-        Box(card.rectTransform, 48f, top, 48f, 650f);
-        Text head = UIKit.Text(card.transform, "이렇게 만나요", 34, TextAnchor.MiddleLeft, Ink);
-        head.fontStyle = FontStyle.Bold;
-        Box(head.rectTransform, 40f, 30f, 40f, 52f);
-        string[] steps =
-        {
-            "근처에서 같은 시간에 걷고 싶은 학생과 짝을 지어요",
-            "둘 다 수락하면, 누구나 오가는 만남 스팟에서 만나요",
-            "인상착의로 서로 알아보고, AI 대화 주제로 걷기 시작",
-        };
-        for (int i = 0; i < steps.Length; i++)
-        {
-            Image n = UIKit.Image(card.transform, "Step", Accent);
-            n.sprite = HudIcons.Circle;
-            Place(n.rectTransform, new Vector2(0f, 1f), new Vector2(66f, -128f - i * 88f));
-            n.rectTransform.pivot = new Vector2(0.5f, 0.5f);
-            n.rectTransform.sizeDelta = new Vector2(52f, 52f);
-            Text num = UIKit.Text(n.transform, (i + 1).ToString(), 28, TextAnchor.MiddleCenter, Color.white);
-            num.fontStyle = FontStyle.Bold;
-            UIKit.Stretch(num.rectTransform);
-            Text t = UIKit.Text(card.transform, steps[i], 30, TextAnchor.MiddleLeft, Ink);
-            Box(t.rectTransform, 112f, 100f + i * 88f, 30f, 56f);
-        }
-        Text safeHead = UIKit.Text(card.transform, "안심하고 걸어요", 30, TextAnchor.MiddleLeft, Ink);
-        safeHead.fontStyle = FontStyle.Bold;
-        Box(safeHead.rectTransform, 40f, 390f, 40f, 48f);
-        Text safe = UIKit.Text(card.transform,
-            "· 공개된 만남 스팟에서만 만나요 · 동성만 고를 수 있어요\n" +
-            "· 위치는 건물 단위로만 쓰고, 인상착의는 끝나면 지워요\n" +
-            "· 언제든 신고 · 차단, 10분 안에 못 만나면 자동으로 끝나요",
-            27, TextAnchor.UpperLeft, InkQuiet);
-        safe.lineSpacing = 1.25f;
-        Box(safe.rectTransform, 40f, 446f, 30f, 180f);
-    }
 
     // ---------- 작은 도우미 ----------
 
-    static Text Heading(Transform parent, string text, float top, TextAnchor anchor = TextAnchor.MiddleLeft)
+    static void Question(Transform parent, string text) =>
+        UIKit.Size(UIKit.Bold(UIKit.Text(parent, text, KucaTheme.Heading, TextAnchor.LowerLeft, Ink)), 96f);
+
+    static Text Note(Transform parent, string text) =>
+        UIKit.Text(parent, text, KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+
+    static RectTransform ChipRow(Transform parent)
     {
-        Text t = UIKit.Text(parent, text, 50, anchor, Ink);
-        t.fontStyle = FontStyle.Bold;
-        Box(t.rectTransform, 60f, top, 60f, 80f);
-        return t;
+        RectTransform row = UIKit.Rect(parent, "Chips");
+        UIKit.Size(row, 104f);
+        UIKit.Horizontal(row, KucaTheme.Space2);
+        return row;
     }
 
-    static Text Label(Transform parent, string text, float top)
+    static Image Chip(RectTransform row, string label, UnityEngine.Events.UnityAction onClick)
     {
-        Text t = UIKit.Text(parent, text, 36, TextAnchor.MiddleLeft, Ink);
-        t.fontStyle = FontStyle.Bold;
-        Box(t.rectTransform, 60f, top, 60f, 60f);
-        return t;
+        Button b = UIKit.Chip(row, label, false, onClick);
+        b.gameObject.AddComponent<PressScale>();
+        return b.GetComponent<Image>();
     }
 
-    static Text Note(Transform parent, string text, float top, TextAnchor anchor = TextAnchor.UpperLeft)
+    /// <summary>경희펫 그림 칸 (가로로 늘어나지 않게 정사각 그림을 왼쪽에)</summary>
+    static RawImage Picture(Transform parent, float size)
     {
-        Text t = UIKit.Text(parent, text, 30, anchor, InkQuiet);
-        Box(t.rectTransform, 60f, top, 60f, 70f);
-        return t;
-    }
-
-    static RawImage Raw(Transform parent, float centerY, float size)
-    {
+        RectTransform holder = UIKit.Rect(parent, "PictureHolder");
+        UIKit.Size(holder, size);
         var raw = new GameObject("Picture", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-        raw.transform.SetParent(parent, false);
+        raw.transform.SetParent(holder, false);
         raw.raycastTarget = false;
-        Place(raw.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -centerY));
-        raw.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+        Place(raw.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero);
         raw.rectTransform.sizeDelta = new Vector2(size, size);
         return raw;
-    }
-
-    static Image ChipAt(Transform parent, string label, UnityEngine.Events.UnityAction onClick, float left, float top, float width)
-    {
-        Button b = UIKit.Button(parent, label, onClick, ChipOff, 32);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 96f;
-        b.GetComponentInChildren<Text>().color = Ink;
-        b.gameObject.AddComponent<PressScale>();
-        RectTransform rt = img.rectTransform;
-        rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0f, 1f);
-        rt.anchoredPosition = new Vector2(left, -top);
-        rt.sizeDelta = new Vector2(width, 96f);
-        return img;
-    }
-
-    static Button Pill(Transform parent, string label, Color face, Color ink, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = UIKit.Button(parent, label, onClick, face, 40);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 120f;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = ink;
-        t.fontStyle = FontStyle.Bold;
-        b.gameObject.AddComponent<PressScale>();
-        return b;
-    }
-
-    static void PrimaryAtBottom(Transform parent, string label, Color face, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = Pill(parent, label, face, Color.white, onClick);
-        BottomBox((RectTransform)b.transform, 60f);
-    }
-
-    static void SecondaryAtBottom(Transform parent, string label, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = UIKit.Button(parent, label, onClick, new Color(0f, 0f, 0f, 0f), 34);
-        b.GetComponentInChildren<Text>().color = InkQuiet;
-        BottomBox((RectTransform)b.transform, 60f);
-    }
-
-    static Button IconButton(Transform parent, Sprite icon, UnityEngine.Events.UnityAction onClick)
-    {
-        Image hit = UIKit.Image(parent, "Close", new Color(0f, 0f, 0f, 0f), raycast: true);
-        hit.rectTransform.sizeDelta = new Vector2(90f, 90f);
-        Button b = hit.gameObject.AddComponent<Button>();
-        b.onClick.AddListener(onClick);
-        Image ic = UIKit.Image(hit.transform, "Icon", Ink);
-        ic.sprite = icon;
-        ic.rectTransform.sizeDelta = new Vector2(42f, 42f);
-        return b;
-    }
-
-    /// <summary>아래에서 bottom 만큼 떨어진 높이 120 의 버튼 줄 (좌우 60)</summary>
-    static void BottomBox(RectTransform rt, float bottom)
-    {
-        rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(1f, 0f);
-        rt.pivot = new Vector2(0.5f, 0f);
-        rt.offsetMin = new Vector2(60f, bottom);
-        rt.offsetMax = new Vector2(-60f, bottom + 120f);
     }
 
     static void Place(RectTransform rt, Vector2 anchor, Vector2 pos)
     {
         rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
         rt.anchoredPosition = pos;
-    }
-
-    static void Box(RectTransform rt, float left, float top, float right, float height)
-    {
-        rt.anchorMin = new Vector2(0f, 1f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.pivot = new Vector2(0.5f, 1f);
-        rt.offsetMin = new Vector2(left, -top - height);
-        rt.offsetMax = new Vector2(-right, -top);
     }
 
     /// <summary>그림이 위아래로 살짝 통통 뛴다 (기다리는 중)</summary>

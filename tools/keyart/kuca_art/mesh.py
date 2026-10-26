@@ -211,14 +211,15 @@ class Builder:
             k = 0.94 + var * ((f * 13) % 5) / 4 + 0.08 * ny
             self.tri(m, pts[0], pts[2], pts[1], shade(col, k), center)
 
-    def hemisphere(self, m, base, r, segments, rings, col):
+    def hemisphere(self, m, base, r, segments, rings, col, checker=True, top_shade=1.0):
         def P(th, ph):
             return (base[0] + math.cos(th) * math.cos(ph) * r, base[1] + math.sin(th) * r, base[2] + math.cos(th) * math.sin(ph) * r)
         for ring in range(rings):
             t0, t1 = ring * math.pi / 2 / rings, (ring + 1) * math.pi / 2 / rings
             for s in range(segments):
                 p0, p1 = s * 2 * math.pi / segments, (s + 1) * 2 * math.pi / segments
-                sh = shade(col, 0.95 + 0.05 * ((s + ring) % 2))
+                sh = shade(col, 0.95 + 0.05 * ((s + ring) % 2)) if checker else col
+                sh = shade(sh, 1.0 + (top_shade - 1.0) * ring / max(1, rings - 1))   # 고리마다 밝기 (밑동 1 → 꼭대기 top_shade)
                 if ring < rings - 1:
                     self.tri(m, P(t0, p0), P(t1, p0), P(t1, p1), sh, base)
                     self.tri(m, P(t0, p0), P(t1, p1), P(t0, p1), sh, base)
@@ -401,7 +402,7 @@ def write_bytes(path, meshes, pos_unit=None):
       반복: int32 nameLen, utf8 name, float32[3] origin, int32 vertexCount, int32 flags(1 = 벽 좌표 있음),
             int16[vc*3] position (origin 기준, 2 cm 단위), uint8[vc*4] sRGB color,
             (flags&1) uint16[vc*2] 벽 좌표 (u, 벽 길이) 10 cm 단위
-      color 알파 0 = 밤에 빛나는 부분
+      color 알파 0 = 밤에 빛나는 부분, 128 ~ 239 = 서 있는 학생 인형 (흔들림 위상 · 높이 칸, people.DOLL_ALPHA0)
     삼각형은 정점 3개씩 순서대로 (인덱스 없음). 법선은 읽는 쪽에서 면 법선으로 계산.
     """
     import gzip
@@ -427,7 +428,7 @@ def write_bytes(path, meshes, pos_unit=None):
         body.write(q.astype('<i2').tobytes())
         c = np.clip(np.asarray(b.col, np.float32).reshape(-1, 3) * 255 + 0.5, 0, 255).astype(np.uint8)
         al = np.asarray(b.alpha, np.float32) if len(b.alpha) == vc else np.ones(vc, np.float32)
-        c = np.concatenate([c, (al * 255).astype(np.uint8)[:, None]], axis=1)
+        c = np.concatenate([c, np.clip(np.round(al * 255), 0, 255).astype(np.uint8)[:, None]], axis=1)   # M31: 반올림 (인형 흔들림 표시 128 ~ 239)
         body.write(c.tobytes())
         if has_aux:
             body.write(np.clip(np.round(np.asarray(b.aux, np.float64) * 10), 0, 65535).astype('<u2').tobytes())
@@ -532,7 +533,29 @@ def _wall_runs(poly, max_turn_deg=12.0):
     def turn(i):
         d = abs(dirs[i][0] - dirs[i - 1][0]) % (2 * math.pi)
         return math.degrees(min(d, 2 * math.pi - d))
-    starts = [i for i in range(n) if turn(i) > max_turn_deg]
+    # M12: 원통 · 둥근 벽(같은 쪽으로 조금씩 꺾이는 꼭짓점이 5개 이상, 합 60° 이상)은 한 벽으로 — 짧은 변마다 끊겨 창이 하나도 안 들어갔음
+    #      (천문대 20각형 드럼 · 외국어대학관 원통). 둥근 모서리(round_corners) 토막은 변이 2 m 보다 짧아 그대로 끊긴다.
+    def signed(i):
+        d = (dirs[i][0] - dirs[i - 1][0] + math.pi) % (2 * math.pi) - math.pi
+        return math.degrees(d)
+    arc = [False] * n
+    sg = [signed(i) for i in range(n)]
+    small = [3.0 < abs(sg[i]) <= 25.0 and min(dirs[i][1], dirs[i - 1][1]) >= 2.0 for i in range(n)]   # 둥근 모서리 토막(짧은 변)은 빼고
+    if all(small) and len({t > 0 for t in sg}) == 1:
+        arc = [True] * n
+    else:
+        i0 = next((i for i in range(n) if not small[i]), 0)
+        run = []
+        for k in range(1, n + 1):
+            i = (i0 + k) % n
+            if small[i] and (not run or (sg[i] > 0) == (sg[run[0]] > 0)):
+                run.append(i)
+                continue
+            if len(run) >= 5 and sum(abs(sg[j]) for j in run) >= 60.0:
+                for j in run:
+                    arc[j] = True
+            run = [i] if small[i] else []
+    starts = [i for i in range(n) if turn(i) > max_turn_deg and not arc[i]]
     out = [None] * n
     if not starts:
         total = sum(l for _, l in dirs)

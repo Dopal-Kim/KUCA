@@ -36,20 +36,47 @@ public class PhotoCaptureScreen : MonoBehaviour
         previewFitter = go.GetComponent<AspectRatioFitter>();
         previewFitter.aspectMode = AspectRatioFitter.AspectMode.FitInParent;
 
-        status = UIKit.Text(root.transform, "", 40, TextAnchor.MiddleCenter);
-        UIKit.Stretch(status.rectTransform, 60f, 0f);
+        status = UIKit.Bold(UIKit.Text(root.transform, "", KucaTheme.Body, TextAnchor.MiddleCenter, Color.white));
+        UIKit.Stretch(status.rectTransform, KucaTheme.Gutter, 0f);
 
-        RectTransform bar = UIKit.Rect(root.transform, "Buttons");
-        bar.anchorMin = new Vector2(0f, 0f);
-        bar.anchorMax = new Vector2(1f, 0f);
-        bar.pivot = new Vector2(0.5f, 0f);
-        bar.sizeDelta = new Vector2(-80f, 140f);
-        bar.anchoredPosition = new Vector2(0f, 80f);
-        UIKit.Horizontal(bar, 40f);
-        UIKit.Button(bar, "취소", Close, UIKit.ButtonGray);
-        UIKit.Button(bar, "찍기", Shoot, UIKit.Accent, 48);
-
+        // 카메라 앱 방식: 왼쪽 위 ×, 아래 가운데 큰 원형 셔터 + 이름표
+        Rect sa = Screen.safeArea;
+        RectTransform safe = UIKit.Rect(root.transform, "Safe");
+        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
+        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
+        safe.offsetMin = safe.offsetMax = Vector2.zero;
+        UIKit.IconButton(safe, HudIcons.Close, Close, Color.white, new Vector2(KucaTheme.Gutter - 30f, -12f));
+        Shutter(safe, "찍기", Shoot);
         root.SetActive(false);
+    }
+
+    /// <summary>아래 가운데 흰 테 + 흰 원 셔터 (지름 200) 와 그 아래 굵은 흰 이름표. 다른 카메라 화면도 같은 모양</summary>
+    public static Button Shutter(RectTransform safe, string label, UnityEngine.Events.UnityAction onClick)
+    {
+        Image ring = UIKit.Image(safe, "Shutter", Color.white, raycast: true);
+        ring.sprite = HudIcons.Circle;
+        RectTransform r = ring.rectTransform;
+        r.anchorMin = r.anchorMax = r.pivot = new Vector2(0.5f, 0f);
+        r.anchoredPosition = new Vector2(0f, 150f);
+        r.sizeDelta = new Vector2(200f, 200f);
+        var edge = ring.gameObject.AddComponent<Outline>();   // 밝은 하늘 · 흰 벽 위에서도 셔터가 보이게
+        edge.effectColor = KucaTheme.Scrim;
+        edge.effectDistance = new Vector2(4f, -4f);
+        Image gap = UIKit.Image(ring.transform, "Gap", Color.black);
+        gap.sprite = HudIcons.Circle;
+        UIKit.Stretch(gap.rectTransform, 10f, 10f);
+        Image face = UIKit.Image(ring.transform, "Face", Color.white);
+        face.sprite = HudIcons.Circle;
+        UIKit.Stretch(face.rectTransform, 20f, 20f);
+        var b = ring.gameObject.AddComponent<Button>();
+        b.transition = Selectable.Transition.None;
+        b.onClick.AddListener(onClick);
+        ring.gameObject.AddComponent<PressScale>();
+        Text t = UIKit.Bold(UIKit.Text(ring.transform, label, KucaTheme.Label, TextAnchor.UpperCenter, Color.white));
+        t.rectTransform.anchorMin = t.rectTransform.anchorMax = t.rectTransform.pivot = new Vector2(0.5f, 0f);
+        t.rectTransform.anchoredPosition = new Vector2(0f, -76f);
+        t.rectTransform.sizeDelta = new Vector2(400f, 64f);
+        return b;
     }
 
     /// <summary>카메라를 켠다. 찍으면 onTaken(JPEG 바이트, 미리보기 텍스처)을 부르고 화면을 닫는다.</summary>

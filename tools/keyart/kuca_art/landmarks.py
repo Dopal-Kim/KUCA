@@ -3,9 +3,10 @@
 (이전 Assets/Editor/KeyArtLandmarks.cs 를 옮겨 와 다듬음)
 """
 import math
+import random
 
 from .geo import Footprint
-from .mesh import Frame, IDENT, Builder, shade
+from .mesh import Frame, IDENT, Builder, outward_normal, shade
 
 STONE = (0.94, 0.91, 0.83)
 COLUMN = (0.98, 0.96, 0.90)
@@ -13,35 +14,55 @@ STEP = (0.87, 0.85, 0.79)
 ROOF = (0.74, 0.76, 0.79)
 DOME = (0.97, 0.97, 0.98)
 DARK = (0.24, 0.30, 0.38)
+SHUTTER = (0.55, 0.60, 0.67)   # 천문대 관측 창 닫힌 셔터 (M14)
+SEAT = (0.30, 0.42, 0.60)      # 대운동장 스탠드 좌석 줄 (M14, 추정)
+STAND_ROOF = (0.78, 0.81, 0.85)   # 대운동장 본부석 지붕 · 스탠드 뒤 갓 (M24 · M25, 연한 청회색 금속, 추정)
 GLASS = (0.30, 0.42, 0.52)
+SKY_GLASS = (0.66, 0.82, 0.93)   # 하늘이 비친 유리 (M10 도서관 천창)
 GOLD = (0.86, 0.72, 0.40)
 POLE = (0.62, 0.64, 0.66)
 LAMP = (1.0, 0.98, 0.88)
-SEAT = (0.80, 0.82, 0.86)
 
 # 사색의 광장(OSM place=square) 중심, 노천극장 옆 연못 중심 (월드 m)
 PLAZA = (94.0, -352.0)
 POND = (327.0, -594.0)
 
+# 정면을 어느 쪽에서 찾을지: 건물 중심 → 목표 점 (없으면 사색의 광장)
+FRONT_TARGET = {'way-455726113': lambda c: (c[0] - 300.0, c[1])}   # 체육대학관: 서쪽
+
 LIBRARY, ARTS, PE, SEONSEUNG = 'way-474085534', 'way-474085536', 'way-455726113', 'way-585696506'
+UJEONGWON, FOREIGN, ENGINEERING, ELECTRONICS = 'relation-8269760', 'way-585696507', 'way-455725718', 'way-474085540'
+STUDENT_UNION = 'way-474085535'
+TEAL_GLASS = (0.30, 0.66, 0.68)   # 실사 우정원 청록 유리 계단탑 · 캐노피
+# M20: 원통 계단탑 유리가 Unity 에서 채도 0.65 · 밝기 0.55 로 다른 건물 창(채도 약 0.33 · 밝기 0.72)보다 진해 튀었음 (REVIEW_v25)
+#      → 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로. 캐노피는 지적 없어 그대로 (학생회관 띠창은 M26 에서 같은 색으로)
+TOWER_GLASS = (0.56, 0.79, 0.84)
+WISTERIA = (0.70, 0.58, 0.86)
+VINE = (0.36, 0.56, 0.24)
+DECK = (0.66, 0.48, 0.32)
 OBSERVATORY, CERAMICS, THEATER, GATE = 'way-474521125', 'way-474521123', 'way-474531805', 'way-473963422'
+GREENHOUSE = 'way-474521122'
 
 # 실제 건물 층수 (나무위키 등 조사, 2026-10). OSM 에 층수가 없어 기본 높이가 틀린 건물을 바로잡는다.
 REAL_LEVELS = {
     'relation-8269760': 7,   # 우정원: 지하1·지상7
     'way-474085540': 7,      # 전자정보대학관: 지하1·지상7 (ㅁ자)
-    'way-474085537': 8,      # 멀티미디어교육관: 8층
+    'way-474521122': 2,      # 원예생물공학온실: 층 자료 없음, 기본 18 m 는 6층 유리 상자처럼 보여 낮은 온실로 (M6, 실사 미확인)
+    'way-474085537': 9,      # 멀티미디어교육관: 지하2·지상9 (공식 캠퍼스맵 층별 안내)
     'way-585696506': 5,      # 선승관: 지상 3층 대공간 체육관 (층고가 높아 5층 높이)
     'way-585696507': 5,      # 외국어대학관
     'way-474085534': 4,      # 중앙도서관 (연면적 17,498 m² / 바닥 5,500 m²)
     'way-455726113': 4,      # 체육대학관
-    'way-474085536': 4,      # 예술디자인대학
-    'way-455725718': 4,      # 공학관
+    'way-474085536': 7,      # 예술디자인대학: B2·7F 본동 (앞 낮은 포르티코 전면동은 arts_palace)
+    'way-455725718': 6,      # 공학관: 지하2·지상6 (공식 캠퍼스맵)
     'way-455728922': 2,      # 공학실험동: 지하1·지상2
-    'way-474085539': 5,      # 국제대학 (국제·경영대학관)
+    'way-474085539': 4,      # 국제대학 (국제·경영대학관): 지하1·지상4 (공식 캠퍼스맵)
     'way-474085542': 4,      # 국제학관: OSM 4층
     'way-474521123': 2,      # 도예관
-    'way-474521125': 2,      # 천문대 (돔 아래 기단 건물)
+    'way-474521125': 3,      # 천문대: 지하2·지상3 (공식 캠퍼스맵), 돔 아래 계단식 몸체
+    # M20: 천문대 주차장 옆 12 m² 작은 동 (OSM way-1385686358, building=yes · man_made=observatory, 2025-05 '천문대 주차장 개선'
+    #      편집, 높이 · 층수 없음). 기본 10 m 라 전자정보대 E 에서 가는 기둥으로 튀었음 (REVIEW_v25) → 한 층(3.3 m × 높이 배율 1.3 = 4.3 m) 작은 관측 동으로
+    'way-1385686358': 1,
 }
 LEVEL_H = 3.3
 
@@ -55,7 +76,7 @@ def is_campus_seed(b):
         or '경희' in (b.name or '')
 
 HIDDEN = {THEATER, GATE}          # 상자 건물 대신 이 형태만 보인다 (충돌체·정보는 Unity 에 남김)
-NO_DETAILS = {THEATER, GATE, OBSERVATORY, CERAMICS}   # 공통 디테일(난간 등)을 붙이지 않을 건물
+NO_DETAILS = {THEATER, GATE, OBSERVATORY, GREENHOUSE}   # 공통 디테일(난간 등)을 붙이지 않을 건물
 
 
 def build(buildings, layer, ground, shells=None, entrances=None):
@@ -76,14 +97,32 @@ def build(buildings, layer, ground, shells=None, entrances=None):
         mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
         return mb
 
-    for bid, cols, pediment in ((LIBRARY, 8, True), (PE, 8, False)):
+    b, f = fp(GREENHOUSE)
+    if b:
+        greenhouse_roof(builder_at(b), b, f)
+        # M15: OSM 상 온실 남쪽 끝(동쪽 날개 · 둥근 돌출부)과 생명과학대학 북쪽 벽은 14 ~ 19 m 떨어진 따로 선 건물인데,
+        #      35° 옆(N · W)에선 10 m 높이 온실 지붕이 틈을 가려 한 건물처럼 보였음 (REVIEW_v20) → 틈 가운데 나무 줄로 간격이 보이게
+        #      (위치는 두 OSM 외곽에서 7 ~ 9 m 씩 떨어진 틈 가운데)
+        from .nature import draw_tree
+        rr = random.Random(474521122)
+        for (px, pz), kind, sc in (((112.0, -95.5), 'round', 1.4), ((121.0, -97.5), 'cone', 1.3), ((130.0, -98.5), 'round', 1.4)):
+            draw_tree(layer.at(px, pz), kind, px, pz, sc, rr.uniform(0, 360), rr)   # 수관 10 m: 온실 지붕(10 m) 너머로 보이게
+            ground.occupy(px, pz, 4.0, ao=0.2, ao_radius=3.5)
+
+    # 실사: 중앙도서관은 정면 거의 전체를 덮는 자이언트 오더 열주 (박공 없이 평평한 엔태블러처)
+    # 정면 방향 (실사 · 항공 VR 확인, M6): 도서관 = 사색의 광장(동), 체육대학관 = 서쪽 긴 면 (대운동장 쪽 주차장 · 도로).
+    # 예전엔 체육대학관도 광장 쪽(남쪽 짧은 면)에 붙어 실제 입구가 아닌 측면에 현관이 있었다.
+    for bid, cols, pediment, frac, max_w in ((LIBRARY, 14, False, 0.78, 96.0), (PE, 14, False, 0.72, 86.0)):
         b, f = fp(bid)
         if b:
-            face = f.face(PLAZA)
+            face = f.face(FRONT_TARGET.get(bid, lambda c: PLAZA)(b.centroid))
+            if entrances is not None and bid == PE:
+                entrances.pop(PE, None)   # 작은 출입문 대신 이 열주 현관이 입구
             mb = builder_at(b)
-            portico(mb, face, b.h, pediment, cols, grand=bid in (LIBRARY, PE), flags=(bid == LIBRARY))
+            portico(mb, face, b.h, pediment, cols, grand=bid in (LIBRARY, PE), flags=(bid == LIBRARY),
+                    width_frac=frac, max_width=max_w)
             if bid == PE:
-                lions(mb, face)          # 체육대학관: 대계단 양옆 웃는 사자상
+                lions(mb, face, min(face['length'] * frac, max_w))   # 체육대학관: 대계단 양옆 웃는 사자상
                 _rooftop_court(mb, b)    # 체육대학다운 지붕: 옥상 트랙 + 코트
             if bid == LIBRARY:
                 atrium(mb, b, f)         # 중앙도서관: 가운데 아트리움 천창
@@ -94,7 +133,7 @@ def build(buildings, layer, ground, shells=None, entrances=None):
         # 예술디자인대학: 궁전식 정면 (가운데 돌출 파빌리온 + 거대 기둥 + 박공 + 테라스 대계단)
         from .buildings import style_of
         st = style_of(b)
-        arts_palace(builder_at(b), shells[st].at(*b.centroid), b, ground)
+        arts_palace(builder_at(b), shells[st].at(*b.centroid), b, ground, front=(0.0, -1.0))
         if entrances is not None:
             entrances.pop(ARTS, None)
 
@@ -102,18 +141,16 @@ def build(buildings, layer, ground, shells=None, entrances=None):
     if b:
         face = f.face(PLAZA)
         mb = builder_at(b)
-        arena_roof(mb, b, f)             # 실제: 대공간 종합체육관 → 배럴 볼트 지붕 (컨셉아트 아이콘도 둥근 지붕)
-        arcade(mb, face, b.h)
-        clock_tower(mb, face, b.h)
+        drum_roof(mb, b, f)              # 실사: 붉은 벽돌 원형 드럼 + 짙은 회색 낮은 둥근 지붕 + 금색 띠 (2017 개관 평화의전당형)
+        drum_arcade(mb, b)               # 실사: 1층 반원 아치 회랑이 둘레를 한 바퀴
+        clock_tower(mb, face, b.h, spire=SPIRE_GREEN)
         _occupy_face(ground, face, 12)
 
     b, f = fp(OBSERVATORY)
     if b:
         observatory(builder_at(b), b, f)
 
-    b, f = fp(CERAMICS)
-    if b:
-        pitched_roof(builder_at(b), b, f)
+    # 도예관: 실사는 적갈색 외벽 2~3층 평지붕 (박공지붕 아님) → 공통 디테일 · 벽돌 스타일로
 
     b, f = fp(THEATER)
     if b:
@@ -138,7 +175,16 @@ def build(buildings, layer, ground, shells=None, entrances=None):
         ground.occupy(px, pz, 5, ao=0.18, ao_radius=5.0)
 
     if ground.stadium_box:
-        stadium(layer, ground)
+        stadium(layer, ground, buildings)
+
+    # 사색의 광장: 오벨리스크 바깥 양옆 대칭 잔디 화단 + 둥근 회양목 (실사)
+    for s in (-1, 1):
+        px, pz = PLAZA[0] + tx * 30 + sx * 30 * s, PLAZA[1] + tz * 30 + sz * 30 * s
+        lawn_bed(layer.at(px, pz), (px, pz), (tx, tz), 20.0, 10.0)
+        ground.occupy(px, pz, 11, ao=0.0)
+
+    if entrances is not None:
+        secondary(by_id, entrances, builder_at, ground)
 
 
 def _occupy_face(ground, face, depth):
@@ -161,10 +207,10 @@ def column(mb, m, base, r, h, col=COLUMN, fluted=True):
     mb.box(m, (x, y + h - 0.22, z), (r * 2.8, 0.45, r * 2.8), STONE)
 
 
-def portico(mb, f, height, pediment, max_cols, grand=False, flags=False):
+def portico(mb, f, height, pediment, max_cols, grand=False, flags=False, width_frac=0.5, max_width=44.0):
     """정면 열주 현관: 기단, 기둥, 엔태블러처, (페디먼트), 앞 계단. 로컬 X = 면 방향, Z = 바깥"""
     m = Frame.look(f['center'], f['normal'])
-    width = min(f['length'] * 0.5, 44.0)
+    width = min(f['length'] * width_frac, max_width)
     cols = max(4, min(max_cols, round(width / 5) + 1))
     depth, base_h = 7.0, 1.6 if grand else 1.2
     col_top = max(7.0, min(height - 2.2, 22.0 if grand else 17.0))
@@ -181,7 +227,9 @@ def portico(mb, f, height, pediment, max_cols, grand=False, flags=False):
     # 엔태블러처: 아키트레이브 + 프리즈 + 코니스
     mb.box(m, (0, col_top + 0.5, depth / 2 - 0.5), (width + 1.0, 1.0, depth + 0.8), STONE)
     mb.box(m, (0, col_top + 1.4, depth / 2 - 0.5), (width + 1.4, 0.8, depth + 1.1), shade(STONE, 1.03))
-    mb.box(m, (0, col_top + 2.0, depth / 2 - 0.5), (width + 2.0, 0.4, depth + 1.6), COLUMN)
+    # M26: 맨 위 코니스 윗면(폭 최대 96 m)이 위(T)에서 하얗게 날아간 긴 판이었음 (REVIEW_v31 Unity 중앙도서관 · 체육대학관 T)
+    #      → 윗면만 회색 한 단계 (M25 현관 캐노피와 같은 0.84), 옆 · 앞면은 흰색 그대로
+    mb.box(m, (0, col_top + 2.0, depth / 2 - 0.5), (width + 2.0, 0.4, depth + 1.6), COLUMN, top=shade(COLUMN, 0.84))
     if pediment:
         mb.gable(m, (0, col_top + 2.2, depth / 2 - 0.3), width + 1.6, depth + 1.4, 5.0, STONE, True,
                  end_col=shade(STONE, 0.93))
@@ -223,7 +271,65 @@ def arcade(mb, f, height):
         mb.box(m, (0, 0.15 + 0.15 * (2 - i), 3.6 + i * 0.8), (width * 0.5 + i * 1.5, 0.3 + 0.3 * (2 - i), 0.8), STEP)
 
 
-def clock_tower(mb, f, height):
+SPIRE_GREEN = (0.36, 0.56, 0.44)   # 선승관 시계탑 첨탑 (실사: 녹청 동판)
+DOME_GRAY = (0.50, 0.56, 0.64)     # 선승관 지붕 (실사: 짙은 회색 금속판). M6 청회색 (0.44,0.48,0.54) 도 Unity 에선 진회색 → M7 한 단계 밝고 푸르게
+
+
+def drum_roof(mb, b, f):
+    """선승관: 외곽을 따라 금색 띠 + 처마, 그 위 짙은 회색 낮은 타원 돔 (외곽 크기에 맞춘 납작한 반구)"""
+    (ax, az), L, Wd = f.long_axis()
+    H = b.h
+    mb.band(b.poly, H - 2.6, H - 0.9, 0.18, -0.01, GOLD)                    # 금색 프리즈
+    mb.band(b.poly, H - 0.2, H + 0.5, 0.9, 1.4, DOME_GRAY, top_col=shade(DOME_GRAY, 1.08))   # 내민 처마
+    k = 0.47
+    dome = Frame((f.center[0], H + 0.4, f.center[1]), (ax * L * k, 0.0, az * L * k), (0.0, min(L, Wd) * 0.16, 0.0),
+                 (-az * Wd * k, 0.0, ax * Wd * k))
+    # M11: 칸마다 밝기를 번갈아 칠하던 체커(타일 반복처럼 보였음, REVIEW_v15)를 끄고 고리를 늘려 면 경계를 부드럽게 — 결은 리브가 맡는다
+    # M13: 단색 진회색 덩어리가 무거웠음 (PC v16 · M12 다음 후보) → 밑동은 그대로, 꼭대기로 갈수록 하늘이 비친 듯 밝게
+    mb.hemisphere(dome, (0.0, 0.0, 0.0), 1.0, 48, 12, DOME_GRAY, checker=False, top_shade=1.25)
+    # 금속판 이음 리브 16줄 (결 따라 밝기 변화: 단색 덩어리로 안 보이게)
+    rib = shade(DOME_GRAY, 1.22)
+
+    def unit(v):
+        n = math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2) or 1.0
+        return (v[0] / n, v[1] / n, v[2] / n), n
+
+    for i in range(16):
+        th = 2 * math.pi * i / 16
+        for j in range(6):
+            ph = (j + 0.5) / 6 * (math.pi / 2) * 0.92
+            dph = (math.pi / 2) * 0.92 / 6
+            cp, sp, ct, st = math.cos(ph), math.sin(ph), math.cos(th), math.sin(th)
+            o = dome.p((cp * ct * 1.003, sp * 1.003, cp * st * 1.003))
+            along, ln = unit(dome.dir((-sp * ct, cp, -sp * st)))   # 자오선 방향 (돔 프레임은 축마다 배율이 달라 월드에서 정규화)
+            across, _ = unit(dome.dir((-st, 0.0, ct)))
+            out = (along[1] * across[2] - along[2] * across[1], along[2] * across[0] - along[0] * across[2], along[0] * across[1] - along[1] * across[0])
+            mb.box(Frame(o, across, along, out), (0.0, 0.0, 0.0), (0.45, ln * dph + 0.2, 0.3), rib)
+    lantern = Frame((f.center[0], H + 0.4 + min(L, Wd) * 0.16, f.center[1]))
+    mb.prism(lantern, (0, -0.3, 0), 3.2, 1.6, 16, GOLD, caps=True)
+
+
+def drum_arcade(mb, b):
+    """선승관: 외벽 둘레 1층에 2층 높이 반원 아치 (밝은 석재 테 + 어두운 안쪽)"""
+    n = len(b.poly)
+    for i in range(n):
+        a, c = b.poly[i], b.poly[(i + 1) % n]
+        dx, dz = c[0] - a[0], c[1] - a[1]
+        seg = math.hypot(dx, dz)
+        count = int(seg / 4.6)
+        if count < 1:
+            continue
+        nx, nz = outward_normal(b.poly, i)
+        mid = ((a[0] + c[0]) / 2, 0.0, (a[1] + c[1]) / 2)
+        m = Frame.look(mid, (nx, 0.0, nz))
+        w = seg / count
+        for k in range(count):
+            x = -seg / 2 + w * (k + 0.5)
+            mb.arch_panel(m, (x, 0.0, 0.05), w * 0.78, 6.6, COLUMN)
+            mb.arch_panel(m, (x, 0.0, 0.1), w * 0.6, 6.0, DARK)
+
+
+def clock_tower(mb, f, height, spire=None):
     c, n, t = f['center'], f['normal'], f['tangent']
     pos = (c[0] + t[0] * (f['length'] / 2 - 6) - n[0] * 4, 0.0, c[2] + t[2] * (f['length'] / 2 - 6) - n[2] * 4)
     m = Frame.look(pos, n)
@@ -236,8 +342,9 @@ def clock_tower(mb, f, height):
     for y in (height, height + 9):
         mb.box(m, (0, y, 0), (w + 0.6, 0.6, w + 0.6), COLUMN)
     mb.box(m, (0, tower_h + 0.4, 0), (w + 1.4, 0.8, w + 1.4), STEP)
-    mb.cone(m, (0, tower_h + 0.8, 0), (w + 1.4) * 0.72, 7.0, 4, ROOF, rot=45)
-    mb.prism(m, (0, tower_h + 7.6, 0), 0.12, 2.2, 4, GOLD)
+    spire_h = 11.0 if spire else 7.0
+    mb.cone(m, (0, tower_h + 0.8, 0), (w + 1.4) * 0.72, spire_h, 4, spire or ROOF, rot=45)
+    mb.prism(m, (0, tower_h + 0.6 + spire_h, 0), 0.12, 2.2, 4, GOLD)
     clock_y = tower_h - 4.0
     for k in range(4):
         side = m.child((0, 0, 0), 90 * k)
@@ -257,25 +364,142 @@ def observatory(mb, b, f):
     # 둥근 발코니 난간
     mb.prism(IDENT, (cx, b.h + 0.5, cz), r + 2.1, 0.9, 20, COLUMN, r_top=r + 2.1)
     mb.prism(IDENT, (cx, b.h + 0.5, cz), r, 3.2, 20, STONE)
-    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 20, 6, DOME)
+    # M12: 칸마다 밝기를 번갈아 칠하던 체커(선승관과 같은 문제, Unity v15 사방 모두 바둑판)를 끄고 칸을 늘려 매끈하게,
+    #      결은 금속판 이음 리브 12줄이 맡는다 (관측 창 자리는 비움)
+    # M13: 40 × 10 칸은 빛에 따라 작은 다각형 면이 보였음 (MAP_REVIEW_v18) → 64 × 16
+    # M14: 지도 메시는 면 법선(각진 음영)이라 64 × 16 도 N · W 에서 작은 사각 칸이 보였음 (REVIEW_v19) → 96 × 24 (이웃 면 각도 5.6° → 3.75°)
+    mb.hemisphere(IDENT, (cx, b.h + 3.7, cz), r, 96, 24, DOME, checker=False)
+    # M22: 0.88 리브가 해 드는 S · E 면에서 돔과 같이 하얗게 날아가 칸 선이 거의 안 보였음 (REVIEW_v27) → 한 단계 진하게 · 조금 넓게 (0.22 → 0.3 m)
+    rib, rw = shade(DOME, 0.74), 0.15
+    for i in range(12):
+        th = 2 * math.pi * (i + 0.5) / 12
+        if abs(math.cos(th)) < 0.2 and math.sin(th) < 0:   # 관측 창(-Z) 바로 옆
+            continue
+        ct, st = math.cos(th), math.sin(th)
+        # M15: 곧은 상자 7토막은 이음매마다 끊겨 점선처럼 보였음 (REVIEW_v20) → 약 3.7° (돔 고리 간격) 마다 꺾이는 이어진 띠 하나 (윗면 + 양옆)
+        def P(ph, w, rr):
+            cp, sp = math.cos(ph), math.sin(ph)
+            return (cx + cp * ct * rr - st * w, b.h + 3.7 + sp * rr, cz + cp * st * rr + ct * w)
+        # M23: 81° 까지 간 리브 10줄이 꼭대기 캡 둘레(축에서 1.7 m)에 몰려 위(T)에서 별 모양으로 진했음 (REVIEW_v28)
+        #      → 72° 에서 끝내고 (축에서 약 3.4 m) 끝으로 갈수록 반 폭까지 가늘게
+        n, top = 20, (math.pi / 2) * 0.8
+        for j in range(n):
+            a0, a1 = j / n * top, (j + 1) / n * top
+            w0, w1 = rw * (1 - 0.5 * j / n), rw * (1 - 0.5 * (j + 1) / n)
+            mid = P((a0 + a1) / 2, 0.0, r)
+            mb.quad(IDENT, P(a0, -w0, r + 0.1), P(a0, w0, r + 0.1), P(a1, w1, r + 0.1), P(a1, -w1, r + 0.1), rib, mid)
+            for sw in (-1, 1):
+                mb.quad(IDENT, P(a0, sw * w0, r - 0.03), P(a0, sw * w0, r + 0.1), P(a1, sw * w1, r + 0.1), P(a1, sw * w1, r - 0.03),
+                        shade(rib, 0.94), P((a0 + a1) / 2, 0.0, r + 0.03))
     mb.prism(IDENT, (cx, b.h + 3.6, cz), r + 0.2, 0.3, 20, COLUMN, r_top=r + 0.2)
     # 관측 창: 남쪽 위로 세로 띠
     slit = Frame((cx, b.h + 3.7, cz)).child((0, 0, 0), 180)
-    # 관측 창: 돔 밑동에서 꼭대기 너머까지 이어진 어두운 띠 + 양옆 셔터 레일
+    # 관측 창: 돔 밑동에서 꼭대기까지 이어진 셔터 띠 + 양옆 셔터 레일
+    # M24: 96° (꼭대기 너머)까지 가 위(T)에서 슬릿이 돔 반대편까지 이어져 보였음 (REVIEW_v29) → 88° 에서 끝 (캡도 꼭대기 앞에서)
     n = 12
     for k in range(n):
-        a0, a1 = math.radians(4 + k * 92 / n), math.radians(4 + (k + 1) * 92 / n)
-        for x0, x1, col, off in ((-0.8, 0.8, DARK, 0.06), (-1.2, -0.8, COLUMN, 0.1), (0.8, 1.2, COLUMN, 0.1)):
+        a0, a1 = math.radians(4 + k * 84 / n), math.radians(4 + (k + 1) * 84 / n)
+        # M13: 위(T)에서 돔 가운데를 가르는 굵은 막대로 보였음 (MAP_REVIEW_v18) → 창 1.6 → 1.1 m, 레일 포함 2.4 → 1.6 m (약 2/3)
+        # M14: 1.1 m 도 위(T)에서 굵은 막대 (REVIEW_v19) — 굵기보다 흰 돔 위 짙은 남색 대비가 컸음 → 닫힌 셔터 색(청회색 금속) + 0.8 m
+        for x0, x1, col, off in ((-0.4, 0.4, SHUTTER, 0.06), (-0.6, -0.4, COLUMN, 0.1), (0.4, 0.6, COLUMN, 0.1)):
             rr = r + off
             p0 = (x0, math.sin(a0) * rr, math.cos(a0) * rr)
             p1 = (x1, math.sin(a0) * rr, math.cos(a0) * rr)
             p2 = (x1, math.sin(a1) * rr, math.cos(a1) * rr)
             p3 = (x0, math.sin(a1) * rr, math.cos(a1) * rr)
             mb.quad(slit, p0, p1, p2, p3, col, (0, 0, 0))
+    # M16: 꼭대기 너머 슬릿 끝이 리브와 같은 굵기라 셔터로 안 읽혔음 (REVIEW_v21) → 레일보다 넓고 두툼한 짙은 셔터 캡 (윗면 + 옆 + 끝면)
+    # M21: 레일보다 넓은 짙은 캡(1.7 m × 16°)이 돔 꼭대기 한가운데라 위(T)에서 점처럼 튀었음 (REVIEW_v26)
+    #      → 폭을 레일 바깥(1.2 m)에 맞추고 길이 16 → 10°, 색은 한 단계 덜 짙게. 옆에서 슬릿 끝 두께는 그대로 (높이 0.3 m)
+    cap, cw, lo, hi = shade(SHUTTER, 0.9), 0.6, r + 0.02, r + 0.32
+    angs = [math.radians(a) for a in (79, 82, 85, 88)]
+
+    def C(a, x, rr):
+        return (x, math.sin(a) * rr, math.cos(a) * rr)
+    for a0, a1 in zip(angs, angs[1:]):
+        mb.quad(slit, C(a0, -cw, hi), C(a0, cw, hi), C(a1, cw, hi), C(a1, -cw, hi), cap, (0, 0, 0))
+        for x in (-cw, cw):
+            mb.quad(slit, C(a0, x, lo), C(a0, x, hi), C(a1, x, hi), C(a1, x, lo), shade(cap, 0.9), C((a0 + a1) / 2, 0.0, hi))
+    for a, inn in ((angs[0], angs[1]), (angs[-1], angs[-2])):
+        mb.quad(slit, C(a, -cw, lo), C(a, cw, lo), C(a, cw, hi), C(a, -cw, hi), shade(cap, 0.85), C(inn, 0.0, (lo + hi) / 2))
     # 기본 공통 디테일 대신 난간만
     mb.ao_floor = 0.0
     mb.band(b.poly, b.h - 0.05, b.h + 0.7, 0.12, 0.4, COLUMN)
     mb.band(b.poly, 0.0, 0.9, 0.35, 0.0, (0.82, 0.77, 0.68))
+
+
+GH_GLASS = (0.72, 0.87, 0.94)
+GH_FRAME = (0.93, 0.95, 0.96)
+# M29: 온실이 위(T)에서 흰 테두리 + 하늘색 지붕이라 다른 건물 유리 천창과 같은 톤 — 사무동처럼 보였음 (MAP_REVIEW_v34 5번)
+#      셰이더가 불투명이라 '비치는' 유리는 색으로: 화분대 위 유리는 초록빛, 통로 위 · 윗벽 유리는 거의 무색 연한 유리
+GH_CLEAR = (0.80, 0.90, 0.89)     # 통로 위 · 윗벽: 하늘빛을 뺀 투명한 연한 유리
+GH_PLANT = (0.58, 0.79, 0.60)     # 화분대 위: 안쪽 초록 식물이 비친 유리
+GH_PLANT2 = (0.50, 0.73, 0.52)
+GH_KNEE = (0.78, 0.77, 0.74)      # 아래 콘크리트 턱
+
+
+def greenhouse_roof(mb, b, f):
+    """원예생물공학온실: 유리 박공 여러 줄 (벤로형 연동 온실). 건물 윤곽 안에 들어오는 칸에만 얹는다 (ㄱ자 모양도 맞게)
+    M29: 박공마다 용마루 쪽 반은 화분대(초록 줄)가 비친 유리, 골 쪽 반은 통로 위 투명 유리 → 위에서 초록 · 연한 줄무늬.
+         외벽은 Shell(유리 커튼월 셰이더) 0.1 m 바깥에 연한 유리 + 아래 초록 화분대 띠 + 흰 틀을 덧씌운다"""
+    from .geo import point_in_poly
+    from .mesh import offset_polygon, triangulate
+    (ax, az), length, width = f.long_axis()
+    m = Frame.look((f.center[0], b.h, f.center[1]), (ax, 0.0, az))   # 로컬 z = 긴 방향 (용마루 방향)
+    span, seg, rise = 4.0, 4.0, 1.6
+    H = b.h
+    # 바닥 유리 판: 박공이 안 덮는 가장자리 칸도 흰 Shell 지붕 대신 투명 유리로
+    for ia, ib, ic in triangulate(b.poly):
+        pa, pb, pc = b.poly[ia], b.poly[ib], b.poly[ic]
+        mb.tri(IDENT, (pa[0], H + 0.03, pa[1]), (pb[0], H + 0.03, pb[1]), (pc[0], H + 0.03, pc[1]), GH_CLEAR,
+               ((pa[0] + pb[0] + pc[0]) / 3, H - 1.0, (pa[1] + pb[1] + pc[1]) / 3))
+    nx, nz = max(1, int(width / span)), max(1, int(length / seg))
+    for i in range(nx):
+        x = -width / 2 + span * (i + 0.5)
+        for k in range(nz):
+            z = -length / 2 + seg * (k + 0.5)
+            p = m.p((x, 0.0, z))
+            if not point_in_poly(p[0], p[2], b.poly):
+                continue
+            z0, z1 = z - seg / 2 - 0.01, z + seg / 2 + 0.01
+            for sgn in (-1, 1):   # 비탈 하나를 골 쪽(투명) · 용마루 쪽(초록) 두 띠로
+                xm, ym = x + sgn * span / 4, rise / 2
+                lit = 1.03 if sgn > 0 else 0.95
+                inside = (x, rise * 0.3, z)
+                mb.quad(m, (x + sgn * span / 2, 0.0, z0), (xm, ym, z0), (xm, ym, z1), (x + sgn * span / 2, 0.0, z1),
+                        shade(GH_CLEAR, lit), inside)
+                mb.quad(m, (xm, ym, z0), (x, rise, z0), (x, rise, z1), (xm, ym, z1),
+                        shade(GH_PLANT if k % 2 else GH_PLANT2, lit), inside)
+            for zz in (z0, z1):
+                mb.tri(m, (x - span / 2, 0.0, zz), (x + span / 2, 0.0, zz), (x, rise, zz), GH_CLEAR, (x, rise * 0.3, z))
+            mb.box(m, (x, rise + 0.02, z), (0.18, 0.12, seg + 0.02), GH_FRAME)   # 용마루 틀
+            mb.box(m, (x - span / 2, 0.05, z), (0.16, 0.12, seg + 0.02), GH_FRAME)   # 골 틀
+    # 외벽 덧씌움: 콘크리트 턱 0 ~ 0.6 m, 화분대 띠 0.6 ~ 3.0 m (1 m 칸마다 초록 두 톤), 위는 투명 유리, 흰 틀
+    skin = offset_polygon(b.poly, 0.1)
+    frame = offset_polygon(b.poly, 0.16)
+    n = len(skin)
+    for i in range(n):
+        (x0, z0), (x1, z1) = skin[i], skin[(i + 1) % n]
+        L = math.hypot(x1 - x0, z1 - z0)
+        if L < 0.05:
+            continue
+        cin = ((x0 + x1) / 2 - (frame[i][0] - skin[i][0]) * 10, 1.0, (z0 + z1) / 2 - (frame[i][1] - skin[i][1]) * 10)
+        cells = max(1, round(L))
+        for c in range(cells):
+            t0, t1 = c / cells, (c + 1) / cells
+            a = (x0 + (x1 - x0) * t0, z0 + (z1 - z0) * t0)
+            e = (x0 + (x1 - x0) * t1, z0 + (z1 - z0) * t1)
+            for y0, y1, col in ((0.0, 0.6, GH_KNEE), (0.6, 3.0, GH_PLANT if c % 2 else GH_PLANT2), (3.0, H, GH_CLEAR)):
+                mb.quad(IDENT, (a[0], y0, a[1]), (e[0], y0, e[1]), (e[0], y1, e[1]), (a[0], y1, a[1]), col, (cin[0], (y0 + y1) / 2, cin[2]))
+        (f0x, f0z), (f1x, f1z) = frame[i], frame[(i + 1) % n]
+        for y0, y1 in ((0.55, 0.7), (2.95, 3.1), (H - 0.2, H + 0.05)):   # 가로 틀
+            mb.quad(IDENT, (f0x, y0, f0z), (f1x, y0, f1z), (f1x, y1, f1z), (f0x, y1, f0z), GH_FRAME, (cin[0], (y0 + y1) / 2, cin[2]))
+        for c in range(1, max(1, round(L / 2.0))):   # 세로 틀 (약 2 m)
+            t = c / max(1, round(L / 2.0))
+            px, pz = f0x + (f1x - f0x) * t, f0z + (f1z - f0z) * t
+            dx, dz = (f1x - f0x) / L * 0.07, (f1z - f0z) / L * 0.07
+            mb.quad(IDENT, (px - dx, 0.6, pz - dz), (px + dx, 0.6, pz + dz), (px + dx, H, pz + dz), (px - dx, H, pz - dz), GH_FRAME,
+                    (cin[0], H / 2, cin[2]))
 
 
 def pitched_roof(mb, b, f):
@@ -330,12 +554,35 @@ def amphitheater(mb, f, to_pond, ground):
     max_r = min(f.half_u, f.half_v) * 1.6
     tiers = max(4, min(int((max_r - 12) / 3), 9))
     center, spread = -math.pi / 2, math.radians(80)
+    # M10 실사: 회백 화강석 계단 객석 (예전 석재 · 잔디 단 번갈이는 초록 · 흰 줄무늬 잔디 계단처럼 보였음).
+    # 한 단(3 m)을 낮은 두 칸으로 나누고 두 돌 색을 번갈아 → 촘촘한 돌계단, 통로 계단 3줄로 객석을 나눈다
+    seat = (0.80, 0.78, 0.73)
     for i in range(tiers):
         r0 = 12 + i * 3.0
-        col = STONE if i % 2 == 0 else (0.52, 0.74, 0.28)   # 석재 단과 잔디 단을 번갈아 (컨셉아트)
-        mb.arc_tier(m, (0, 0, 0), r0, r0 + 3, center - spread, center + spread, 0.6 * (i + 1), 24, col)
-        # 가운데 통로 계단 (어두운 줄)
-        mb.box(m, (0, 0.6 * (i + 1) + 0.01, -(r0 + 1.5)), (1.6, 0.04, 3.0), shade(STEP, 0.8), top=shade(STEP, 0.8))
+        for k in range(2):
+            mb.arc_tier(m, (0, 0, 0), r0 + 1.5 * k, r0 + 1.5 * (k + 1), center - spread, center + spread,
+                        0.6 * i + 0.3 * (k + 1), 24, seat if k == 0 else shade(seat, 0.92))
+            for deg in (-45, 0, 45):   # 통로 계단 (어두운 줄)
+                a, rm = center + math.radians(deg), r0 + 1.5 * k + 0.75
+                am = m.child((math.cos(a) * rm, 0, math.sin(a) * rm), 90 - math.degrees(a))
+                mb.box(am, (0, 0.6 * i + 0.3 * (k + 1) + 0.01, 0), (1.6, 0.04, 1.5), shade(STEP, 0.72), top=shade(STEP, 0.72))
+    # M29: 학생 인형이 앉을 객석 줄 (단 뒤쪽 0.9 m, 통로 계단 사이마다 한 줄씩, 무대를 본다)
+    from .people import SEAT_ROWS
+    for i in range(tiers):
+        for k in range(2):
+            rm, y = 12 + i * 3.0 + 1.5 * k + 0.9, 0.6 * i + 0.3 * (k + 1)
+            row = []
+            for j in range(int(2 * spread * rm / 0.75)):
+                a = center - spread + (j + 0.5) * 0.75 / rm
+                if any(abs(a - center - math.radians(deg)) * rm < 1.3 for deg in (-45, 0, 45)):
+                    if len(row) >= 2:
+                        SEAT_ROWS['amphitheater'].append(row)
+                    row = []
+                    continue
+                p, d = m.p((math.cos(a) * rm, y, math.sin(a) * rm)), m.dir((-math.cos(a), 0.0, -math.sin(a)))
+                row.append((p[0], p[1], p[2], math.degrees(math.atan2(d[0], d[2]))))
+            if len(row) >= 2:
+                SEAT_ROWS['amphitheater'].append(row)
     outer = 12 + tiers * 3.0
     # 뒤쪽 둘레 벽
     mb.arc_tier(m, (0, 0, 0), outer, outer + 1.0, center - spread, center + spread, 0.6 * tiers + 1.0, 24, COLUMN)
@@ -343,8 +590,20 @@ def amphitheater(mb, f, to_pond, ground):
     mb.box(m, (0, 0.6, 2), (18, 1.2, 10), STEP)
     mb.box(m, (0, 0.62, 2), (16, 1.2, 8.6), shade(STEP, 1.05))
     mb.box(m, (0, 3.8, 7.6), (22, 7.6, 1.4), STONE)
+    # M16: 아치 판이 +Z(연못 쪽)를 보고 벽 앞면(z 6.9) 안쪽에 묻혀 객석에서 민짜 벽으로 보였음 → 180° 돌린 틀로 객석 쪽을 보게
+    back = m.child((0, 0, 0), 180)
     for k in (-2, -1, 0, 1, 2):
-        mb.arch_panel(m, (k * 4.2, 1.2, 6.88), 2.4, 4.6, shade(STONE, 0.8))
+        mb.arch_panel(back, (k * 4.2, 1.2, -6.86), 2.4, 4.6, shade(STONE, 0.8))
+    # M17: 뒷면(연못 쪽, z 8.3)이 민짜 흰 벽으로 보였음 (REVIEW_v22 N · E) → 아래 굽 + 한 톤 어두운 돌 띠 둘
+    #      (0.14 m 줄눈은 지도 거리에서 점선처럼 깨졌음)
+    # M18: 0.84 · 0.4 m 띠가 Unity N · E 에서 아주 옅게만 보였음 (REVIEW_v22_day) → 두 단계 진하게 (0.66) · 0.6 m, 굽도 0.72
+    # M19: 여전히 옅음 (REVIEW_v24). Unity · 웹 같은 거리 픽셀은 같았음 (벽 147 ~ 167 · 띠 113 ~ 115) — 뒷면은 해 반대쪽 그늘이라
+    #      더하는 햇살 번짐 · 가장자리 빛이 띠 대비를 0.66 → 0.72 로 줄이고, 0.6 m 띠가 지도 거리에서 3 ~ 4 px 라 옅게 읽힘
+    #      → 뒷면 전체를 한 톤 어두운 판(0.84)으로 앞면과 다르게 + 띠 1.0 m · 0.52, 굽 1.2 m · 0.6
+    mb.box(m, (0, 4.2, 8.33), (22.04, 6.6, 0.06), shade(STONE, 0.84))
+    mb.box(m, (0, 0.6, 8.36), (22.1, 1.2, 0.16), shade(STONE, 0.6))
+    for y in (2.6, 4.9):
+        mb.box(m, (0, y, 8.37), (22.0, 1.0, 0.14), shade(STONE, 0.52))
     mb.box(m, (0, 7.9, 7.6), (23.5, 0.8, 2.2), STEP)
     mb.box(m, (0, 8.8, 7.6), (10, 1.2, 1.6), STONE)
     for s in (-1, 1):
@@ -375,100 +634,108 @@ def amphitheater(mb, f, to_pond, ground):
 
 def gate(mb, f, ground=None):
     """
-    정문 (새천년기념탑, 네오르네상스문): 길을 가로지르는 깊은 석조 문.
-    양 끝 큰 기둥덩어리 + 안쪽 기둥덩어리 2개로 가운데 넓은 차도 문 1 + 양옆 보행 문 2.
-    덩어리마다 앞뒤 네 모서리에 굵은 기둥, 위로 두꺼운 엔태블러처, 양 끝·가운데 높은 아틱 (키아트 아이콘).
+    정문 (새천년기념탑, 네오르네상스문). 실사: 가운데 높은 반원 아치 1개 (두꺼운 사각 기둥 + 꼭대기 문장 장식),
+    좌우로 낮은 2열 원기둥 회랑 + 엔태블러처, 양 끝 사각 파일런 위 조각상. 차로는 가운데 아치 밑으로 지난다.
     """
     from .nature import LIGHTS
     (ax, az), length, _ = f.long_axis()
     W = max(length, 44.0)
-    D = 13.0                       # 문 깊이 (앞뒤 기둥 사이)
     # 로컬 X = 문의 긴 방향, 로컬 Z = 길 방향
     m = Frame.look((f.center[0], 0.0, f.center[1]), (az, 0.0, -ax))
-    base_h, ph = 1.2, 14.0
-    top = base_h + ph
-    end_w, side_w, inner_w = 7.5, 6.0, 5.6
-    center_w = W - 2 * (end_w + side_w + inner_w)
-    piers = []
-    for s in (-1, 1):
-        piers.append((s * (W / 2 - end_w / 2), end_w, True))
-        piers.append((s * (center_w / 2 + inner_w / 2), inner_w, False))
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 3.0, 0.3
-    for px, pw, is_end in piers:
-        # 기단 2단
-        mb.box(m, (px, 0.35, 0), (pw + 1.6, 0.7, D + 1.6), STEP)
-        mb.box(m, (px, 0.95, 0), (pw + 0.8, 0.5, D + 0.8), shade(STEP, 1.03))
-        # 기둥 사이로 보이는 안쪽 벽 덩어리 (조금 들어가 그늘진 돌)
-        mb.box(m, (px, base_h + ph / 2, 0), (pw - 1.4, ph, D - 3.2), shade(STONE, 0.93))
-        # 네 모서리 굵은 기둥 (+ 양 끝 덩어리는 바깥 옆면에 가운데 기둥 하나 더)
-        cx_off = pw / 2 - 1.15
-        for sx in (-1, 1):
-            for sz in (-1, 1):
-                column(mb, m, (px + sx * cx_off, base_h, sz * (D / 2 - 1.15)), 1.0, ph)
-        if is_end:
-            ox = px + (1 if px > 0 else -1) * (pw / 2 - 1.15)
-            column(mb, m, (ox, base_h, 0), 1.0, ph)
-            # 앞뒤 기둥 사이 아치 벽감
-            for sz in (-1, 1):
-                side = m.child((px, 0, sz * (D / 2 - 1.55)), 0 if sz > 0 else 180)
-                mb.arch_panel(side, (0, base_h + 1.0, 0.02), 2.2, 6.0, shade(STONE, 0.78))
-        else:
-            # 밤에 문 안쪽을 밝히는 등 (안쪽 덩어리 앞뒤)
-            for sz in (-1, 1):
-                mb.emissive = True
-                mb.box(m, (px, base_h + 5.2, sz * (D / 2 - 1.55)), (1.0, 1.4, 0.5), LAMP)
-                mb.emissive = False
-                mb.box(m, (px, base_h + 6.05, sz * (D / 2 - 1.55)), (1.3, 0.3, 0.7), GOLD)
-        # 기둥 머리 위 받침 블록
-        mb.box(m, (px, top + 0.3, 0), (pw + 0.4, 0.6, D + 0.4), STONE)
-    # 엔태블러처: 아키트레이브 · 프리즈 · 코니스 (앞뒤로 같은 두께, 밑면은 그늘)
-    mb.box(m, (0, top + 1.2, 0), (W + 0.4, 1.2, D + 0.4), shade(STONE, 1.02))
-    mb.box(m, (0, top + 2.6, 0), (W + 0.2, 1.6, D + 0.2), STONE)
-    for sz in (-1, 1):
-        # 프리즈 안 오목한 띠, 기둥 위 마름돌
-        mb.box(m, (0, top + 2.6, sz * (D / 2 + 0.12)), (W - 3.0, 0.9, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))
-        for px, pw, _ in piers:
-            for sx in (-1, 1):
-                mb.box(m, (px + sx * (pw / 2 - 1.15), top + 2.6, sz * (D / 2 + 0.18)), (1.6, 1.3, 0.2), COLUMN)
-    mb.box(m, (0, top + 3.65, 0), (W + 1.8, 0.5, D + 1.8), COLUMN)
-    mb.box(m, (0, top + 4.0, 0), (W + 1.2, 0.2, D + 1.2), shade(COLUMN, 0.97))
-    y0 = top + 4.1
-    # 아틱: 양 끝 높은 블록 + 가운데 높은 판 (사이는 낮은 난간)
+    # 1) 가운데 아치 (M6, 실사 비례): 넓은 반원 개구부(덩어리 폭의 약 2/3) + 날씬한 기둥, 덩어리 폭 ≥ 높이.
+    #    예전 (통로 9 m · 기둥 5 m · 높은 아틱) 은 가운데가 좁고 높은 'I' 자처럼 보였다.
+    # M11: 깊이 12 → 16 m — 옆(W · E)에서 가운데 덩어리 · 끝 기둥탑이 얇은 탑 두 개처럼 보였음 (REVIEW_v15). 정면 모양(X · Y)은 그대로
+    D, pier, r, spring = 16.0, 4.5, 7.5, 8.0
+    cw = 2 * r + 2 * pier
+    block_top = spring + r + 4.0   # M7 실사: 아치 꼭대기가 덩어리(코니스까지)의 약 4분의 3 — 2.0 은 아치 위 벽이 얇아 아치가 커 보였음
     for s in (-1, 1):
-        x = s * (W / 2 - end_w / 2)
-        mb.box(m, (x, y0 + 2.6, 0), (end_w + 0.6, 5.2, D), STONE)
-        mb.box(m, (x, y0 + 0.6, 0), (end_w + 1.0, 1.2, D + 0.4), shade(STONE, 1.03))
-        mb.box(m, (x, y0 + 5.4, 0), (end_w + 1.4, 0.5, D + 0.8), COLUMN)
-        mb.box(m, (x, y0 + 5.85, 0), (end_w - 1.0, 0.4, D - 2.0), shade(STEP, 1.05))
+        px = s * (r + pier / 2)
+        mb.box(m, (px, 0.4, 0), (pier + 1.2, 0.8, D + 1.2), STEP)
+        mb.box(m, (px, spring / 2, 0), (pier, spring, D), STONE)
+        for sz in (-1, 1):   # 기둥 앞뒤로 붙은 높은 원기둥 2개씩 (엔태블러처까지)
+            for cx in (-1, 1):
+                column(mb, m, (px + cx * 1.3, 0.8, sz * (D / 2 + 0.5)), 0.55, block_top - 1.6)
+            side = m.child((px, 0, sz * (D / 2)), 0 if sz > 0 else 180)
+            mb.arch_panel(side, (0, 2.2, 0.03), 1.4, 3.6, shade(STONE, 0.8))   # 기둥 벽감
+    n = 32   # 아치 위 벽(스팬드럴): 아치 곡선에서 블록 위까지 세로 띠로 채운다 (넓은 아치라 촘촘히: 12 는 계단처럼 보였음)
+    for i in range(n):
+        x0, x1 = -r + 2 * r * i / n, -r + 2 * r * (i + 1) / n
+        xm = (x0 + x1) / 2
+        y = spring + math.sqrt(max(r * r - xm * xm, 0.0))
+        mb.box(m, (xm, (y + block_top) / 2, 0), (x1 - x0 + 0.02, block_top - y, D), STONE)
+    for k in range(24):   # 아치 테 (밝은 돌): 곡선을 따라 돌린 조각 (축 정렬 상자는 계단처럼 보였음)
+        a0, a1 = math.pi * k / 24, math.pi * (k + 1) / 24
+        x0, y0 = -math.cos(a0) * (r + 0.35), spring + math.sin(a0) * (r + 0.35)
+        x1, y1 = -math.cos(a1) * (r + 0.35), spring + math.sin(a1) * (r + 0.35)
+        seg = math.hypot(x1 - x0, y1 - y0)
+        tx, ty = (x1 - x0) / seg, (y1 - y0) / seg
         for sz in (-1, 1):
-            mb.box(m, (x, y0 + 2.8, sz * (D / 2 + 0.06)), (end_w - 2.2, 2.6, 0.12), shade(STONE, 0.88), top=shade(STONE, 0.88))
-        # 난간 (끝 블록과 가운데 판 사이)
-        x_in, x_out = s * (center_w / 2 + 3.0), s * (W / 2 - end_w - 0.3)
-        mid, run = (x_in + x_out) / 2, abs(x_out - x_in)
-        for sz in (-1, 1):
-            balustrade(mb, m, (mid, y0, sz * (D / 2 - 0.4)), run, 1.1)
-    cw = center_w + 6.0
-    mb.box(m, (0, y0 + 2.0, 0), (cw, 4.0, D - 1.6), STONE)
-    mb.box(m, (0, y0 + 4.2, 0), (cw + 0.8, 0.45, D - 0.8), COLUMN)
-    mb.box(m, (0, y0 + 4.85, 0), (cw * 0.55, 0.9, D - 3.0), shade(STONE, 1.02))
-    mb.box(m, (0, y0 + 5.4, 0), (cw * 0.55 + 0.6, 0.3, D - 2.4), COLUMN)
-    for side_yaw in (0, 180):
+            o = m.p(((x0 + x1) / 2, (y0 + y1) / 2, sz * (D / 2 + 0.1)))
+            mb.box(Frame(o, m.dir((tx, ty, 0.0)), m.dir((-ty, tx, 0.0)), m.dir((0.0, 0.0, 1.0))), (0, 0, 0), (seg + 0.08, 0.8, 0.3), COLUMN)
+    for sz in (-1, 1):   # 쐐기돌
+        mb.box(m, (0, spring + r + 0.2, sz * (D / 2 + 0.15)), (1.4, 1.9, 0.5), COLUMN)
+    mb.box(m, (0, spring + 0.3, 0), (2 * r + 0.6, 0.5, D + 0.3), COLUMN)   # 아치 시작선 (임포스트)
+    mb.box(m, (0, block_top + 0.4, 0), (cw + 1.4, 0.8, D + 1.4), COLUMN)   # 엔태블러처 · 코니스
+    AT = 2.6   # 아틱 높이 (실사: 코니스 위 조각 띠가 뚜렷)
+    mb.box(m, (0, block_top + 0.8 + AT / 2, 0), (cw - 1.0, AT, D - 0.6), STONE)   # 아틱
+    mb.box(m, (0, block_top + 0.95 + AT, 0), (cw - 0.4, 0.3, D - 0.2), COLUMN)
+    for side_yaw in (0, 180):   # 아틱 가운데 문장 (금색 원판)
         side = m.child((0, 0, 0), side_yaw)
-        zf = (D - 1.6) / 2
-        mb.box(side, (0, y0 + 2.0, zf + 0.06), (cw * 0.62, 2.0, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))
-        mb.box(side, (0, y0 + 2.0, zf + 0.14), (cw * 0.5, 0.18, 0.06), GOLD)   # 새김 글씨 줄
-        mb.disc(side, (0, y0 + 2.0, zf + 0.22), 1.25, 0.1, 20, GOLD)
-        mb.disc(side, (0, y0 + 2.0, zf + 0.27), 0.85, 0.1, 20, shade(GOLD, 1.12))
-    # 바닥 불빛: 가운데 문·옆 문 아래
-    for x in (0.0, -(center_w / 2 + inner_w + side_w / 2), center_w / 2 + inner_w + side_w / 2):
-        p = m.p((x, 0, 0))
-        LIGHTS.append((p[0], p[2], 12.0 if x == 0 else 7.0, 0.9))
+        mb.disc(side, (0, block_top + 0.8 + AT / 2, (D - 0.6) / 2 + 0.06), 1.0, 0.1, 20, GOLD)
+    top = block_top + 1.1 + AT
+    # M12 (PC v16 ③): 위(T)에서 23 × 15 m 흰 평면 하나로 보였음 → 회색 금속 지붕 판(가장자리 흰 테만 남김) + 앞뒤 난간 + 조각 밑 두 단 받침
+    #      (실제 윗면 마감은 확인 못 함 — 추정)
+    mb.box(m, (0, top + 0.03, 0), (cw - 2.6, 0.06, D - 2.4), shade(ROOF, 0.96), top=shade(ROOF, 0.96))
+    for sz in (-1, 1):
+        balustrade(mb, m, (0, top, sz * (D / 2 - 0.9)), cw - 3.0, 0.8)
+    mb.box(m, (0, top + 0.2, 0), (9.0, 0.4, 6.0), STONE)
+    mb.box(m, (0, top + 0.45, 0), (7.0, 0.1, 4.4), COLUMN)
+    mb.box(m, (0, top + 0.5, 0), (5.0, 1.0, 2.6), COLUMN)   # 꼭대기 조각 무리
+    mb.ico(m, (0, top + 1.9, 0), (1.5, 1.6, 1.0), COLUMN, var=0.05)
+    for s in (-1, 1):
+        mb.ico(m, (s * 2.0, top + 1.4, 0), (0.7, 1.1, 0.7), COLUMN, var=0.05)
+        mb.ico(m, (s * (cw / 2 - 0.6), top + 0.7, 0), (0.6, 1.0, 0.6), COLUMN, var=0.05)
+    # 2) 좌우 낮은 회랑: 원기둥 2열 + 엔태블러처, 3) 양 끝 파일런 + 조각상
+    pyl, Dc, col_h = 5.5, 9.0, 7.4   # 열주 위 = 가운데 덩어리의 약 0.55 (실사). M11: 회랑 깊이 7 → 9, 끝 기둥탑 Dc + 3
+    x_in, x_out = cw / 2, W / 2 - pyl
+    run = x_out - x_in
+    ncol = max(3, int(run / 3.0))
+    for s in (-1, 1):
+        mid = s * (x_in + run / 2)
+        mb.box(m, (mid, 0.3, 0), (run, 0.6, Dc + 1.0), STEP)
+        for i in range(ncol + 1):
+            x = s * (x_in + 1.0 + (run - 2.0) * i / ncol)
+            for sz in (-1, 1):
+                column(mb, m, (x, 0.6, sz * (Dc / 2 - 0.6)), 0.45, col_h)
+        mb.box(m, (mid, 0.6 + col_h + 0.6, 0), (run, 1.2, Dc), STONE)
+        mb.box(m, (mid, 0.6 + col_h + 1.35, 0), (run + 0.4, 0.3, Dc + 0.6), COLUMN)
+        balustrade(mb, m, (mid, 0.6 + col_h + 1.5, 0), run - 1.0, 0.8)
+        px = s * (W / 2 - pyl / 2)
+        ph = 0.6 + col_h + 1.5   # 끝 기둥탑은 열주 높이까지 + 위 조각상 (예전 11 m 는 열주보다 높아 계단이 거꾸로였음)
+        PD = Dc + 3.0
+        mb.box(m, (px, 0.4, 0), (pyl + 1.0, 0.8, PD + 1.0), STEP)
+        mb.box(m, (px, ph / 2, 0), (pyl, ph, PD), STONE)
+        mb.box(m, (px, ph + 0.3, 0), (pyl + 0.6, 0.6, PD + 0.6), COLUMN)
+        for sz in (-1, 1):
+            mb.box(m, (px, ph * 0.55, sz * (PD / 2 + 0.06)), (pyl - 1.6, ph * 0.5, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))   # 부조 판
+        side = m.child((s * W / 2, 0, 0), 90 * s)   # 바깥 옆면 부조 판 (옆에서 민벽 대신 두께 있는 기둥탑으로)
+        mb.box(side, (0, ph * 0.55, 0.06), (PD - 2.4, ph * 0.5, 0.12), shade(STONE, 0.86), top=shade(STONE, 0.86))
+        mb.box(m, (px, ph + 1.1, 0), (2.0, 1.0, 2.0), STONE)
+        mb.ico(m, (px, ph + 2.6, 0), (0.8, 1.4, 0.8), COLUMN, var=0.06)   # 조각상
+    # 밤: 아치 밑 등
+    mb.emissive = True
+    for s in (-1, 1):
+        mb.box(m, (s * (r - 0.3), spring - 2.0, 0), (0.5, 1.2, 1.0), LAMP)
+    mb.emissive = False
+    p = m.p((0, 0, 0))
+    LIGHTS.append((p[0], p[2], 12.0, 0.9))
     if ground is not None:
-        # 문 전체 (기둥덩어리 + 문 사이 통로) 에 나무·벤치가 서지 않게, 덩어리 밑은 그늘
+        # 문 전체에 나무·벤치가 서지 않게, 기둥 · 파일런 밑은 그늘
         for k in range(int(-D / 2) - 4, int(D / 2) + 5, 2):
             for dx in range(int(-W / 2) - 3, int(W / 2) + 4, 2):
                 p = m.p((dx, 0, k))
-                near = any(abs(dx - px) < pw / 2 + 1 and abs(k) < D / 2 + 1 for px, pw, _ in piers)
+                near = (r - 1 < abs(dx) < r + pier + 1 or abs(dx) > W / 2 - pyl - 1) and abs(k) < D / 2 + 1
                 ground.occupy(p[0], p[2], 1.6, ao=0.35 if near else 0.0, ao_radius=1.8)
 
 
@@ -503,8 +770,10 @@ def obelisk(mb, pos):
     mb.cone(m, (0, 27.6, 0), 1.3 * 1.414, 3.6, 4, COLUMN, rot=45)
 
 
-def stadium(layer, ground):
-    """대운동장 네 모서리 조명탑 + 긴 변 한쪽 관중석"""
+def stadium(layer, ground, buildings=()):
+    """대운동장 네 모서리 조명탑 + 양쪽 긴 변 계단식 스탠드 (실사: 흙 운동장 둘레 스탠드)
+    짧은 변(북 · 남)엔 스탠드 없음: OSM 에 그쪽 관람석 근거가 없고, 둘레 차도(way-423471655)가 8 ~ 15 m 바깥을 돈다 (M15)"""
+    from .geo import dist_to_poly_edge, point_in_poly
     (x0, z0), (x1, z1) = ground.stadium_box
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     long_z = (z1 - z0) > (x1 - x0)
@@ -523,23 +792,275 @@ def stadium(layer, ground):
                     mb.box(m, (-1.4 + i * 1.4, 21.9 + j * 1.2, 0.6), (1.1, 0.9, 0.2), LAMP, top=LAMP)
                     mb.emissive = False
             ground.occupy(px, pz, 2.5, ao=0.3, ao_radius=1.8)
-    # 관중석: 서쪽(또는 남쪽) 긴 변 바깥
+    # 스탠드: 양쪽 긴 변 바깥. 서쪽(또는 남쪽)은 지붕 있는 본부석 포함
     if long_z:
-        pos, face = (x0 - 9, 0.0, cz), (1.0, 0.0, 0.0)
-        length = (z1 - z0) * 0.55
+        sides = (((x0 - 9, 0.0, cz), (1.0, 0.0, 0.0), True), ((x1 + 9, 0.0, cz), (-1.0, 0.0, 0.0), False))
+        length = (z1 - z0) * 0.8
     else:
-        pos, face = (cx, 0.0, z0 - 9), (0.0, 0.0, 1.0)
-        length = (x1 - x0) * 0.55
-    mb = layer.at(pos[0], pos[2])
-    m = Frame.look(pos, face)
-    for i in range(6):
-        mb.box(m, (0, 0.45 * (i + 1) / 2, 3 - i * 1.0), (length, 0.45 * (i + 1), 1.0), SEAT if i % 2 else shade(SEAT, 1.05))
-    mb.box(m, (0, 3.6, -2.6), (length + 1, 0.4, 3.6), (0.95, 0.95, 0.96))
-    for s in (-1, 0, 1):
-        mb.prism(m, (s * length / 2.2, 0, -3.8), 0.18, 3.5, 6, POLE)
-    for k in range(-int(length / 2), int(length / 2) + 1, 3):
-        p = m.p((k, 0, 0))
-        ground.occupy(p[0], p[2], 4.0)
+        sides = (((cx, 0.0, z0 - 9), (0.0, 0.0, 1.0), True), ((cx, 0.0, z1 + 9), (0.0, 0.0, -1.0), False))
+        length = (x1 - x0) * 0.8
+    for pos, face, main in sides:
+        mb = layer.at(pos[0], pos[2])
+        m = Frame.look(pos, face)
+        # 계단 10단 (높이 5.5 m, 깊이 10 m): 6단은 멀리서 얇은 띠로만 보였음 (M4)
+        # M14: 디딤 · 챌면이 거의 같은 흰색이라 계단 덩어리로만 보였음 (REVIEW_v19) → 챌면 한 톤 어둡게 + 단마다 좌석 줄
+        #      (14 m 블록마다 2 m 통로). 좌석 색은 실사 확인 못 함 — 흙 · 잔디와 갈리는 차분한 청회색 (추정)
+        #      계단 · 뒤 벽도 블록마다 끊는다: 150 m 상자 하나는 양 끝 정점만 지형 높이를 따라가 가운데 좌석을 덮었음
+        near = [bb for bb in buildings if math.hypot(bb.centroid[0] - pos[0], bb.centroid[1] - pos[2]) < length]
+
+        def clear(lx):
+            # 스탠드 단면(계단 앞 ~ 뒤 기둥 띠)이 건물 외곽에서 6 m 밖인지
+            for lz in (3.5, -2.0, -7.5):
+                q = m.p((lx, 0.0, lz))
+                if any(point_in_poly(q[0], q[2], bb.poly) or dist_to_poly_edge(q[0], q[2], bb.poly) < 6.0 for bb in near):
+                    return False
+            return True
+        # M15: 서쪽 스탠드 북쪽 토막이 멀티미디어교육관 벽을 따라 2.5 ~ 5.5 m 로 붙어 닿아 보였음 (REVIEW_v20) → 양 끝 토막(가운데
+        #      본부석 지붕 폭 밖)에서 건물 외곽 6 m 안에 드는 곳이 있으면, 그중 가장 안쪽 자리 1 m 앞에서 스탠드를 자른다.
+        #      건물이 끝(끝에서 15 m 안) 옆에 있을 때만 — 가운데 옆 건물(지붕 밑 여자동)은 그대로, 그 너머 남쪽 스탠드도 남긴다.
+        #      (끝 자체는 비스듬한 벽에서 5.5 m 라 끝에서부터 걸어 들어오면 못 찾음)
+        lo, hi = -length / 2, length / 2
+        for sgn in (1, -1):
+            bad = [k for k in range(int(length * 0.2), int(length / 2) + 1) if not clear(sgn * k)]
+            if bad and max(bad) >= length / 2 - 15:
+                if sgn > 0:
+                    hi = min(bad) - 1.0
+                else:
+                    lo = -min(bad) + 1.0
+        if hi - lo < length - 0.5:
+            print(f'stadium: 스탠드 끝 자름 {length:.0f} → {hi - lo:.0f} m')
+        nb = max(1, round((hi - lo) / 14))
+        bw = (hi - lo) / nb
+        # M25: 동쪽 스탠드가 위(T)에서 같은 파랑 좌석 + 흰 갓돌이 100 m 넘게 이어진 한 줄 패널처럼 보였음 (REVIEW_v30)
+        #      → 블록마다 좌석 톤을 번갈아(파랑 / 한 단계 연한 청회색), 블록 사이 통로 가운데 어두운 난간 줄,
+        #      뒤 갓돌은 본부석 지붕과 같은 청회색 금속 + 기둥 띠(6 m)마다 이음 줄
+        for k in range(nb):
+            bx = lo + (k + 0.5) * bw
+            seat = SEAT if k % 2 == 0 else (0.50, 0.58, 0.70)
+            for i in range(10):
+                top = 0.55 * (i + 1)
+                mb.box(m, (bx, top / 2, 3 - i * 1.0), (bw, top, 1.0), shade(STEP, 0.82), top=STEP)
+                mb.box(m, (bx, top + 0.15, 3 - i * 1.0 - 0.05), (bw - 2.0, 0.3, 0.5), seat if i % 2 else shade(seat, 1.08))
+                if k:   # 통로 난간 (앞 블록과의 사이)
+                    mb.box(m, (lo + k * bw, top + 0.45, 3 - i * 1.0), (0.25, 0.9, 1.0), (0.42, 0.45, 0.50))
+            mb.box(m, (bx, 3.2, -6.9), (bw, 6.4, 0.8), shade(STEP, 0.92))   # 뒤 벽
+            # M29: 학생 인형이 앉을 좌석 줄 (블록 · 단마다, 본부석 지붕 밑은 위에서 안 보여 뺌)
+            from .people import SEAT_ROWS
+            fd = m.dir((0.0, 0.0, 1.0))
+            for i in range(10):
+                row = []
+                for j in range(int((bw - 3.0) / 0.75)):
+                    lx = bx - (bw - 3.0) / 2 + (j + 0.5) * 0.75
+                    if main and -length * 0.2 - 1 < lx < length * 0.2 + 1:
+                        continue
+                    p = m.p((lx, 0.55 * (i + 1) + 0.3, 3 - i * 1.0 - 0.05))
+                    row.append((p[0], p[1], p[2], math.degrees(math.atan2(fd[0], fd[2]))))
+                if row:
+                    SEAT_ROWS['stadium'].append(row)
+            # M12: 100 m 넘는 민짜 뒤 벽 → 6 m 마다 기둥 띠 + 위 갓돌 (멀티미디어 · 여자동 쪽에서 큰 회색 판으로 보였음)
+            mb.box(m, (bx, 6.5, -6.9), (bw + 0.02, 0.3, 1.1), STAND_ROOF, top=shade(STAND_ROOF, 1.04))
+        n6 = max(1, int((hi - lo) / 6))
+        for k in range(n6 + 1):
+            mb.box(m, (lo + k * (hi - lo) / n6, 3.2, -7.35), (0.7, 6.4, 0.3), shade(STEP, 0.84))
+            mb.box(m, (lo + k * (hi - lo) / n6, 6.68, -6.9), (0.2, 0.08, 1.14), shade(STAND_ROOF, 0.8))   # 갓돌 이음 줄
+        if main:
+            # M12: 본부석 지붕이 뒤쪽 가는 기둥 3개(위에서 안 보임)뿐이라 스탠드 위에 떠 있는 흰 판처럼 보였음
+            #      → 앞쪽 굵은 기둥 5개 + 뒤 기둥 5개(바닥부터), 지붕 앞 처마 띠 · 어두운 밑면 (실제 본부석 구조는 확인 못 함 — 추정)
+            r0, r1 = max(-length * 0.2, lo + 0.6), min(length * 0.2, hi - 0.6)   # 자른 스탠드 밖으로 나가지 않게 (M15)
+            w, rc = r1 - r0, (r0 + r1) / 2
+            # M24: 0.95 흰 지붕이 위(T) · 끝(N · S) · 여자동 E 에서 민짜 흰 판으로 튀었음 → 연한 청회색 금속판 + 3 m 마다 이음 줄 (추정)
+            roof = STAND_ROOF
+            mb.box(m, (rc, 8.45, -1.6), (w + 1, 0.4, 10.0), roof, top=shade(roof, 1.04))
+            for k in range(1, int((w + 1) / 3.0)):
+                mb.box(m, (rc - (w + 1) / 2 + k * (w + 1) / int((w + 1) / 3.0), 8.69, -1.6), (0.18, 0.08, 10.0), shade(roof, 0.86))
+            mb.box(m, (rc, 8.2, -1.6), (w + 0.6, 0.12, 9.6), (0.62, 0.64, 0.68))       # 밑면 그늘
+            mb.box(m, (rc, 8.35, 3.45), (w + 1.2, 0.9, 0.35), shade(STEP, 1.02))       # 앞 처마 띠
+            for s in (-1, -0.5, 0, 0.5, 1):
+                mb.prism(m, (rc + s * w / 2, 0.55, 2.9), 0.32, 7.65, 8, POLE)
+                mb.prism(m, (rc + s * w / 2, 0.0, -6.0), 0.32, 8.2, 8, POLE)
+        for k in range(int(lo), int(hi) + 1, 3):
+            p = m.p((k, 0, 0))
+            ground.occupy(p[0], p[2], 4.0)
+
+
+# ---------- 보조 건물 (사이클 M4, 실사 기준) ----------
+
+def _entrance_frame(b, ent, out=0.0):
+    """입구 변 위 로컬 틀 (X = 변 방향, Z = 바깥)과 입구 변 길이"""
+    i = ent['edge']
+    a, c = b.poly[i], b.poly[(i + 1) % len(b.poly)]
+    nx, nz = ent['n']
+    m = Frame.look((ent['x'] + nx * out, 0.0, ent['z'] + nz * out), (nx, 0.0, nz))
+    return m, math.hypot(c[0] - a[0], c[1] - a[1])
+
+
+def secondary(by_id, entrances, builder_at, ground):
+    from .buildings import MASSING
+    for bid, fn in ((UJEONGWON, ujeongwon_front), (FOREIGN, foreign_canopy), (ENGINEERING, engineering_arcade),
+                    (ELECTRONICS, electronics_plaza), (STUDENT_UNION, union_canopy), (CERAMICS, ceramics_deck)):
+        b, ent = by_id.get(bid), entrances.get(bid)
+        if b is None or ent is None:
+            print('landmarks: 보조 건물 입구 없음', bid)
+            continue
+        out = 2.4 if 'bay' in (MASSING.get(bid) or ()) else 0.0   # 정면 돌출 동 앞면에서 시작
+        m, elen = _entrance_frame(b, ent, out)
+        if bid == CERAMICS:
+            ceramics_stair(builder_at(b), m, b, elen)
+            # 도예관 입구 쪽은 옆 건물과 붙은 좁은 틈 → 데크는 숲길이 오는 서쪽 면에
+            f = Footprint(b.poly, b.h).face((b.centroid[0] - 200.0, b.centroid[1]))
+            m, elen = Frame.look(f['center'], f['normal']), f['length']
+        fn(builder_at(b), m, b, elen, ground)
+
+
+def ujeongwon_front(mb, m, b, elen, ground):
+    """우정원: 정면 양 끝 청록 유리 계단탑(둥근 원통, 지붕 위로 한 층) + 1층 청록 캐노피 현관"""
+    H = b.h
+    # 실사: 계단탑은 정면 양 끝. 정면 띠(정면에서 안쪽 12 m 까지)에 있는 윤곽 꼭짓점을 정면 방향으로 투영해 양 끝을 찾는다
+    # (안쪽으로 걸어가며 찾던 방식은 중정에 막혀 입구 변 끝에서 멈췄음)
+    loc = [((px - m.o[0]) * m.x[0] + (pz - m.o[2]) * m.x[2], (px - m.o[0]) * m.z[0] + (pz - m.o[2]) * m.z[2]) for px, pz in b.poly]
+    front = [lx for lx, lz in loc if -12.0 <= lz <= 1.5]
+    ends = (min(front + [-elen / 2]), max(front + [elen / 2]))
+    for s, edge in zip((-1, 1), ends):
+        x = edge - s * 3.0
+        mb.prism(m, (x, 0.0, 1.2), 3.6, H + 3.3, 14, TOWER_GLASS, caps=True)
+        for k in range(1, int((H + 3.3) / 3.3)):
+            mb.prism(m, (x, k * 3.3 - 0.15, 1.2), 3.75, 0.3, 14, COLUMN)   # 층 띠
+        mb.prism(m, (x, H + 3.3, 1.2), 3.9, 0.5, 14, COLUMN, caps=True)  # 꼭대기 테
+    w = min(elen * 0.45, 26.0)
+    mb.box(m, (0, 4.6, 2.8), (w, 0.5, 5.6), TEAL_GLASS, top=shade(TEAL_GLASS, 1.15))
+    for x in (-w / 2 + 0.6, -w / 6, w / 6, w / 2 - 0.6):
+        mb.prism(m, (x, 0.0, 5.2), 0.22, 4.4, 8, COLUMN)
+    # 가운데 연녹색 작은 박공 장식 입구
+    mb.gable(m, (0, 4.85, 2.8), 7.0, 5.6, 1.8, (0.72, 0.86, 0.66), True, end_col=(0.80, 0.90, 0.74))
+
+
+def foreign_canopy(mb, m, b, elen, ground):
+    """외국어대학관: 가운데 입구 위로 크게 내민 캔틸레버 평 캐노피 (기둥 없음) + 넓은 계단"""
+    w = min(max(elen * 0.6, 18.0), 26.0)
+    # M25: 9 m 흰 윗면이 위(T)에서 하얗게 날아간 지붕 판으로 보였음 (국제학관 현관과 같은 문제) → 윗면만 회색 한 단계
+    mb.box(m, (0, 6.0, 4.6), (w, 0.9, 9.2), COLUMN, top=shade(COLUMN, 0.84))
+    mb.box(m, (0, 5.5, 4.6), (w - 0.6, 0.1, 8.8), (0.98, 0.95, 0.82), top=(0.98, 0.95, 0.82))   # 밑면 조명 띠
+    for k in range(4):
+        mb.box(m, (0, 0.12 * (4 - k), 3.2 + k * 1.0), (w + 2 - k * 0.6, 0.24 * (4 - k), 1.0), STEP)
+
+
+def engineering_arcade(mb, m, b, elen, ground):
+    """공학관: 입구 변을 따라 1층 기둥 아케이드 (위 평 슬래브) + 가운데 반원 캐노피 (실사)"""
+    L = elen - 6.0
+    if L < 12:
+        return
+    mb.box(m, (0, 4.6, 1.7), (L, 0.6, 3.4), COLUMN, top=shade(COLUMN, 1.02))
+    n = int(L / 4.5)
+    for i in range(n + 1):
+        x = -L / 2 + L * i / n
+        if abs(x) < 7.0:
+            continue   # 가운데 현관 · 계단 자리
+        mb.box(m, (x, 2.15, 3.1), (0.7, 4.3, 0.7), COLUMN)
+    mb.prism(m, (0, 4.5, 0.0), 6.5, 0.8, 18, COLUMN, caps=True)   # 벽에 반쯤 묻힌 원판 = 반원 캐노피
+    mb.box(m, (0, 6.0, 0.6), (8.0, 1.6, 0.4), (0.24, 0.30, 0.38))  # 현판
+
+
+def electronics_plaza(mb, m, b, elen, ground):
+    """전자정보대학관: 앞 붉은 벽돌 포장 광장 (지면) + 가로등 줄"""
+    from .nature import draw_lamp
+    w, d = min(elen + 10, 44.0), 22.0
+    corners = [m.p((sx * w / 2, 0, z)) for sx, z in ((-1, 1.0), (1, 1.0), (1, d), (-1, d))]
+    ground.add_brick([(p[0], p[2]) for p in corners])
+    for sx in (-1, 1):
+        for z in (6.0, 16.0):
+            p = m.p((sx * (w / 2 - 2), 0, z))
+            draw_lamp(mb, p[0], p[2], math.degrees(math.atan2(m.z[0], m.z[2])))
+
+
+def union_canopy(mb, m, b, elen, ground):
+    """학생회관: 크게 내민 평 캐노피 + 넓은 대계단 (실사)"""
+    w = min(max(elen * 0.5, 16.0), 24.0)
+    mb.box(m, (0, 5.4, 3.8), (w, 0.8, 7.6), COLUMN, top=shade(COLUMN, 0.84))   # M25: 윗면 회색 한 단계 (외국어대 캐노피와 같음)
+    for x in (-w / 2 + 0.8, w / 2 - 0.8):
+        mb.box(m, (x, 2.5, 6.8), (0.8, 5.0, 0.8), COLUMN)
+    for k in range(6):
+        mb.box(m, (0, 0.1 * (6 - k), 2.0 + k * 0.9), (w + 4 - k * 0.5, 0.2 * (6 - k), 0.9), STEP)
+    # 실사: 정면 2층 위로 가로로 긴 청록 띠창
+    # M26: 진한 TEAL_GLASS 라 S 에서 다른 건물 창과 색이 달라 튀었음 (REVIEW_v31) — 실사 색은 다시 확인 못 함
+    #      → 우정원 계단탑(M20)과 같은 TOWER_GLASS: 청록 색조는 두고 밝기 · 채도를 창 유리 쪽으로 한 단계
+    for y in (7.4, 10.6):
+        if y + 1.0 < b.h:
+            mb.box(m, (0, y, 0.12), (elen * 0.86, 1.3, 0.24), TOWER_GLASS)
+    # M11: M5 의 '뒤쪽 4층 더 높은 매스'(지붕 위 청록 띠창 탑)는 근거 없음 — OSM 은 다각형 하나(building=college, 높이 ·
+    # 층수 · building:part 없음)라 이미 기본 높이 18 m(5층대) 몸체인데 그 위에 4층을 더 얹어 9층 탑이 됐다.
+    # 실사의 '앞 2~3층 / 뒤 고층' 은 몸체 높이로 이미 닮았으니 탑을 없애고 지붕은 다른 건물과 같은 옥상 규칙(작은 계단실 · 실외기)에 맡긴다.
+
+
+def ceramics_stair(mb, m, b, elen):
+    """도예관: 입구 모서리의 전면 유리 계단실 (지붕 위로 반 층) + 옆 모자이크 타일 기둥 2개 (실사)"""
+    x = elen / 2 - 2.4
+    H = b.h
+    mb.box(m, (x, (H + 1.6) / 2, 1.0), (4.4, H + 1.6, 2.6), (0.66, 0.82, 0.88), top=shade(COLUMN, 0.95))
+    for k in range(1, int((H + 1.6) / 3.3) + 1):
+        mb.box(m, (x, k * 3.3 - 0.1, 1.0), (4.6, 0.22, 2.8), COLUMN)   # 층 슬래브
+    mb.box(m, (x, H + 1.75, 1.0), (4.8, 0.3, 3.0), COLUMN)
+    tiles = ((0.20, 0.45, 0.70), (0.95, 0.85, 0.55), (0.85, 0.35, 0.30), (0.30, 0.65, 0.55), (0.98, 0.97, 0.92))
+    for j, cx in enumerate((x - 5.0, x - 9.0)):
+        for k in range(8):   # 0.5 m 조각을 쌓아 도자기 모자이크 느낌
+            mb.box(m, (cx, 0.25 + k * 0.5, 0.7), (0.9, 0.5, 0.9), tiles[(k + j * 2) % len(tiles)])
+
+
+def ceramics_deck(mb, m, b, elen, ground):
+    """도예관: 앞 나무 데크 테라스 + 파라솔 테이블 (실사)"""
+    dw, dd = 14.0, 8.0
+    x0 = elen / 2 - dw / 2 if elen > dw + 6 else 0.0   # 입구 옆으로 비켜서
+    mb.box(m, (x0, 0.25, 5.0 + dd / 2), (dw, 0.5, dd), DECK, top=shade(DECK, 1.08))
+    for k in range(int(dw / 1.2)):
+        mb.box(m, (x0 - dw / 2 + 0.6 + k * 1.2, 0.51, 5.0 + dd / 2), (0.08, 0.02, dd - 0.2), shade(DECK, 0.85))
+    for i, (px, pz) in enumerate(((-3.5, 7.0), (3.5, 7.0), (0.0, 10.5))):
+        x = x0 + px
+        mb.prism(m, (x, 0.5, pz), 0.6, 0.75, 8, (0.95, 0.95, 0.93), caps=True)    # 둥근 탁자
+        mb.prism(m, (x, 0.5, pz), 0.06, 2.6, 6, (0.40, 0.40, 0.42))               # 파라솔 대
+        mb.cone(m, (x, 2.6, pz), 1.8, 0.7, 8, (0.98, 0.62, 0.40) if i % 2 == 0 else (0.98, 0.96, 0.90))
+    for zz in range(0, int(dd) + 6, 2):
+        for xx in range(int(-dw / 2) - 1, int(dw / 2) + 2, 2):
+            p = m.p((x0 + xx, 0, 5.0 + zz))
+            ground.occupy(p[0], p[2], 1.6)
+
+
+def lawn_bed(mb, c, axis, length, width):
+    """광장 잔디 화단: 낮은 석재 테두리 + 잔디 + 긴 변을 따라 둥근 회양목"""
+    m = Frame.look((c[0], 0.0, c[1]), (axis[0], 0.0, axis[1]))   # 로컬 Z = 광장 축
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 0.6, 0.2
+    mb.box(m, (0, 0.2, 0), (width + 0.8, 0.4, length + 0.8), STONE)
+    mb.ao_strength = 0.0
+    mb.box(m, (0, 0.42, 0), (width, 0.06, length), (0.42, 0.66, 0.28), top=(0.42, 0.66, 0.28))
+    for sx in (-1, 1):
+        for k in range(int(length / 3) + 1):
+            mb.ico(m, (sx * (width / 2 - 1.0), 1.0, -length / 2 + 1.0 + k * (length - 2) / int(length / 3)),
+                   (0.85, 0.7, 0.85), HEDGE_C, var=0.05)
+    mb.cone(m, (0, 0.45, 0), 1.3, 4.2, 8, FORMAL, bottom=False)
+    mb.ao_strength = 0.25
+
+
+def pergola(mb, p0, p1):
+    """등나무 퍼걸러 열주 (흰 원기둥 두 줄 + 들보 + 덮인 등나무, 군데군데 보라 꽃)"""
+    L = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+    yaw = math.degrees(math.atan2(p1[0] - p0[0], p1[1] - p0[1]))
+    m = Frame.yaw(((p0[0] + p1[0]) / 2, 0.0, (p0[1] + p1[1]) / 2), yaw)   # 로컬 Z = 길이 방향
+    n = max(2, int(L / 4.0))
+    mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 1.0, 0.25
+    for i in range(n + 1):
+        z = -L / 2 + L * i / n
+        for x in (-1.7, 1.7):
+            mb.prism(m, (x, 0.0, z), 0.26, 3.3, 8, COLUMN)
+    mb.ao_strength = 0.0
+    for x in (-1.7, 1.7):
+        mb.box(m, (x, 3.45, 0), (0.35, 0.35, L + 0.8), COLUMN)
+    for k in range(int(L / 1.6) + 1):
+        mb.box(m, (0, 3.75, -L / 2 + k * 1.6), (4.4, 0.25, 0.22), COLUMN)
+    for k in range(int(L / 2.2)):
+        z = -L / 2 + 1.1 + k * 2.2
+        mb.ico(m, (((k * 37) % 5 - 2) * 0.4, 4.1, z), (1.6, 0.6, 1.4), VINE, var=0.08)
+        if k % 2 == 0:
+            for x in (-1.9, 1.9):
+                mb.ico(m, (x, 3.2, z), (0.35, 0.7, 0.35), WISTERIA, var=0.05)
+    mb.ao_strength = 0.25
 
 
 # ---------- 정문 진입로와 사색의 광장 둘레 (키아트 메인 비주얼의 정돈된 축) ----------
@@ -693,10 +1214,9 @@ def plaza_ring(layer, ground, osm):
     return n
 
 
-def lions(mb, f):
-    """대계단 양옆 받침 위 사자상 (돌 색, 앉은 모습을 덩어리로)"""
+def lions(mb, f, width):
+    """대계단 양옆 받침 위 사자상 (돌 색, 앉은 모습을 덩어리로). width: 현관 폭"""
     m = Frame.look(f['center'], f['normal'])
-    width = min(f['length'] * 0.5, 44.0)
     for sx in (-1, 1):
         x, z = sx * (width / 2 + 5.0), 7.0 + 9.5
         mb.box(m, (x, 0.9, z), (2.6, 1.8, 3.6), STEP)
@@ -714,8 +1234,47 @@ def atrium(mb, b, f):
     (ax, az), L, Wd = f.long_axis()
     m = Frame.look((f.center[0], top, f.center[1]), (ax, 0.0, az))
     mb.ao_floor = top
-    mb.box(m, (0, 0.3, 0), (Wd * 0.28 + 0.8, 0.6, L * 0.3 + 0.8), COLUMN)
-    mb.gable(m, (0, 0.6, 0), Wd * 0.28, L * 0.3, 2.6, GLASS, True, end_col=COLUMN)
+    gw, gl, gh = Wd * 0.28, L * 0.3, 2.6
+    mb.box(m, (0, 0.3, 0), (gw + 0.8, 0.6, gl + 0.8), COLUMN)
+    # M10: 짙은 남색(GLASS)은 위 · 옆에서 지붕에 뚫린 구멍처럼 보였음 → 하늘이 비친 밝은 유리 + 흰 살 · 용마루
+    mb.gable(m, (0, 0.6, 0), gw, gl, gh, SKY_GLASS, True, end_col=COLUMN)
+    seg = math.hypot(gw / 2, gh)
+    tx, ty = (gw / 2) / seg, gh / seg
+    for k in range(-4, 5):
+        for sx in (-1, 1):   # 경사면을 따라 내려오는 살 (지붕 위로 살짝 띄움)
+            o = m.p((sx * gw / 4, 0.6 + gh / 2 + 0.06, k * gl / 9))
+            mb.box(Frame(o, m.dir((-sx * tx, ty, 0.0)), m.dir((sx * ty, tx, 0.0)), m.dir((0.0, 0.0, -sx))), (0, 0, 0), (seg, 0.12, 0.28), COLUMN)   # z 는 오른손 좌표가 되게
+    mb.box(m, (0, 0.6 + gh + 0.1, 0), (0.6, 0.3, gl + 0.4), COLUMN)   # 용마루
+    mb.ao_floor = 0.0
+    _library_roof(mb, b, f)
+
+
+def _library_roof(mb, b, f):
+    """M10: 박공 둘레 밖 넓은 평지붕이 민짜 베이지였음 → 안쪽 낮은 난간 띠(트림) + 날개마다 기계실 · 실외기 묶음"""
+    from .buildings import FAN, ROOF_RESERVED, ROOF_UNIT
+    from .geo import dist_to_poly_edge, point_in_poly
+    from .mesh import offset_polygon, rect_poly
+    H = b.h
+    mb.ao_floor = H
+    inner = offset_polygon(b.poly, -4.5)
+    if len(inner) >= 3:
+        mb.band(inner, H, H + 0.45, 0.18, 0.18, shade(COLUMN, 0.97), top_col=COLUMN)   # 낮은 안쪽 난간 (지붕 테두리 트림)
+    (ax, az), L, Wd = f.long_axis()
+    u, v = (ax, az), (-az, ax)
+    yaw = math.degrees(math.atan2(ax, az))
+    for su in (-1, 1):
+        for sv in (-1, 1):
+            px = f.center[0] + u[0] * su * L * 0.36 + v[0] * sv * Wd * 0.22
+            pz = f.center[1] + u[1] * su * L * 0.36 + v[1] * sv * Wd * 0.22
+            if not point_in_poly(px, pz, b.poly) or dist_to_poly_edge(px, pz, b.poly) < 7:
+                continue
+            m = Frame.yaw((px, H, pz), yaw)
+            # M28: 기계실(5 × 7 m) 위 실외기 두 대가 천창 양 끝 실외기(M27)보다 커 위(T)에서 크기 규칙이 두 가지였음 (REVIEW_v33)
+            #      → 기계실을 빼고 천창 쪽과 같은 실외기 한 쌍(2.2 × 1.6 m, 4 m 간격)을 지붕에 바로. 막는 자리는 그대로 (공용 rng 순서 유지)
+            for k in (-1, 1):
+                mb.box(m, (k * 2.0, 0.7, 0), (2.2, 1.4, 1.6), ROOF_UNIT)
+                mb.box(m, (k * 2.0, 1.42, 0), (1.1, 0.06, 1.1), FAN, top=FAN)
+            ROOF_RESERVED.setdefault(b.id, []).append((rect_poly((px, pz), u, v, 5.0, 4.0), H + 3.4))
     mb.ao_floor = 0.0
 
 
@@ -747,7 +1306,7 @@ LILY = (0.36, 0.62, 0.26)
 
 
 def plan_lake(ground, osm):
-    """광장 다각형 안 동쪽에 둥근 호수 (오벨리스크는 서쪽 도서관 쪽). 반환: (중심, rx, rz)"""
+    """광장 다각형 안 동쪽에 직사각 수조 (오벨리스크는 서쪽 도서관 쪽). 반환: (중심, rx, rz)"""
     from .geo import to_world
     ring = None
     for e in osm:
@@ -759,14 +1318,13 @@ def plan_lake(ground, osm):
     w, h = max(xs) - min(xs), max(zs) - min(zs)
     cx = (min(xs) + max(xs)) / 2 + w * 0.14
     cz = (min(zs) + max(zs)) / 2
-    rx, rz = min(w * 0.24, 42.0), min(h * 0.3, 26.0)
+    rx, rz = min(w * 0.2, 34.0), min(h * 0.2, 15.0)   # 실사: 축을 따라 긴 직사각 수조
     ground.add_lake((cx, cz), rx, rz)
     return (cx, cz), rx, rz
 
 
 def lake_features(layer, ground, lake):
-    """호수 둘레 낮은 석재 테, 가운데 3단 분수와 물줄기, 연잎"""
-    import random as _r
+    """수조 둘레 낮은 석재 테, 가운데 3단 분수와 물줄기, 동쪽 끝 아치 7개 열주 (실사: 사색의 광장)"""
     from .mesh import offset_polygon, signed_area
     (cx, cz), rx, rz = lake
     poly = list(ground.lake_poly)
@@ -789,22 +1347,41 @@ def lake_features(layer, ground, lake):
         a = k * math.pi / 4
         x, z = cx + math.cos(a) * 3.6, cz + math.sin(a) * 3.6
         mb.cone(IDENT, (x, 0.75, z), 0.22, 1.6, 6, WATER_JET, bottom=False)
-    # 연잎과 분홍 연꽃
-    rr = _r.Random(5)
-    for k in range(22):
-        a = rr.uniform(0, 2 * math.pi)
-        t = rr.uniform(0.45, 0.85)
-        x, z = cx + math.cos(a) * rx * t, cz + math.sin(a) * rz * t
-        mb.prism(IDENT, (x, 0.05, z), rr.uniform(0.7, 1.2), 0.06, 8, LILY, caps=True)
-        if rr.random() < 0.35:
-            mb.ico(IDENT, (x, 0.3, z), (0.3, 0.22, 0.3), (0.98, 0.70, 0.82), var=0.0)
+    ax = cx + rx + 10.0
+    arch_colonnade(layer.at(ax, cz), (ax, 0.0, cz), 7, 6.5)
+    ground.occupy(ax, cz, 8.0, ao=0.0)
+    # 수조 긴 변 바깥 남북으로 등나무 퍼걸러 열주 (실사: 광장 가장자리)
+    for s in (-1, 1):
+        z = cz + s * (rz + 10.0)
+        pergola(layer.at(cx, z), (cx - rx, z), (cx + rx, z))
+        for x in range(int(cx - rx), int(cx + rx) + 1, 3):
+            ground.occupy(x, z, 3.0)
     ground.occupy(cx, cz, max(rx, rz) + 2, ao=0.0)
-    # 호수 둘레 벤치 6개 (호수를 바라보게)
+    # 수조 긴 변을 따라 벤치 (수조를 바라보게)
     from .nature import draw_bench
-    for k in range(6):
-        a = k * math.pi / 3 + 0.3
-        x, z = cx + math.cos(a) * (rx + 4.5), cz + math.sin(a) * (rz + 4.5)
-        draw_bench(layer.at(x, z), x, z, math.degrees(math.atan2(cx - x, cz - z)))
+    for sx in (-0.6, 0.0, 0.6):
+        for sz in (-1, 1):
+            x, z = cx + rx * sx, cz + sz * (rz + 4.0)
+            draw_bench(layer.at(x, z), x, z, 180.0 if sz > 0 else 0.0)
+
+
+def arch_colonnade(mb, pos, count, spacing):
+    """따로 선 반원 아치 문이 남북으로 한 줄 (실사: 사색의 광장 동쪽 끝 아치 7개, 아치 사이는 비어 있다)"""
+    m = Frame.look(pos, (1.0, 0.0, 0.0))   # 로컬 x = 남북 (아치가 늘어서는 방향), 로컬 z = 동쪽
+    pier, h, r = 1.1, 4.2, spacing * 0.3
+    L = spacing * count
+    for i in range(count):
+        xc = -L / 2 + spacing * (i + 0.5)
+        for s in (-1, 1):
+            x = xc + s * (r + pier / 2)
+            mb.box(m, (x, 0.2, 0.0), (pier + 0.4, 0.4, 1.6), STONE)
+            mb.box(m, (x, h / 2, 0.0), (pier, h, 1.2), COLUMN)
+        R = r + pier / 2
+        for k in range(8):   # 반원 아치 테 (짧은 상자 8개)
+            a0, a1 = math.pi * k / 8, math.pi * (k + 1) / 8
+            x0, y0 = xc - math.cos(a0) * R, h + math.sin(a0) * R
+            x1, y1 = xc - math.cos(a1) * R, h + math.sin(a1) * R
+            mb.box(m, ((x0 + x1) / 2, (y0 + y1) / 2, 0.0), (abs(x1 - x0) + pier * 0.9, abs(y1 - y0) + pier * 0.9, 1.2), COLUMN)
 
 
 # ---------- 캠퍼스 경계 담장 ----------
@@ -961,12 +1538,21 @@ def gate_fountain(layer, ground):
     mb.prism(m, (0, 0.55, 0), 6.4, 0.2, 20, (0.50, 0.80, 0.94), caps=True)       # 물
     mb.prism(m, (0, 0.0, 0), 1.6, 3.2, 8, stone)                                   # 받침
     mb.prism(m, (0, 3.2, 0), 2.0, 0.35, 8, cap, caps=True)
-    mb.ico(m, (0, 5.3, 0), (1.8, 1.8, 1.8), (0.62, 0.78, 0.92), var=0.06)          # 지구본
+    mb.ico(m, (0, 5.3, 0), (1.8, 1.8, 1.8), (0.86, 0.88, 0.91), var=0.04)          # 은색 구 (실사)
     mb.prism(m, (0, 4.6, 0), 2.15, 0.25, 16, GOLD)                                 # 금색 고리
     for k in range(10):
         a = k * math.pi / 5
         mb.cone(m, (math.cos(a) * 5.2, 0.75, math.sin(a) * 5.2), 0.2, 1.8, 6, WATER_JET, bottom=False)
-    ground.occupy(x, z, 9.0, ao=0.25, ao_radius=7.5)
+    # 실사: 로터리 둘레 장미 화단 고리 (낮은 회양목 테 + 빨강 · 분홍 장미)
+    roses = ((0.86, 0.18, 0.30), (0.98, 0.62, 0.74), (0.95, 0.36, 0.45))
+    mb.ao_strength = 0.2
+    for k in range(28):
+        a = 2 * math.pi * k / 28
+        rx, rz = math.cos(a) * 9.6, math.sin(a) * 9.6
+        mb.ico(m, (rx, 0.45, rz), (1.15, 0.55, 1.15), HEDGE_C, var=0.05)
+        mb.ico(m, (rx, 0.95, rz), (0.42, 0.32, 0.42), roses[k % 3], var=0.0)
+    mb.ao_strength = 0.0
+    ground.occupy(x, z, 11.5, ao=0.25, ao_radius=7.5)
     return True
 
 
@@ -1027,22 +1613,29 @@ def pavilions(layer, ground, rng, max_count=10, spacing=130.0):
 
 
 def _front_edge(poly, toward):
-    """toward 방향(단위 벡터)을 바라보는 가장 긴 변: (a, b, 바깥 법선, 길이)"""
+    """toward 방향(단위 벡터)을 바라보는 가장 긴 벽: (a, b, 바깥 법선, 길이).
+    한 직선 벽이 여러 변으로 나뉘어 있으면(예술대 남쪽 면 4조각) 이어서 한 벽으로 본다 — 안 그러면 끝 조각에 현관이 붙는다"""
     from .mesh import outward_normal
     best = None
     n = len(poly)
-    for i in range(n):
-        a, c = poly[i], poly[(i + 1) % n]
-        L = math.hypot(c[0] - a[0], c[1] - a[1])
-        nx, nz = outward_normal(poly, i)
-        if nx * toward[0] + nz * toward[1] < 0.92:
-            continue
-        if best is None or L > best[3]:
-            best = (a, c, (nx, nz), L)
+    run = None   # 지금 잇고 있는 벽: [a, c, (nx, nz)]
+    for i in range(n + 1):
+        k = i % n
+        a, c = poly[k], poly[(k + 1) % n]
+        nx, nz = outward_normal(poly, k)
+        ok = nx * toward[0] + nz * toward[1] >= 0.92
+        if ok and run is not None and nx * run[2][0] + nz * run[2][1] > 0.995 and a == run[1]:
+            run[1] = c
+        else:
+            if run is not None:
+                L = math.hypot(run[1][0] - run[0][0], run[1][1] - run[0][1])
+                if best is None or L > best[3]:
+                    best = (run[0], run[1], run[2], L)
+            run = [a, c, (nx, nz)] if ok and i < n else None
     return best
 
 
-def arts_palace(mb, shell, b, ground):
+def arts_palace(mb, shell, b, ground, front=None):
     """
     예술디자인대학 (키아트 '궁전' 아이콘): 사색의 광장·산책길이 오는 서쪽 정면 돌출부를
     한 층 높은 가운데 파빌리온으로 키우고, 거대 기둥 6개 + 엔태블러처 + 박공 + 지붕 난간,
@@ -1052,9 +1645,12 @@ def arts_palace(mb, shell, b, ground):
     from .mesh import extrude_poly, rect_poly, round_corners
     from .nature import LIGHTS
     pal = PALETTE[style_of(b)]
-    dx, dz = PLAZA[0] - b.centroid[0], PLAZA[1] - b.centroid[1]
-    L = math.hypot(dx, dz) or 1
-    edge = _front_edge(b.poly, (dx / L, dz / L))
+    # 실사 (항공 VR · 정면 사진, M6): 정면 포르티코는 남쪽 긴 면, 앞 차도 · 횡단보도 너머 대형 주차장. 예전엔 광장 쪽(서쪽 옆면)
+    if front is None:
+        dx, dz = PLAZA[0] - b.centroid[0], PLAZA[1] - b.centroid[1]
+        L = math.hypot(dx, dz) or 1
+        front = (dx / L, dz / L)
+    edge = _front_edge(b.poly, front)
     if edge is None:
         return
     a, c, (nx, nz), elen = edge
@@ -1064,7 +1660,7 @@ def arts_palace(mb, shell, b, ground):
     proj, back = 4.0, 4.0
     H = b.h
     fh = floor_height(style_of(b))
-    top = H + fh
+    top = min(H, 2 * fh) + fh   # 실사: 7층 본동 앞의 낮은 포르티코 (2층 높이 기둥 + 박공 시계)
     # 1) 파빌리온 덩어리 (외벽 셰이더: 창이 같이 그려진다)
     tx, tz = -nz, nx
     pc = (mx + nx * (proj - back) / 2, mz + nz * (proj - back) / 2)
@@ -1139,6 +1735,8 @@ def arts_palace(mb, shell, b, ground):
         cp = m.p((s * (tw / 2 + 1.6), 0, td * 0.5 - 5.5))
         formal_cone(mb, cp[0], cp[2], 0.9)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
+    _corner_towers(mb, b, front, pal, fh)
+    _arts_wings(mb, b, pc, width, fh, ground, front)
     _atelier_roof(mb, b, pal)
     # 나무·벤치가 테라스·계단에 서지 않게, 계단 앞은 포장 (apron)
     for zz in range(-1, int(td + 6), 2):
@@ -1149,6 +1747,65 @@ def arts_palace(mb, shell, b, ground):
     end = ground.nearest_walk_point(s0[0], s0[2], max_dist=30)
     if end:
         ground.add_apron((s0[0], s0[2]), end, sw)
+
+
+def _arts_wings(mb, b, pc, width, fh, ground, front):
+    """예술대 1층 열주 날개: 박공 현관 양옆으로 본동 정면을 따라 1층 높이 기둥 줄 + 위 평 슬래브 (실사)"""
+    f = Footprint(b.poly, b.h).face((b.centroid[0] + front[0] * 300, b.centroid[1] + front[1] * 300))
+    mf = Frame.look(f['center'], f['normal'])
+    off = (pc[0] - f['center'][0]) * mf.x[0] + (pc[1] - f['center'][2]) * mf.x[2]   # 현관 가운데의 면 방향 위치
+    h = fh * 1.15
+    for s in (-1, 1):
+        x0 = off + s * (width / 2 + 1.0)
+        x1 = s * (f['length'] / 2 - 2.0)
+        L = (x1 - x0) * s
+        if L < 6.0:
+            continue
+        L = min(L, 22.0)
+        cx = x0 + s * L / 2
+        mb.box(mf, (cx, h + 0.35, 1.6), (L, 0.7, 3.4), COLUMN, top=shade(COLUMN, 1.02))
+        n = max(2, int(L / 3.2))
+        for i in range(n + 1):
+            column(mb, mf, (x0 + s * L * i / n, 0.0, 2.9), 0.32, h, fluted=False)
+        for i in range(0, int(L) + 1, 2):
+            p = mf.p((x0 + s * i, 0, 2.6))
+            ground.occupy(p[0], p[2], 1.4)
+
+
+def _corner_towers(mb, b, front, pal, fh):
+    """예술대 본동 정면 양 모서리 탑 (실사: 모서리가 탑처럼 솟고 아치창 · 코니스). 지붕 위로 1.5층"""
+    from .geo import point_in_poly
+    from .buildings import HUT_CAP
+    fp = Footprint(b.poly, b.h)
+    H = b.h
+    corners = [(fp.center[0] + fp.u[0] * su * fp.half_u + fp.v[0] * sv * fp.half_v,
+                fp.center[1] + fp.u[1] * su * fp.half_u + fp.v[1] * sv * fp.half_v)
+               for su in (-1, 1) for sv in (-1, 1)]
+    corners.sort(key=lambda p: -((p[0] - fp.center[0]) * front[0] + (p[1] - fp.center[1]) * front[1]))
+    yaw = math.degrees(math.atan2(fp.u[0], fp.u[1]))
+    for px, pz in corners[:2]:
+        # 모서리에서 중심 쪽으로 들어가며 탑(8 m) 이 건물 안에 들어가는 첫 자리
+        dl = max(1.0, math.hypot(fp.center[0] - px, fp.center[1] - pz))
+        for d in range(4, 52, 2):   # 윤곽이 패인 모서리도 더 안쪽까지 찾는다 (M4 에서 한쪽만 섰음)
+            qx, qz = px + (fp.center[0] - px) * d / dl, pz + (fp.center[1] - pz) * d / dl
+            if all(point_in_poly(qx + ox, qz + oz, b.poly) for ox in (-3, 3) for oz in (-3, 3)):
+                break
+        else:
+            print('landmarks: 예술대 모서리 탑 자리 없음', round(px), round(pz))
+            continue
+        m = Frame.yaw((qx, 0.0, qz), yaw)
+        top = H + fh * 2.6   # 양 끝 파빌리온(H + 1층)보다 한 층 반 더
+        # M28: 흰 벽(0.92) · 흰 갓(0.95)이 M27 청회색 톱날 지붕보다 밝아 E · W 에서 지붕 모서리 흰 계단실 둘이 튀었음 (REVIEW_v33)
+        #      → 몸체를 지붕 베이지 쪽으로 한 단계 낮추고 갓 윗면은 다른 계단실과 같은 회색 갓(HUT_CAP), 코니스 띠만 한 톤 밝게 남겨 테로
+        body = shade(pal['wall'], 0.86)
+        mb.box(m, (0, (H + top) / 2, 0), (8.0, top - H + 0.4, 8.0), body, top=body)
+        mb.box(m, (0, top - 0.3, 0), (8.8, 0.6, 8.8), shade(pal['trim'], 0.92))
+        mb.box(m, (0, top + 0.5, 0), (7.4, 1.0, 7.4), body, top=HUT_CAP)
+        for k in range(4):
+            fm = Frame.yaw((qx, 0.0, qz), yaw + 90 * k)
+            mb.arch_panel(fm, (0, H + 0.6, 4.02), 2.0, 3.0, (0.50, 0.60, 0.70))
+        from .buildings import ROOF_RESERVED
+        ROOF_RESERVED.setdefault(b.id, []).append(([m.p((sx * 5, 0, sz * 5))[::2] for sx, sz in ((-1, -1), (1, -1), (1, 1), (-1, 1))], top))
 
 
 def _atelier_roof(mb, b, pal):
@@ -1180,7 +1837,11 @@ def _atelier_roof(mb, b, pal):
     mb.ao_strength = 0.0
     pitch, th = 5.0, 2.4
     rows = max(2, int(half_v * 2 / pitch))
-    roof_c = shade(pal['trim'], 0.96)
+    # M26: 흰 지붕면(trim 0.96)이 남쪽 해를 받아 위(T)에서 줄 없는 흰 판이었음 (REVIEW_v31 Unity 예술디자인대학 T)
+    #      → 본부석 지붕과 같은 연한 청회색 금속판 (실제 지붕 재질은 확인 못 함 — 톱날 천창 자체가 키아트)
+    # M27: STAND_ROOF 도 Unity 에서 E · S · W · T 거의 흰색, N 유리 면만 진한 파랑이라 태양광처럼 보였음 (REVIEW_v32)
+    #      → 금속 면을 한 단계 더 청회색으로 (본부석 지붕은 지적 없어 그대로), 유리 면은 한 단계 덜 파랗게 (두 면 차이를 줄임)
+    roof_c, glass_c = (0.70, 0.74, 0.79), (0.62, 0.74, 0.82)
     x0, x1 = -half_u, half_u
     for k in range(rows):
         z0 = -half_v + k * (half_v * 2 / rows)
@@ -1190,7 +1851,7 @@ def _atelier_roof(mb, b, pal):
         # 남쪽으로 기운 지붕면, 북쪽 세로 유리면 (밤에는 불 켜진 작업실)
         mb.quad(m, (x0, y0, z0), (x1, y0, z0), (x1, y0 + th, z1), (x0, y0 + th, z1), roof_c, inside)
         mb.emissive = True
-        mb.quad(m, (x0, y0, z1), (x1, y0, z1), (x1, y0 + th, z1), (x0, y0 + th, z1), (0.55, 0.72, 0.86), inside)
+        mb.quad(m, (x0, y0, z1), (x1, y0, z1), (x1, y0 + th, z1), (x0, y0 + th, z1), glass_c, inside)
         mb.emissive = False
         for xx in (x0, x1):
             mb.tri(m, (xx, y0, z0), (xx, y0, z1), (xx, y0 + th, z1), shade(roof_c, 0.9), inside)
@@ -1199,6 +1860,9 @@ def _atelier_roof(mb, b, pal):
         for i in range(n_m + 1):
             x = x0 + (x1 - x0) * i / n_m
             mb.box(m, (x, y0 + th / 2, z1 + 0.05), (0.18, th, 0.1), COLUMN)
+            # M26: 금속 지붕면 이음 줄 (창살과 같은 자리, 본부석 지붕처럼 약 3 m 마다)
+            mb.quad(m, (x - 0.09, y0 + 0.03, z0), (x + 0.09, y0 + 0.03, z0), (x + 0.09, y0 + th + 0.03, z1), (x - 0.09, y0 + th + 0.03, z1),
+                    shade(roof_c, 0.86), inside)
         mb.box(m, (0, y0 + th + 0.08, z1), (x1 - x0 + 0.4, 0.16, 0.4), COLUMN)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     ROOF_RESERVED.setdefault(b.id, []).append((rect_poly(fp.center, u, v, half_u + 1.0, half_v + 1.0), H + 3.0))
@@ -1223,7 +1887,8 @@ def _rooftop_court(mb, b):
         return
     H = b.h
     m = Frame((fp.center[0], H, fp.center[1]), (u[0], 0.0, u[1]), (0.0, 1.0, 0.0), (v[0], 0.0, v[1]))
-    track, court, line = (0.84, 0.45, 0.36), (0.38, 0.66, 0.46), (0.98, 0.98, 0.96)
+    # M27: 주황 트랙(0.84, 0.45, 0.36)이 위(T)에서 아주 진했음 (REVIEW_v32) → 대운동장 마사토 흙(ground.DIRT) 쪽으로 한 단계
+    track, court, line = (0.81, 0.56, 0.44), (0.38, 0.66, 0.46), (0.98, 0.98, 0.96)
     mb.ao_floor, mb.ao_height, mb.ao_strength = H, 1.0, 0.25
     mb.box(m, (0, 0.1, 0), (hl * 2 + 1.2, 0.2, hw * 2 + 1.2), shade(STEP, 1.02))
     mb.ao_strength = 0.0
@@ -1261,3 +1926,5 @@ def _rooftop_court(mb, b):
             mb.box(m, (x, 0.75, sz * (hw + 0.5)), (0.12, 1.4, 0.12), POLE)
     mb.ao_floor, mb.ao_height, mb.ao_strength = 0.0, 2.0, 0.25
     ROOF_RESERVED.setdefault(b.id, []).append((rect_poly(fp.center, u, v, hl + 1.5, hw + 1.5), H + 2.0))
+    from .people import ROOF_COURTS
+    ROOF_COURTS.append((m, hl, hw))   # M30: 옥상 운동장에 선 학생 인형 자리

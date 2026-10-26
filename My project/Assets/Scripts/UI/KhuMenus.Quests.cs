@@ -9,10 +9,10 @@ using UnityEngine.UI;
 /// </summary>
 public partial class KhuMenus
 {
-    static readonly Color QuestInk = new Color(0.20f, 0.14f, 0.10f);
-    static readonly Color QuestQuiet = new Color(0.20f, 0.14f, 0.10f, 0.55f);
-    static readonly Color QuestOrange = new Color(0.96f, 0.52f, 0.16f);
-    static readonly Color QuestTrack = new Color(0.20f, 0.14f, 0.10f, 0.10f);
+    static readonly Color QuestInk = KucaTheme.Ink;
+    static readonly Color QuestQuiet = KucaTheme.InkMuted;
+    static readonly Color QuestOrange = KucaTheme.Primary;
+    static readonly Color QuestTrack = KucaTheme.Line;
 
     GameObject questScreen;
     RectTransform questList;
@@ -91,7 +91,7 @@ public partial class KhuMenus
         title.verticalOverflow = VerticalWrapMode.Truncate;
         title.horizontalOverflow = HorizontalWrapMode.Wrap;
 
-        string reward = d.egg ? $"보상: 경희몬 알 + {d.xp} XP" : $"보상: {d.xp} XP";
+        string reward = d.egg ? $"보상: 경희펫 알 + {d.xp} XP" : $"보상: {d.xp} XP";
         Text rw = T(card.transform, reward, 28, TextAnchor.UpperLeft, QuestOrange, bold: true);
         Box(rw.rectTransform, 40f, 92f, 300f, 40f);
 
@@ -131,7 +131,7 @@ public partial class KhuMenus
             cr.anchorMin = cr.anchorMax = cr.pivot = new Vector2(1f, 1f);
             cr.anchoredPosition = new Vector2(-30f, -40f);
             cr.sizeDelta = new Vector2(230f, 84f);
-            claim.GetComponentInChildren<Text>().fontSize = 32;
+            claim.GetComponentInChildren<Text>(true).fontSize = 32;
             claim.gameObject.AddComponent<PressScale>();
         }
     }
@@ -155,20 +155,10 @@ public partial class KhuMenus
 
     void BuildQuests()
     {
-        questScreen = FullScreen("Quests", new Color(1f, 0.95f, 0.84f), new Color(0.99f, 0.82f, 0.62f), out RectTransform inner);
-        Frame(questScreen.transform, QuestOrange);
-        Text title = T(inner, "퀘스트", 60, TextAnchor.MiddleLeft, QuestInk, bold: true);
-        Box(title.rectTransform, 60f, 40f, 60f, 90f);
-        questTimer = T(inner, "", 30, TextAnchor.MiddleLeft, QuestQuiet);
-        Box(questTimer.rectTransform, 60f, 130f, 60f, 50f);
-
-        RectTransform area = UIKit.Rect(inner, "List");
-        area.anchorMin = Vector2.zero;
-        area.anchorMax = Vector2.one;
-        area.offsetMin = new Vector2(0f, 220f);
-        area.offsetMax = new Vector2(0f, -190f);
-        questList = UIKit.ScrollList(area, 22f, new RectOffset(48, 48, 0, 40));
-        CloseFab(inner, () => Show(questScreen, false), filled: true, QuestOrange);
+        UIKit.Page page = UIKit.CreatePage(canvasRoot, "Quests", "퀘스트", () => Show(questScreen, false), " ");
+        questScreen = page.root;
+        questTimer = page.subtitle;
+        questList = page.content;
     }
 
     /// <summary>부모 위쪽에서 (left, top) 떨어지고 오른쪽 여백 right, 높이 height 인 칸</summary>

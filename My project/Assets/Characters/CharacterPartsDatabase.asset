@@ -78,6 +78,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: 4e932cafd19a1433c94804217b464f48, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: 0246f56cac1a44e6adda7726606a4b03, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 19053d72deaf4c3589189faf30288395, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 360b044c9c364f9c84dae9a93d8b7bd7, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: 8cdd93668ac545e8a43665fffa17f9a6, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: e9cbc6949bbb74e8cbc4c50caff1238c, type: 3}
@@ -115,6 +127,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: faa9d24e7696240fb922d685b433fca1, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: dcb130762a334ef7ac4b2e2351dd1f43, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: c6f15677a9b545829b661c1a8c1bc2e4, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 87776674ed56483f9bb2774760209f55, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: c4fcf8cbdd3a41eaa73c30dfb5035fc6, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: 9d976aede455040278a65c19e3d0645b, type: 3}
@@ -152,6 +176,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: 80526368c2dba4362ab3706307ad95ab, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: 8b315a5275e841119308d7a081b4e692, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 0d47b1c0d8e24e159f93d274f0aa3b1b, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 41076437dc93422ebc71fdadce0f352c, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: 3cd3f3610df745359ce5d5bee4dd1a24, type: 3}
     - id: King
       displayName: "\uC655"
       prefab: {fileID: 919132149155446097, guid: 9203593021d964c1ca778ee717fa53da, type: 3}
@@ -230,6 +266,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: 4c55cd5a6104849359655cc3629fea27, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: 9651e15611264c97934f3c70cab11251, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 92921912ef9542ef911fc7b316e30f8f, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 834240259ad34b77a1e7793054fe014e, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: 14154979ad8543979033784c7f148b10, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: ef2cf690015324671923f09630e0acdd, type: 3}
@@ -264,6 +312,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: 936f6cc53e73c4318987ddea3354d419, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: 61300a1c75ed41298a41f098a38bd9f4, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: fc0fe9ce257047ad940e35c9c10a590b, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 8fe40e65c247498a91e9a42638fc1e92, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: ca49c1d714f4481baf184b0d96378fd1, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: 05a9a99ca1cee4a518d1578c810b5080, type: 3}
@@ -298,6 +358,18 @@ MonoBehaviour:
     - id: KHU_Adventurer
       displayName: "\uACBD\uD76C \uBAA8\uD5D8\uAC00"
       prefab: {fileID: 919132149155446097, guid: ddc8de6e2b749484e9c1709bd73fb0bd, type: 3}
+    - id: KHU_Varsity
+      displayName: "\uACBD\uD76C \uACFC\uC7A0"
+      prefab: {fileID: 919132149155446097, guid: 29a94096ce2e40a6b8f579a51e3e0e64, type: 3}
+    - id: KHU_Hoodie
+      displayName: "\uD6C4\uB4DC\uD2F0"
+      prefab: {fileID: 919132149155446097, guid: 193ce3d85e4c4a1b8c112a276eea9786, type: 3}
+    - id: KHU_Neat
+      displayName: "\uB2E8\uC815"
+      prefab: {fileID: 919132149155446097, guid: 0c19c01a4c1c4964917060d9533c1eb5, type: 3}
+    - id: KHU_Summer
+      displayName: "\uC5EC\uB984 \uB098\uB4E4\uC774"
+      prefab: {fileID: 919132149155446097, guid: 728a7391fa4f4d5ead88c793fe1f0373, type: 3}
     - id: Medieval
       displayName: "\uC911\uC138"
       prefab: {fileID: 919132149155446097, guid: 2d8ad0990e8e24a289ea104f19085962, type: 3}

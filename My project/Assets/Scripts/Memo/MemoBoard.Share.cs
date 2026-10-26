@@ -159,7 +159,7 @@ public partial class MemoBoard
 
     void BuildShare()
     {
-        // 공유 창: 어두운 배경 위 가운데 카드
+        // 공유 창: 어두운 배경 위 아래에서 올라온 시트 (iOS 공유 시트 · 토스 바텀시트)
         shareSheet = UIKit.Image(root.transform, "ShareSheet", new Color(0f, 0f, 0f, 0.55f), raycast: true).gameObject;
         UIKit.Stretch((RectTransform)shareSheet.transform);
         Image card = UIKit.Image(shareSheet.transform, "Card", Color.white, raycast: true);
@@ -167,22 +167,22 @@ public partial class MemoBoard
         card.type = Image.Type.Sliced;
         card.pixelsPerUnitMultiplier = 0.5f;
         RectTransform cr = card.rectTransform;
-        cr.anchorMin = new Vector2(0.06f, 0.5f);
-        cr.anchorMax = new Vector2(0.94f, 0.5f);
-        cr.pivot = new Vector2(0.5f, 0.5f);
-        cr.sizeDelta = new Vector2(0f, 1060f);
-        cr.anchoredPosition = Vector2.zero;
+        cr.anchorMin = Vector2.zero;
+        cr.anchorMax = new Vector2(1f, 0f);
+        cr.pivot = new Vector2(0.5f, 0f);
+        cr.sizeDelta = new Vector2(0f, 1300f);
+        cr.anchoredPosition = new Vector2(0f, -48f);   // 아래 둥근 모서리는 화면 밖으로
 
-        Text title = UIKit.Text(cr, "친구에게도 공유할까요?", 44, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
-        TopBox(title.rectTransform, 54f, 64f, 30f);
-        shareSubtitle = UIKit.Text(cr, "", 30, TextAnchor.MiddleCenter, InkQuiet);
-        TopBox(shareSubtitle.rectTransform, 124f, 44f, 30f);
+        Text title = UIKit.Text(cr, "친구에게도 공유할까요?", KucaTheme.Title, TextAnchor.MiddleLeft, Ink);
+        UIKit.Bold(title);
+        TopBox(title.rectTransform, 64f, 100f, KucaTheme.Gutter);
+        shareSubtitle = UIKit.Text(cr, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        TopBox(shareSubtitle.rectTransform, 166f, 60f, KucaTheme.Gutter);
 
         Image thumb = UIKit.Image(cr, "Thumb", PaperDark);
         thumb.gameObject.AddComponent<RectMask2D>();
-        Place(thumb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -200f));
-        thumb.rectTransform.sizeDelta = new Vector2(400f, 400f);
+        Place(thumb.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -256f));
+        thumb.rectTransform.sizeDelta = new Vector2(420f, 420f);
         var go = new GameObject("Photo", typeof(RectTransform), typeof(RawImage), typeof(AspectRatioFitter));
         go.transform.SetParent(thumb.transform, false);
         sharePreview = go.GetComponent<RawImage>();
@@ -190,11 +190,11 @@ public partial class MemoBoard
         sharePreviewFit = go.GetComponent<AspectRatioFitter>();
         sharePreviewFit.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
 
-        ShareButton(cr, "인스타그램 스토리에 올리기", InstaPink, Color.white, HudIcons.Camera, 640f, OpenCrop);
-        ShareButton(cr, "카카오톡으로 보내기", KakaoYellow, KakaoInk, HudIcons.Bubble, 772f, ShareKakao);
-        Button skip = UIKit.Button(cr, "건너뛰기", CloseShare, new Color(0f, 0f, 0f, 0f), 34);
+        ShareButton(cr, "인스타그램 스토리에 올리기", InstaPink, Color.white, HudIcons.Camera, 720f, OpenCrop);
+        ShareButton(cr, "카카오톡으로 보내기", KakaoYellow, KakaoInk, HudIcons.Bubble, 904f, ShareKakao);
+        Button skip = UIKit.Button(cr, "건너뛰기", CloseShare, new Color(0f, 0f, 0f, 0f), KucaTheme.Body);
         skip.GetComponentInChildren<Text>().color = InkQuiet;
-        TopBox((RectTransform)skip.transform, 910f, 100f, 200f);
+        TopBox((RectTransform)skip.transform, 1086f, KucaTheme.TouchMin, 200f);
         shareSheet.SetActive(false);
 
         // 자르기 화면
@@ -204,18 +204,18 @@ public partial class MemoBoard
         RectTransform safe = SafeRect(cropView.transform, "Safe",
             new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
             new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
-        Button cancel = UIKit.Button(safe, "취소", () => { cropView.SetActive(false); shareSheet.SetActive(true); }, new Color(0f, 0f, 0f, 0f), 36);
+        Button cancel = UIKit.Button(safe, "취소", () => { cropView.SetActive(false); shareSheet.SetActive(true); }, new Color(0f, 0f, 0f, 0f), KucaTheme.Body);
         Place((RectTransform)cancel.transform, new Vector2(0f, 1f), new Vector2(20f, -30f));
-        ((RectTransform)cancel.transform).sizeDelta = new Vector2(160f, 88f);
-        Text head = UIKit.Text(safe, "스토리에 올릴 부분", 38, TextAnchor.MiddleCenter, Color.white);
-        head.fontStyle = FontStyle.Bold;
+        ((RectTransform)cancel.transform).sizeDelta = new Vector2(180f, KucaTheme.TouchMin);
+        Text head = UIKit.Text(safe, "스토리에 올릴 부분", KucaTheme.Heading, TextAnchor.MiddleCenter, Color.white);
+        UIKit.Bold(head);
         TopBox(head.rectTransform, 30f, 88f, 200f);
-        cropNext = UIKit.Button(safe, "올리기", FinishCrop, new Color(0f, 0f, 0f, 0f), 36);
+        cropNext = UIKit.Button(safe, "올리기", FinishCrop, new Color(0f, 0f, 0f, 0f), KucaTheme.Body);
         Text nextLabel = cropNext.GetComponentInChildren<Text>();
         nextLabel.color = new Color(0.45f, 0.62f, 1f);
-        nextLabel.fontStyle = FontStyle.Bold;
+        UIKit.Bold(nextLabel);
         Place((RectTransform)cropNext.transform, new Vector2(1f, 1f), new Vector2(-20f, -30f));
-        ((RectTransform)cropNext.transform).sizeDelta = new Vector2(200f, 88f);
+        ((RectTransform)cropNext.transform).sizeDelta = new Vector2(200f, KucaTheme.TouchMin);
 
         cropArea = UIKit.Rect(safe, "Area");
         cropArea.anchorMin = Vector2.zero;
@@ -244,11 +244,11 @@ public partial class MemoBoard
             Edge(cropFrame, new Vector2(0f, i / 3f), new Vector2(1f, i / 3f), 2f, new Color(1f, 1f, 1f, 0.35f));
         }
 
-        Text hint = UIKit.Text(safe, "끌어서 옮기고, 두 손가락으로 벌려 크게 볼 수 있어요", 28, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.6f));
+        Text hint = UIKit.Text(safe, "끌어서 옮기고, 두 손가락으로 벌려 크게 볼 수 있어요", KucaTheme.Caption, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.75f));
         hint.rectTransform.anchorMin = new Vector2(0f, 0f);
         hint.rectTransform.anchorMax = new Vector2(1f, 0f);
         hint.rectTransform.pivot = new Vector2(0.5f, 0f);
-        hint.rectTransform.sizeDelta = new Vector2(0f, 50f);
+        hint.rectTransform.sizeDelta = new Vector2(0f, 60f);
         hint.rectTransform.anchoredPosition = new Vector2(0f, 230f);
         cropChips = new Image[cropAspects.Length];
         const float chipW = 200f, chipGap = 24f;
@@ -256,13 +256,13 @@ public partial class MemoBoard
         for (int i = 0; i < cropAspects.Length; i++)
         {
             int choice = i;
-            Button chip = UIKit.Button(safe, cropAspects[i].label, () => SetCropAspect(choice), Color.white, 32);
+            Button chip = UIKit.Button(safe, cropAspects[i].label, () => SetCropAspect(choice), Color.white, KucaTheme.Label);
             Image ci = chip.GetComponent<Image>();
             ci.sprite = HudIcons.Pill;
             ci.type = Image.Type.Sliced;
             ci.pixelsPerUnitMultiplier = 120f / 84f;
             Place((RectTransform)chip.transform, new Vector2(0.5f, 0f), new Vector2(startX + i * (chipW + chipGap), 100f));
-            ((RectTransform)chip.transform).sizeDelta = new Vector2(chipW, 84f);
+            ((RectTransform)chip.transform).sizeDelta = new Vector2(chipW, 104f);
             cropChips[i] = ci;
         }
         cropView.SetActive(false);
@@ -279,20 +279,14 @@ public partial class MemoBoard
 
     static void ShareButton(RectTransform card, string label, Color face, Color ink, Sprite icon, float top, UnityEngine.Events.UnityAction onClick)
     {
-        Button b = UIKit.Button(card, label, onClick, face, 36);
-        Image bi = b.GetComponent<Image>();
-        bi.sprite = HudIcons.Pill;
-        bi.type = Image.Type.Sliced;
-        bi.pixelsPerUnitMultiplier = 120f / 112f;
+        Button b = UIKit.BigButton(card, label, onClick, face, ink);
         Text t = b.GetComponentInChildren<Text>();
-        t.color = ink;
-        t.fontStyle = FontStyle.Bold;
-        t.rectTransform.offsetMin = new Vector2(60f, 0f);
-        TopBox((RectTransform)b.transform, top, 112f, 50f);
+        t.rectTransform.offsetMin = new Vector2(80f, 0f);
+        TopBox((RectTransform)b.transform, top, KucaTheme.ButtonHeight, KucaTheme.Gutter);
         Image ic = UIKit.Image(b.transform, "Icon", ink);
         ic.sprite = icon;
-        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(44f, 0f));
-        ic.rectTransform.sizeDelta = new Vector2(60f, 60f);
+        Place(ic.rectTransform, new Vector2(0f, 0.5f), new Vector2(56f, 0f));
+        ic.rectTransform.sizeDelta = new Vector2(64f, 64f);
         b.gameObject.AddComponent<PressScale>();
     }
 }

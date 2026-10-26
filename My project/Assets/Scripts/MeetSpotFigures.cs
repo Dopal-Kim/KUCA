@@ -3,19 +3,19 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// v2 (A-V3): 만남 스팟 10곳의 지붕 위, 경희스팟 기둥 옆에 그 장소의 경희몬이 서 있다 (MeetSpotCatalog).
+/// v2 (A-V3): 만남 스팟 10곳의 지붕 위, 경희스팟 기둥 옆에 그 장소의 경희펫이 서 있다 (MeetSpotCatalog).
 /// 야생 출현이 꺼진 지도에서 "여기서 만나요" 표지가 된다. 탭·잡기는 없다 (충돌체 없음).
 /// CollectController 가 붙인다.
 /// </summary>
 public class MeetSpotFigures : MonoBehaviour
 {
     /// <summary>
-    /// 지도에 만남 스팟 경희몬을 세울지. 10/24: 지도에는 경희몬을 두지 않고 뽑기로만 얻게 해서 꺼 둔다 (B 요청).
-    /// 매칭 화면은 여전히 스팟 이름과 그 경희몬 그림을 보여 준다. 다시 세우려면 true.
+    /// 지도에 만남 스팟 경희펫을 세울지. 10/24: 지도에는 경희펫을 두지 않고 뽑기로만 얻게 해서 꺼 둔다 (B 요청).
+    /// 매칭 화면은 여전히 스팟 이름과 그 경희펫 그림을 보여 준다. 다시 세우려면 true.
     /// </summary>
     public static bool ShowOnMap = false;
 
-    const float Scale = 1.15f;       // 지도 경희몬과 같은 크기 (받침 포함 약 10 m)
+    const float Scale = 1.15f;       // 지도 경희펫과 같은 크기 (받침 포함 약 10 m)
     const float SideOffset = 16f;    // 기둥에서 옆으로 (배지와 겹치지 않게)
     const int RimStage = 1;          // 1단계 진화 테두리 빛 → 다른 지도 장식과 구별
 

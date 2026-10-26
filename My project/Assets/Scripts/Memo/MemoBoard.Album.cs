@@ -10,10 +10,21 @@ using UnityEngine.UI;
 /// </summary>
 public partial class MemoBoard
 {
-    GameObject album;
+    GameObject album, albumEmptyCard, albumEmptyAction;
     RectTransform albumGrid;
-    Text albumCount, albumEmpty;
-    Button albumEmptyAction;   // 사진이 없을 때: 가까운 경희스팟 메모판 열기 (빈 화면이 막다른 길이 되지 않게)
+    Text albumCount, albumEmptyTitle, albumEmptyBody;
+
+    /// <summary>빈 상태 카드 글 (첫 줄 = 제목, 나머지 = 설명). 비우면 카드를 숨긴다</summary>
+    string AlbumEmpty
+    {
+        set
+        {
+            albumEmptyCard.SetActive(!string.IsNullOrEmpty(value));
+            int nl = (value ?? "").IndexOf('\n');
+            albumEmptyTitle.text = nl >= 0 ? value.Substring(0, nl) : value ?? "";
+            albumEmptyBody.text = nl >= 0 ? value.Substring(nl + 1) : "";
+        }
+    }
     bool albumMode;
     int albumRequest;
 
@@ -117,8 +128,8 @@ public partial class MemoBoard
         ids.Reverse(); // 나중에 올린 것이 앞에
         int request = ++albumRequest;
         albumCount.text = "";
-        albumEmpty.text = ids.Count == 0 ? "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요" : "불러오는 중…";
-        albumEmptyAction.gameObject.SetActive(ids.Count == 0);
+        AlbumEmpty = ids.Count == 0 ? "아직 올린 사진이 없어요\n지도의 경희스팟 핀을 누르면\n그곳 메모판에 사진을 남길 수 있어요" : "불러오는 중…";
+        albumEmptyAction.SetActive(ids.Count == 0);
         if (ids.Count == 0)
             return;
 
@@ -154,11 +165,11 @@ public partial class MemoBoard
                     if (memo.likeCount > 0)
                         LikeChip(cell.transform, memo.likeCount, added > 0);
                 }
-                albumCount.text = $"게시물 {currentMemos.Count}";
-                albumEmpty.text = currentMemos.Count > 0 ? ""
+                albumCount.text = $"내가 남긴 사진 {currentMemos.Count}장";
+                AlbumEmpty = currentMemos.Count > 0 ? ""
                     : failed > 0 ? "사진을 불러오지 못했어요\n인터넷 연결을 확인해 주세요"
-                    : "아직 올린 사진이 없어요\n경희스팟 메모판에 사진을 남겨 보세요";
-                albumEmptyAction.gameObject.SetActive(currentMemos.Count == 0 && failed == 0);
+                    : "아직 올린 사진이 없어요\n지도의 경희스팟 핀을 누르면\n그곳 메모판에 사진을 남길 수 있어요";
+                albumEmptyAction.SetActive(currentMemos.Count == 0 && failed == 0);
                 if (currentMemos.Count > 0)
                 {
                     SaveSeen(currentMemos);
@@ -185,7 +196,7 @@ public partial class MemoBoard
         Place(heart.rectTransform, new Vector2(0f, 0.5f), new Vector2(14f, 0f));
         heart.rectTransform.sizeDelta = new Vector2(30f, 30f);
         Text t = UIKit.Text(chip.transform, count.ToString(), 28, TextAnchor.MiddleLeft, Color.white);
-        t.fontStyle = FontStyle.Bold;
+        UIKit.Bold(t);
         t.rectTransform.anchorMin = Vector2.zero;
         t.rectTransform.anchorMax = Vector2.one;
         t.rectTransform.offsetMin = new Vector2(52f, 0f);
@@ -194,43 +205,23 @@ public partial class MemoBoard
 
     void BuildAlbum()
     {
-        album = UIKit.Image(root.transform, "Album", Color.white, raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)album.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = SafeRect(album.transform, "Safe",
-            new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height)),
-            new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height)));
+        // v4 화면 틀: ‹ 뒤로 · 큰 제목 · 부제(사진 수) · 3열 사진 격자 · 비었으면 빈 상태 카드
+        UIKit.Page page = UIKit.CreatePage(root.transform, "Album", "내 사진첩", Close, " ", scroll: false);
+        album = page.root;
+        albumCount = page.subtitle;
 
-        Button close = RoundButton(safe, "Close", HudIcons.Close, 88f, Color.white, Ink, Close);
-        Place((RectTransform)close.transform, new Vector2(0f, 1f), new Vector2(32f, -30f));
-        close.transform.Find("Shadow").GetComponent<Image>().color = Line;
-        Text head = UIKit.Text(safe, "내 사진첩", 38, TextAnchor.MiddleCenter, Ink);
-        head.fontStyle = FontStyle.Bold;
-        TopBox(head.rectTransform, 30f, 88f, 140f);
-        albumCount = UIKit.Text(safe, "", 30, TextAnchor.MiddleRight, InkQuiet);
-        TopBox(albumCount.rectTransform, 30f, 88f, 40f);
-        Image hr = UIKit.Image(safe, "Line", Line);
-        TopBox(hr.rectTransform, 140f, 2f, 0f);
+        // 빈 상태에서 할 일: 가까운 경희스팟 메모판 바로 열기 (REVIEW_v14: 안내만 있고 버튼이 없었음)
+        RectTransform empty = UIKit.EmptyState(page.content, " ", " ", "가까운 경희스팟 메모판 열기", OpenNearestSpot);
+        albumEmptyCard = empty.gameObject;
+        albumEmptyAction = empty.GetComponentInChildren<Button>(true).gameObject;
+        Text[] texts = empty.GetComponentsInChildren<Text>(true);
+        albumEmptyTitle = texts[0];
+        albumEmptyBody = texts[1];
 
-        RectTransform area = UIKit.Rect(safe, "Grid");
-        UIKit.StretchBetween(area, 0f, 146f);
+        RectTransform area = UIKit.Rect(page.content, "Grid");
+        UIKit.Size(area).flexibleHeight = 1f;
         albumGrid = BuildGrid(area);
-        albumEmpty = UIKit.Text(area, "", 34, TextAnchor.UpperCenter, InkQuiet);
-        UIKit.Stretch(albumEmpty.rectTransform, 40f, 120f);
-        albumEmptyAction = UIKit.Button(area, "가까운 경희스팟 메모판 열기", OpenNearestSpot, ShareBlue, 36);
-        RectTransform ar = (RectTransform)albumEmptyAction.transform;
-        ar.anchorMin = ar.anchorMax = ar.pivot = new Vector2(0.5f, 1f);
-        ar.anchoredPosition = new Vector2(0f, -250f);
-        ar.sizeDelta = new Vector2(640f, 110f);
-        albumEmptyAction.GetComponentInChildren<Text>().color = Color.white;
-        albumEmptyAction.GetComponentInChildren<Text>().fontStyle = FontStyle.Bold;
-        Image aimg = albumEmptyAction.GetComponent<Image>();
-        aimg.sprite = HudIcons.Pill;
-        aimg.type = Image.Type.Sliced;
-        aimg.pixelsPerUnitMultiplier = 120f / 110f;
-        albumEmptyAction.gameObject.SetActive(false);
-
-        album.SetActive(false);
+        albumGrid.GetComponent<GridLayoutGroup>().spacing = new Vector2(12f, 12f);
     }
 
     /// <summary>지금 위치에서 가장 가까운 경희스팟의 메모판을 연다</summary>
@@ -238,7 +229,10 @@ public partial class MemoBoard
     {
         Transform player = collectController != null && collectController.campusMap != null ? collectController.campusMap.player : null;
         if (spots == null || player == null)
+        {
+            Close();   // 지도가 없으면 지도로 돌아가 직접 찾게
             return;
+        }
         KyungHeeSpot best = null;
         float bestD = float.MaxValue;
         foreach (KyungHeeSpot s in spots.Spots)
@@ -250,5 +244,7 @@ public partial class MemoBoard
         }
         if (best != null)
             OpenSpot(best);
+        else
+            Close();
     }
 }

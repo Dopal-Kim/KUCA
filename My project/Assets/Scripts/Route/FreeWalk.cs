@@ -7,9 +7,9 @@ using UnityEngine.UI;
 /// </summary>
 public class FreeWalk : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color ChipOff = new Color(0.94f, 0.95f, 0.96f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color ChipOff = KucaTheme.Fill;
+    const float PanelHeight = 280f;
     /// <summary>자유 산책 선 색 (코스 색 파랑 · 보라 · 분홍과 다르게)</summary>
     public static readonly Color TrackColor = new Color(0.05f, 0.62f, 0.66f);
 
@@ -82,7 +82,7 @@ public class FreeWalk : MonoBehaviour
         if (panel.activeSelf != show)
             panel.SetActive(show);
         if (show)
-            VirtualWalk.PlacePanel((RectTransform)panel.transform, 220f);
+            VirtualWalk.PlacePanel((RectTransform)panel.transform, PanelHeight);
         if (line != null)
             line.SetVisible(on && showPath);
         if (on && Time.frameCount % 20 == 0)
@@ -97,8 +97,8 @@ public class FreeWalk : MonoBehaviour
         stats.text = $"{RouteMath.Distance(WalkSession.WalkedMeters)}  ·  {seconds / 60}분 {seconds % 60:00}초";
         int left = LocalWalkService.MateMeters - Mathf.RoundToInt(WalkSession.WalkedMeters);
         title.text = left > 0
-            ? $"자유 산책 중  <size=26><color=#8C8C91>완료까지 {left}m</color></size>"
-            : "자유 산책 중  <size=26><color=#2F9E5B>완료!</color></size>";
+            ? $"자유 산책 중  <color=#8B95A1>완료까지 {left}m</color>"
+            : "자유 산책 중  <color=#2B7A4B>완료!</color>";
         toggle.color = showPath ? TrackColor : ChipOff;
         toggleText.color = showPath ? Color.white : Ink;
         toggleText.text = showPath ? "경로 켜짐" : "경로 꺼짐";
@@ -122,51 +122,49 @@ public class FreeWalk : MonoBehaviour
         Canvas canvas = UIKit.CreateCanvas(transform, "FreeWalkCanvas", 20);
         RectTransform root = (RectTransform)canvas.transform;
 
-        Image card = UIKit.Image(root, "FreeWalkPanel", Color.white, raycast: true);
+        // 산책 카드 (애플 지도 · 스트라바 기록 중 카드): 상태 한 줄 · 큰 숫자 · 오른쪽 경로 칩 + 끝내기
+        Image card = UIKit.Image(root, "FreeWalkPanel", KucaTheme.Card, raycast: true);
         card.sprite = HudIcons.Rounded;
         card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
+        card.pixelsPerUnitMultiplier = 0.34f;
         panel = card.gameObject;
         RectTransform pr = card.rectTransform;
         pr.anchorMin = new Vector2(0f, 0f);
         pr.anchorMax = new Vector2(1f, 0f);
         pr.pivot = new Vector2(0.5f, 0f);
-        pr.sizeDelta = new Vector2(-48f, 220f);
-        pr.anchoredPosition = new Vector2(0f, 320f);
+        pr.sizeDelta = new Vector2(-2f * KucaTheme.Space4, PanelHeight);
         UIInputBlocker.Register(pr);
 
         Image dot = UIKit.Image(pr, "Dot", TrackColor);
         dot.sprite = HudIcons.Footprints;
-        Place(dot.rectTransform, new Vector2(0f, 1f), new Vector2(54f, -56f));
-        dot.rectTransform.sizeDelta = new Vector2(44f, 44f);
-        title = UIKit.Text(pr, "", 32, TextAnchor.MiddleLeft, Ink);
-        title.fontStyle = FontStyle.Bold;
-        Box(title.rectTransform, 96f, 26f, 380f, 60f);
-        stats = UIKit.Text(pr, "", 44, TextAnchor.MiddleLeft, Ink);
-        stats.fontStyle = FontStyle.Bold;
-        Box(stats.rectTransform, 40f, 104f, 40f, 80f);
+        Place(dot.rectTransform, new Vector2(0f, 1f), new Vector2(48f, -44f));
+        dot.rectTransform.sizeDelta = new Vector2(56f, 56f);
+        title = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink));
+        title.horizontalOverflow = HorizontalWrapMode.Overflow;
+        Box(title.rectTransform, 120f, 40f, 300f, 64f);
+        stats = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Title, TextAnchor.MiddleLeft, Ink));
+        stats.horizontalOverflow = HorizontalWrapMode.Overflow;
+        Box(stats.rectTransform, 48f, 128f, 300f, 100f);
 
         Button t = Pill(pr, "경로 켜짐", TrackColor, Color.white, () => { showPath = !showPath; Refresh(); });
         toggle = t.GetComponent<Image>();
         toggleText = t.GetComponentInChildren<Text>();
-        Place((RectTransform)t.transform, new Vector2(1f, 1f), new Vector2(-200f, -24f));
-        ((RectTransform)t.transform).sizeDelta = new Vector2(170f, 64f);
-        Button end = Pill(pr, "끝내기", ChipOff, Ink, ConfirmEnd);
-        Place((RectTransform)end.transform, new Vector2(1f, 1f), new Vector2(-24f, -24f));
-        ((RectTransform)end.transform).sizeDelta = new Vector2(160f, 64f);
+        Place((RectTransform)t.transform, new Vector2(1f, 1f), new Vector2(-40f, -40f));
+        ((RectTransform)t.transform).sizeDelta = new Vector2(240f, 88f);
+        Button end = UIKit.Button(pr, "끝내기", ConfirmEnd, KucaTheme.Primary, KucaTheme.Label);
+        Place((RectTransform)end.transform, new Vector2(1f, 0f), new Vector2(-40f, 40f));
+        ((RectTransform)end.transform).sizeDelta = new Vector2(240f, 112f);
         panel.SetActive(false);
     }
 
     static Button Pill(Transform parent, string label, Color color, Color textColor, UnityEngine.Events.UnityAction onClick)
     {
-        Button b = UIKit.Button(parent, label, onClick, color, 26);
+        Button b = UIKit.Button(parent, label, onClick, color, KucaTheme.Caption);
         Image img = b.GetComponent<Image>();
         img.sprite = HudIcons.Pill;
         img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 1f;
-        Text txt = b.GetComponentInChildren<Text>();
-        txt.color = textColor;
-        txt.fontStyle = FontStyle.Bold;
+        img.pixelsPerUnitMultiplier = 1.4f;
+        b.GetComponentInChildren<Text>().color = textColor;
         b.gameObject.AddComponent<PressScale>();
         return b;
     }

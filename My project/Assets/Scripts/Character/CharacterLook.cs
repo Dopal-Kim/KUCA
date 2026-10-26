@@ -37,23 +37,35 @@ public static class CharacterLook
         }
     }
 
-    /// <summary>피부 8 (자연 6 + 캠퍼스 파스텔 2)</summary>
+    /// <summary>피부 4: 연황 · 진황 · 백 · 흑 (0 = 캐릭터 시트 기본색). 파스텔(민트 · 라벤더)은 이상해 보여 뺐다 (10/25)</summary>
     public static readonly Swatch[] Skins =
     {
-        new Swatch("복숭아", 0xF4C7A8), new Swatch("밝은", 0xFCE3D2), new Swatch("살구", 0xEDB48E), new Swatch("구릿빛", 0xD9976B),
-        new Swatch("갈색", 0xB8774E), new Swatch("짙은 갈색", 0x8E5638), new Swatch("민트", 0xBFE3D0), new Swatch("라벤더", 0xD9CCF2),
+        new Swatch("연황", 0xF4C7A8), new Swatch("진황", 0xD9A06B), new Swatch("백", 0xFCE3D2), new Swatch("흑", 0x7B4B30),
     };
 
+    /// <summary>머리 · 눈썹 4: 자연색만 (0 = 시트 기본색)</summary>
     public static readonly Swatch[] Hairs =
     {
-        new Swatch("초코", 0x5A3A2A), new Swatch("흑갈색", 0x2B2522), new Swatch("밤색", 0x8A5A3C), new Swatch("카라멜", 0xC99A5B),
-        new Swatch("금발", 0xE8D29A), new Swatch("크림슨", 0x8E2433), new Swatch("블루그레이", 0x6F8FAF), new Swatch("라벤더", 0xB9A3D9),
+        new Swatch("짙은 갈색", 0x5A3A2A), new Swatch("검정", 0x2B2522), new Swatch("갈색", 0x8A5A3C), new Swatch("밝은 갈색", 0xC99A5B),
     };
 
     public static readonly Swatch[] EyeColors =
     {
-        new Swatch("짙은 갈색", 0x3A2620), new Swatch("검정", 0x1E1E24), new Swatch("호박", 0x6B4A2E),
-        new Swatch("숲", 0x3E6B4E), new Swatch("바다", 0x3F5F8F), new Swatch("자두", 0x7A3E5E),
+        new Swatch("짙은 갈색", 0x3A2620), new Swatch("검정", 0x1E1E24), new Swatch("갈색", 0x6B4A2E),
+    };
+
+    /// <summary>
+    /// 옷 스타일 5: 성별마다 상의 id 와 하의 · 신발 id (Characters/{Men,Women} 의 의상 폴더 이름). 머리는 늘 경희 모험가
+    /// (얼굴 갈래가 이 머리에만 있다). 다섯 벌 모두 tools/character/build_adventurer.py --outfit 으로 만든 같은 몸
+    /// (경희 모험가 비율 · 형태) 에 옷만 다르게 입힌 것이다. 몸 비율이 다른 Quaternius 의상은 고르지 않는다 (10/25)
+    /// </summary>
+    public static readonly (string name, string menTop, string menBottom, string womenTop, string womenBottom)[] Styles =
+    {
+        ("경희 모험가", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer", "KHU_Adventurer"),
+        ("경희 과잠", "KHU_Varsity", "KHU_Varsity", "KHU_Varsity", "KHU_Varsity"),
+        ("후드티", "KHU_Hoodie", "KHU_Hoodie", "KHU_Hoodie", "KHU_Hoodie"),
+        ("단정", "KHU_Neat", "KHU_Neat", "KHU_Neat", "KHU_Neat"),
+        ("여름 나들이", "KHU_Summer", "KHU_Summer", "KHU_Summer", "KHU_Summer"),
     };
 
     static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");

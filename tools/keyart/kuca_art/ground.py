@@ -13,16 +13,19 @@ from scipy import ndimage
 from .geo import Raster, to_world
 
 # 키아트 아이콘에서 뽑은 색 (sRGB)
-GRASS = np.array([140, 182, 56], np.float32)       # 햇빛 받은 잔디가 이 색이 되게
+GRASS = np.array([124, 166, 64], np.float32)       # 햇빛 받은 잔디가 이 색이 되게 (실사 비교: 형광 연두 → 차분한 여름 잔디)
 ASPHALT = np.array([122, 125, 131], np.float32)
 CURB = np.array([229, 223, 211], np.float32)
 PAVING = np.array([226, 213, 199], np.float32)
 PLAZA = np.array([232, 220, 204], np.float32)
 PARKING = np.array([206, 203, 197], np.float32)
-WATER_EDGE = np.array([118, 214, 236], np.float32)
-WATER_DEEP = np.array([44, 162, 214], np.float32)
+WATER_EDGE = np.array([128, 200, 212], np.float32)   # 실사 연못: 수영장 같은 청록 → 차분한 물빛
+WATER_DEEP = np.array([60, 140, 170], np.float32)
 STONE_RIM = np.array([224, 214, 198], np.float32)
 TRACK = np.array([200, 104, 82], np.float32)
+DIRT = np.array([200, 172, 132], np.float32)        # 실사 대운동장: 마사토 흙 바닥
+BRICK_PAVE = np.array([170, 98, 80], np.float32)   # 실사 전자정보대학관 앞 붉은 벽돌 광장
+YELLOW = np.array([236, 192, 64], np.float32)       # 차도 중앙선
 LINE = np.array([248, 246, 238], np.float32)
 
 ROAD_W = {'primary': 16, 'secondary': 14, 'tertiary': 11, 'residential': 8, 'unclassified': 8,
@@ -74,6 +77,8 @@ class Ground:
         self.parking = self._area(lambda t: t.get('amenity') == 'parking' or t.get('landuse') == 'construction')
         self.paved = self._area(lambda t: bool(t.get('area:highway')) or (t.get('highway') == 'pedestrian' and t.get('area') == 'yes'))
         self.water = self._area(lambda t: t.get('natural') == 'water' or t.get('landuse') in ('reservoir', 'basin'))
+        # OSM 연못은 꼭짓점이 적어 모난 육각형으로 보인다 → 4 m 정도로 둥글린다 (실사: 자연석 호안의 둥근 연못)
+        self.water = ndimage.gaussian_filter(self.water.astype(np.float32), 4.0 * self.ppm) > 0.5
 
         self.road_lines = list(self._lines(ROAD_W))   # (kind, [(x,z)...]) 월드 좌표
         self.walk_lines = list(self._lines(WALK_W))
@@ -82,6 +87,7 @@ class Ground:
         self.road = self._stroke(self.road_lines, ROAD_W)
 
         self.apron = np.zeros((self.H, self.W), bool)
+        self.apron_paint = np.zeros((self.H, self.W), bool)   # 칠하기만 하는 포장 (나무 · 산울타리 자리는 그대로)
         self.campus = np.ones((self.H, self.W), bool)
         self.campus_soft = np.ones((self.H, self.W), np.float32)
         self.lake = np.zeros((self.H, self.W), bool)
@@ -185,10 +191,10 @@ class Ground:
         pts = []
         for k in range(72):
             t = 2 * math.pi * k / 72
-            # 살짝 부푼 타원 (슈퍼엘립스) → 귀여운 연못 모양
+            # 모서리가 둥근 직사각형 (슈퍼엘립스 지수 0.15) → 실사 사색의 광장 직사각 수조
             c, s_ = math.cos(t), math.sin(t)
-            ex = math.copysign(abs(c) ** 0.8, c) * rx
-            ez = math.copysign(abs(s_) ** 0.8, s_) * rz
+            ex = math.copysign(abs(c) ** 0.15, c) * rx
+            ez = math.copysign(abs(s_) ** 0.15, s_) * rz
             pts.append(self.r.px(center[0] + ex * math.cos(a) - ez * math.sin(a), center[1] + ex * math.sin(a) + ez * math.cos(a)))
         d.polygon(pts, fill=255)
         self.lake_poly = [self.r.world(x, y) for x, y in pts]
@@ -211,13 +217,26 @@ class Ground:
             d.polygon([self.r.px(*p) for p in b.poly], fill=255)
         self.buildings = np.asarray(img) > 127
 
-    def add_apron(self, p0, p1, width):
-        """건물 입구에서 길까지 포장 (월드 점 두 개)"""
+    def add_brick(self, poly):
+        """붉은 벽돌 포장 광장 (월드 다각형). 나무 · 산울타리가 들어가지 않게 막는다"""
+        img = Image.new('L', (self.W, self.H), 0)
+        ImageDraw.Draw(img).polygon([self.r.px(*p) for p in poly], fill=255)
+        m = (np.asarray(img) > 127) & ~self.buildings
+        self.brick = getattr(self, 'brick', np.zeros_like(m)) | m
+        for name in ('blocked_env', 'blocked', 'blocked_near_bld'):
+            if hasattr(self, name):
+                setattr(self, name, getattr(self, name) | m)
+
+    def add_apron(self, p0, p1, width, block=True):
+        """건물 입구에서 길까지 포장 (월드 점 두 개). block=False 면 나무 · 산울타리 막기에 안 넣는다"""
         img = Image.new('L', (self.W, self.H), 0)
         d = ImageDraw.Draw(img)
         w = max(2, int(width * self.ppm))
         d.line([self.r.px(*p0), self.r.px(*p1)], fill=255, width=w)
-        self.apron |= np.asarray(img) > 127
+        if block:
+            self.apron |= np.asarray(img) > 127
+        else:
+            self.apron_paint |= np.asarray(img) > 127
 
     def finalize_blocking(self):
         """나무·산울타리가 들어가면 안 되는 곳"""
@@ -310,6 +329,7 @@ class Ground:
     def paint(self, out_path, detail_path=None):
         H, W, ppm = self.H, self.W, self.ppm
         print('ground: tiles', W, H)
+        self.apron = self.apron | self.apron_paint
         grass = _recolor(self._tile('grass', 34, median=7, blur=2.0), GRASS)
         # 큰 얼룩: 밝은 연두 / 짙은 초록이 넓게 번갈아 (키아트 잔디의 부드러운 결)
         n1 = _smooth_noise((H, W), 26, 1)[..., None]
@@ -367,16 +387,17 @@ class Ground:
             ba = np.asarray(band).astype(np.float32)
             canvas = np.where((ba.sum(axis=2) > 0)[..., None], ba, canvas)
 
-        # 운동장: 붉은 트랙, 줄무늬 잔디 구장, 흰 선
+        # 운동장: 대운동장은 마사토 흙 바닥 + 흰 선 (실사), 그 밖의 구장은 줄무늬 잔디
         paving_t = self._tile('paving', 14)
         track_tex = _recolor(paving_t, TRACK)
-        blend(self.track, track_tex)
+        blend(self.track & ~self.stadium, track_tex)
         field = ndimage.binary_erosion(self.stadium, iterations=int(12 * ppm))
         yy, xx = np.mgrid[0:H, 0:W]
         stripes = (((xx + yy * 0.0) // int(6 * ppm)) % 2).astype(np.float32)[..., None]
         pitch_tex = np.clip(grass * (1.04 + 0.06 * stripes) + np.array([-6, 8, -4], np.float32), 0, 255)
-        blend(field, pitch_tex)
-        blend(self.pitch, pitch_tex)
+        blend(self.pitch & ~self.stadium, pitch_tex)
+        dirt_tex = _recolor(paving_t, DIRT)
+        blend(self.stadium, dirt_tex)
         lines = Image.new('L', (W, H), 0)
         ld = ImageDraw.Draw(lines)
         fa = np.argwhere(field)
@@ -397,8 +418,8 @@ class Ground:
                     ld.rectangle((min(sx, sx + dx), cy - 20 * ppm, max(sx, sx + dx), cy + 20 * ppm), outline=255, width=lw)
             r9 = 9 * ppm
             ld.ellipse((cx - r9, cy - r9, cx + r9, cy + r9), outline=255, width=lw)
-        # 트랙 레인 (흰 줄) — 트랙 안쪽 경계에서 1.2 m 간격
-        track_only = self.track & ~field
+        # 트랙 레인 (흰 줄) — 트랙 안쪽 경계에서 1.2 m 간격 (흙 운동장 둘레는 레인 없음)
+        track_only = self.track & ~field & ~self.stadium
         if track_only.any():
             d_in = ndimage.distance_transform_edt(~field) / ppm
             lane = np.zeros_like(track_only)
@@ -430,29 +451,26 @@ class Ground:
         rim = self._grow(self.water, 1.4) & ~self.water
         blend(rim, flat(STONE_RIM), 0.5)
 
-        # 도로: 연석 → 아스팔트 → 중앙 점선 → 횡단보도
+        # 도로: 연석 → 아스팔트 → 노란 중앙선 (실사 정문 진입로) → 횡단보도
         print('ground: roads')
         walk_m = self.walk
         blend(walk_m, paving, 0.7)
+        if hasattr(self, 'brick'):
+            blend(self.brick, _recolor(paving_t, BRICK_PAVE))
         blend(self.curb, flat(CURB), 0.7)
         asphalt = _recolor(self._tile('road', 9, crop=(0.10, 0.0, 0.40, 1.0)), ASPHALT)
         blend(self.road, asphalt, 0.7)
         marks = Image.new('L', (W, H), 0)
         md = ImageDraw.Draw(marks)
+        center = Image.new('L', (W, H), 0)
+        cd = ImageDraw.Draw(center)
         lw = max(2, int(0.3 * ppm))
         for hw, pts in self.road_lines:
-            if hw not in CENTER_LINE:
-                continue
-            for a, b in zip(pts, pts[1:]):
-                L = math.hypot(b[0] - a[0], b[1] - a[1])
-                n = int(L // 7)
-                for i in range(n):
-                    t0, t1 = (i * 7 + 1) / L, (i * 7 + 4) / L
-                    p0 = (a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0)
-                    p1 = (a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1)
-                    md.line([self.r.px(*p0), self.r.px(*p1)], fill=255, width=lw)
+            if hw in CENTER_LINE:
+                cd.line([self.r.px(*p) for p in pts], fill=255, width=lw, joint='curve')
         self._crosswalks(md)
         blend(np.asarray(marks) > 0, flat(LINE), 0.5)
+        blend((np.asarray(center) > 0) & self.road, flat(YELLOW), 0.6)
 
         # 포장 가장자리 선: 포장 안쪽 0.35 m 를 살짝 어둡게 (타일 테두리처럼 또렷하게)
         light_paved = walk_m | self.square | self.paved | self.apron | self.parking
@@ -514,17 +532,28 @@ class Ground:
         acc = np.zeros((h, w), np.float32)
         img = Image.new('L', (w, h), 0)
         d = ImageDraw.Draw(img)
+        cover = np.zeros((h, w), np.float32)   # M32: 몇 개의 웅덩이가 덮는지 (겹침 판정)
         for x, z, r, s in lights:
             px, py = self.r.px(x, z)
             px, py = px * w / self.W, py * h / self.H
             rr = r * ppm
             d.ellipse((px - rr, py - rr, px + rr, py + rr), fill=int(255 * min(1.0, s)))
+            y0, y1, x0, x1 = max(0, int(py - rr)), min(h, int(py + rr) + 2), max(0, int(px - rr)), min(w, int(px + rr) + 2)
+            yy, xx = np.ogrid[y0:y1, x0:x1]
+            cover[y0:y1, x0:x1] += (xx - px) ** 2 + (yy - py) ** 2 <= rr * rr
         pts = np.asarray(img).astype(np.float32) / 255
         # 등 아래 또렷한 웅덩이 + 25 m 에 걸쳐 넓게 번지는 따뜻한 빛 (등이 모인 곳일수록 밝은 동네 불빛)
-        tight = ndimage.gaussian_filter(pts, 2.5 * ppm)
+        # M31: 웅덩이 가장자리 2.5 → 1.5 m, 번짐 0.45 → 0.25 — 24 m 마다 선 등의 웅덩이가 길을 따라 고른 띠로 이어져 Unity 에서
+        #      '바닥 빛 웅덩이'로 안 읽혔음 (REVIEW_v36 5절 5번). 셰이더가 1 근처만 더 밝힌다 (KUCAStylizedLighting.KucaNightLight)
+        tight = ndimage.gaussian_filter(pts, 1.5 * ppm)
         wide = ndimage.gaussian_filter(pts, 14.0 * ppm)
         wide = wide / (np.percentile(wide[wide > 0.001], 95) + 1e-6) if (wide > 0.001).any() else wide
-        acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.45, 0, 1) ** 0.85
+        acc = np.clip(tight * 1.3 + np.clip(wide, 0, 1.4) * 0.25, 0, 1) ** 0.85
+        # M32: 가로등이 몇 m 간격으로 모인 사색의 광장은 웅덩이가 겹쳐 가운데가 흰색으로 날아갔음 (REVIEW_v37 3절) — 지도 값이 1 에서
+        #      잘려 겹친 곳은 한 덩어리 1 판이 됨. 웅덩이가 겹치는 곳(3 m 로 흐린 겹침 비율)만 지도 값을 최대 0.88 배로 → 셰이더 곡선
+        #      (KucaNightLight, 1 근처 1.6 배)을 지나 밝기 약 2/3. 혼자 선 등(산책길)은 겹침이 없어 그대로
+        lap = ndimage.gaussian_filter((cover >= 2).astype(np.float32), 3.0 * ppm)
+        acc *= 1.0 - 0.12 * np.clip(lap / 0.35, 0, 1)
         Image.fromarray((acc * 255).astype(np.uint8)).save(path)
         print('lights', len(lights), path)
 

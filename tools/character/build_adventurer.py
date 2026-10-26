@@ -1,20 +1,24 @@
 """
 경희 모험가 플레이어 캐릭터 (Art/Concept/07_Player 시트) 를 블렌더에서 도형으로 빚어 Quaternius 뼈대에 붙인다.
 
-    blender -b --python tools/character/build_adventurer.py -- [--gender=men|women] [--preview=out.png]
+    blender -b --python tools/character/build_adventurer.py -- [--gender=men|women] [--outfit=Adventurer] [--preview=out.png]
+    (블렌더 없이: pip install bpy 후 python tools/character/build_adventurer.py -- ...)
 
 - 모양은 "보이는 모습" 기준으로 만든다: Unity ModularCharacter 가 머리 1.8배 · 다리 0.68배 · 팔 0.85배로
   바꿔 보여 주므로, 내보낼 때는 그 반대로 줄이고 늘려 원래 뼈대 크기(rest)에 맞춘다.
 - 부위별 FBX 4개 (머리 · 상의 · 하의 · 신발) → My project/Assets/Characters/{Men,Women}/KHU_Adventurer/
   Unity 메뉴 KUCA › Build Character Database 를 누르면 꾸미기에 "경희 모험가" 로 나온다.
+- --outfit: 몸 (머리 · 목 · 몸통 · 팔 · 손 · 다리 · 발 위치와 굵기, 뼈 가중치) 은 경희 모험가와 똑같고 옷만 다른 한 벌.
+  Adventurer (경희 모험가, 기본) · Varsity (경희 과잠) · Hoodie (후드티) · Neat (단정) · Summer (여름 나들이).
+  모험가 말고는 머리 FBX 를 만들지 않는다 (꾸미기에서 머리는 늘 경희 모험가) → KHU_<outfit>/KHU_<outfit>_{Body,Legs,Feet}.fbx
 - 재질 이름은 KHU_ / Skin 으로 시작해 Unity 가 파스텔로 바꾸지 않고 그림 색 그대로 쓴다.
 """
 import math
 import os
 import sys
 
+import bpy   # bpy 를 먼저 (pip 의 bpy 모듈은 bpy 를 불러야 bmesh 가 생긴다)
 import bmesh
-import bpy
 from mathutils import Vector
 
 ARGS = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
@@ -24,7 +28,8 @@ FOLDER = {'men': 'Men', 'women': 'Women'}[GENDER]
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHAR = os.path.join(HERE, '..', '..', 'My project', 'Assets', 'Characters')
 SKELETON = {'men': 'Men/Casual_2/Casual2_Body.fbx', 'women': 'Women/Casual/Casual_Body.fbx'}[GENDER]
-OUT_DIR = os.path.join(CHAR, FOLDER, 'KHU_Adventurer')
+OUTFIT = OPT.get('outfit', 'Adventurer')
+OUT_DIR = os.path.join(CHAR, FOLDER, 'KHU_' + OUTFIT)
 
 # Unity ModularCharacter 기본값과 같게
 HEAD_SCALE, LEG_SCALE, ARM_SCALE = 1.8, 0.68, 0.85
@@ -35,6 +40,30 @@ COLORS = {
     'KHU_Adv_Cream': '#F3EBD8', 'KHU_Adv_Olive': '#7C8C5A', 'KHU_Adv_Boot': '#B77A43', 'KHU_Adv_Sole': '#7A4A28',
     'KHU_Adv_Leather': '#8E5A35', 'KHU_Adv_Eye': '#3A2620', 'KHU_Adv_White': '#FFFFFF', 'KHU_Adv_Blush': '#F29C93',
     'KHU_Adv_Mouth': '#B5524A', 'KHU_Adv_Paper': '#EADBB8', 'KHU_Adv_Tongue': '#E98A86', 'KHU_Adv_Freckle': '#C98B6B',
+    # 옷 (Unity 는 재질 이름으로 색을 나눠 쓰므로 같은 이름은 어느 옷에서나 같은 색)
+    'KHU_Var_Red': '#A6192E', 'KHU_Var_Cream': '#F3EBD8', 'KHU_Var_Tee': '#FAFAF7', 'KHU_Var_Denim': '#4F6F9A', 'KHU_Var_DenimCuff': '#7392BA',
+    'KHU_Hood_Gray': '#A7ABB2', 'KHU_Hood_Rib': '#8C9098', 'KHU_Hood_String': '#F4F4F1', 'KHU_Hood_Navy': '#2F3B5C', 'KHU_Hood_NavyRib': '#263150',
+    'KHU_Neat_Navy': '#2C3B60', 'KHU_Neat_Shirt': '#FFFFFF', 'KHU_Neat_Button': '#1C2540', 'KHU_Neat_Beige': '#CDB48C',
+    'KHU_Neat_Loafer': '#7B4B2B', 'KHU_Neat_Sole': '#4A2D1B',
+    'KHU_Sum_Tee': '#BFE3AE', 'KHU_Sum_Rib': '#8FC47A', 'KHU_Sum_Denim': '#6C90BC', 'KHU_Sum_DenimCuff': '#94B3D6', 'KHU_Sum_Sock': '#FFFFFF',
+    'KHU_Shoe_White': '#F6F5F1', 'KHU_Shoe_Sole': '#D8D3CA', 'KHU_Shoe_Lace': '#DAD6CE',
+}
+
+# 옷 한 벌: 속 (몸통 타원) · 겉 (셔츠 껍질, gap = 앞섶 반폭 → 없으면 앞이 막힌 티) · 소매 · 바지 (hem = 발에서 바짓단 높이, 없으면 반바지) · 신발
+OUTFITS = {
+    'Adventurer': dict(inner='KHU_Adv_Crimson', shell='KHU_Adv_Cream', gap=lambda z: 0.07 + max(0.0, z - (body_top - 0.22)) * 0.3, edge=0.008,
+                       long_sleeve=False, sleeve='KHU_Adv_Cream', pants='KHU_Adv_Olive', pants_cuff='KHU_Adv_Olive', hem=None,
+                       sock='KHU_Adv_Cream', shoe='boot'),
+    'Varsity': dict(inner='KHU_Var_Tee', shell='KHU_Var_Red', gap=lambda z: 0.05 + max(0.0, z - (body_top - 0.12)) * 0.3, edge=0.012,
+                    long_sleeve=True, sleeve='KHU_Var_Cream', cuff='KHU_Var_Red', cuff_r=0.075,
+                    pants='KHU_Var_Denim', pants_cuff='KHU_Var_DenimCuff', hem=0.11, hem_r=0.088, shoe='sneaker', accent='KHU_Var_Red'),
+    'Hoodie': dict(inner='KHU_Hood_Gray', shell='KHU_Hood_Gray', gap=None, long_sleeve=True, sleeve='KHU_Hood_Gray', cuff='KHU_Hood_Rib', cuff_r=0.075,
+                   pants='KHU_Hood_Navy', pants_cuff='KHU_Hood_NavyRib', hem=0.13, hem_r=0.074, shoe='sneaker', accent='KHU_Hood_Navy'),
+    'Neat': dict(inner='KHU_Neat_Shirt', shell='KHU_Neat_Navy', gap=lambda z: 0.012 + max(0.0, z - (body_top - 0.26)) * 0.42, edge=0.011,
+                 long_sleeve=True, sleeve='KHU_Neat_Navy', sleeve_back=0.075, cuff='KHU_Neat_Shirt', cuff_r=0.062, cuff_span=(0.075, 0.02),
+                 pants='KHU_Neat_Beige', pants_cuff=None, hem=0.1, hem_r=0.086, shoe='loafer'),
+    'Summer': dict(inner='KHU_Sum_Tee', shell='KHU_Sum_Tee', gap=None, long_sleeve=False, sleeve='KHU_Sum_Tee',
+                   pants='KHU_Sum_Denim', pants_cuff='KHU_Sum_DenimCuff', hem=None, sock='KHU_Sum_Sock', shoe='sneaker', accent='KHU_Sum_Rib'),
 }
 
 
@@ -141,11 +170,12 @@ def cylinder(center, radius_bottom, radius_top, height, segs=32, cap=True):
 
 
 def loft(cx, cy, rings, segs=40):
-    """z 마다 타원 단면 (z, 반지름 x, 반지름 y) 을 이은 통. 위 · 아래는 막는다."""
+    """z 마다 타원 단면 (z, 반지름 x, 반지름 y[, 중심 x, 중심 y]) 을 이은 통. 위 · 아래는 막는다."""
     bm = bmesh.new()
     loops = []
-    for z, rx, ry in rings:
-        loops.append([bm.verts.new((cx + math.cos(2 * math.pi * i / segs) * rx, cy + math.sin(2 * math.pi * i / segs) * ry, z))
+    for z, rx, ry, *c in rings:
+        x0, y0 = c if c else (cx, cy)
+        loops.append([bm.verts.new((x0 + math.cos(2 * math.pi * i / segs) * rx, y0 + math.sin(2 * math.pi * i / segs) * ry, z))
                       for i in range(segs)])
     for a, b in zip(loops, loops[1:]):
         for i in range(segs):
@@ -378,12 +408,15 @@ for bm_, *_ in PARTS[hat_start:]:
         v.co = hat_pivot + Vector((d.x, d.y * math.cos(HAT_TILT) + d.z * math.sin(HAT_TILT),
                                    -d.y * math.sin(HAT_TILT) + d.z * math.cos(HAT_TILT)))
 
-# 몸통: 크림슨 티 + 앞이 열린 크림 셔츠 (반팔)
+# ---------------------------------------------------------------- 옷 (--outfit)
+# 몸 규격 (몸통 타원 · 셔츠 껍질 크기 · 목 · 팔 · 손 · 다리 · 발 위치와 굵기) 은 모든 옷이 같고, 덮는 옷의 도형 · 색만 다르다.
+# 긴소매 · 긴바지 안에는 피부를 만들지 않는다 (걸을 때 피부가 옷 밖으로 뚫고 나오지 않게).
+FIT = OUTFITS[OUTFIT]
 body_top = HEAD.z - 0.02
 body_bot = HIP['.L'].z + 0.07      # 셔츠 밑단 (반바지 허리를 올려 상체가 짧아 보이게)
 tc = Vector((0, -0.005, (body_top + body_bot) / 2))
 TORSO = (0.2, 0.135, (body_top - body_bot) / 2 + 0.03)
-add(ellipsoid(tc, TORSO), 'KHU_Adv_Crimson', 'Body', 'body')
+add(ellipsoid(tc, TORSO), FIT['inner'], 'Body', 'body')
 SHIRT_C = tc + Vector((0, 0, -0.01))
 SHIRT_R = (0.218, 0.152, (body_top - body_bot) / 2 + 0.04)
 
@@ -396,16 +429,20 @@ def shirt_profile(z):
     return SHIRT_R[0] * k, SHIRT_R[1] * k
 
 
-def shirt_open(zs, segs=72):
-    """앞이 V 로 열린 셔츠: 각 높이마다 앞 (-y) 가운데를 빼고 둘레를 잇는다. 가장자리가 매끈하다."""
+def open_angles(z, gap):
+    """앞섶 반폭 gap(z) 만큼 앞 (-y) 가운데를 뺀 둘레의 시작 · 끝 각도."""
+    rx, _ = shirt_profile(z)
+    half = math.asin(min(0.95, gap(z) / max(rx, 1e-3)))
+    return -math.pi / 2 + half, 3 * math.pi / 2 - half
+
+
+def shirt_open(zs, gap, segs=72):
+    """앞이 열린 셔츠 · 재킷: 각 높이마다 앞 (-y) 가운데를 빼고 둘레를 잇는다. 가장자리가 매끈하다."""
     bm = bmesh.new()
     rows = []
     for z in zs:
         rx, ry = shirt_profile(z)
-        gap = 0.07 + max(0.0, z - (body_top - 0.22)) * 0.3          # 앞섶 반폭 (m), 위로 갈수록 넓게
-        half = math.asin(min(0.95, gap / max(rx, 1e-3)))
-        a0 = -math.pi / 2 + half
-        a1 = 3 * math.pi / 2 - half
+        a0, a1 = open_angles(z, gap)
         rows.append([bm.verts.new((SHIRT_C.x + math.cos(a0 + (a1 - a0) * i / segs) * rx,
                                    SHIRT_C.y + math.sin(a0 + (a1 - a0) * i / segs) * ry, z)) for i in range(segs + 1)])
     for ra, rb in zip(rows, rows[1:]):
@@ -418,129 +455,229 @@ def shirt_open(zs, segs=72):
     return add_inner(bm)
 
 
+def shell_pt(z, a, out=0.0):
+    rx, ry = shirt_profile(z)
+    return Vector((SHIRT_C.x + math.cos(a) * (rx + out), SHIRT_C.y + math.sin(a) * (ry + out), z))
+
+
+def band(z, mat, r, gap=None, out=0.004, n=64):
+    """셔츠 둘레를 따라 도는 시보리 줄 (gap 이 있으면 앞섶에서 끊긴다)."""
+    a0, a1 = open_angles(z, gap) if gap else (-math.pi / 2, 3 * math.pi / 2)
+    add(tube([shell_pt(z, a0 + (a1 - a0) * i / n, out) for i in range(n + 1)], r, 8), mat, 'Body', 'body')
+
+
+def neck_ring(mat, r, rx=0.09, ry=0.086, cut=0.0, n=40):
+    """목둘레 깃 (cut 만큼 앞을 비운다)."""
+    a0, a1 = -math.pi / 2 + cut, 3 * math.pi / 2 - cut
+    pts = [Vector((math.cos(a) * rx, tc.y + 0.01 + math.sin(a) * ry, body_top - 0.008)) for a in [a0 + (a1 - a0) * i / n for i in range(n + 1)]]
+    add(tube(pts, r, 8), mat, 'Body', 'body')
+
+
+def front_y(z):
+    """셔츠 앞면 (-y) 의 y."""
+    return SHIRT_C.y - shirt_profile(z)[1]
+
+
 zs = [body_bot - 0.03 + (body_top - 0.01 - (body_bot - 0.03)) * i / 30 for i in range(31)]
-add(shirt_open(zs), 'KHU_Adv_Cream', 'Body', 'body')
-for side in (1, -1):   # 앞섶 가장자리 두께 (얇은 껍질이 종이처럼 보이지 않게)
-    edge = []
-    for z in zs:
-        rx, ry = shirt_profile(z)
-        gap = 0.07 + max(0.0, z - (body_top - 0.22)) * 0.3
-        half = math.asin(min(0.95, gap / max(rx, 1e-3)))
-        a = -math.pi / 2 + half * side
-        edge.append(Vector((SHIRT_C.x + math.cos(a) * rx, SHIRT_C.y + math.sin(a) * ry, z)))
-    add(tube(edge, 0.008, 8), 'KHU_Adv_Cream', 'Body', 'body')
-for s in (1, -1):   # 깃
-    collar = capsule(Vector((0.03 * s, tc.y - 0.08, body_top + 0.0)), Vector((0.11 * s, tc.y - 0.02, body_top - 0.01)), 0.02, 0.016, 12, 8)
-    add(collar, 'KHU_Adv_Cream', 'Body', 'body')
+if FIT['gap']:   # 앞이 열린 겉옷 + 앞섶 가장자리 두께 (얇은 껍질이 종이처럼 보이지 않게)
+    add(shirt_open(zs, FIT['gap']), FIT['shell'], 'Body', 'body')
+    for side in (1, -1):
+        edge = []
+        for z in zs:
+            a0, a1 = open_angles(z, FIT['gap'])
+            edge.append(shell_pt(z, a0 if side > 0 else a1 - 2 * math.pi))
+        add(tube(edge, FIT['edge'], 8), FIT['shell'], 'Body', 'body')
+else:            # 앞이 막힌 티 · 후드티
+    add(loft(SHIRT_C.x, SHIRT_C.y, [(z, *shirt_profile(z)) for z in zs], 72), FIT['shell'], 'Body', 'body')
+
+if OUTFIT == 'Adventurer':
+    for s in (1, -1):   # 깃
+        collar = capsule(Vector((0.03 * s, tc.y - 0.08, body_top + 0.0)), Vector((0.11 * s, tc.y - 0.02, body_top - 0.01)), 0.02, 0.016, 12, 8)
+        add(collar, 'KHU_Adv_Cream', 'Body', 'body')
+elif OUTFIT == 'Varsity':   # 야구 점퍼: 목 · 밑단 시보리 (빨강 + 크림 줄)
+    neck_ring('KHU_Var_Red', 0.02, cut=0.45)
+    band(zs[0] + 0.016, 'KHU_Var_Red', 0.02, FIT['gap'])
+    band(zs[0] + 0.016, 'KHU_Var_Cream', 0.006, FIT['gap'], out=0.022)
+elif OUTFIT == 'Hoodie':    # 등 뒤 후드 · 목둘레 · 끈 두 줄 · 앞 주머니 · 밑단 시보리
+    hood_c = Vector((0, SHIRT_C.y + 0.12, body_top - 0.05))
+    hood = ellipsoid(hood_c, (0.17, 0.075, 0.11), 40, 24)
+    for v in hood.verts:   # 위쪽은 목 뒤로 둥글게 말려 넘어간 모양 (앞으로 살짝 숙인다)
+        v.co.y -= max(0.0, v.co.z - hood_c.z) * 0.35
+    add(hood, 'KHU_Hood_Gray', 'Body', 'body')
+    neck_ring('KHU_Hood_Gray', 0.024, rx=0.095, ry=0.09)
+    for s in (1, -1):
+        top_z = body_top - 0.03
+        pts = [Vector((0.035 * s, front_y(z) - 0.012, z)) for z in [top_z - 0.13 * i / 8 for i in range(9)]]
+        pts[0].y = tc.y - 0.095   # 목둘레에서 시작
+        add(tube(pts, 0.007, 8), 'KHU_Hood_String', 'Body', 'body')
+        add(ellipsoid(pts[-1] + Vector((0, 0, -0.008)), (0.01, 0.01, 0.014), 10, 8), 'KHU_Hood_String', 'Body', 'body')
+    pz = body_bot + 0.05
+    add(ellipsoid(Vector((0, front_y(pz) + 0.012, pz)), (0.125, 0.022, 0.06), 32, 16), 'KHU_Hood_Rib', 'Body', 'body')
+    band(zs[0] + 0.016, 'KHU_Hood_Rib', 0.02)
+elif OUTFIT == 'Neat':      # 재킷 단추 두 개 + 흰 셔츠 깃
+    for bz in (body_top - 0.3, body_top - 0.4):
+        add(ellipsoid(Vector((0, front_y(bz) - 0.006, bz)), (0.014, 0.008, 0.014), 12, 8), 'KHU_Neat_Button', 'Body', 'body')
+    for s in (1, -1):
+        collar = capsule(Vector((0.03 * s, tc.y - 0.08, body_top + 0.0)), Vector((0.1 * s, tc.y - 0.025, body_top - 0.005)), 0.02, 0.016, 12, 8)
+        add(collar, 'KHU_Neat_Shirt', 'Body', 'body')
+elif OUTFIT == 'Summer':    # 둥근 목 티
+    neck_ring('KHU_Sum_Rib', 0.016)
 add(cylinder(Vector((0, tc.y + 0.01, body_top + 0.0)), 0.075, 0.07, 0.06), 'Skin_Adv', 'Body', 'body')   # 목
+
+
+def limb(a, b, r0, r1, cuts=12):
+    """길이 방향으로 잘게 나눈 캡슐 (팔꿈치 · 무릎이 접힐 때 소매 · 바짓단이 같이 굽게)."""
+    bm = capsule(a, b, r0, r1)
+    L = (Vector(b) - Vector(a)).length
+    bmesh.ops.subdivide_edges(bm, edges=[e for e in bm.edges if e.calc_length() > L * 0.6], cuts=cuts, use_grid_fill=True)
+    return bm
+
 
 # 팔 (T 자세: 어깨에서 +x / -x 로 곧게)
 for s, side in ((1, '.L'), (-1, '.R')):
     sh, wr = SH[side], WRIST[side]
-    sleeve_end = sh + (wr - sh) * 0.5
-    add(capsule(sh + Vector((-0.03 * s, 0, 0)), sleeve_end, 0.085, 0.078), 'KHU_Adv_Cream', 'Body', 'arm' + side)
-    add(capsule(sh + Vector((0.02 * s, 0, 0)), wr, 0.058, 0.052), 'Skin_Adv', 'Body', 'arm' + side)
+    if FIT['long_sleeve']:   # 소매가 손목까지 (안에 피부 없음) + 소매 끝 시보리 · 셔츠 소맷부리
+        d = (wr - sh).normalized()
+        end = FIT.get('sleeve_back', 0.05)
+        add(limb(sh + Vector((-0.03 * s, 0, 0)), wr - d * end, 0.085, 0.07), FIT['sleeve'], 'Body', 'arm' + side)
+        c0, c1 = FIT.get('cuff_span', (end + 0.035, end - 0.005))
+        add(capsule(wr - d * c0, wr - d * c1, FIT['cuff_r'], None, 20, 10), FIT['cuff'], 'Body', 'arm' + side)
+    else:
+        sleeve_end = sh + (wr - sh) * 0.5
+        add(capsule(sh + Vector((-0.03 * s, 0, 0)), sleeve_end, 0.085, 0.078), FIT['sleeve'], 'Body', 'arm' + side)
+        add(capsule(sh + Vector((0.02 * s, 0, 0)), wr, 0.058, 0.052), 'Skin_Adv', 'Body', 'arm' + side)
     add(ellipsoid(wr + Vector((0.055 * s, -0.005, 0)), (0.065, 0.045, 0.058)), 'Skin_Adv', 'Body', 'arm' + side)
     add(ellipsoid(wr + Vector((0.035 * s, -0.04, 0.02)), (0.025, 0.022, 0.025), 12, 10), 'Skin_Adv', 'Body', 'arm' + side)   # 엄지
 
-# 가방 (왼쪽 허리) + 끈 (오른쪽 어깨 → 가방) + 지도 + 배지
-bag_c = Vector((0.25, -0.05, HIP['.L'].z + 0.06))
-add(ellipsoid(bag_c, (0.1, 0.06, 0.085)), 'KHU_Adv_Leather', 'Body', 'body')
-add(ellipsoid(bag_c + Vector((0, -0.035, 0.03)), (0.098, 0.035, 0.055)), 'KHU_Adv_Leather', 'Body', 'body')
-add(ellipsoid(bag_c + Vector((0, -0.072, 0.0)), (0.025, 0.01, 0.025), 14, 10), 'KHU_Adv_Crimson', 'Body', 'body')
-add(capsule(bag_c + Vector((-0.06, 0.0, 0.08)), bag_c + Vector((-0.11, 0.02, 0.17)), 0.02), 'KHU_Adv_Paper', 'Body', 'body')
-from mathutils.bvhtree import BVHTree
-_surf = bmesh.new()
-for bm_, _, part_, _ in PARTS:          # 지금까지 만든 몸통 · 셔츠 · 소매 겉면
-    if part_ == 'Body':
-        tmp = bpy.data.meshes.new('tmp')
-        bm_.to_mesh(tmp)
-        _surf.from_mesh(tmp)
-        bpy.data.meshes.remove(tmp)
-SURF = BVHTree.FromBMesh(_surf)
+if OUTFIT == 'Adventurer':
+    # 가방 (왼쪽 허리) + 끈 (오른쪽 어깨 → 가방) + 지도 + 배지
+    bag_c = Vector((0.25, -0.05, HIP['.L'].z + 0.06))
+    add(ellipsoid(bag_c, (0.1, 0.06, 0.085)), 'KHU_Adv_Leather', 'Body', 'body')
+    add(ellipsoid(bag_c + Vector((0, -0.035, 0.03)), (0.098, 0.035, 0.055)), 'KHU_Adv_Leather', 'Body', 'body')
+    add(ellipsoid(bag_c + Vector((0, -0.072, 0.0)), (0.025, 0.01, 0.025), 14, 10), 'KHU_Adv_Crimson', 'Body', 'body')
+    add(capsule(bag_c + Vector((-0.06, 0.0, 0.08)), bag_c + Vector((-0.11, 0.02, 0.17)), 0.02), 'KHU_Adv_Paper', 'Body', 'body')
+    from mathutils.bvhtree import BVHTree
+    _surf = bmesh.new()
+    for bm_, _, part_, _ in PARTS:          # 지금까지 만든 몸통 · 셔츠 · 소매 겉면
+        if part_ == 'Body':
+            tmp = bpy.data.meshes.new('tmp')
+            bm_.to_mesh(tmp)
+            _surf.from_mesh(tmp)
+            bpy.data.meshes.remove(tmp)
+    SURF = BVHTree.FromBMesh(_surf)
 
+    def on_body(origin, direction, lift=0.013):
+        """origin 에서 direction 으로 쏜 광선이 처음 닿는 겉면 + 살짝 띄운 점."""
+        hit, normal, _, _ = SURF.ray_cast(Vector(origin), Vector(direction).normalized(), 2.0)
+        if hit is None:
+            return None
+        if normal.dot(Vector(direction)) > 0:
+            normal = -normal
+        return hit + normal * lift
 
-def on_body(origin, direction, lift=0.013):
-    """origin 에서 direction 으로 쏜 광선이 처음 닿는 겉면 + 살짝 띄운 점."""
-    hit, normal, _, _ = SURF.ray_cast(Vector(origin), Vector(direction).normalized(), 2.0)
-    if hit is None:
-        return None
-    if normal.dot(Vector(direction)) > 0:
-        normal = -normal
-    return hit + normal * lift
-
-
-strap = []
-sx, top_z = -0.12, body_top + 0.02
-bag_top = bag_c + Vector((-0.035, 0, 0.075))
-front, back = [], []
-for i in range(26):
-    t = i / 25
-    x = sx + (bag_top.x - 0.03 - sx) * t
-    z = top_z - 0.05 + (bag_top.z - (top_z - 0.05)) * t
-    for side, out in ((-1, front), (1, back)):
-        p = on_body((x, SHIRT_C.y + side * 1.0, z), (0, -side, 0))
+    sx, top_z = -0.12, body_top + 0.02
+    bag_top = bag_c + Vector((-0.035, 0, 0.075))
+    front, back = [], []
+    for i in range(26):
+        t = i / 25
+        x = sx + (bag_top.x - 0.03 - sx) * t
+        z = top_z - 0.05 + (bag_top.z - (top_z - 0.05)) * t
+        for side, out in ((-1, front), (1, back)):
+            p = on_body((x, SHIRT_C.y + side * 1.0, z), (0, -side, 0))
+            if p is not None:
+                out.append(p)
+    over = []
+    y0, y1 = front[0].y, back[0].y
+    for i in range(1, 12):   # 어깨 위: 위에서 아래로 쏴서 어깨 윗면을 따라간다
+        y = y0 + (y1 - y0) * i / 12
+        p = on_body((sx, y, top_z + 1.0), (0, 0, -1))
         if p is not None:
-            out.append(p)
-arc = []
-y0, y1 = front[0].y, back[0].y
-for i in range(1, 12):   # 어깨 위: 위에서 아래로 쏴서 어깨 윗면을 따라간다
-    y = y0 + (y1 - y0) * i / 12
-    p = on_body((sx, y, top_z + 1.0), (0, 0, -1))
-    if p is not None:
-        arc.append(p)
-def bridge(pts, side):
-    """셔츠 앞섶처럼 움푹한 곳은 끈이 건너가게: 바깥쪽으로만 펴고 부드럽게."""
-    for _ in range(6):
-        out = [pts[0]]
-        for i in range(1, len(pts) - 1):
-            m = (pts[i - 1] + pts[i] * 2 + pts[i + 1]) / 4
-            q = pts[i].copy()
-            q.x, q.z = m.x, m.z
-            q.y = min(q.y, m.y) if side < 0 else max(q.y, m.y)   # 몸 안쪽으로는 들어가지 않게
-            out.append(q)
-        out.append(pts[-1])
-        pts = out
-    return pts
+            over.append(p)
+
+    def bridge(pts, side):
+        """셔츠 앞섶처럼 움푹한 곳은 끈이 건너가게: 바깥쪽으로만 펴고 부드럽게."""
+        for _ in range(6):
+            out = [pts[0]]
+            for i in range(1, len(pts) - 1):
+                m = (pts[i - 1] + pts[i] * 2 + pts[i + 1]) / 4
+                q = pts[i].copy()
+                q.x, q.z = m.x, m.z
+                q.y = min(q.y, m.y) if side < 0 else max(q.y, m.y)   # 몸 안쪽으로는 들어가지 않게
+                out.append(q)
+            out.append(pts[-1])
+            pts = out
+        return pts
+
+    front, back = bridge(front, -1), bridge(back, 1)
+    strap = front[::-1] + over + back
+    strap.insert(0, Vector((bag_top.x, bag_top.y - 0.045, bag_top.z)))
+    strap.append(Vector((bag_top.x, bag_top.y + 0.045, bag_top.z)))
+    add(tube(strap, 0.014, 10), 'KHU_Adv_Leather', 'Body', 'body')
 
 
-front, back = bridge(front, -1), bridge(back, 1)
-strap = front[::-1] + arc + back
-strap.insert(0, Vector((bag_top.x, bag_top.y - 0.045, bag_top.z)))
-strap.append(Vector((bag_top.x, bag_top.y + 0.045, bag_top.z)))
-add(tube(strap, 0.014, 10), 'KHU_Adv_Leather', 'Body', 'body')
+def shoe(style, s, side, ft):
+    """신발 (발 뼈, 크기 그대로). 몸통 (발등 타원 · 밑창) 크기는 모든 신발이 같다."""
+    bc = Vector((ft.x, ft.y - 0.045, ft.z + 0.085))
+    kind = 'foot' + side
+    if style == 'boot':
+        add(ellipsoid(bc, (0.098, 0.155, 0.095)), 'KHU_Adv_Boot', 'Feet', kind)
+        add(capsule(Vector((ft.x, ft.y + 0.015, ft.z + 0.1)), Vector((ft.x, ft.y + 0.015, ft.z + 0.17)), 0.088, 0.085), 'KHU_Adv_Boot', 'Feet', kind)
+        add(ellipsoid(Vector((bc.x, bc.y, ft.z + 0.014)), (0.104, 0.165, 0.026)), 'KHU_Adv_Sole', 'Feet', kind)
+        for i in range(2):   # 끈
+            y = bc.y - 0.07 + i * 0.04
+            add(capsule(Vector((bc.x - 0.04, y, bc.z + 0.06 + i * 0.02)), Vector((bc.x + 0.04, y, bc.z + 0.06 + i * 0.02)), 0.009), 'KHU_Adv_Sole', 'Feet', kind)
+        return
+    if style == 'sneaker':   # 흰 운동화: 두꺼운 밑창 + 옆 줄 + 끈
+        add(ellipsoid(bc, (0.098, 0.155, 0.095)), 'KHU_Shoe_White', 'Feet', kind)
+        add(capsule(Vector((ft.x, ft.y + 0.015, ft.z + 0.1)), Vector((ft.x, ft.y + 0.015, ft.z + 0.13)), 0.088, 0.085), 'KHU_Shoe_White', 'Feet', kind)
+        add(ellipsoid(Vector((bc.x, bc.y, ft.z + 0.02)), (0.106, 0.167, 0.034)), 'KHU_Shoe_Sole', 'Feet', kind)
+        for o in (1, -1):
+            add(ellipsoid(Vector((bc.x + 0.088 * o, bc.y + 0.02, bc.z - 0.015)), (0.016, 0.075, 0.026), 16, 10), FIT['accent'], 'Feet', kind)
+        for i in range(2):
+            y = bc.y - 0.07 + i * 0.04
+            add(capsule(Vector((bc.x - 0.04, y, bc.z + 0.06 + i * 0.02)), Vector((bc.x + 0.04, y, bc.z + 0.06 + i * 0.02)), 0.009), 'KHU_Shoe_Lace', 'Feet', kind)
+        return
+    # 로퍼: 발등 띠 + 짙은 밑창
+    add(ellipsoid(bc, (0.098, 0.155, 0.095)), 'KHU_Neat_Loafer', 'Feet', kind)
+    add(ellipsoid(Vector((bc.x, bc.y, ft.z + 0.016)), (0.104, 0.165, 0.028)), 'KHU_Neat_Sole', 'Feet', kind)
+    add(capsule(Vector((bc.x - 0.075, bc.y - 0.03, bc.z + 0.045)), Vector((bc.x + 0.075, bc.y - 0.03, bc.z + 0.045)), 0.014), 'KHU_Neat_Sole', 'Feet', kind)
 
-# 반바지 (골반 + 두 다리) · 다리 · 양말
+
+# 바지 (골반 + 두 다리) · 다리 · 양말 · 신발
 # 골반: 허리 → 사타구니까지 반듯한 한 덩어리 (아래 모서리만 살짝 둥글게). 다리 통이 그 아래에서 이어진다.
 hz = HIP['.L'].z
 crotch_z = hz - 0.085
 pelvis_y = HIP['.L'].y
 add(loft(0, pelvis_y, [(crotch_z, 0.19, 0.118), (crotch_z + 0.02, 0.205, 0.13), (hz, 0.212, 0.136), (hz + 0.1, 0.205, 0.134), (hz + 0.13, 0.198, 0.13)]),
-    'KHU_Adv_Olive', 'Legs', 'pelvis')
+    FIT['pants'], 'Legs', 'pelvis')
 for s, side in ((1, '.L'), (-1, '.R')):
     hip, knee, ft = HIP[side], KNEE[side], FOOT[side]
-    short_end = hip + (knee - hip) * 0.7 + Vector((0.01 * s, 0, 0))
     lx = hip.x + 0.008 * s
-    add(loft(lx, hip.y, [(short_end.z, 0.106, 0.108), (crotch_z + 0.01, 0.104, 0.112), (crotch_z + 0.045, 0.1, 0.11)], 28),
-        'KHU_Adv_Olive', 'Legs', 'leg' + side)
-    cuff = cylinder(Vector((lx, hip.y, short_end.z + 0.012)), 0.112, 0.11, 0.03, 28)
-    add(cuff, 'KHU_Adv_Olive', 'Legs', 'leg' + side)   # 접단
-    add(ellipsoid(Vector((lx + 0.1 * s, hip.y, crotch_z - 0.04)), (0.014, 0.055, 0.05), 14, 10), 'KHU_Adv_Olive', 'Legs', 'leg' + side)  # 옆주머니 (납작)
     ankle = Vector((ft.x, ft.y + 0.01, ft.z + 0.1))
-    add(capsule(Vector((lx, hip.y, short_end.z + 0.03)), ankle, 0.072, 0.066), 'Skin_Adv', 'Legs', 'leg' + side)
-    add(cylinder(ankle + Vector((0, 0, 0.07)), 0.078, 0.084, 0.07), 'KHU_Adv_Cream', 'Legs', 'leg' + side)
-
-    # 부츠 (발 뼈, 크기 그대로)
-    bc = Vector((ft.x, ft.y - 0.045, ft.z + 0.085))
-    boot = ellipsoid(bc, (0.098, 0.155, 0.095))
-    add(boot, 'KHU_Adv_Boot', 'Feet', 'foot' + side)
-    add(capsule(Vector((ft.x, ft.y + 0.015, ft.z + 0.1)), Vector((ft.x, ft.y + 0.015, ft.z + 0.17)), 0.088, 0.085), 'KHU_Adv_Boot', 'Feet', 'foot' + side)
-    sole = ellipsoid(Vector((bc.x, bc.y, ft.z + 0.014)), (0.104, 0.165, 0.026))
-    add(sole, 'KHU_Adv_Sole', 'Feet', 'foot' + side)
-    for i in range(2):   # 끈
-        y = bc.y - 0.07 + i * 0.04
-        add(capsule(Vector((bc.x - 0.04, y, bc.z + 0.06 + i * 0.02)), Vector((bc.x + 0.04, y, bc.z + 0.06 + i * 0.02)), 0.009), 'KHU_Adv_Sole', 'Feet', 'foot' + side)
-
+    if FIT['hem'] is None:   # 반바지 + 맨다리 + 양말
+        short_end = hip + (knee - hip) * 0.7 + Vector((0.01 * s, 0, 0))
+        add(loft(lx, hip.y, [(short_end.z, 0.106, 0.108), (crotch_z + 0.01, 0.104, 0.112), (crotch_z + 0.045, 0.1, 0.11)], 28),
+            FIT['pants'], 'Legs', 'leg' + side)
+        cuff = cylinder(Vector((lx, hip.y, short_end.z + 0.012)), 0.112, 0.11, 0.03, 28)
+        add(cuff, FIT['pants_cuff'], 'Legs', 'leg' + side)   # 접단
+        if OUTFIT == 'Adventurer':
+            add(ellipsoid(Vector((lx + 0.1 * s, hip.y, crotch_z - 0.04)), (0.014, 0.055, 0.05), 14, 10), 'KHU_Adv_Olive', 'Legs', 'leg' + side)  # 옆주머니 (납작)
+        add(capsule(Vector((lx, hip.y, short_end.z + 0.03)), ankle, 0.072, 0.066), 'Skin_Adv', 'Legs', 'leg' + side)
+        add(cylinder(ankle + Vector((0, 0, 0.07)), 0.078, 0.084, 0.07), FIT['sock'], 'Legs', 'leg' + side)
+    else:                    # 긴바지: 사타구니 → 발목까지 한 통 (무릎에서 굽게 잘게 나눈다, 안에 피부 없음)
+        top_z, hem_z = crotch_z + 0.045, ft.z + FIT['hem']
+        r_hem = FIT['hem_r']
+        rings = []
+        for i in range(19):
+            z = top_z + (hem_z - top_z) * i / 18
+            t = (hip.z - z) / (hip.z - hem_z)          # 0 엉덩이 → 1 밑단
+            c = Vector((lx, hip.y)).lerp(Vector((ankle.x, ankle.y)), max(0.0, t))
+            rx = 0.104 + (r_hem - 0.104) * t
+            rings.append((z, rx, rx + 0.006 * (1 - t), c.x, c.y))
+        add(loft(lx, hip.y, rings[::-1], 28), FIT['pants'], 'Legs', 'leg' + side)
+        if FIT['pants_cuff']:   # 조거 밑단 시보리 · 청바지 접단
+            add(cylinder(Vector((ankle.x, ankle.y, hem_z + 0.018)), r_hem + 0.006, r_hem + 0.004, 0.036, 28), FIT['pants_cuff'], 'Legs', 'leg' + side)
+    shoe(FIT['shoe'], s, side, ft)
 
 # ---------------------------------------------------------------- 뼈 가중치
 def ramp(x, a, b):
@@ -602,7 +739,7 @@ def build_objects(rest):
     objs = {}
     for part in dict.fromkeys(it[2] for it in PARTS):
         items = [it for it in PARTS if it[2] == part]
-        name = part if part.startswith('Face_') else f'KHU_Adventurer_{part}'   # Unity 가 Face_ 이름으로 갈래를 찾는다
+        name = part if part.startswith('Face_') else f'KHU_{OUTFIT}_{part}'   # Unity 가 Face_ 이름으로 갈래를 찾는다
         mesh = bpy.data.meshes.new(name)
         obj = bpy.data.objects.new(name, mesh)
         bpy.context.scene.collection.objects.link(obj)
@@ -726,8 +863,8 @@ def export():
     objs = build_objects(rest=True)
     os.makedirs(OUT_DIR, exist_ok=True)
     for part, o in objs.items():
-        if part.startswith('Face_'):
-            continue   # 얼굴 갈래는 머리 FBX 에 같이 넣는다
+        if part.startswith('Face_') or (part == 'Head' and OUTFIT != 'Adventurer'):
+            continue   # 얼굴 갈래는 머리 FBX 에 같이 넣는다. 다른 옷은 경희 모험가 머리를 같이 쓴다
         bpy.ops.object.select_all(action='DESELECT')
         RIG.select_set(True)
         o.select_set(True)
@@ -736,7 +873,7 @@ def export():
                 if p.startswith('Face_'):
                     f.select_set(True)
         bpy.context.view_layer.objects.active = RIG
-        path = os.path.join(OUT_DIR, f'KHU_Adventurer_{part}.fbx')
+        path = os.path.join(OUT_DIR, f'KHU_{OUTFIT}_{part}.fbx')
         bpy.ops.export_scene.fbx(filepath=path, use_selection=True, object_types={'ARMATURE', 'MESH'},
                                  add_leaf_bones=False, bake_anim=False, mesh_smooth_type='FACE')
         print('wrote', os.path.normpath(path), len(o.data.polygons), 'faces')

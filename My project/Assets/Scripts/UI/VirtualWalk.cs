@@ -19,8 +19,7 @@ public class VirtualWalk : MonoBehaviour
     const string GateBuildingId = "way-473963422";         // 정문
     const float OfferAfter = 8f;                            // 위치를 이만큼 못 받으면 권한다
 
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
+    static readonly Color Ink = KucaTheme.Ink;
 
     CampusMap map;
     GameObject offer, controls;
@@ -39,26 +38,33 @@ public class VirtualWalk : MonoBehaviour
     public bool On => map != null && map.VirtualWalk;
 
     /// <summary>
-    /// 걷는 중 판 · 자유 산책 판을 놓는다. 보통은 화면 아래 (로고 버튼 위), 가상 산책 중이면 조이스틱과 가운데 캐릭터를
-    /// 가리지 않게 왼쪽 위 정보 칸 아래로 (오른쪽 버튼 줄은 비켜서).
+    /// 걷는 중 판 · 자유 산책 판을 놓는다. 보통은 HUD 아래 탭 막대 바로 위 ("산책 시작" 버튼 자리, 산책 중엔 그 버튼이 숨는다).
+    /// 가상 산책 중이면 조이스틱과 가운데 캐릭터를 가리지 않게 위 상태 카드 · 티켓 칩 아래로 (오른쪽 버튼 줄은 비켜서).
+    /// 판의 캔버스는 안전 영역이 없어서 노치 · 홈 표시줄 높이를 더한다.
     /// </summary>
     public static void PlacePanel(RectTransform panel, float height)
     {
+        Canvas root = panel.GetComponentInParent<Canvas>(true);
+        float canvasH = root != null ? ((RectTransform)root.rootCanvas.transform).rect.height : 1920f;
+        Rect sa = Screen.safeArea;
+        float insetBottom = Screen.height > 0 ? sa.yMin / Screen.height * canvasH : 0f;
+        float insetTop = Screen.height > 0 ? (Screen.height - sa.yMax) / Screen.height * canvasH : 0f;
         if (Instance != null && Instance.On)
         {
+            const float belowStatus = 330f;   // GameHUD 상태 카드(156) + 티켓 칩(104) + 여백
             panel.anchorMin = new Vector2(0f, 1f);
             panel.anchorMax = new Vector2(1f, 1f);
             panel.pivot = new Vector2(0.5f, 1f);
-            panel.offsetMin = new Vector2(24f, -370f - height);
-            panel.offsetMax = new Vector2(-180f, -370f);
+            panel.offsetMin = new Vector2(KucaTheme.Space4, -insetTop - belowStatus - height);
+            panel.offsetMax = new Vector2(-180f, -insetTop - belowStatus);
         }
         else
         {
             panel.anchorMin = new Vector2(0f, 0f);
             panel.anchorMax = new Vector2(1f, 0f);
             panel.pivot = new Vector2(0.5f, 0f);
-            panel.sizeDelta = new Vector2(-48f, height);
-            panel.anchoredPosition = new Vector2(0f, 320f);
+            panel.sizeDelta = new Vector2(-2f * KucaTheme.Space4, height);
+            panel.anchoredPosition = new Vector2(0f, insetBottom + GameHUD.BottomReserve);
         }
     }
 
@@ -217,81 +223,63 @@ public class VirtualWalk : MonoBehaviour
         controls = UIKit.Rect(safe, "Controls").gameObject;
         UIKit.Stretch((RectTransform)controls.transform);
 
-        Image tag = UIKit.Image(controls.transform, "Tag", new Color(0.96f, 0.52f, 0.16f, 0.95f), raycast: true);
+        // 가상 산책 중 표시: 금색 알약 + 진한 글자 (HUD 상태 카드 · 티켓 칩 아래 가운데)
+        Image tag = UIKit.Image(controls.transform, "Tag", KucaTheme.Gold, raycast: true);
         tag.sprite = HudIcons.Pill;
         tag.type = Image.Type.Sliced;
-        tag.pixelsPerUnitMultiplier = 120f / 70f;
-        Place(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -440f), new Vector2(520f, 70f)); // HUD 닉네임 · 티켓 게이지 아래
-        Text tt = UIKit.Text(tag.transform, "가상 산책 중 · 체험 계정", 28, TextAnchor.MiddleCenter, Color.white);
-        tt.fontStyle = FontStyle.Bold;
+        tag.pixelsPerUnitMultiplier = 1.4f;
+        Place(tag.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -330f), new Vector2(600f, 88f));
+        Text tt = UIKit.Bold(UIKit.Text(tag.transform, "가상 산책 중 · 체험 계정", KucaTheme.Caption, TextAnchor.MiddleCenter, Ink));
         UIKit.Stretch(tt.rectTransform, 20f, 0f);
         UIInputBlocker.Register(tag.rectTransform);
 
-        Image padImg = UIKit.Image(controls.transform, "Pad", new Color(1f, 1f, 1f, 0.28f), raycast: true);
+        // 조이스틱: 아래 가운데, "산책 시작" 버튼 위 (양손 어느 쪽으로도 조작하기 쉽게)
+        const float padSize = 280f;
+        float padY = GameHUD.BottomReserve + KucaTheme.ButtonHeight + KucaTheme.Space4 + padSize / 2f;
+        Image padImg = UIKit.Image(controls.transform, "Pad", new Color(1f, 1f, 1f, 0.55f), raycast: true);
         padImg.sprite = HudIcons.Circle;
         pad = padImg.rectTransform;
-        // 화면 아래 가운데, 경희대 로고 버튼 바로 위 (양손 어느 쪽으로도 조작하기 쉽게)
-        Place(pad, new Vector2(0.5f, 0f), new Vector2(0f, 470f), new Vector2(260f, 260f));
+        Place(pad, new Vector2(0.5f, 0f), new Vector2(0f, padY), new Vector2(padSize, padSize));
         pad.pivot = new Vector2(0.5f, 0.5f);
-        Image ring = UIKit.Image(pad, "Ring", new Color(1f, 1f, 1f, 0.7f));
+        Image ring = UIKit.Image(pad, "Ring", new Color(1f, 1f, 1f, 0.9f));
         ring.sprite = HudIcons.GlowRing;
         UIKit.Stretch(ring.rectTransform);
-        Image k = UIKit.Image(pad, "Knob", Color.white);
+        Image k = UIKit.Image(pad, "Knob", KucaTheme.Primary);
         k.sprite = HudIcons.Circle;
         knob = k.rectTransform;
-        Place(knob, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(110f, 110f));
-        Image foot = UIKit.Image(knob, "Icon", Accent);
+        Place(knob, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(124f, 124f));
+        Image foot = UIKit.Image(knob, "Icon", Color.white);
         foot.sprite = HudIcons.Footprints;
-        Place(foot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(60f, 60f));
+        Place(foot.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(64f, 64f));
         padImg.gameObject.AddComponent<Pad>().owner = this;
         UIInputBlocker.Register(pad);
 
-        Button speed = UIKit.Button(controls.transform, "", () => { speedLevel = (speedLevel + 1) % Speeds.Length; RefreshFast(); }, new Color(1f, 1f, 1f, 0.9f), 28);
+        // 속도 단계: 흰 알약, 조이스틱 바로 위
+        Button speed = UIKit.Button(controls.transform, "", () => { speedLevel = (speedLevel + 1) % Speeds.Length; RefreshFast(); }, KucaTheme.Card, KucaTheme.Label);
         Image si = speed.GetComponent<Image>();
         si.sprite = HudIcons.Pill;
-        si.type = Image.Type.Sliced;
-        si.pixelsPerUnitMultiplier = 120f / 70f;
+        si.pixelsPerUnitMultiplier = 1.4f;
         fastLabel = speed.GetComponentInChildren<Text>();
         fastLabel.color = Ink;
-        fastLabel.fontStyle = FontStyle.Bold;
-        Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(0f, 665f), new Vector2(300f, 70f));   // 조이스틱 바로 위
+        Place((RectTransform)speed.transform, new Vector2(0.5f, 0f), new Vector2(0f, padY + padSize / 2f + KucaTheme.Space2 + 48f), new Vector2(360f, 96f));
         ((RectTransform)speed.transform).pivot = new Vector2(0.5f, 0.5f);
         UIInputBlocker.Register((RectTransform)speed.transform);
         controls.SetActive(false);
 
-        // 권하는 카드
-        Image dim = UIKit.Image(canvas.transform, "Offer", new Color(0f, 0f, 0f, 0.45f), raycast: true);
+        // 권하는 카드 (토스 확인 시트: 큰 제목 · 설명 · 꽉 찬 주요 버튼 + 회색 보조 버튼)
+        Image dim = UIKit.Image(canvas.transform, "Offer", KucaTheme.Scrim, raycast: true);
         UIKit.Stretch(dim.rectTransform);
         offer = dim.gameObject;
-        Image card = UIKit.Image(dim.transform, "Card", Color.white, raycast: true);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
-        Place(card.rectTransform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 700f));
-        Text title = UIKit.Text(card.transform, "가상 산책으로 둘러볼까요?", 46, TextAnchor.MiddleCenter, Ink);
-        title.fontStyle = FontStyle.Bold;
-        Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(820f, 70f));
-        offerText = UIKit.Text(card.transform, "", 32, TextAnchor.UpperCenter, new Color(Ink.r, Ink.g, Ink.b, 0.65f));
-        Place(offerText.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -160f), new Vector2(800f, 230f));
-        Button go = Pill(card.transform, "가상 산책 시작", Accent, Color.white, Begin);
-        Place((RectTransform)go.transform, new Vector2(0.5f, 0f), new Vector2(0f, 170f), new Vector2(760f, 116f));
-        Button later = Pill(card.transform, "나중에 (설정에서 켤 수 있어요)", new Color(0.94f, 0.95f, 0.96f), Ink, CloseOffer);
-        Place((RectTransform)later.transform, new Vector2(0.5f, 0f), new Vector2(0f, 40f), new Vector2(760f, 104f));
+        RectTransform card = UIKit.CardBox(dim.transform, "Card", KucaTheme.Space3);
+        card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
+        card.sizeDelta = new Vector2(1080f - 2f * KucaTheme.Gutter, 0f);
+        UIKit.Bold(UIKit.Paragraph(card, "가상 산책으로 둘러볼까요?", KucaTheme.Title - 6, Ink));
+        offerText = UIKit.Paragraph(card, "", KucaTheme.Body, KucaTheme.InkMuted);
+        UIKit.Size(UIKit.Rect(card, "Gap"), KucaTheme.Space2);
+        UIKit.PrimaryButton(card, "가상 산책 시작", Begin);
+        UIKit.SecondaryButton(card, "나중에 (설정에서 켤 수 있어요)", CloseOffer);
         offer.SetActive(false);
-    }
-
-    static Button Pill(Transform parent, string label, Color face, Color ink, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = UIKit.Button(parent, label, onClick, face, 36);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 110f;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = ink;
-        t.fontStyle = FontStyle.Bold;
-        b.gameObject.AddComponent<PressScale>();
-        return b;
     }
 
     static void Place(RectTransform rt, Vector2 anchor, Vector2 pos, Vector2 size)

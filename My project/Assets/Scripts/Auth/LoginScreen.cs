@@ -7,19 +7,23 @@ using UnityEngine.UI;
 /// 흐름: (첫 실행) 개인정보 안내 → 카카오 / Apple 로그인 → 경희대 메일 인증 → 닉네임 → 성별 → 산책 취향 체크리스트 → 시작.
 /// 체험 모드("로그인 없이 둘러보기")는 서버가 만든 체험 계정으로 메일 인증 · 닉네임을 건너뛰고 성별만 받는다.
 /// 이미 끝낸 단계는 건너뛴다 (예: 토큰이 살아 있고 모두 끝났으면 바로 시작).
+/// 디자인 v4 (docs/디자인_v4.md): 토스 · 카카오 로그인 — 흰 바탕, 왼쪽 큰 문구, 화면 아래 꽉 찬 카카오 버튼, 그 아래 글자 버튼.
 /// </summary>
 public class LoginScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
-    static readonly Color KakaoYellow = new Color(1f, 0.9f, 0f);
-    static readonly Color Burgundy = new Color(0.55f, 0.13f, 0.20f);
-    static readonly Color Field = new Color(0.95f, 0.96f, 0.97f);
-    static readonly Color ErrorRed = new Color(0.86f, 0.25f, 0.25f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
+    // 카카오 로그인 버튼 브랜드 규칙: #FEE500 바탕 · #191919 글자 (85%) · 말풍선 아이콘
+    static readonly Color KakaoYellow = new Color(0xFE / 255f, 0xE5 / 255f, 0f);
+    static readonly Color KakaoInk = new Color(0x19 / 255f, 0x19 / 255f, 0x19 / 255f);
+    static readonly Color Field = KucaTheme.Fill;
+    static readonly Color ErrorRed = KucaTheme.Crimson;
 
     const string PrivacySeenKey = "privacy_seen";
 
+    static readonly string[] HeroSpecies = { "pigeon", "library_owl", "squirrel" };
+    readonly RawImage[] hero = new RawImage[3];
     GameObject root, checking, loginPage, emailPage, nickPage, genderPage, privacyPage;
     Button privacyButton;
     bool privacyOnly; // 설정에서 열었으면 확인을 눌러도 닫기만 한다
@@ -315,6 +319,13 @@ public class LoginScreen : MonoBehaviour
     {
         foreach (GameObject p in new[] { checking, loginPage, emailPage, nickPage, genderPage, privacyPage })
             p.SetActive(p == page);
+        if (page == loginPage)
+            for (int i = 0; i < hero.Length; i++)
+                if (hero[i].texture == null)
+                {
+                    hero[i].texture = MonsterThumbnails.Get(HeroSpecies[i]);   // 모델이 없으면 null → 숨김
+                    hero[i].enabled = hero[i].texture != null;
+                }
     }
 
     static void Toast(string message)
@@ -328,16 +339,8 @@ public class LoginScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "LoginCanvas", 60);
-        root = UIKit.Image(canvas.transform, "Login", Color.white, raycast: true).gameObject;
+        root = UIKit.Image(canvas.transform, "Login", KucaTheme.Card, raycast: true).gameObject;
         UIKit.Stretch((RectTransform)root.transform);
-        // 위쪽 버건디 띠 (학교 색)
-        var bg = new GameObject("Band", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-        bg.transform.SetParent(root.transform, false);
-        bg.texture = HudIcons.Gradient(new Color(0.62f, 0.16f, 0.24f), new Color(0.36f, 0.07f, 0.13f));
-        bg.raycastTarget = false;
-        bg.rectTransform.anchorMin = new Vector2(0f, 0.76f); // 위 띠를 짧게: 키보드가 올라와도 입력칸이 가려지지 않게
-        bg.rectTransform.anchorMax = Vector2.one;
-        bg.rectTransform.offsetMin = bg.rectTransform.offsetMax = Vector2.zero;
 
         Rect sa = Screen.safeArea;
         RectTransform safe = UIKit.Rect(root.transform, "Safe");
@@ -345,125 +348,140 @@ public class LoginScreen : MonoBehaviour
         safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
-        Text brand = UIKit.Text(safe, "KUCA", 120, TextAnchor.MiddleCenter, Color.white);
-        brand.fontStyle = FontStyle.Bold;
-        Box(brand.rectTransform, 0f, 90f, 0f, 150f);
-        Text tag = UIKit.Text(safe, "경희대 국제캠퍼스를 함께 걷는 산책 동반자", 34, TextAnchor.MiddleCenter, new Color(1f, 1f, 1f, 0.85f));
-        Box(tag.rectTransform, 0f, 245f, 0f, 60f);
+        // 왼쪽 위 작은 상표 (큰 크림슨 띠 대신)
+        Text brand = UIKit.Bold(UIKit.Text(safe, "KUCA", KucaTheme.Heading, TextAnchor.MiddleLeft, KucaTheme.Primary));
+        Box(brand.rectTransform, G, 48f, G, 72f);
 
         RectTransform panel = UIKit.Rect(safe, "Panel");
-        panel.anchorMin = Vector2.zero;
-        panel.anchorMax = new Vector2(1f, 0.74f);
-        panel.offsetMin = panel.offsetMax = Vector2.zero;
+        UIKit.Stretch(panel);
 
-        errorText = UIKit.Text(safe, "", 30, TextAnchor.MiddleCenter, ErrorRed);
+        errorText = UIKit.Text(safe, "", KucaTheme.Label, TextAnchor.MiddleCenter, ErrorRed);
         errorText.rectTransform.anchorMin = new Vector2(0f, 0f);
         errorText.rectTransform.anchorMax = new Vector2(1f, 0f);
         errorText.rectTransform.pivot = new Vector2(0.5f, 0f);
-        errorText.rectTransform.offsetMin = new Vector2(60f, 40f);
-        errorText.rectTransform.offsetMax = new Vector2(-60f, 140f);
+        errorText.rectTransform.offsetMin = new Vector2(G, 24f);
+        errorText.rectTransform.offsetMax = new Vector2(-G, 124f);
 
         // 확인 중
         checking = UIKit.Rect(panel, "Checking").gameObject;
         UIKit.Stretch((RectTransform)checking.transform);
-        checkingText = UIKit.Text(checking.transform, "", 34, TextAnchor.MiddleCenter, InkQuiet);
-        Box(checkingText.rectTransform, 60f, 160f, 60f, 120f);
-        retryButton = Pill(checking.transform, "다시 시도", Accent, Color.white, StartFlow, 320f);
+        checkingText = UIKit.Text(checking.transform, "", KucaTheme.Body, TextAnchor.MiddleLeft, InkQuiet);
+        Box(checkingText.rectTransform, G, 160f, G, 140f);
+        retryButton = Pill(checking.transform, "다시 시도", Accent, Color.white, StartFlow, 340f);
 
-        // 로그인
+        // 로그인: 위 큰 문구, 아래 버튼 묶음 (엄지 닿는 곳)
         loginPage = UIKit.Rect(panel, "LoginPage").gameObject;
         UIKit.Stretch((RectTransform)loginPage.transform);
-        Text welcome = UIKit.Text(loginPage.transform, "시작하기", 52, TextAnchor.MiddleLeft, Ink);
-        welcome.fontStyle = FontStyle.Bold;
-        Box(welcome.rectTransform, 60f, 90f, 60f, 80f);
-        Text sub = UIKit.Text(loginPage.transform, "로그인한 뒤 경희대 메일 인증을 한 번 해요.", 30, TextAnchor.MiddleLeft, InkQuiet);
-        Box(sub.rectTransform, 60f, 170f, 60f, 50f);
-        Button kakao = Pill(loginPage.transform, "카카오로 시작하기", KakaoYellow, new Color(0.1f, 0.1f, 0.1f), () => LoginWith("kakao"), 280f);
-        AddIcon(kakao, HudIcons.Bubble, new Color(0.1f, 0.1f, 0.1f));
-        float y = 412f;
+        Text welcome = UIKit.Bold(UIKit.Text(loginPage.transform, "경희대 국제캠퍼스,\n오늘은 어디로 걸어 볼까요?", KucaTheme.Title, TextAnchor.UpperLeft, Ink));
+        Box(welcome.rectTransform, G, 180f, G, 190f);
+        Text sub = UIKit.Text(loginPage.transform, "파트너 경희펫과 함께 걷고, 장소마다 메모를 남겨요.\n로그인한 뒤 경희대 메일 인증을 한 번 해요.", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
+        Box(sub.rectTransform, G, 390f, G, 130f);
+
+        // 가운데: 경희펫 셋 (문구와 버튼 사이가 통째로 비어 있었음 — 무슨 앱인지 그림으로 바로 보이게)
+        RectTransform heroRow = UIKit.Rect(loginPage.transform, "Hero");
+        Box(heroRow, G, 560f, G, 310f);   // 칸 너비 (960 - 32) / 3 ≈ 310: 정사각 썸네일이 늘어나지 않게
+        UIKit.Horizontal(heroRow, KucaTheme.Space2);
+        for (int i = 0; i < hero.Length; i++)
+        {
+            hero[i] = new GameObject(HeroSpecies[i], typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+            hero[i].transform.SetParent(heroRow, false);
+            hero[i].raycastTarget = false;
+            hero[i].enabled = false;
+        }
+
+        RectTransform actions = UIKit.Rect(loginPage.transform, "Actions");
+        actions.anchorMin = Vector2.zero;
+        actions.anchorMax = new Vector2(1f, 0f);
+        actions.pivot = new Vector2(0.5f, 0f);
+        actions.offsetMin = new Vector2(0f, 140f);
+        actions.offsetMax = new Vector2(0f, 900f);
+        VerticalLayoutGroup stack = UIKit.Vertical(actions, KucaTheme.Space2, new RectOffset((int)G, (int)G, 0, 0));
+        stack.childAlignment = TextAnchor.LowerCenter;
+        Button kakao = UIKit.BigButton(actions, "카카오로 시작하기", () => LoginWith("kakao"), KakaoYellow, KakaoInk);
+        kakao.gameObject.AddComponent<PressScale>();
+        AddIcon(kakao, HudIcons.Bubble, KakaoInk);
         if (AuthConfig.AppleLoginEnabled)
         {
-            Button apple = Pill(loginPage.transform, "Apple로 계속하기", Color.black, Color.white, () => LoginWith("apple"), y);
+            Button apple = UIKit.BigButton(actions, "Apple로 계속하기", () => LoginWith("apple"), Color.black, Color.white);
+            apple.gameObject.AddComponent<PressScale>();
             AddIcon(apple, HudIcons.AppleLogo, Color.white);   // Apple 버튼은 로고 + 글자 (Apple 디자인 가이드)
-            y += 132f;
         }
-        Button guest = UIKit.Button(loginPage.transform, "로그인 없이 둘러보기", StartGuest, new Color(0f, 0f, 0f, 0f), 34);
-        guest.GetComponentInChildren<Text>().color = Ink;
-        Box((RectTransform)guest.transform, 60f, y + 10f, 60f, 90f);
-        Text guestHint = UIKit.Text(loginPage.transform, "체험 계정은 7일 뒤 지워져요. 나중에 로그인해도 진행은 이어져요.", 26, TextAnchor.MiddleCenter, InkQuiet);
-        Box(guestHint.rectTransform, 60f, y + 92f, 60f, 50f);
-        y += 170f;
+        // 보조 버튼 하나로 통일 (글자만 있어 눌리는지 애매했음, REVIEW_v14)
+        UIKit.SecondaryButton(actions, "로그인 없이 둘러보기", StartGuest);
+        Text guestHint = UIKit.Text(actions, "체험 계정은 7일 뒤 지워져요. 나중에 로그인해도 진행은 이어져요.", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft);
+        UIKit.Size(guestHint, 60f);
 #if UNITY_EDITOR
-        // 에디터에는 카카오·Apple 이 없으니 테스트용으로 건너뛸 수 있게 한다 (빌드에는 없음).
-        Button skip = UIKit.Button(loginPage.transform, "에디터: 로그인 건너뛰기", Finish, new Color(0f, 0f, 0f, 0f), 30);
+        // 에디터에는 카카오·Apple 이 없으니 테스트용으로 건너뛸 수 있게 한다 (빌드에는 없음). 캡처 도구가 이 글자로 누른다.
+        Button skip = UIKit.Button(actions, "에디터: 로그인 건너뛰기", Finish, new Color(0f, 0f, 0f, 0f), KucaTheme.Caption);
         skip.GetComponentInChildren<Text>().color = InkQuiet;
-        Box((RectTransform)skip.transform, 60f, y + 10f, 60f, 80f);
+        UIKit.Size(skip, 90f);
 #endif
 
         // 경희대 메일 인증
         emailPage = UIKit.Rect(panel, "EmailPage").gameObject;
         UIKit.Stretch((RectTransform)emailPage.transform);
-        Text et = UIKit.Text(emailPage.transform, "경희대 메일 인증", 52, TextAnchor.MiddleLeft, Ink);
-        et.fontStyle = FontStyle.Bold;
-        Box(et.rectTransform, 60f, 60f, 60f, 80f);
-        emailHint = UIKit.Text(emailPage.transform, "", 28, TextAnchor.UpperLeft, InkQuiet);
-        Box(emailHint.rectTransform, 60f, 140f, 60f, 80f);
-        emailInput = Input(emailPage.transform, "학교 메일 아이디", 220f, 60f, 330f);
+        Heading(emailPage.transform, "경희대 메일 인증");
+        emailHint = UIKit.Text(emailPage.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        Box(emailHint.rectTransform, G, 260f, G, 110f);
+        emailInput = Input(emailPage.transform, "학교 메일 아이디", 390f, G, 400f);
         emailInput.contentType = InputField.ContentType.EmailAddress;
         emailInput.characterLimit = 64;
-        Text domain = UIKit.Text(emailPage.transform, "@" + AuthConfig.SchoolDomain, 36, TextAnchor.MiddleLeft, Ink);
+        Text domain = UIKit.Bold(UIKit.Text(emailPage.transform, "@" + AuthConfig.SchoolDomain, KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
         domain.rectTransform.anchorMin = domain.rectTransform.anchorMax = new Vector2(1f, 1f);
         domain.rectTransform.pivot = new Vector2(1f, 1f);
-        domain.rectTransform.anchoredPosition = new Vector2(-60f, -220f);
-        domain.rectTransform.sizeDelta = new Vector2(260f, 110f);
-        sendButton = Pill(emailPage.transform, "인증번호 받기", Burgundy, Color.white, SendCode, 350f);
+        domain.rectTransform.anchoredPosition = new Vector2(-G, -390f);
+        domain.rectTransform.sizeDelta = new Vector2(320f, InputHeight);
+        sendButton = Pill(emailPage.transform, "인증번호 받기", KucaTheme.Fill, Ink, SendCode, 550f);
         codeRow = UIKit.Rect(emailPage.transform, "Code").gameObject;
         UIKit.Stretch((RectTransform)codeRow.transform);
-        codeInput = Input(codeRow.transform, "6자리 번호", 490f, 60f, 60f);
+        codeInput = Input(codeRow.transform, "6자리 번호", 760f, G, G);
         codeInput.contentType = InputField.ContentType.IntegerNumber;
         codeInput.characterLimit = 6;
-        codeHint = UIKit.Text(codeRow.transform, "", 26, TextAnchor.UpperLeft, InkQuiet);
-        Box(codeHint.rectTransform, 60f, 606f, 60f, 70f);
-        verifyButton = Pill(codeRow.transform, "확인", Accent, Color.white, VerifyCode, 680f);
+        codeHint = UIKit.Text(codeRow.transform, "", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+        Box(codeHint.rectTransform, G, 904f, G, 90f);
+        verifyButton = Pill(codeRow.transform, "확인", Accent, Color.white, VerifyCode, 1000f);
 
         // 닉네임
         nickPage = UIKit.Rect(panel, "NickPage").gameObject;
         UIKit.Stretch((RectTransform)nickPage.transform);
-        Text nt = UIKit.Text(nickPage.transform, "닉네임을 정해 주세요", 52, TextAnchor.MiddleLeft, Ink);
-        nt.fontStyle = FontStyle.Bold;
-        Box(nt.rectTransform, 60f, 60f, 60f, 80f);
-        Text nh = UIKit.Text(nickPage.transform, "메모판과 산책메이트에서 보이는 이름이에요 (1~20자).", 28, TextAnchor.UpperLeft, InkQuiet);
-        Box(nh.rectTransform, 60f, 140f, 60f, 60f);
-        nickInput = Input(nickPage.transform, "닉네임", 220f, 60f, 60f);
+        Heading(nickPage.transform, "닉네임을 정해 주세요");
+        Text nh = UIKit.Text(nickPage.transform, "메모판과 산책메이트에서 보이는 이름이에요 (1~20자).", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        Box(nh.rectTransform, G, 260f, G, 110f);
+        nickInput = Input(nickPage.transform, "닉네임", 390f, G, G);
         nickInput.characterLimit = 20;
-        nickButton = Pill(nickPage.transform, "다음", Accent, Color.white, SaveNickname, 360f);
+        nickButton = Pill(nickPage.transform, "다음", Accent, Color.white, SaveNickname, 560f);
 
-        // 성별 (필수)
+        // 성별 (필수): 큰 선택 칸 두 개
         genderPage = UIKit.Rect(panel, "GenderPage").gameObject;
         UIKit.Stretch((RectTransform)genderPage.transform);
-        Text gt = UIKit.Text(genderPage.transform, "성별을 알려 주세요", 52, TextAnchor.MiddleLeft, Ink);
-        gt.fontStyle = FontStyle.Bold;
-        Box(gt.rectTransform, 60f, 60f, 60f, 80f);
-        Text gh = UIKit.Text(genderPage.transform, "상대에게 보이지 않아요. 산책메이트 '동성만' 조건에만 써요.", 28, TextAnchor.UpperLeft, InkQuiet);
-        Box(gh.rectTransform, 60f, 140f, 60f, 60f);
-        Pill(genderPage.transform, "남자", Field, Ink, () => SaveGender("male"), 240f);
-        Pill(genderPage.transform, "여자", Field, Ink, () => SaveGender("female"), 380f);
+        Heading(genderPage.transform, "성별을 알려 주세요");
+        Text gh = UIKit.Text(genderPage.transform, "상대에게 보이지 않아요. 산책메이트 '동성만' 조건에만 써요.", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        Box(gh.rectTransform, G, 260f, G, 110f);
+        Pill(genderPage.transform, "남자", Field, Ink, () => SaveGender("male"), 400f);
+        Pill(genderPage.transform, "여자", Field, Ink, () => SaveGender("female"), 600f);
 
         BuildPrivacy(panel);
 
         root.SetActive(false);
     }
 
-    /// <summary>개인정보 안내: 무엇을 왜 받고 언제 지우는지</summary>
+    const float G = KucaTheme.Gutter;
+    const float InputHeight = 140f;
+
+    static void Heading(Transform parent, string text)
+    {
+        Text h = UIKit.Bold(UIKit.Text(parent, text, KucaTheme.Title, TextAnchor.MiddleLeft, KucaTheme.Ink));
+        Box(h.rectTransform, G, 150f, G, 100f);
+    }
+
+    /// <summary>개인정보 안내: 무엇을 왜 받고 언제 지우는지 (흰 바탕 위 회색 카드 행)</summary>
     void BuildPrivacy(RectTransform panel)
     {
         privacyPage = UIKit.Rect(panel, "PrivacyPage").gameObject;
         UIKit.Stretch((RectTransform)privacyPage.transform);
-        Text pt = UIKit.Text(privacyPage.transform, "개인정보 안내", 52, TextAnchor.MiddleLeft, Ink);
-        pt.fontStyle = FontStyle.Bold;
-        Box(pt.rectTransform, 60f, 50f, 60f, 80f);
-        Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요.", 28, TextAnchor.UpperLeft, InkQuiet);
-        Box(ph.rectTransform, 60f, 130f, 60f, 50f);
+        Heading(privacyPage.transform, "개인정보 안내");
+        Text ph = UIKit.Text(privacyPage.transform, "KUCA 가 받는 정보와 쓰는 곳, 보관 기간이에요. 초록 줄은 민감한 정보예요.", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        Box(ph.rectTransform, G, 254f, G, 100f);   // 두 줄 (60 이면 둘째 줄이 첫 카드에 깔렸음, REVIEW_v16)
 
         (string item, string use, string keep)[] rows =
         {
@@ -475,54 +493,53 @@ public class LoginScreen : MonoBehaviour
             ("사진 · 메모", "경희스팟 메모판에 공개", "직접 지울 때까지"),
             ("체험 계정", "로그인 없이 둘러보기", "만든 지 7일 뒤 삭제"),
         };
-        float top = 200f;
+        float top = 370f;
         foreach (var (item, use, keep) in rows)
         {
-            Image row = UIKit.Image(privacyPage.transform, item, Field);
+            // 민감한 셋(성별 · 위치 · 인상착의)은 옅은 초록 + 왼쪽 띠로 먼저 눈에 띄게: 7줄이 같은 무게라 훑기 어려웠음 (REVIEW_v14)
+            bool sensitive = item == "성별" || item == "위치" || item == "인상착의";
+            Image row = UIKit.Image(privacyPage.transform, item, sensitive ? KucaTheme.PrimarySoft : Field);
             row.sprite = HudIcons.Rounded;
             row.type = Image.Type.Sliced;
-            row.pixelsPerUnitMultiplier = 0.8f;
-            Box(row.rectTransform, 60f, top, 60f, 116f);
-            Text name = UIKit.Text(row.transform, item, 32, TextAnchor.UpperLeft, Ink);
-            name.fontStyle = FontStyle.Bold;
-            Box(name.rectTransform, 32f, 18f, 32f, 44f);
-            Text k = UIKit.Text(row.transform, keep, 26, TextAnchor.UpperRight, Burgundy);
-            Box(k.rectTransform, 32f, 22f, 32f, 40f);
-            Text u = UIKit.Text(row.transform, use, 26, TextAnchor.UpperLeft, InkQuiet);
-            Box(u.rectTransform, 32f, 64f, 32f, 40f);
-            top += 128f;
+            row.pixelsPerUnitMultiplier = 0.5f;
+            Box(row.rectTransform, G, top, G, 124f);
+            if (sensitive)
+            {
+                Image bar = UIKit.Image(row.transform, "Mark", KucaTheme.Primary);
+                RectTransform br = bar.rectTransform;
+                br.anchorMin = new Vector2(0f, 0.18f);
+                br.anchorMax = new Vector2(0f, 0.82f);
+                br.offsetMin = new Vector2(12f, 0f);
+                br.offsetMax = new Vector2(20f, 0f);
+            }
+            Text name = UIKit.Bold(UIKit.Text(row.transform, item, KucaTheme.Label, TextAnchor.UpperLeft, Ink));
+            Box(name.rectTransform, 36f, 16f, 36f, 50f);
+            Text k = UIKit.Bold(UIKit.Text(row.transform, keep, KucaTheme.Caption, TextAnchor.UpperRight, KucaTheme.PrimaryDeep));
+            Box(k.rectTransform, 36f, 20f, 36f, 44f);
+            Text u = UIKit.Text(row.transform, use, KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+            Box(u.rectTransform, 36f, 70f, 36f, 44f);
+            top += 136f;
         }
-        Text foot = UIKit.Text(privacyPage.transform, "설정 › 회원 탈퇴로 계정과 정보를 언제든 지울 수 있어요.", 26, TextAnchor.UpperLeft, InkQuiet);
-        Box(foot.rectTransform, 60f, top + 6f, 60f, 50f);
-        privacyButton = Pill(privacyPage.transform, "확인하고 시작", Burgundy, Color.white, ConfirmPrivacy, top + 80f);
+        Text foot = UIKit.Text(privacyPage.transform, "설정 › 회원 탈퇴로 계정과 정보를 언제든 지울 수 있어요.", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+        Box(foot.rectTransform, G, top + 8f, G, 50f);
+        privacyButton = Pill(privacyPage.transform, "확인하고 시작", Accent, Color.white, ConfirmPrivacy, top + 80f);
     }
 
     InputField Input(Transform parent, string placeholder, float top, float left, float right)
     {
-        InputField f = UIKit.Input(parent, placeholder, 38, false, 64);
+        InputField f = UIKit.Input(parent, placeholder, KucaTheme.Body, false, 64);
         Image bg = f.GetComponent<Image>();
         bg.color = Field;
-        bg.sprite = HudIcons.Rounded;
-        bg.type = Image.Type.Sliced;
-        bg.pixelsPerUnitMultiplier = 0.8f;
-        f.textComponent.color = Ink;
-        ((Text)f.placeholder).color = InkQuiet;
-        ((Text)f.placeholder).fontStyle = FontStyle.Normal;
-        Box((RectTransform)f.transform, left, top, right, 110f);
+        bg.pixelsPerUnitMultiplier = 0.4f;
+        Box((RectTransform)f.transform, left, top, right, InputHeight);
         return f;
     }
 
+    /// <summary>v4 큰 버튼 (둥근 사각 · 168 높이) 을 위에서 top 만큼 내려 꽉 차게</summary>
     static Button Pill(Transform parent, string label, Color face, Color ink, UnityEngine.Events.UnityAction onClick, float top)
     {
-        Button b = UIKit.Button(parent, label, onClick, face, 40);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 116f;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = ink;
-        t.fontStyle = FontStyle.Bold;
-        Box((RectTransform)b.transform, 60f, top, 60f, 116f);
+        Button b = UIKit.BigButton(parent, label, onClick, face, ink);
+        Box((RectTransform)b.transform, G, top, G, KucaTheme.ButtonHeight);
         b.gameObject.AddComponent<PressScale>();
         return b;
     }
@@ -532,8 +549,8 @@ public class LoginScreen : MonoBehaviour
         Image ic = UIKit.Image(b.transform, "Icon", color);
         ic.sprite = icon;
         ic.rectTransform.anchorMin = ic.rectTransform.anchorMax = ic.rectTransform.pivot = new Vector2(0f, 0.5f);
-        ic.rectTransform.anchoredPosition = new Vector2(48f, 0f);
-        ic.rectTransform.sizeDelta = new Vector2(56f, 56f);
+        ic.rectTransform.anchoredPosition = new Vector2(56f, 0f);
+        ic.rectTransform.sizeDelta = new Vector2(64f, 64f);
     }
 
     static void Box(RectTransform rt, float left, float top, float right, float height)

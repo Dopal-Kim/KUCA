@@ -11,8 +11,8 @@ using UnityEngine.UI;
 /// </summary>
 public partial class MemoBoard
 {
-    /// <summary>메모판 위쪽 (닫기·이름·탭) 높이. 사진·공지 영역은 그 아래</summary>
-    const float BoardTop = 280f;
+    /// <summary>메모판 위쪽 (뒤로 · 큰 이름 · 부제 · 사진/공지) 높이. 사진·공지 영역은 그 아래</summary>
+    const float BoardTop = 470f;
 
     GameObject photoArea, noticeArea;
     RectTransform boardNoticeList;
@@ -22,26 +22,32 @@ public partial class MemoBoard
 
     void BuildBoardTabs(RectTransform safe)
     {
+        // 세그먼트: 회색 트랙 위 두 칸, 고른 칸은 흰색 + 굵은 글자 (iOS 세그먼트 · 토스 탭)
         string[] labels = { "사진", "공지" };
+        Image track = UIKit.Image(safe, "Segments", KucaTheme.Line);
+        track.sprite = HudIcons.Rounded;
+        track.type = Image.Type.Sliced;
+        track.pixelsPerUnitMultiplier = 0.5f;
+        TopBox(track.rectTransform, 338f, 112f, KucaTheme.Gutter);
         boardTabFaces = new Image[labels.Length];
         for (int i = 0; i < labels.Length; i++)
         {
             int tab = i;
-            Button b = UIKit.Button(safe, labels[i], () => SetBoardTab(tab), Chip, 32);
+            Button b = UIKit.Button(track.transform, labels[i], () => SetBoardTab(tab), Color.white, KucaTheme.Label);
             Image img = b.GetComponent<Image>();
-            img.sprite = HudIcons.Pill;
-            img.type = Image.Type.Sliced;
-            img.pixelsPerUnitMultiplier = 120f / 80f;
-            b.gameObject.AddComponent<PressScale>();
-            Place(img.rectTransform, new Vector2(0.5f, 1f), new Vector2((i - 0.5f) * 250f, -176f));
-            img.rectTransform.sizeDelta = new Vector2(230f, 80f);
+            img.pixelsPerUnitMultiplier = 0.55f;
+            RectTransform r = img.rectTransform;
+            r.anchorMin = new Vector2(i / (float)labels.Length, 0f);
+            r.anchorMax = new Vector2((i + 1) / (float)labels.Length, 1f);
+            r.offsetMin = new Vector2(8f, 8f);
+            r.offsetMax = new Vector2(-8f, -8f);
             boardTabFaces[i] = img;
         }
 
         RectTransform area = UIKit.Rect(safe, "Notices");
         UIKit.StretchBetween(area, 0f, BoardTop);
         noticeArea = area.gameObject;
-        boardNoticeList = UIKit.ScrollList(area, 18f, new RectOffset(40, 40, 10, 60));
+        boardNoticeList = UIKit.ScrollList(area, KucaTheme.Space3, new RectOffset((int)KucaTheme.Gutter, (int)KucaTheme.Gutter, 10, 60));
         noticeArea.SetActive(false);
     }
 
@@ -50,8 +56,8 @@ public partial class MemoBoard
         boardTab = tab;
         for (int i = 0; i < boardTabFaces.Length; i++)
         {
-            boardTabFaces[i].color = i == tab ? Ink : Color.white;
-            boardTabFaces[i].GetComponentInChildren<Text>().color = i == tab ? Color.white : Ink;
+            boardTabFaces[i].color = i == tab ? Color.white : new Color(1f, 1f, 1f, 0f);
+            boardTabFaces[i].GetComponentInChildren<Text>().color = i == tab ? Ink : InkQuiet;
         }
         photoArea.SetActive(tab == 0);
         noticeArea.SetActive(tab == 1);
@@ -73,6 +79,8 @@ public partial class MemoBoard
             ClearBoardNotices();
             if (error != null) { NoticeMessage($"{error}\n잠시 뒤 다시 열어 주세요"); return; }
             if (list.Count == 0) { NoticeMessage("이 장소와 관련된 공지가 아직 없어요"); return; }
+            // 어디서 온 공지인지: 학교 전체 공지로 오해했음 (REVIEW_v28)
+            UIKit.Size(UIKit.Text(boardNoticeList, "이 건물을 쓰는 학과 · 기관 게시판의 공지예요", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet), 64f);
             foreach (PlaceNotice n in list)
             {
                 RoutePlanner.NoticeRow(boardNoticeList, n, false);
@@ -111,7 +119,7 @@ public partial class MemoBoard
 
     void NoticeMessage(string message)
     {
-        Text t = UIKit.Text(boardNoticeList, message, 32, TextAnchor.MiddleCenter, InkQuiet);
-        UIKit.Size(t, 200f);
+        Text t = UIKit.Text(boardNoticeList, message, KucaTheme.Body, TextAnchor.MiddleCenter, InkQuiet);
+        UIKit.Size(t, 240f);
     }
 }

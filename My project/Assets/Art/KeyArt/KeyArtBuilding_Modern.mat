@@ -27,15 +27,15 @@ Material:
     m_Floats:
     - _Arch: 0
     - _Brick: 0
-    - _FloorHeight: 4.5499997
+    - _FloorHeight: 4.55
     - _PilasterEvery: 0
     - _WindowHeight: 0.42
     - _WindowSpacing: 3.2
     - _WindowWidth: 0.86
     m_Colors:
     - _RoofColor: {r: 0.76, g: 0.75, b: 0.73, a: 1}
-    - _TrimColor: {r: 1, g: 1, b: 0.99, a: 1}
-    - _WallColor: {r: 0.97, g: 0.97, b: 0.95, a: 1}
+    - _TrimColor: {r: 0.96, g: 0.96, b: 0.95, a: 1}
+    - _WallColor: {r: 0.91, g: 0.91, b: 0.89, a: 1}
     - _WindowColor: {r: 0.46, g: 0.68, b: 0.86, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

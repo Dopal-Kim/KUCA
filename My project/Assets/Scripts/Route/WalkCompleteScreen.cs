@@ -9,15 +9,16 @@ using UnityEngine.UI;
 /// - 리뷰: 산책메이트 별점 (함께 걸었을 때) · 코스 별점 · 한 줄 → 서버
 /// - 보상: 서버가 정한 경험치 · 티켓 · 파트너 진화 경험치를 받아 더하고, 레벨 막대를 채운다
 /// 서버 호출은 IWalkService: 서버에 API 가 없으면 기기 계산 (HttpWalkService → LocalWalkService).
+/// v4 (docs/디자인_v4.md): 애플 피트니스 운동 요약 + 듀오링고 레슨 완료 — 큰 숫자 3개 · 걸은 길 카드 · 보상 카드 · 리뷰 카드,
+/// 아래 꽉 찬 "확인" 하나.
 /// </summary>
 public class WalkCompleteScreen : MonoBehaviour
 {
-    static readonly Color Ink = new Color(0.11f, 0.11f, 0.12f);
-    static readonly Color InkQuiet = new Color(0.11f, 0.11f, 0.12f, 0.55f);
-    static readonly Color Accent = new Color(0.16f, 0.42f, 0.95f);
-    static readonly Color Gold = new Color(0.98f, 0.72f, 0.12f);
-    static readonly Color Field = new Color(0.94f, 0.95f, 0.96f);
-    static readonly Color Green = new Color(0.24f, 0.68f, 0.38f);
+    static readonly Color Ink = KucaTheme.Ink;
+    static readonly Color InkQuiet = KucaTheme.InkMuted;
+    static readonly Color Accent = KucaTheme.Primary;
+    static readonly Color Gold = KucaTheme.Gold;
+    static readonly Color Green = KucaTheme.Primary;
 
     /// <summary>
     /// A-V4: 파트너와 AR 사진 화면을 여는 함수. CollectController 가 CatchCameraScreen.OpenPartnerPhoto 를 넣어 준다.
@@ -31,6 +32,7 @@ public class WalkCompleteScreen : MonoBehaviour
     WalkCompleteResult result;
     bool reviewSent, busy;
     int partnerStars, courseStars;
+    static readonly Color StarOff = Color.Lerp(KucaTheme.Line, KucaTheme.InkSoft, 0.35f);   // 빈 별: 흰 카드 위에서 보이는 회색
 
     GameObject root, partnerRow, reviewCard, rewardCard, recap, shareRow;
     RawImage recapMap;
@@ -142,8 +144,8 @@ public class WalkCompleteScreen : MonoBehaviour
     /// <summary>카카오톡 노란 버튼 (말풍선 + 글자)</summary>
     public static Button KakaoButton(Transform parent, UnityEngine.Events.UnityAction onClick)
     {
-        Button b = Pill(parent, "카카오톡으로 자랑하기", new Color(1f, 0.9f, 0f), new Color(0.1f, 0.1f, 0.12f), onClick);
-        Image icon = UIKit.Image(b.transform, "Icon", new Color(0.1f, 0.1f, 0.12f));
+        Button b = UIKit.BigButton(parent, "카카오톡으로 자랑하기", onClick, KucaTheme.KakaoYellow, KucaTheme.KakaoInk);
+        Image icon = UIKit.Image(b.transform, "Icon", KucaTheme.KakaoInk);
         icon.sprite = HudIcons.Bubble;
         icon.raycastTarget = false;
         icon.rectTransform.anchorMin = icon.rectTransform.anchorMax = icon.rectTransform.pivot = new Vector2(0f, 0.5f);
@@ -251,14 +253,16 @@ public class WalkCompleteScreen : MonoBehaviour
         var parts = new System.Collections.Generic.List<string>();
         if (xp > 0) parts.Add($"{label} +{xp}");
         if (tickets > 0) parts.Add($"티켓 +{tickets}");
-        if (growth > 0 && partnerName != null) parts.Add($"{partnerName} 진화 경험치 +{growth}");
+
         if (evolved && p.Partner != null)
         {
             parts.Add(KhuMenus.EvolvedMessage(p.Partner.speciesId, stage));
             FindAnyObjectByType<KhuMenus>()?.RefreshPartner();
         }
+        // 파트너 진화 경험치는 내 경험치와 다른 것이라 따로 한 줄 (같은 줄이라 헷갈렸음, REVIEW_v22_day)
+        if (growth > 0 && partnerName != null) parts.Add($"\n파트너 {partnerName} 성장 경험치 +{growth}");
         if (parts.Count > 0)
-            rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts);
+            rewardText.text = (rewardText.text.Length > 0 ? rewardText.text + "\n" : "") + string.Join("   ", parts).Replace("   \n", "\n");
         else if (rewardText.text.Length == 0)
         {
             // 완료 보상은 없어도 걸은 거리는 티켓 · 경험치에 이미 쌓였다는 것을 보여 준다 (실망만 주지 않게)
@@ -297,8 +301,8 @@ public class WalkCompleteScreen : MonoBehaviour
     {
         for (int i = 0; i < 5; i++)
         {
-            partnerStarImages[i].color = i < partnerStars ? Gold : new Color(0f, 0f, 0f, 0.12f);
-            courseStarImages[i].color = i < courseStars ? Gold : new Color(0f, 0f, 0f, 0.12f);
+            partnerStarImages[i].color = i < partnerStars ? Gold : StarOff;
+            courseStarImages[i].color = i < courseStars ? Gold : StarOff;
         }
         sendButton.interactable = !reviewSent;
         UIKit.SetLabel(sendButton, reviewSent ? "리뷰를 보냈어요" : $"리뷰 보내기  (+{LocalWalkService.ReviewXp} XP)");
@@ -356,152 +360,92 @@ public class WalkCompleteScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkCompleteCanvas", 52);
-        root = UIKit.Image(canvas.transform, "WalkComplete", new Color(0.98f, 0.98f, 1f), raycast: true).gameObject;
-        UIKit.Stretch((RectTransform)root.transform);
-        Rect sa = Screen.safeArea;
-        RectTransform safe = UIKit.Rect(root.transform, "Safe");
-        safe.anchorMin = new Vector2(sa.xMin / Mathf.Max(1, Screen.width), sa.yMin / Mathf.Max(1, Screen.height));
-        safe.anchorMax = new Vector2(sa.xMax / Mathf.Max(1, Screen.width), sa.yMax / Mathf.Max(1, Screen.height));
-        safe.offsetMin = safe.offsetMax = Vector2.zero;
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkComplete", "산책 완료!", Close, " ", bottomButtons: 1);
+        root = page.root;
+        title = page.title;
+        sub = page.subtitle;
+        RectTransform list = page.content;
 
-        RectTransform area = UIKit.Rect(safe, "Area");
-        UIKit.StretchBetween(area, 180f, 0f);
-        RectTransform list = UIKit.ScrollList(area, 26f, new RectOffset(60, 60, 60, 60));
-
-        title = Line(list, "", 60, Ink, 90f, true);
-        title.alignment = TextAnchor.MiddleCenter;
-        sub = Line(list, "", 32, InkQuiet, 50f);
-        sub.alignment = TextAnchor.MiddleCenter;
-
-        // 걸은 거리 · 시간 · 칼로리
-        RectTransform stats = UIKit.Rect(list, "Stats");
-        UIKit.Size(stats, 190f);
-        var h = UIKit.Horizontal(stats, 20f);
-        h.childForceExpandWidth = true;
-        statMeters = Stat(stats, "걸은 거리");
-        statMinutes = Stat(stats, "시간");
-        statStops = Stat(stats, "들른 곳");
-        Line(list, RouteMath.HealthNote, 24, InkQuiet, 36f).alignment = TextAnchor.MiddleCenter;
+        // 요약: 큰 숫자 3개 (애플 피트니스) + 완료 이유
+        RectTransform summary = UIKit.CardBox(list, "Summary", KucaTheme.Space2);
+        RectTransform stats = UIKit.StatRow(summary, ("", "걸은 거리"), ("", "시간"), ("", "들른 곳"));
+        statMeters = stats.GetChild(0).GetComponentInChildren<Text>();
+        statMinutes = stats.GetChild(1).GetComponentInChildren<Text>();
+        statStops = stats.GetChild(2).GetComponentInChildren<Text>();
+        reason = UIKit.Bold(UIKit.Text(summary, "", KucaTheme.Body, TextAnchor.MiddleLeft, InkQuiet));
+        UIKit.Size(reason, 64f);
+        UIKit.Paragraph(summary, RouteMath.HealthNote, KucaTheme.Caption, KucaTheme.InkSoft);
 
         // 걸은 길 돌아보기
-        Image frame = TopMap.Frame(list, "Recap", out recapMap, out recapOverlay);
-        UIKit.Size(frame, 600f);
-        recap = frame.gameObject;
-        Button kakao = KakaoButton(list, () => ShareToKakao((RectTransform)recap.transform));
+        RectTransform recapCard = UIKit.CardBox(list, "RecapCard", KucaTheme.Space2);
+        UIKit.SectionTitle(recapCard, "걸은 길");
+        Image frame = TopMap.Frame(recapCard, "Recap", out recapMap, out recapOverlay);
+        UIKit.Size(frame, 640f);
+        Button kakao = KakaoButton(recapCard, () => ShareToKakao(frame.rectTransform));
         UIKit.Size(kakao, 104f);
         shareRow = kakao.gameObject;
-        reason = Line(list, "", 32, InkQuiet, 50f, true);
-        reason.alignment = TextAnchor.MiddleCenter;
+        recap = recapCard.gameObject;
 
-        // 보상
-        rewardCard = Card(list, "Reward", out RectTransform rc);
-        Line(rc, "이번 산책 보상", 34, Ink, 50f, true);
-        rewardText = Line(rc, "", 32, Ink, 90f);
-        levelText = Line(rc, "", 28, InkQuiet, 40f);
-        Image track = UIKit.Image(rc, "Track", new Color(0f, 0f, 0f, 0.08f));
+        // 보상 (듀오링고: 받은 것을 크게 + 레벨 막대)
+        RectTransform rc = UIKit.CardBox(list, "Reward", KucaTheme.Space2);
+        rewardCard = rc.gameObject;
+        UIKit.SectionTitle(rc, "이번 산책 보상");
+        rewardText = UIKit.Paragraph(rc, "", KucaTheme.Body, Ink);
+        levelText = UIKit.Text(rc, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        UIKit.Size(levelText, 56f);
+        Image track = UIKit.Image(rc, "Track", KucaTheme.Fill);
         track.sprite = HudIcons.Pill;
         track.type = Image.Type.Sliced;
-        track.pixelsPerUnitMultiplier = 6f;
-        UIKit.Size(track, 24f);
+        track.pixelsPerUnitMultiplier = 4f;
+        UIKit.Size(track, 32f);
         Image fill = UIKit.Image(track.transform, "Fill", Gold);
         fill.sprite = HudIcons.Pill;
         fill.type = Image.Type.Sliced;
-        fill.pixelsPerUnitMultiplier = 6f;
+        fill.pixelsPerUnitMultiplier = 4f;
         levelFill = fill.rectTransform;
         levelFill.anchorMin = Vector2.zero;
         levelFill.anchorMax = new Vector2(0f, 1f);
         levelFill.offsetMin = levelFill.offsetMax = Vector2.zero;
 
-        // 보상 다음에 사진 (보상을 먼저 보여 준다)
-        Button photo = Pill(list, "파트너와 사진 찍기", Ink, Color.white, TakePhoto);
-        UIKit.Size(photo, 116f);
+        UIKit.SecondaryButton(list, "파트너와 사진 찍기", TakePhoto);
 
-        // 리뷰
-        reviewCard = Card(list, "Review", out RectTransform vc);
-        Line(vc, "산책은 어땠어요?", 34, Ink, 50f, true);
+        // 리뷰: 별점 + 한 줄 + 보내기를 한 카드에
+        RectTransform vc = UIKit.CardBox(list, "Review", KucaTheme.Space2);
+        reviewCard = vc.gameObject;
+        UIKit.SectionTitle(vc, "산책은 어땠어요?");
         partnerRow = UIKit.Rect(vc, "PartnerRow").gameObject;
-        UIKit.Size(partnerRow.GetComponent<RectTransform>(), 120f);
-        UIKit.Vertical(partnerRow.GetComponent<RectTransform>(), 6f);
-        Line(partnerRow.transform, "산책메이트  (상대에게 보이지 않아요)", 28, InkQuiet, 40f);
+        UIKit.Vertical(partnerRow.GetComponent<RectTransform>(), KucaTheme.Space1);
+        Label(partnerRow.transform, "산책메이트  (상대에게 보이지 않아요)");
         partnerStarImages = Stars(partnerRow.transform, n => SetStars(true, n));
-        Line(vc, "코스", 28, InkQuiet, 40f);
+        Label(vc, "코스");
         courseStarImages = Stars(vc, n => SetStars(false, n));
-        comment = UIKit.Input(vc, $"한 줄 남기기 (선택, {WalkReviewRequest.MaxText}자)", 32, false, WalkReviewRequest.MaxText);
-        Image cb = comment.GetComponent<Image>();
-        cb.color = Field;
-        cb.sprite = HudIcons.Rounded;
-        cb.type = Image.Type.Sliced;
-        cb.pixelsPerUnitMultiplier = 0.8f;
-        comment.textComponent.color = Ink;
-        ((Text)comment.placeholder).color = InkQuiet;
-        UIKit.Size(comment, 100f);
-        sendButton = Pill(vc, "리뷰 보내기", Accent, Color.white, SendReview);
-        UIKit.Size(sendButton, 104f);
-        reviewNote = Line(vc, "", 26, InkQuiet, 40f);
+        comment = UIKit.Input(vc, $"한 줄 남기기 (선택, {WalkReviewRequest.MaxText}자)", KucaTheme.Body, false, WalkReviewRequest.MaxText);
+        comment.GetComponent<Image>().color = KucaTheme.Fill;
+        UIKit.Size(comment, KucaTheme.TouchMin);
+        sendButton = UIKit.SecondaryButton(vc, "리뷰 보내기", SendReview);   // 강조 버튼은 아래 "확인" 하나
+        reviewNote = UIKit.Text(vc, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        UIKit.Size(reviewNote, 56f);
 
-        Button close = Pill(safe, "확인", Ink, Color.white, Close);
-        RectTransform cr = (RectTransform)close.transform;
-        cr.anchorMin = new Vector2(0f, 0f);
-        cr.anchorMax = new Vector2(1f, 0f);
-        cr.pivot = new Vector2(0.5f, 0f);
-        cr.offsetMin = new Vector2(60f, 50f);
-        cr.offsetMax = new Vector2(-60f, 166f);
-
-        root.SetActive(false);
+        UIKit.PrimaryButton(page.bottom, "확인", Close);
     }
 
-    static Text Line(Transform parent, string text, int size, Color color, float height, bool bold = false)
-    {
-        Text t = UIKit.Text(parent, text, size, TextAnchor.MiddleLeft, color);
-        if (bold) t.fontStyle = FontStyle.Bold;
-        UIKit.Size(t, height);
-        return t;
-    }
-
-    static Text Stat(Transform parent, string label)
-    {
-        Image box = UIKit.Image(parent, label, Color.white);
-        box.sprite = HudIcons.Rounded;
-        box.type = Image.Type.Sliced;
-        box.pixelsPerUnitMultiplier = 0.6f;
-        Text v = UIKit.Text(box.transform, "", 46, TextAnchor.MiddleCenter, Ink);
-        v.fontStyle = FontStyle.Bold;
-        v.rectTransform.anchorMin = new Vector2(0f, 0.38f);
-        v.rectTransform.anchorMax = Vector2.one;
-        v.rectTransform.offsetMin = v.rectTransform.offsetMax = Vector2.zero;
-        Text l = UIKit.Text(box.transform, label, 26, TextAnchor.MiddleCenter, InkQuiet);
-        l.rectTransform.anchorMin = Vector2.zero;
-        l.rectTransform.anchorMax = new Vector2(1f, 0.4f);
-        l.rectTransform.offsetMin = l.rectTransform.offsetMax = Vector2.zero;
-        return v;
-    }
-
-    static GameObject Card(Transform parent, string name, out RectTransform content)
-    {
-        Image card = UIKit.Image(parent, name, Color.white);
-        card.sprite = HudIcons.Rounded;
-        card.type = Image.Type.Sliced;
-        card.pixelsPerUnitMultiplier = 0.5f;
-        UIKit.Vertical(card, 14f, new RectOffset(40, 40, 34, 36));
-        card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-        content = card.rectTransform;
-        return card.gameObject;
-    }
+    static void Label(Transform parent, string text) =>
+        UIKit.Size(UIKit.Text(parent, text, KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet), 56f);
 
     static Image[] Stars(Transform parent, System.Action<int> onPick)
     {
         RectTransform row = UIKit.Rect(parent, "Stars");
-        UIKit.Size(row, 76f);
-        var h = UIKit.Horizontal(row, 12f);
+        UIKit.Size(row, KucaTheme.TouchMin);
+        var h = UIKit.Horizontal(row, KucaTheme.Space2);
         h.childForceExpandWidth = false;
         h.childAlignment = TextAnchor.MiddleLeft;
         var images = new Image[5];
         for (int i = 0; i < 5; i++)
         {
             int n = i + 1;
-            Image star = UIKit.Image(row, "Star" + n, new Color(0f, 0f, 0f, 0.12f), raycast: true);
+            Image star = UIKit.Image(row, "Star" + n, StarOff, raycast: true);
             star.sprite = HudIcons.Star;
-            UIKit.Size(star, 76f, 76f);
+            UIKit.Size(star, 112f, 112f);
             var b = star.gameObject.AddComponent<Button>();
             b.transition = Selectable.Transition.None;
             b.onClick.AddListener(() => onPick(n));
@@ -509,19 +453,5 @@ public class WalkCompleteScreen : MonoBehaviour
             images[i] = star;
         }
         return images;
-    }
-
-    static Button Pill(Transform parent, string label, Color face, Color ink, UnityEngine.Events.UnityAction onClick)
-    {
-        Button b = UIKit.Button(parent, label, onClick, face, 38);
-        Image img = b.GetComponent<Image>();
-        img.sprite = HudIcons.Pill;
-        img.type = Image.Type.Sliced;
-        img.pixelsPerUnitMultiplier = 120f / 110f;
-        Text t = b.GetComponentInChildren<Text>();
-        t.color = ink;
-        t.fontStyle = FontStyle.Bold;
-        b.gameObject.AddComponent<PressScale>();
-        return b;
     }
 }
