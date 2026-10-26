@@ -105,6 +105,10 @@ public class MatchService(
         public string? WalkId;
         // 함께 걸을 코스: 둘 다 동의하면 확정, "다른 코스"는 MaxCourseChanges 번까지
         public RecommendResult? Course;
+        // 왜 연결했는지 한 줄: 제안 순간 틀 문장, 곧 AI 문장으로 바뀜
+        public string? Why;
+        public string WhySource = "fallback";
+        public bool WhyRequested;
         public bool CourseConfirmed;
         public int CourseChanges, CourseVersion;
         public readonly HashSet<string> CourseSeen = [];
@@ -126,6 +130,53 @@ public class MatchService(
     DateTimeOffset Now => clock.GetUtcNow();
 
     // ───── 대기열 ─────
+
+    /// <summary>대기열에 들어가고, 바로 짝이 되면 AI 매칭 이유까지 받아서 돌려준다</summary>
+    public async Task<MatchState> JoinAsync(Account user, MatchJoinRequest? body, IMatchExplainer explainer, CancellationToken ct)
+    {
+        Join(user, body);
+        return await ExplainAndViewAsync(user.Id, explainer, ct);
+    }
+
+    /// <summary>폴링. 이번에 새로 짝이 됐으면 이 요청이 AI 매칭 이유를 받아 온다 (다른 요청은 기다리지 않음)</summary>
+    public async Task<MatchState> GetAsync(string userId, IMatchExplainer explainer, CancellationToken ct)
+    {
+        lock (gate)
+            Tick(Now);
+        return await ExplainAndViewAsync(userId, explainer, ct);
+    }
+
+    async Task<MatchState> ExplainAndViewAsync(string userId, IMatchExplainer explainer, CancellationToken ct)
+    {
+        Match? m = null;
+        MatchReasonInput? input = null;
+        lock (gate)
+        {
+            if (current.TryGetValue(userId, out string? id) && matches.TryGetValue(id, out m) && m.State == "proposed" && !m.WhyRequested)
+            {
+                m.WhyRequested = true;
+                input = ReasonInput(m);
+            }
+        }
+        if (m != null && input != null)
+        {
+            (string text, string source) = await explainer.ExplainAsync(input, ct);
+            lock (gate)
+                (m.Why, m.WhySource) = (text, source);
+        }
+        lock (gate)
+            return View(userId);
+    }
+
+    MatchReasonInput ReasonInput(Match m)
+    {
+        Building a = buildings.Find(m.A.BuildingId)!, b = buildings.Find(m.B.BuildingId)!;
+        return new MatchReasonInput(
+            m.A.Prefs.Tastes.Intersect(m.B.Prefs.Tastes).OrderBy(t => t).ToList(),
+            m.A.Prefs.WalkTimes.Intersect(m.B.Prefs.WalkTimes).OrderBy(t => t).ToList(),
+            m.A.Prefs.TalkStyle is { Length: > 0 } t && t == m.B.Prefs.TalkStyle ? t : null,
+            (int)Math.Round(Geo.Meters(a.Lat, a.Lon, b.Lat, b.Lon)), m.Minutes);
+    }
 
     public MatchState Join(Account user, MatchJoinRequest? body)
     {
@@ -287,6 +338,7 @@ public class MatchService(
             Remove(m);
             store.EndRecord(m.Id, "declined", now);
             Count(m, MetricsStore.MatchEnded, "declined");
+            Count(m, MetricsStore.MatchAnswer, m.WhySource, 0);
             ended[userId] = new Ended(m.Id, "declined", userId, now);
             Side other = m.Other(userId);
             if (!other.IsDemo)
@@ -496,6 +548,7 @@ public class MatchService(
                 Remove(m);
                 store.EndRecord(m.Id, "timeout", now);
                 Count(m, MetricsStore.MatchEnded, "timeout");
+                Count(m, MetricsStore.MatchAnswer, m.WhySource, 0);
                 foreach (Side s in m.Sides.Where(s => !s.IsDemo))
                     if (s.Accepted) Requeue(s, m.Minutes, now);
                     else ended[s.UserId] = new Ended(m.Id, "timeout", null, now);
@@ -563,14 +616,15 @@ public class MatchService(
             current[s.UserId] = m.Id;
         }
         store.AddRecord(m.Id, a.UserId, b.UserId, now);
+        m.Why = MatchExplainer.Fallback(ReasonInput(m));   // AI 문장이 오기 전까지 보여 줄 틀 문장
         Count(m, MetricsStore.MatchProposed);
     }
 
     /// <summary>지표 기록. 시연용 가상 상대와의 매칭은 성사율을 부풀리지 않게 세지 않는다</summary>
-    void Count(Match m, string kind, string? source = null)
+    void Count(Match m, string kind, string? source = null, int? value = null)
     {
         if (!m.Sides.Any(s => s.IsDemo))
-            metrics.Record(kind, source);
+            metrics.Record(kind, source, value);
     }
 
     void StartMeeting(Match m, ISmalltalkGenerator smalltalk)
@@ -586,6 +640,7 @@ public class MatchService(
             (s.Appearance, s.Arrived) = (MatchRules.DemoAppearance, true);
         store.SetSpot(m.Id, m.Spot.Id);
         Count(m, MetricsStore.MatchMet);
+        Count(m, MetricsStore.MatchAnswer, m.WhySource, 1);
     }
 
     /// <summary>둘 다 수락한 직후 AI 주제를 받아, 그사이 다른 주제로 바뀌지 않았으면 바꿔 넣는다</summary>
@@ -702,10 +757,10 @@ public class MatchService(
             var common = me.Prefs.Tastes.Intersect(other.Prefs.Tastes).OrderBy(t => t).ToList();
             if (m.State == "proposed")
                 return new MatchState("proposed", m.Id, m.Minutes,
-                    Partner: new MatchPartner(other.Nickname, common, null),
+                    Partner: new MatchPartner(other.Nickname, common, null, m.Why, m.WhySource),
                     RespondBy: Iso(m.RespondBy), MyAnswer: me.Accepted ? "accepted" : null);
             return new MatchState(m.State, m.Id, m.Minutes,
-                Partner: new MatchPartner(other.Nickname, common, other.Appearance),
+                Partner: new MatchPartner(other.Nickname, common, other.Appearance, m.Why, m.WhySource),
                 MyAnswer: "accepted",
                 MeetSpot: new MeetSpotView(m.Spot!.Id, m.Spot.Name, m.SpotBuilding!.Lat, m.SpotBuilding.Lon, m.Spot.MeetSpecies),
                 MeetBy: Iso(m.MeetBy),

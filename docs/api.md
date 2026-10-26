@@ -561,7 +561,8 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   "state": "meeting",
   "matchId": "m_5a2e…",
   "minutes": 30,
-  "partner": { "nickname": "민지", "commonTastes": ["photo", "quiet"], "appearance": "검은 후드, 흰 운동화" },
+  "partner": { "nickname": "민지", "commonTastes": ["photo", "quiet"], "appearance": "검은 후드, 흰 운동화",
+               "whyMatched": "저녁 산책과 사진을 함께 즐길 두 분이에요", "whyMatchedSource": "ai" },
   "respondBy": null,
   "myAnswer": "accepted",
   "meetSpot": {
@@ -593,7 +594,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 | --- | --- | --- |
 | `idle` | 매칭 안 함 | 없음 |
 | `waiting` | 짝을 찾는 중 | `waitingSince`, `waitingUntil` (10분 `[가정]`), `nowSearching` (나 말고 지금 짝을 찾는 사람 수 — 대기 화면의 실시간 느낌용) |
-| `proposed` | 상대를 찾음, 수락 기다림 | `partner.nickname`, `partner.commonTastes`, `respondBy` (60초 `[가정]`), `myAnswer` (`null` · `accepted`) |
+| `proposed` | 상대를 찾음, 수락 기다림 | `partner.nickname`, `partner.commonTastes`, `partner.whyMatched`, `respondBy` (60초 `[가정]`), `myAnswer` (`null` · `accepted`) |
 | `meeting` | 둘 다 수락, 만남 스팟으로 가는 중 | `meetSpot`, `meetBy` (노쇼 기준, Q7 제안 10분), `smalltalk`, `smalltalkCards`, `myAppearance`, `partner.appearance`, `arrived`, `course` (함께 걸을 코스, 만드는 몇 초 동안은 `null`) |
 | `walking` | 만나서 산책 중 | `walkId` (산책 완료 API 에 씀) |
 | `ended` | 끝남 | `endReason` |
@@ -609,6 +610,10 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   - `completed`: 두 사람 모두 산책 끝(`POST /api/walks/{walkId}/finish`). 아무도 안 눌러도 산책 시작 뒤 고른 시간 + 30분이 지나면 매칭은 `completed` 로 끝납니다 `[가정]` (산책 기록은 남아서 나중에 끝낼 수 있음)
 - `proposed` 에서 상대가 거절하거나 응답하지 않으면, 수락한 쪽은 자동으로 `waiting` 으로 돌아가 다시 찾습니다.
 - **상대 정보는 닉네임·공통 취향·인상착의만** 보입니다. 성별·계정 ID·건물은 보이지 않습니다.
+- **`partner.whyMatched` (AI 매칭 이유):** "왜 둘을 연결했는지" 한 줄. 두 사람이 같은 문장을 봅니다. `proposed` 부터 끝날 때까지 있습니다.
+  - 짝은 위 규칙으로 정하고, AI 는 그 짝을 설명만 합니다 (안전 조건은 AI 가 바꿀 수 없음).
+  - AI 에게는 겹치는 취향 · 시간대 · 대화 스타일, 건물 사이 거리, 걸을 시간만 보냅니다. 닉네임 · 성별 · 계정 · 위치는 보내지 않습니다.
+  - `whyMatchedSource`: `ai` 또는 `fallback`. AI 가 안 되면 겹치는 것으로 만든 틀 문장입니다 (예: "둘 다 사진 찍기를 좋아해서 연결했어요").
 - `partner.appearance` 는 상대가 입력하기 전에는 `null` 입니다.
 - 만남 스팟은 `meetSpecies` 가 있는 스팟 10곳 중, 두 사람 중 더 먼 쪽이 걷는 거리가 가장 짧은 곳입니다.
 
@@ -857,11 +862,13 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   "matching": {
     "requests": 30, "proposed": 14, "met": 11, "walking": 9, "completed": 8,
     "successRate": 0.367, "completionRate": 0.727,
-    "endReasons": { "completed": 8, "no_partner": 9, "declined": 3, "noshow": 1 }
+    "endReasons": { "completed": 8, "no_partner": 9, "declined": 3, "noshow": 1 },
+    "acceptRateByReason": { "ai": 0.82, "fallback": 0.64 }
   },
   "ai": {
     "recommend":  { "ai": 40, "fallback": 12, "fallbackRate": 0.231 },
     "smalltalk":  { "ai": 20, "fallback": 2, "fallbackRate": 0.091 },
+    "match_reason": { "ai": 14, "fallback": 1, "fallbackRate": 0.067 },
     "moderation": { "ai": 85, "fallback": 3, "fallbackRate": 0.034 }
   }
 }
@@ -875,6 +882,7 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 | `successRate` (매칭 성사율) | 둘 다 수락(`meeting`)한 수 ÷ 대기열 요청 수 |
 | `matching.completionRate` | 함께 산책을 끝낸 매칭 ÷ 성사된 매칭 |
 | `fallbackRate` | AI 대신 규칙 · 예시 · 금지어로 처리한 비율. 높으면 AI 키 · 게이트웨이를 확인 |
+| `acceptRateByReason` | 제안 화면의 매칭 이유가 AI 문장일 때 / 틀 문장일 때, 두 사람 모두 수락한 비율 (AI 매칭 이유의 효과) |
 
 - 분모가 0 이면 비율은 `null` 입니다.
 - `walks` 의 종류: `ai` · `fallback` (추천 코스), `free` (추천 없이), `match` (매칭 산책)
