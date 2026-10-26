@@ -179,9 +179,7 @@ public static class UIKit
         safe.offsetMin = safe.offsetMax = Vector2.zero;
 
         // 위: 뒤로 + 큰 제목 + 부제
-        // 부제가 여러 줄이면 (자리 잡기용 " \n " 포함) 한 줄에 48 씩 더 (두 줄 부제가 첫 카드에 붙었음, REVIEW_v45)
-        float subExtra = string.IsNullOrEmpty(subtitle) ? 0f : (subtitle.Split('\n').Length - 1) * 48f;
-        float headH = 150f + (string.IsNullOrEmpty(title) ? 0f : 100f) + (string.IsNullOrEmpty(subtitle) ? 0f : 70f) + subExtra;
+        float headH = 150f + (string.IsNullOrEmpty(title) ? 0f : 100f) + (string.IsNullOrEmpty(subtitle) ? 0f : 70f);
         RectTransform head = Rect(safe, "Header");
         head.anchorMin = new Vector2(0f, 1f);
         head.anchorMax = Vector2.one;
@@ -199,7 +197,7 @@ public static class UIKit
         if (!string.IsNullOrEmpty(subtitle))
         {
             page.subtitle = Text(head, subtitle, KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
-            Box(page.subtitle.rectTransform, KucaTheme.Gutter, 250f, 64f + subExtra);
+            Box(page.subtitle.rectTransform, KucaTheme.Gutter, 250f, 64f);
         }
 
         // 아래 고정 버튼 칸 (버튼 수만큼 세로로)

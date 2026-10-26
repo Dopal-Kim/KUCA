@@ -46,10 +46,17 @@ public class WalkHistoryScreen : MonoBehaviour
         int weekCount = 0, weekMeters = 0;
         foreach (WalkHistory.Entry e in all)
             if (e.EndedAt >= monday) { weekCount++; weekMeters += e.meters; }
-        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요\n" +
-            $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Course, 3, 1))}>■</color> 코스  " +
-            $"<color=#{ColorUtility.ToHtmlStringRGB(FreeWalk.TrackColor)}>■</color> 자유  " +
-            $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Mate, 0, 0))}>■</color> 산책메이트";
+        summary.text = all.Count == 0 ? "아직 걸은 기록이 없어요" : $"이번 주 {weekCount}번  ·  {RouteMath.Distance(weekMeters)} 걸었어요";
+        if (all.Count > 0)
+        {
+            // 색 범례는 기록 목록 맨 위 한 줄 (부제 두 줄은 머리말을 넘쳐 첫 카드에 붙었음, REVIEW_v45 · v46)
+            Text legend = UIKit.Text(list,
+                $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Course, 3, 1))}>■</color> 코스   " +
+                $"<color=#{ColorUtility.ToHtmlStringRGB(FreeWalk.TrackColor)}>■</color> 자유   " +
+                $"<color=#{ColorUtility.ToHtmlStringRGB(WalkCompleteScreen.LineColor(WalkSession.Mate, 0, 0))}>■</color> 산책메이트",
+                KucaTheme.Label, TextAnchor.MiddleLeft, KucaTheme.InkMuted);
+            UIKit.Size(legend, 56f);
+        }
         if (all.Count == 0)
             UIKit.EmptyState(list, "첫 산책을 시작해 보세요", "코스를 걷거나 자유 산책을 끝내면\n여기에 기록이 남아요.", "산책 코스 고르기",
                 () => { Close(); RoutePlanner.Open(); });
@@ -161,10 +168,9 @@ public class WalkHistoryScreen : MonoBehaviour
     void Build()
     {
         Canvas canvas = UIKit.CreateCanvas(transform, "WalkHistoryCanvas", 50);
-        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " \n ");   // 두 줄: 이번 주 요약 + 색 범례
+        UIKit.Page page = UIKit.CreatePage(canvas.transform, "WalkHistory", "산책 기록", Close, " ");
         root = page.root;
         summary = page.subtitle;
-        summary.supportRichText = true;   // 색 범례 ■ (UIKit.Text 는 기본으로 꺼 둠)
         list = page.content;
 
         // 기록 하나 자세히 (지도): 어둡게 덮고 흰 카드
