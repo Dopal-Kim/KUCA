@@ -27,13 +27,18 @@ public class MatchApiTests : IDisposable
     readonly HttpClient client;
     readonly TestClock clock = new();
 
-    internal MatchApiTests(bool demo)
+    internal MatchApiTests(bool demo, IRouteAi? ai = null)
     {
         server = root.WithWebHostBuilder(b =>
         {
             if (demo)
                 b.UseSetting("Match:DemoPartner", "true");
-            b.ConfigureTestServices(s => s.AddSingleton<TimeProvider>(clock));
+            b.ConfigureTestServices(s =>
+            {
+                s.AddSingleton<TimeProvider>(clock);
+                if (ai != null)
+                    s.AddSingleton(ai);
+            });
         });
         client = server.CreateClient();
     }
@@ -449,6 +454,41 @@ public class MatchApiTests : IDisposable
         Assert.Equal("🍚", cards[0].Emoji);
     }
 
+    // ───── AI 매칭 이유 ─────
+
+    [Fact]
+    public async Task 제안_화면에_왜_연결했는지_한_줄이_나온다()
+    {
+        string a = await User("민지", prefs: new { tastes = new[] { "photo", "quiet" } });
+        string b = await User("서연", prefs: new { tastes = new[] { "photo", "food" } });
+        await Join(a);
+        JsonElement p = (await Join(b)).GetProperty("partner");
+        Assert.Equal("둘 다 사진 찍기를 좋아해서 연결했어요", S(p, "whyMatched"));     // AI 키가 없으면 틀 문장
+        Assert.Equal("fallback", S(p, "whyMatchedSource"));
+        Assert.Equal(S(p, "whyMatched"), S((await State(a)).GetProperty("partner"), "whyMatched"));   // 두 사람이 같은 문장
+    }
+
+    [Theory]
+    [InlineData(new[] { "quiet" }, new string[0], null, 900, "둘 다 조용한 곳을 좋아해서 연결했어요")]
+    [InlineData(new string[0], new[] { "evening" }, null, 900, "둘 다 저녁에 걷는 걸 좋아해요")]
+    [InlineData(new string[0], new string[0], "quiet", 900, "둘 다 조용히 함께 걷기를 좋아해요")]
+    [InlineData(new string[0], new string[0], null, 120, "지금 가까이 있어서 금방 만날 수 있어요")]
+    [InlineData(new string[0], new string[0], null, 900, "같은 30분 산책을 찾고 있어서 연결했어요")]
+    public void 틀_문장은_가장_구체적인_공통점으로_만든다(string[] tastes, string[] times, string? talk, int distance, string expected)
+    {
+        Assert.Equal(expected, MatchExplainer.Fallback(new MatchReasonInput(tastes, times, talk, distance, 30)));
+    }
+
+    [Theory]
+    [InlineData("{\"reason\":\"둘 다 저녁 산책을 좋아해서 연결했어요\"}", true)]
+    [InlineData("{\"reason\":\"\"}", false)]
+    [InlineData("링크 http://x.com", false)]
+    [InlineData("이유를 못 썼어요", false)]
+    public void AI_이유는_한_문장_형식일_때만_쓴다(string answer, bool ok)
+    {
+        Assert.Equal(ok, MatchExplainer.Parse(answer) != null);
+    }
+
     // ───── 권한 · 안전 ─────
 
     [Fact]
@@ -560,6 +600,25 @@ public class MatchApiTests : IDisposable
         Assert.Equal("waiting", S(await State(a), "state"));
     }
 
+    /// <summary>MatchReasonAiTests 가 부른다: 취향이 겹치는 두 사람을 제안 상태로 만들고 partner 를 돌려준다</summary>
+    public async Task<JsonElement> ProposeWithPrefs()
+    {
+        string a = await User("민지", prefs: new { tastes = new[] { "photo" }, walkTimes = new[] { "evening" } });
+        string b = await User("서연", prefs: new { tastes = new[] { "photo" }, walkTimes = new[] { "evening" } });
+        await Join(a);
+        return (await Join(b)).GetProperty("partner");
+    }
+
+    /// <summary>MatchReasonAiTests 가 부른다: 멀리(천문대) · 가까이(중앙도서관) 두 사람이 기다릴 때 학생회관의 내가 들어가면 누구와 짝이 되는지</summary>
+    public async Task<JsonElement> JoinWithTwoCandidates()
+    {
+        string far = await User("멀리", prefs: new { tastes = new[] { "photo", "quiet" }, walkTimes = new[] { "evening" } });
+        string near = await User("가까이", prefs: new { tastes = new[] { "food" } });
+        string me = await User("나", prefs: new { tastes = new[] { "photo", "quiet" }, walkTimes = new[] { "evening" } });
+        await TwoWaiting(far, "way-474521125", near, Library);
+        return (await Join(me, building: StudentHall)).GetProperty("partner");
+    }
+
     string UserIdOf(string token) => server.Services.GetRequiredService<AccountStore>().FindBySession(token)!.Id;
 
     [Fact]
@@ -591,4 +650,82 @@ public class MatchDemoTests : IDisposable
 
     [Fact]
     public Task 실제_학생에게는_가상_상대가_붙지_않는다() => t.DemoSkipsRealStudents();
+}
+
+/// <summary>AI 매칭 이유 (가짜 AI 로)</summary>
+public class MatchReasonAiTests : IDisposable
+{
+    sealed class FakeAi : IRouteAi
+    {
+        public bool IsConfigured => true;
+        public List<string> Prompts { get; } = [];
+        /// <summary>짝 고르기 요청에 줄 답 (null 이면 엉뚱한 답)</summary>
+        public string? PickAnswer;
+        public Task<string?> CompleteAsync(string system, string user, CancellationToken ct)
+        {
+            lock (Prompts) Prompts.Add(system + "\n" + user);
+            // 매칭 이유 · 짝 고르기에만 답하고, 나머지(코스 · 스몰토크)는 형식이 틀려 규칙으로 대신한다
+            if (system.Contains("왜 둘을 연결했는지"))
+                return Task.FromResult<string?>("{\"reason\":\"저녁 산책과 사진을 함께 즐길 두 분이에요\"}");
+            if (system.Contains("가장 잘 맞을 한 명"))
+                return Task.FromResult(PickAnswer ?? "잘 모르겠어요");
+            return Task.FromResult<string?>("모름");
+        }
+    }
+
+    readonly FakeAi ai = new();
+    readonly MatchApiTests t;
+
+    public MatchReasonAiTests() => t = new MatchApiTests(demo: false, ai);
+    public void Dispose() => t.Dispose();
+
+    [Fact]
+    public async Task AI_가_쓴_이유를_보여_주고_닉네임은_AI_에게_보내지_않는다()
+    {
+        JsonElement p = await t.ProposeWithPrefs();
+        Assert.Equal("저녁 산책과 사진을 함께 즐길 두 분이에요", p.GetProperty("whyMatched").GetString());
+        Assert.Equal("ai", p.GetProperty("whyMatchedSource").GetString());
+        string prompt = string.Join("\n", ai.Prompts.Where(x => x.Contains("왜 둘을 연결했는지")));
+        Assert.Contains("사진 찍기", prompt);
+        Assert.DoesNotContain("민지", prompt);
+        Assert.DoesNotContain("서연", prompt);
+        Assert.DoesNotContain("female", prompt);
+    }
+
+    [Fact]
+    public async Task 후보가_둘_이상이면_AI_가_고른_사람과_AI_이유로_짝이_된다()
+    {
+        // 규칙 점수(거리 − 공통 취향 × 100m)로는 취향이 겹치는 "멀리"가 A(1등)지만, AI 가 B("가까이")를 고르면 그대로 따른다
+        ai.PickAnswer = "{\"pick\":\"B\",\"reason\":\"바로 가까이 있어 금방 만날 수 있는 메이트예요\"}";
+        JsonElement p = await t.JoinWithTwoCandidates();
+        Assert.Equal("가까이", p.GetProperty("nickname").GetString());
+        Assert.Equal("바로 가까이 있어 금방 만날 수 있는 메이트예요", p.GetProperty("whyMatched").GetString());
+        Assert.Equal("ai", p.GetProperty("whyMatchedSource").GetString());
+
+        string prompt = ai.Prompts.Single(x => x.Contains("가장 잘 맞을 한 명"));
+        Assert.Contains("A |", prompt);
+        Assert.Contains("B |", prompt);
+        Assert.DoesNotContain("멀리", prompt);      // 닉네임은 AI 에게 보내지 않는다
+        Assert.DoesNotContain("가까이", prompt);
+    }
+
+    [Theory]
+    [InlineData(null)]                                      // 엉뚱한 답
+    [InlineData("{\"pick\":\"Z\",\"reason\":\"없는 후보\"}")]   // 후보에 없는 Label
+    public async Task AI_가_못_고르면_규칙_점수대로_짝이_된다(string? answer)
+    {
+        ai.PickAnswer = answer;
+        JsonElement p = await t.JoinWithTwoCandidates();
+        Assert.Equal("멀리", p.GetProperty("nickname").GetString());   // 거리 403m − 공통 3개 × 100m = 103 < 가까이 121
+    }
+
+    [Fact]
+    public void AI_짝_고르기_답은_후보_Label_일_때만_쓴다()
+    {
+        var labels = new HashSet<string> { "A", "B" };
+        Assert.Equal(("B", "좋아요"), MatchExplainer.ParsePick("{\"pick\":\"B\",\"reason\":\"좋아요\"}", labels));
+        Assert.Equal(("A", (string?)null), MatchExplainer.ParsePick("{\"pick\":\"A\",\"reason\":\"http://x\"}", labels));
+        Assert.Equal(((string?)null, (string?)null), MatchExplainer.ParsePick("{\"pick\":\"C\"}", labels));
+        Assert.Equal(((string?)null, (string?)null), MatchExplainer.ParsePick("모르겠어요", labels));
+    }
 }

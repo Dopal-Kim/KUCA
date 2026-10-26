@@ -18,7 +18,9 @@ public class MetricsStore
     public const string MatchMet = "match_met";             // 둘 다 수락
     public const string MatchWalking = "match_walking";     // 둘 다 도착
     public const string MatchEnded = "match_ended";         // source: endReason
-    public const string AiCall = "ai_call";                 // source: recommend · smalltalk · moderation, value: 1 AI · 0 대체
+    public const string MatchAnswer = "match_answer";       // source: 매칭 이유 ai · fallback, value: 1 둘 다 수락 · 0 거절/응답 없음
+    public const string MatchPickAnswer = "match_pick_answer"; // source: 짝을 고른 쪽 ai · rule, value: 위와 같음
+    public const string AiCall = "ai_call";                 // source: recommend · smalltalk · moderation · match_reason · match_pick, value: 1 AI · 0 대체
 
     readonly string connectionString;
     readonly TimeProvider clock;

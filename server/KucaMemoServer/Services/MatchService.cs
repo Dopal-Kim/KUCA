@@ -35,6 +35,12 @@ public static class MatchRules
 
     public const int MaxAppearanceLength = 60;
     public const int MaxReportTextLength = 300;
+    /// <summary>AI 짝 고르기: 안전 조건을 통과한 후보가 이만큼 이상일 때만 AI 가 고른다 (1명이면 고를 게 없음)</summary>
+    public const int AiPickMinCandidates = 2;
+    /// <summary>[가정] AI 에게 보여 줄 후보 수 (규칙 점수 상위)</summary>
+    public const int AiPickMaxCandidates = 5;
+    /// <summary>[가정] AI 가 고르는 동안 그 사람을 다른 짝 찾기에서 잠깐 빼 두는 시간 (넘으면 규칙으로)</summary>
+    public static readonly TimeSpan AiPickHold = TimeSpan.FromSeconds(10);
     /// <summary>함께 걸을 코스의 "다른 코스" 횟수 (10/25 피드백, 방식 (가))</summary>
     public const int MaxCourseChanges = 3;
     /// <summary>[가정] 매칭 하나에서 "다음 주제" 를 부를 수 있는 횟수</summary>
@@ -77,6 +83,7 @@ public class MatchService(
         public required Prefs Prefs;
         public required DateTimeOffset Since, Until;
         public bool IsGuest;   // 체험 계정만 시연용 가상 상대를 만난다
+        public DateTimeOffset? ChoosingUntil;   // AI 가 이 사람의 짝을 고르는 중 (이때까지 규칙 짝 찾기에서 뺌)
     }
 
     sealed class Side
@@ -105,6 +112,11 @@ public class MatchService(
         public string? WalkId;
         // 함께 걸을 코스: 둘 다 동의하면 확정, "다른 코스"는 MaxCourseChanges 번까지
         public RecommendResult? Course;
+        // 왜 연결했는지 한 줄: 제안 순간 틀 문장, 곧 AI 문장으로 바뀜
+        public string PickedBy = "rule";   // 짝을 누가 골랐는지: rule · ai
+        public string? Why;
+        public string WhySource = "fallback";
+        public bool WhyRequested;
         public bool CourseConfirmed;
         public int CourseChanges, CourseVersion;
         public readonly HashSet<string> CourseSeen = [];
@@ -127,7 +139,123 @@ public class MatchService(
 
     // ───── 대기열 ─────
 
-    public MatchState Join(Account user, MatchJoinRequest? body)
+    /// <summary>대기열에 들어가고, 바로 짝이 되면 AI 매칭 이유까지 받아서 돌려준다</summary>
+    public async Task<MatchState> JoinAsync(Account user, MatchJoinRequest? body, IMatchExplainer explainer, CancellationToken ct)
+    {
+        Join(user, body, explainer.CanPick);
+        await PickIfHeldAsync(user.Id, explainer, ct);
+        return await ExplainAndViewAsync(user.Id, explainer, ct);
+    }
+
+    /// <summary>폴링. 이번에 새로 짝이 됐으면 이 요청이 AI 매칭 이유를 받아 온다 (다른 요청은 기다리지 않음)</summary>
+    public async Task<MatchState> GetAsync(string userId, IMatchExplainer explainer, CancellationToken ct)
+    {
+        lock (gate)
+        {
+            DateTimeOffset now = Now;
+            if (explainer.CanPick && waiting.TryGetValue(userId, out Waiting? w))
+                HoldForAiPick(w, now);
+            Tick(now);
+        }
+        await PickIfHeldAsync(userId, explainer, ct);
+        return await ExplainAndViewAsync(userId, explainer, ct);
+    }
+
+    // ───── AI 짝 고르기 ─────
+
+    static bool Choosing(Waiting w, DateTimeOffset now) => w.ChoosingUntil is { } t && t > now;
+
+    /// <summary>안전 조건을 통과한 후보 (규칙 점수 순). AI 가 고르는 중인 사람은 빼 둔다</summary>
+    List<Waiting> CandidatesFor(Waiting w, DateTimeOffset now) =>
+        waiting.Values.Where(o => o.UserId != w.UserId && !Choosing(o, now) && Compatible(w, o)).OrderBy(o => Cost(w, o)).ToList();
+
+    /// <summary>후보가 2명 이상이면 AI 가 고를 동안 이 사람을 규칙 짝 찾기에서 잠깐 뺀다. lock 안에서</summary>
+    void HoldForAiPick(Waiting w, DateTimeOffset now)
+    {
+        if (!Choosing(w, now) && CandidatesFor(w, now).Count >= MatchRules.AiPickMinCandidates)
+            w.ChoosingUntil = now + MatchRules.AiPickHold;
+    }
+
+    /// <summary>
+    /// AI 가 후보 중 가장 잘 맞는 사람을 고르면 그 사람과 짝을 짓고, AI 가 쓴 이유를 매칭 이유로 쓴다.
+    /// 못 고르거나 그사이 후보가 사라졌으면 규칙(가까움 · 공통 취향)으로 짝을 찾는다.
+    /// </summary>
+    async Task PickIfHeldAsync(string userId, IMatchExplainer explainer, CancellationToken ct)
+    {
+        PickInput input;
+        Dictionary<string, string> labelToUser;
+        lock (gate)
+        {
+            DateTimeOffset now = Now;
+            if (!waiting.TryGetValue(userId, out Waiting? w) || !Choosing(w, now))
+                return;
+            List<Waiting> candidates = CandidatesFor(w, now).Take(MatchRules.AiPickMaxCandidates).ToList();
+            labelToUser = candidates.Select((o, i) => (Label: ((char)('A' + i)).ToString(), o.UserId)).ToDictionary(x => x.Label, x => x.UserId);
+            input = new PickInput(w.Minutes, candidates.Select((o, i) =>
+            {
+                MatchReasonInput shared = Shared(w.Prefs, o.Prefs, w.BuildingId, o.BuildingId, w.Minutes);
+                return new PickCandidate(((char)('A' + i)).ToString(), shared.CommonTastes, shared.CommonWalkTimes, shared.SameTalkStyle, shared.DistanceM);
+            }).ToList());
+        }
+
+        (string? label, string? reason) = await explainer.PickAsync(input, ct);
+
+        lock (gate)
+        {
+            DateTimeOffset now = Now;
+            if (!waiting.TryGetValue(userId, out Waiting? w))
+                return;
+            w.ChoosingUntil = null;
+            if (label != null && labelToUser.TryGetValue(label, out string? pickedId)
+                && waiting.TryGetValue(pickedId, out Waiting? picked) && !Choosing(picked, now) && Compatible(w, picked))
+            {
+                Match m = Propose(ToSide(w), ToSide(picked), w.Minutes, now);
+                m.PickedBy = "ai";
+                if (reason != null)
+                    (m.Why, m.WhySource, m.WhyRequested) = (reason, "ai", true);
+            }
+            else if (CandidatesFor(w, now).FirstOrDefault() is { } best)
+                Propose(ToSide(w), ToSide(best), w.Minutes, now);   // AI 가 못 골랐으면 같은 후보 중 규칙 1등
+            Tick(now);
+        }
+    }
+
+    async Task<MatchState> ExplainAndViewAsync(string userId, IMatchExplainer explainer, CancellationToken ct)
+    {
+        Match? m = null;
+        MatchReasonInput? input = null;
+        lock (gate)
+        {
+            if (current.TryGetValue(userId, out string? id) && matches.TryGetValue(id, out m) && m.State == "proposed" && !m.WhyRequested)
+            {
+                m.WhyRequested = true;
+                input = ReasonInput(m);
+            }
+        }
+        if (m != null && input != null)
+        {
+            (string text, string source) = await explainer.ExplainAsync(input, ct);
+            lock (gate)
+                (m.Why, m.WhySource) = (text, source);
+        }
+        lock (gate)
+            return View(userId);
+    }
+
+    MatchReasonInput ReasonInput(Match m) => Shared(m.A.Prefs, m.B.Prefs, m.A.BuildingId, m.B.BuildingId, m.Minutes);
+
+    /// <summary>두 사람이 겹치는 것 (AI 에게 보내는 것은 이것뿐)</summary>
+    MatchReasonInput Shared(Prefs x, Prefs y, string buildingX, string buildingY, int minutes)
+    {
+        Building a = buildings.Find(buildingX)!, b = buildings.Find(buildingY)!;
+        return new MatchReasonInput(
+            x.Tastes.Intersect(y.Tastes).OrderBy(t => t).ToList(),
+            x.WalkTimes.Intersect(y.WalkTimes).OrderBy(t => t).ToList(),
+            x.TalkStyle is { Length: > 0 } t && t == y.TalkStyle ? t : null,
+            (int)Math.Round(Geo.Meters(a.Lat, a.Lon, b.Lat, b.Lon)), minutes);
+    }
+
+    public MatchState Join(Account user, MatchJoinRequest? body, bool aiPick = false)
     {
         if (body == null || !MatchRules.AllowedMinutes.Contains(body.Minutes))
             throw new MatchException(400, "함께 걷기는 30분 또는 60분이에요.");
@@ -153,6 +281,8 @@ public class MatchService(
                 Since = now, Until = now + MatchRules.WaitLimit,
             };
             metrics.Record(MetricsStore.MatchRequest, body.Minutes.ToString(CultureInfo.InvariantCulture));
+            if (aiPick)
+                HoldForAiPick(waiting[user.Id], now);
             Tick(now);
             return View(user.Id);
         }
@@ -287,6 +417,8 @@ public class MatchService(
             Remove(m);
             store.EndRecord(m.Id, "declined", now);
             Count(m, MetricsStore.MatchEnded, "declined");
+            Count(m, MetricsStore.MatchAnswer, m.WhySource, 0);
+            Count(m, MetricsStore.MatchPickAnswer, m.PickedBy, 0);
             ended[userId] = new Ended(m.Id, "declined", userId, now);
             Side other = m.Other(userId);
             if (!other.IsDemo)
@@ -496,6 +628,8 @@ public class MatchService(
                 Remove(m);
                 store.EndRecord(m.Id, "timeout", now);
                 Count(m, MetricsStore.MatchEnded, "timeout");
+                Count(m, MetricsStore.MatchAnswer, m.WhySource, 0);
+                Count(m, MetricsStore.MatchPickAnswer, m.PickedBy, 0);
                 foreach (Side s in m.Sides.Where(s => !s.IsDemo))
                     if (s.Accepted) Requeue(s, m.Minutes, now);
                     else ended[s.UserId] = new Ended(m.Id, "timeout", null, now);
@@ -508,12 +642,9 @@ public class MatchService(
 
         foreach (Waiting w in waiting.Values.OrderBy(w => w.Since).ToList())
         {
-            if (!waiting.ContainsKey(w.UserId))
-                continue; // 이번 Tick 에서 이미 짝이 됨
-            Waiting? best = waiting.Values
-                .Where(o => o.UserId != w.UserId && Compatible(w, o))
-                .OrderBy(o => Cost(w, o))
-                .FirstOrDefault();
+            if (!waiting.ContainsKey(w.UserId) || Choosing(w, now))
+                continue; // 이번 Tick 에서 이미 짝이 됐거나, AI 가 이 사람의 짝을 고르는 중
+            Waiting? best = CandidatesFor(w, now).FirstOrDefault();
             if (best != null)
                 Propose(ToSide(w), ToSide(best), w.Minutes, now);
             // 가상 상대는 체험 계정(심사 · 시연)에게만. 실제 학생은 켜 둬도 실제 학생끼리만 짝이 된다
@@ -549,7 +680,7 @@ public class MatchService(
         a.Tastes.Intersect(b.Tastes).Count() + a.WalkTimes.Intersect(b.WalkTimes).Count()
         + (a.TalkStyle is { Length: > 0 } && a.TalkStyle == b.TalkStyle ? 1 : 0);
 
-    void Propose(Side a, Side b, int minutes, DateTimeOffset now)
+    Match Propose(Side a, Side b, int minutes, DateTimeOffset now)
     {
         var m = new Match
         {
@@ -563,14 +694,16 @@ public class MatchService(
             current[s.UserId] = m.Id;
         }
         store.AddRecord(m.Id, a.UserId, b.UserId, now);
+        m.Why = MatchExplainer.Fallback(ReasonInput(m));   // AI 문장이 오기 전까지 보여 줄 틀 문장
         Count(m, MetricsStore.MatchProposed);
+        return m;
     }
 
     /// <summary>지표 기록. 시연용 가상 상대와의 매칭은 성사율을 부풀리지 않게 세지 않는다</summary>
-    void Count(Match m, string kind, string? source = null)
+    void Count(Match m, string kind, string? source = null, int? value = null)
     {
         if (!m.Sides.Any(s => s.IsDemo))
-            metrics.Record(kind, source);
+            metrics.Record(kind, source, value);
     }
 
     void StartMeeting(Match m, ISmalltalkGenerator smalltalk)
@@ -586,6 +719,8 @@ public class MatchService(
             (s.Appearance, s.Arrived) = (MatchRules.DemoAppearance, true);
         store.SetSpot(m.Id, m.Spot.Id);
         Count(m, MetricsStore.MatchMet);
+        Count(m, MetricsStore.MatchAnswer, m.WhySource, 1);
+        Count(m, MetricsStore.MatchPickAnswer, m.PickedBy, 1);
     }
 
     /// <summary>둘 다 수락한 직후 AI 주제를 받아, 그사이 다른 주제로 바뀌지 않았으면 바꿔 넣는다</summary>
@@ -702,10 +837,10 @@ public class MatchService(
             var common = me.Prefs.Tastes.Intersect(other.Prefs.Tastes).OrderBy(t => t).ToList();
             if (m.State == "proposed")
                 return new MatchState("proposed", m.Id, m.Minutes,
-                    Partner: new MatchPartner(other.Nickname, common, null),
+                    Partner: new MatchPartner(other.Nickname, common, null, m.Why, m.WhySource),
                     RespondBy: Iso(m.RespondBy), MyAnswer: me.Accepted ? "accepted" : null);
             return new MatchState(m.State, m.Id, m.Minutes,
-                Partner: new MatchPartner(other.Nickname, common, other.Appearance),
+                Partner: new MatchPartner(other.Nickname, common, other.Appearance, m.Why, m.WhySource),
                 MyAnswer: "accepted",
                 MeetSpot: new MeetSpotView(m.Spot!.Id, m.Spot.Name, m.SpotBuilding!.Lat, m.SpotBuilding.Lon, m.Spot.MeetSpecies),
                 MeetBy: Iso(m.MeetBy),

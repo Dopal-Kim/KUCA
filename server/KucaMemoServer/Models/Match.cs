@@ -10,7 +10,9 @@ public record ReportRequest(string? MatchId, string? Reason, string? Text);
 public record BlockRequest(string? MatchId);
 
 /// <summary>상대에게서 보이는 것은 닉네임 · 공통 취향 · 인상착의뿐이다 (성별 · 계정 · 건물은 안 보임)</summary>
-public record MatchPartner(string Nickname, List<string> CommonTastes, string? Appearance);
+public record MatchPartner(string Nickname, List<string> CommonTastes, string? Appearance,
+                           string? WhyMatched = null,         // 왜 연결했는지 한 줄 (AI, 실패하면 틀 문장)
+                           string? WhyMatchedSource = null);  // ai · fallback
 public record MeetSpotView(string BuildingId, string Name, double Lat, double Lon, string? MeetSpecies);
 public record MatchArrived(bool Me, bool Partner);
 public record SmalltalkResult(List<string> Smalltalk, string Source, List<KucaMemoServer.Services.SmalltalkCard> SmalltalkCards);

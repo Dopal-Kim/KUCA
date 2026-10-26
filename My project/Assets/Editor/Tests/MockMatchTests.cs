@@ -100,4 +100,56 @@ public class MockMatchTests
         Assert.AreEqual(MatchState.Cancelled, last.status);
         Assert.IsFalse(last.Active);
     }
+
+    void Meet()
+    {
+        Join();
+        now = MockMatchService.ProposeAfter + 0.1f;
+        Status();
+        Run(mock.Respond(last.matchId, true, (s, _) => last = s));
+        now += MockMatchService.PartnerAcceptsAfter + 0.1f;
+        Status();
+    }
+
+    [Test]
+    public void 만나면_코스가_나오고_둘_다_좋다고_하면_정해진다()
+    {
+        Meet();
+        Assert.AreEqual(MatchState.Matched, last.status);
+        Assert.IsTrue(last.HasCourse);
+        Assert.Greater(last.course.stops.Count, 0);
+        Assert.AreEqual(3, last.cards.Count);
+        Assert.IsFalse(string.IsNullOrEmpty(last.cards[0].topic));
+
+        Run(mock.AgreeCourse(last.matchId, (s, _) => last = s));
+        Assert.IsTrue(last.course.myAgree);
+        Assert.IsFalse(last.course.confirmed);
+        now += MockMatchService.PartnerLookAfter + 0.1f;     // 가상 상대도 곧 좋다고 한다
+        Assert.IsTrue(Status().course.confirmed);
+    }
+
+    [Test]
+    public void 다른_코스는_세_번까지이고_동의를_지운다()
+    {
+        Meet();
+        Run(mock.AgreeCourse(last.matchId, (s, _) => last = s));
+        string first = last.course.recommendationId;
+        string error = null;
+        Run(mock.NextCourse(last.matchId, (s, e) => { last = s; error = e; }));
+        Assert.IsNull(error);
+        Assert.AreNotEqual(first, last.course.recommendationId);
+        Assert.IsFalse(last.course.myAgree);
+        Assert.AreEqual(MockMatchService.CourseChanges - 1, last.course.changesLeft);
+        for (int i = 1; i < MockMatchService.CourseChanges; i++)
+            Run(mock.NextCourse(last.matchId, (s, _) => last = s));
+        Run(mock.NextCourse(last.matchId, (s, e) => { last = s; error = e; }));
+        Assert.IsNotNull(error);
+    }
+
+    [Test]
+    public void 대기_중에는_찾는_사람_수가_있다()
+    {
+        Join();
+        Assert.Greater(last.nowSearching, 0);
+    }
 }
