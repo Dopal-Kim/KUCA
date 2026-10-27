@@ -70,11 +70,24 @@ public static class WalkMusic
         {
             case App.Spotify: return ("spotify:search:" + q, "https://open.spotify.com/search/" + q);
             case App.YouTubeMusic: return (null, "https://music.youtube.com/search?q=" + q);
-            default: return ("melonapp://search?keyword=" + q, "https://m.app.melon.com/search/searchMcom.htm?s=" + q);
+            default: return ("melonapp://search?keyword=" + q, MelonStore);
         }
     }
 
-    /// <summary>음악 앱을 연다. 앱이 없어 이 앱이 그대로 있으면 (잠깐 기다려 봄) 웹 검색을 연다</summary>
+    /// <summary>
+    /// 멜론 앱이 없을 때: 멜론 웹 검색은 폰 브라우저에서 결과가 비어 보여 (자바스크립트로 불러옴) 앱 설치 페이지를 연다.
+    /// iOS App Store 415597317 "멜론(Melon)" (Kakao M), Android com.iloen.melon
+    /// </summary>
+    static string MelonStore =>
+#if UNITY_IOS && !UNITY_EDITOR
+        "itms-apps://apps.apple.com/kr/app/id415597317";
+#elif UNITY_ANDROID && !UNITY_EDITOR
+        "market://details?id=com.iloen.melon";
+#else
+        "https://apps.apple.com/kr/app/id415597317";
+#endif
+
+    /// <summary>음악 앱을 연다. 앱이 없어 이 앱이 그대로 있으면 (잠깐 기다려 봄) 웹 검색 (멜론은 앱 설치 페이지) 을 연다</summary>
     public static void Open(Track t)
     {
         (string app, string web) = SearchUrls(t);
