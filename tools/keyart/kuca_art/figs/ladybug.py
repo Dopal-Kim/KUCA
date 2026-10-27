@@ -49,22 +49,22 @@ def build(fig, rng):
         fig.add(S.capsule((s * 0.7, y0 + 1.15, 0.05), (s * 0.72, y0 + 0.35, 0.12), 0.46, 0.44), LIMB, k=0.15, layer='limb')
         fig.add(S.ellipsoid((s * 0.72, y0 + 0.3, 0.22), (0.5, 0.3, 0.6)), LIMB, k=0.15, layer='limb')
     # ---- 머리: 짙은 투구 + 작은 살구빛 얼굴 (아래가 살짝 통통한 한 덩어리, 볼 구 없음) ----
-    hc = np.array((0.0, y0 + 6.05, -0.05))
-    helm0 = S.ellipsoid(hc, (1.98, 1.8, 1.82))
-    hole = S.ellipsoid((0, y0 + 5.38, 1.65), (1.5, 1.3, 1.4))
+    hc = np.array((0.0, y0 + 6.1, -0.05))
+    helm0 = S.ellipsoid(hc, (2.14, 1.9, 1.92))    # 키아트: 투구 머리가 몸보다 살짝 넓다
+    hole = S.ellipsoid((0, y0 + 5.3, 1.7), (1.72, 1.42, 1.45))      # 키아트: 얼굴 창이 넓다 (투구가 눈썹 위 + 볼 옆까지)
     helm = S.subtract(helm0, hole, k=0.2)
     fig.add(helm, DARK, k=0.0, layer='helm')
     near_h = lambda P: np.abs(helm(P))
     fig.paint(masked(lambda P: np.abs(P[:, 0]) - 0.025, near_h, 0.06), (0.20, 0.14, 0.13), soft=0.04)
-    fc = np.array((0.0, y0 + 5.55, 0.15))
-    face0 = S.intersect(soft_head(fc, (1.6, 1.42, 1.62), flare=0.1, flare_y=-0.45), lambda P: (0.2 - P[:, 2]) * 0.8)
+    fc = np.array((0.0, y0 + 5.48, 0.2))
+    face0 = S.intersect(soft_head(fc, (1.7, 1.5, 1.62), flare=0.1, flare_y=-0.45), lambda P: (0.2 - P[:, 2]) * 0.8)
     fig.add(face0, SKIN, k=0.0, layer='face')
     # 활짝 웃는 'D' 입: 또렷한 부품 (짙은 입 안 + 분홍 혀), 표면에 붙임
     fmo = face_frame(fig, fc, 0, -23, 'face', out=-0.03)
     ell(fig.extra, fmo, (0, -0.06, 0.0), (0.27, 0.2, 0.05), (0.42, 0.09, 0.12), 18, 8)          # 입 안
     ell(fig.extra, fmo, (0, 0.1, 0.01), (0.3, 0.1, 0.06), SKIN, 18, 8)                          # 윗입술 (위를 평평하게 → 'D')
     ell(fig.extra, fmo, (0, -0.15, 0.025), (0.15, 0.08, 0.04), (1.0, 0.50, 0.58), 14, 6)        # 혀
-    eye_pair(fig, fc, 25, 2, 'round', 0.42, iris=(0.40, 0.21, 0.09), layer='face', sink=0.14)
+    eye_pair(fig, fc, 26, 3, 'round', 0.48, iris=(0.40, 0.21, 0.09), layer='face', sink=0.14)
     blush_paint(fig, fc, 42, -18, 'face', size=0.36, soft=0.4)
     fig.paint(S.sphere(face_frame(fig, fc, 0, -11, 'face').o, 0.06), (0.88, 0.62, 0.55), soft=0.05)
     # ---- 더듬이 (가는 줄기 + 큰 공) ----
@@ -72,8 +72,8 @@ def build(fig, rng):
         a, _ = surf_point(helm, hc, s * 22, 60)
         m = np.array((s * 0.95, y0 + 8.45, 0.0))
         t = np.array((s * 1.45, y0 + 8.95, 0.15))
-        fig.add(S.capsule(tuple(a - (0, 0.2, 0)), tuple(m), 0.13, 0.11), DARK, k=0.12, layer='helm2')
-        fig.add(S.capsule(tuple(m), tuple(t), 0.11, 0.1), DARK, k=0.12, layer='helm2')
+        fig.add(S.capsule(tuple(a - (0, 0.2, 0)), tuple(m), 0.18, 0.15), DARK, k=0.2, layer='helm2')
+        fig.add(S.capsule(tuple(m), tuple(t), 0.15, 0.14), DARK, k=0.2, layer='helm2')
         fig.add(S.ellipsoid(tuple(t + (s * 0.12, 0.08, 0.0)), (0.44, 0.36, 0.38)), DARK, k=0.1, layer='helm2')
     # ---- 책가방 (등) ----
     pc = np.array((0.0, y0 + 3.0, -2.0))
@@ -90,9 +90,10 @@ def build(fig, rng):
         nrm = np.array((1.0, 0.0, 0.12 * s_)); nrm /= np.linalg.norm(nrm)
         c0 = np.array((s_ * 0.98, 0, 0))
         def band(P, nrm=nrm, c0=c0):
-            shell_d = np.abs(shell(P) - 0.06) - 0.07
-            plane = np.abs((P - c0) @ nrm) - 0.13
-            low = (bc[1] - 1.25) - P[:, 1]
+            shell_d = np.abs(shell(P) - 0.08) - 0.1      # 두툼하게 (얇은 판은 가장자리가 지글거림)
+            plane = np.abs((P - c0) @ nrm) - 0.15
+            # 앞은 어깨 → 겨드랑이까지만 (키아트: 짧은 멜빵), 뒤는 가방 아래까지
+            low = np.where(P[:, 2] > 0.3, (bc[1] + 0.35) - P[:, 1], (bc[1] - 0.55) - P[:, 1])
             return np.maximum(np.maximum(shell_d, plane), low)
         fig.add(band, PACK, k=0.0, layer='strap')
     # 진홍 꽃 단추 (-x 멜빵 가슴)

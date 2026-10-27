@@ -408,7 +408,7 @@ def build(fig, rng):
         for j in range(n):
             az = 360 * (j + 0.5 * (i % 2)) / n
             d = _dir(az, el_)
-            if d[2] > 0.55 or (el_ > 25 and d[2] > -0.25):      # 얼굴 앞·정수리 앞쪽은 비움
+            if d[2] > 0.55 or (25 < el_ < 40 and d[2] > -0.25) or (el_ > 40 and d[2] > 0.3):   # 띠 위 정수리도 갈기로 덮는다      # 얼굴 앞·정수리 앞쪽은 비움
                 continue
             p = mcen + d * MRr
             out = d / np.linalg.norm(d)
@@ -420,7 +420,7 @@ def build(fig, rng):
     bn = np.array((0, 1.0, 0.12))
     bn /= np.linalg.norm(bn)
     bcen = hc + np.array((0, 0.98, 0))
-    groove = lambda P: 0.26 - np.abs((P - bcen) @ bn)            # 띠 자리 (갈기를 파낸다)
+    groove = lambda P: 0.21 - np.abs((P - bcen) @ bn)            # 띠 자리 (갈기를 파낸다)
     mane_r0 = U(rear, 0.16)
     mane_f0 = U(front, 0.16)
     mane_r = lambda P: np.maximum(mane_r0(P), groove(P))
@@ -435,7 +435,7 @@ def build(fig, rng):
     fig.add(S.ellipsoid(p + R @ np.array((0, 0.4, 0)), (0.34, 0.66, 0.22), R=R), MANE_LT, k=0.0, layer='tuft')
     # 귀 (갈기 위로 나온 둥근 귀, 분홍 안쪽)
     for s in (-1, 1):
-        ec = surf(head, hc, s * 40, 52, -0.25) + np.array((s * 0.12, 0.3, -0.1))
+        ec = surf(head, hc, s * 40, 52, -0.25) + np.array((s * 0.2, 0.45, -0.1))
         Re = S.rot(s * 12, 0, -s * 28)
         fig.add(S.subtract(S.ellipsoid(ec, (0.66, 0.64, 0.38), R=Re), S.ellipsoid(ec + Re @ np.array((0, -0.05, 0.3)), (0.4, 0.38, 0.2), R=Re), k=0.06),
                 FUR, k=0.12, layer='head')

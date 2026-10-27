@@ -37,10 +37,10 @@ def stripe_w(origin, axis, n, duty=0.38, phase=math.pi, ref=(0, 0, 1)):
     return w
 
 
-def add_striped(fig, f, sw, k, relief=0.0):
-    """잠옷 천 + 분홍 줄 칠. 돋움(relief)은 줄 경계를 울퉁불퉁한 톱니·흰 점으로 만들어서 기본은 끔, 칠 경계도 부드럽게"""
-    fig.add((lambda P: f(P) - relief * sw(P)) if relief else f, PJ_W, k=k, layer='pj')
-    fig.paint(lambda P: (0.5 - sw(P)) * 0.2 + np.maximum(0, f(P) - relief * sw(P) - 0.05), PJ_P, soft=0.08)
+def add_striped(fig, f, sw, k, relief=0.02):
+    """줄무늬를 살짝 돋운 잠옷 천 (돋움이 있어야 메시를 줄여도 줄 경계에 정점이 남는다 — 돋움 없이 칠만 하면 줄이 톱니 얼룩이 됨) + 분홍 칠"""
+    fig.add(lambda P: f(P) - relief * sw(P), PJ_W, k=k, layer='pj')
+    fig.paint(lambda P: (0.5 - sw(P)) * 0.2 + np.maximum(0, f(P) - relief * sw(P) - 0.05), PJ_P, soft=0.03)
 
 
 def band_w(origin, axis, period, duty=0.45):
@@ -175,12 +175,12 @@ def build(fig, rng):
     capmask = lambda P: np.clip((hq(P)[:, 1] - 1.42) / 0.1, 0, 1)
     for k_, f in enumerate(cap_parts):
         g_ = f if k_ else S.intersect(f, lambda P: 1.07 - hq(P)[:, 1])
-        fig.add(g_, PJ_W, k=0.35, layer='cap')   # 줄 돋움 없이 매끈한 원뿔 (줄은 칠만)
+        fig.add(lambda P, g_=g_: g_(P) - 0.022 * cw(P) * capmask(P), PJ_W, k=0.35, layer='cap')
 
     def cap_region(P):
         return np.min(np.stack([f(P) for f in cap_parts]), axis=0) - 0.08
 
-    fig.paint(lambda P: np.maximum((0.5 - cw(P) * capmask(P)) * 0.2, cap_region(P)), PJ_P, soft=0.08)
+    fig.paint(lambda P: np.maximum((0.5 - cw(P) * capmask(P)) * 0.2, cap_region(P)), PJ_P, soft=0.03)
     pom = path[-1] + np.array((0.05, -0.38, 0.0))
     fig.add(lambda P: S.sphere(tuple(pom), 0.55)(P) + 0.025 * np.sin(P[:, 0] * 30) * np.sin(P[:, 1] * 27) * np.sin(P[:, 2] * 29), POM, k=0.0, layer='pom')
     # ---- 얼굴: 졸린 ∪ 감은 눈, 작은 분홍 코, 'w' 입, 볼터치는 칠만 ----

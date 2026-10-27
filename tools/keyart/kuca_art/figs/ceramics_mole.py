@@ -197,6 +197,8 @@ def build(fig, rng):
         for a, b in zip(pts, pts[1:]):
             fig.add(S.capsule(tuple(a), tuple(b), 0.09), LINEN, k=0.03, layer='strap')
 
+    # 끈이 닿는 어깨·등 몸 표면에 끈 색(리넨)이 번지는 것을 털 색으로 덮는다 (블렌딩된 몸 부품보다 끈이 '더 가까운' 정점)
+    layer_paint(fig, 'body', lambda P: np.maximum(np.maximum(y0 + 2.5 - P[:, 1], P[:, 1] - (y0 + 4.3)), P[:, 2] - 0.5), FUR, soft=0.05, tol=0.02)
     # ---------- 얼굴 ----------
     hcv = np.asarray(hc)
     # 분홍 별 코 (긴 주둥이 끝)

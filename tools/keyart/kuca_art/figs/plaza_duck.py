@@ -310,11 +310,15 @@ def build(fig, rng):
     def brim(P):
         q = (P - Hc) @ Rh
         r = np.linalg.norm(q[:, [0, 2]], axis=1)
-        a, b = np.array((2.0, -0.5)), np.array((3.1, -0.98))
         p2 = np.stack([r, q[:, 1]], axis=1)
-        ba = b - a
-        h = np.clip(((p2 - a) @ ba) / (ba @ ba), 0, 1)
-        return np.linalg.norm(p2 - a - h[:, None] * ba, axis=1) - 0.075
+        d = None
+        # 챙 단면: 안쪽은 완만하게, 바깥 끝은 아래로 처지는 곡선 (꺾인 원뿔 대신)
+        for a, b in ((np.array((2.0, -0.5)), np.array((2.6, -0.66))), (np.array((2.6, -0.66)), np.array((3.12, -1.0)))):
+            ba = b - a
+            h = np.clip(((p2 - a) @ ba) / (ba @ ba), 0, 1)
+            e = np.linalg.norm(p2 - a - h[:, None] * ba, axis=1)
+            d = e if d is None else np.minimum(d, e)
+        return d - 0.075
     fig.add(brim, HAT, k=0.12, layer='hat')
     for k in range(4):
         a = math.pi * k / 4 + math.pi / 8

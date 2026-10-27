@@ -385,7 +385,7 @@ def build(fig, rng):
     cp = hc + np.array((0.2, 1.75, -0.12))
     fig.add(S.cylinder(cp + Rc @ np.array((0, 0.44, 0)), 1.28, 0.3, round_=0.2, R=Rc), CAP, k=0.0, layer='cap')
     fig.add(S.cylinder(cp + Rc @ np.array((0, -0.1, 0)), 1.21, 0.21, round_=0.04, R=Rc), CRIMSON, k=0.0, layer='band')
-    for yy in (0.12, -0.32):
+    for yy in (0.07, -0.27):   # 띠 가장자리를 덮어 모자-띠 틈 그늘을 가린다
         fig.add(S.torus(cp + Rc @ np.array((0, yy, 0)), 1.24, 0.085, Rm=Rc), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     fig.add(S.cylinder(cp + Rc @ np.array((0, -0.11, 1.2)), 0.17, 0.05, round_=0.04, R=Rc @ S.rot(0, 90, 0)), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     visor = lambda P: np.maximum(S.cylinder(cp + Rc @ np.array((0, -0.38, 0.25)), 1.3, 0.05, round_=0.04, R=Rc @ S.rot(0, 14, 0))(P), -((P - cp) @ Rc[:, 2]) + 0.6)
