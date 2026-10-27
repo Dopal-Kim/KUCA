@@ -44,6 +44,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<RouteRecommender>();
 // 산책 음악 추천: 같은 챗쿠 AI, 실패하면 분위기별 기본 목록 (Data/music.json)
 builder.Services.AddScoped<MusicRecommender>();
+builder.Services.AddSingleton<MusicHistory>();   // 최근 추천곡 (같은 곡만 나오지 않게)
 // 실시간 산책 매칭 (C-V3): 대기열·진행 중인 매칭은 메모리, 기록·차단·신고는 SQLite. 시연용 가상 상대는 Match:DemoPartner=true
 builder.Services.AddSingleton<MatchStore>();
 builder.Services.AddSingleton<MatchService>();
