@@ -191,6 +191,87 @@ public class WishAndPlaceApiTests : IDisposable
         Assert.Equal(1, ai.Prompts.Count(p => p.Contains("<wish>") && !p.Contains("후보 장소")));
     }
 
+    // ---------- 판단 → 사실 비교 → 경로 (AI 우선) ----------
+
+    static object Visits(string wish, params (string Id, int Count)[] counts) => new
+    {
+        minutes = 30, tastes = Array.Empty<string>(), lat = Lat, lon = Lon, visitedBuildingIds = Array.Empty<string>(),
+        candidateBuildingIds = Spots, wish, visitCounts = counts.Select(c => new { buildingId = c.Id, count = c.Count }),
+    };
+
+    [Fact]
+    public void 말_찾기도_판단_비중과_판단_문장을_만든다()
+    {
+        SpotStore spots = new(new TestEnv());
+        WalkWish w = WishRules.Parse("안 가 본 새로운 곳, 경치 좋은 데로", spots);
+        Assert.Equal(3, w.Priorities.Novelty);
+        Assert.Equal(3, w.Priorities.Scenery);
+        Assert.Equal(0, w.Priorities.Familiar);
+        Assert.Contains("안 가 본 곳", w.Judgment);
+        Assert.Contains("경관", w.Judgment);
+    }
+
+    [Fact]
+    public void AI_판단은_비중을_0에서_3으로_자르고_금지어_판단은_버린다()
+    {
+        SpotStore spots = new(new TestEnv());
+        WalkWish? w = WishInterpreter.Parse(
+            """{"minutes": 30, "judgment": "기분 전환이 필요해 보여 안 가 본 곳 위주로 골라요", "priorities": {"novelty": 7, "familiar": -2, "scenery": 2}}""", "x", spots);
+        Assert.Equal("기분 전환이 필요해 보여 안 가 본 곳 위주로 골라요", w!.Judgment);
+        Assert.Equal((3, 0, 2, 1), (w.Priorities.Novelty, w.Priorities.Familiar, w.Priorities.Scenery, w.Priorities.Quiet));
+        WalkWish? bad = WishInterpreter.Parse("""{"judgment": "시발 그냥 아무데나 가요"}""", "x", spots);
+        Assert.DoesNotContain("시발", bad!.Judgment);
+    }
+
+    [Fact]
+    public async Task 익숙한_곳을_원하면_자주_간_곳이_들어가고_이유와_코스_이유가_방문_횟수를_말한다()
+    {
+        HttpClient client = Server().CreateClient();
+        JsonElement r = await Recommend(client, Visits("늘 가던 익숙한 곳으로 30분", (Theater, 5)));
+        Assert.Contains(Theater, StopIds(r));
+        string reason = r.GetProperty("stops").EnumerateArray().First(s => s.GetProperty("buildingId").GetString() == Theater).GetProperty("reason").GetString()!;
+        Assert.Contains("자주 들렀던 곳", reason);
+        Assert.Contains("자주 가던 곳", r.GetProperty("why").GetString());
+        Assert.Contains("자주 가던 곳", r.GetProperty("wish").GetProperty("judgment").GetString());
+    }
+
+    [Fact]
+    public async Task 새로운_곳을_원하면_자주_간_곳은_뒤로_밀린다()
+    {
+        HttpClient client = Server().CreateClient();
+        JsonElement fresh = await Recommend(client, Visits("안 가 본 새로운 곳으로 15분", (Library, 9), (Union, 9)));
+        Assert.DoesNotContain(Library, StopIds(fresh));
+        Assert.DoesNotContain(Union, StopIds(fresh));
+    }
+
+    [Fact]
+    public async Task AI_에는_점수_없이_후보_전체와_사실_판단_비중을_준다()
+    {
+        var ai = new RoutingAi(
+            wish: """{"minutes": 30, "judgment": "경치 좋은 곳 위주로 골라요", "priorities": {"scenery": 3}}""",
+            course: $$"""{"title": "노을 코스", "why": "노을 경관이 있는 노천극장을 넣었어요", "stops": [{"buildingId": "{{Theater}}", "reason": "저녁 노을에 계단에 앉아 쉬기 좋아요"}]}""");
+        HttpClient client = Server(ai).CreateClient();
+        JsonElement r = await Recommend(client, new { minutes = 30, tastes = Array.Empty<string>(), lat = Lat, lon = Lon, wish = "경치 좋은 데" });
+        string prompt = ai.Prompts.Last(p => p.Contains("후보 장소"));
+        Assert.True(prompt.Split('\n').Count(l => l.StartsWith("way-") || l.StartsWith("relation-")) > 10);   // 상위 10곳으로 자르지 않음
+        Assert.DoesNotContain("점수", prompt);
+        Assert.Contains("판단: 경치 좋은 곳 위주로 골라요", prompt);
+        Assert.Contains("경관 3", prompt);
+        Assert.Contains("안 가 봄", prompt);
+        Assert.Equal("노을 경관이 있는 노천극장을 넣었어요", r.GetProperty("why").GetString());
+    }
+
+    [Fact]
+    public async Task AI_코스_이유가_사실과_겹치지_않으면_비중으로_만든_이유를_쓴다()
+    {
+        var ai = new RoutingAi(
+            wish: """{"minutes": 30, "judgment": "경치 좋은 곳 위주로 골라요", "priorities": {"scenery": 3}}""",
+            course: $$"""{"title": "코스", "why": "분수 쇼와 불꽃놀이를 볼 수 있어요", "stops": [{"buildingId": "{{Theater}}", "reason": "저녁 노을에 계단에 앉아 쉬기 좋아요"}]}""");
+        HttpClient client = Server(ai).CreateClient();
+        JsonElement r = await Recommend(client, Body("경치 좋은 데"));
+        Assert.Contains("경관 좋은 곳", r.GetProperty("why").GetString());
+    }
+
     // ---------- 공지: 통제 · 행사 ----------
 
     [Fact]
