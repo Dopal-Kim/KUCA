@@ -18,7 +18,7 @@ public class HttpWalkService : IWalkService
     [Serializable] class ErrorBody { public string error; public string reason; }
     [Serializable] class BeginBody { public string recommendationId; public int minutes; }
     [Serializable] class BeginResult { public string id; }
-    [Serializable] class FinishBody { public int distanceM; public int durationSec; public List<string> visitedBuildingIds = new List<string>(); }
+    [Serializable] class FinishBody { public int distanceM; public int durationSec; public List<string> visitedBuildingIds = new List<string>(); public float weightKg; }
     [Serializable] class RewardPart { public string kind; public int xp; }
     [Serializable] class Reward { public int tickets; public int xp; public List<RewardPart> breakdown = new List<RewardPart>(); }
     [Serializable] class FinishResult { public bool completed; public int distanceM; public Reward reward; }
@@ -93,7 +93,8 @@ public class HttpWalkService : IWalkService
             yield return fallback.Complete(request, score, onDone);
             yield break;
         }
-        var body = new FinishBody { distanceM = request.meters, durationSec = request.durationSec, visitedBuildingIds = request.visitedBuildingIds };
+        var body = new FinishBody { distanceM = request.meters, durationSec = request.durationSec, visitedBuildingIds = request.visitedBuildingIds,
+                                    weightKg = HealthProfile.ForRequest };   // 몸무게(선택)는 이 기기에만 있고 계산할 때만 보낸다
         using var req = Post($"/api/walks/{Uri.EscapeDataString(request.walkId)}/finish", JsonUtility.ToJson(body));
         yield return req.SendWebRequest();
         if (req.responseCode == 404)

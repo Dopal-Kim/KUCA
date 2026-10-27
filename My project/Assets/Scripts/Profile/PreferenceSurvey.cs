@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 산책 취향 체크리스트 화면. 한 화면에 질문 하나씩, 7단계 (디자인 v4: 토스 단계 질문 — 진행 막대 · 큰 질문 · 흰 카드 선택지 · 아래 고정 "다음").
+/// 산책 취향 체크리스트 화면. 한 화면에 질문 하나씩, 7단계 + 마지막에 몸무게(선택) (디자인 v4: 토스 단계 질문 — 진행 막대 · 큰 질문 · 흰 카드 선택지 · 아래 고정 "다음").
+/// 몸무게는 건강(걸음 수 · 칼로리 범위)용으로 HealthProfile 에 이 기기에만 저장하고, 비워 두고 넘어가도 된다.
 /// 첫 실행 때 자동으로 열리고 (나중에는 로그인 직후에 Open 을 부르면 된다), 설정 › 취향 다시 고르기에서도 연다.
 /// 답은 WalkPreferences 로 기기에 저장한다 (AI 산책메이트 매칭에 쓸 자료).
 /// </summary>
@@ -37,6 +38,12 @@ public class PreferenceSurvey : MonoBehaviour
         new Question { title = "같이 걸을 상대는요?", hint = "하나만 골라요", options = new[]
             { ("same", "동성만", "나와 같은 성별인 사람과만"), ("any", "상관없어요", "") } },
     };
+
+    /// <summary>질문 7개 다음 마지막 단계: 몸무게 (선택, 숫자 입력)</summary>
+    static int WeightStep => Questions.Length;
+    static int Steps => Questions.Length + 1;
+    InputField weightInput;
+    string weightDraft = "";
 
     GameObject root;
     Text stepText, titleText, hintText;
@@ -74,6 +81,7 @@ public class PreferenceSurvey : MonoBehaviour
             p.walkMinutes > 0 ? new List<string> { p.walkMinutes.ToString() } : new List<string>(),
             Single(p.pace), new List<string>(p.tastes), Single(p.talkStyle), Single(p.groupSize), Single(p.matchGender),
         };
+        weightDraft = HealthProfile.WeightKg?.ToString() ?? "";
         step = 0;
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
@@ -84,15 +92,20 @@ public class PreferenceSurvey : MonoBehaviour
 
     void Fill()
     {
-        Question q = Questions[step];
-        stepText.text = $"{step + 1} / {Questions.Length}";
-        titleText.text = q.title;
-        hintText.text = q.hint;
-        progressFill.anchorMax = new Vector2((step + 1) / (float)Questions.Length, 1f);
-        UIKit.SetLabel(nextButton, step == Questions.Length - 1 ? "완료" : "다음");
+        stepText.text = $"{step + 1} / {Steps}";
+        progressFill.anchorMax = new Vector2((step + 1) / (float)Steps, 1f);
+        UIKit.SetLabel(nextButton, step == Steps - 1 ? "완료" : "다음");
 
         for (int i = optionList.childCount - 1; i >= 0; i--)
             Destroy(optionList.GetChild(i).gameObject);
+        if (step == WeightStep)
+        {
+            FillWeight();
+            return;
+        }
+        Question q = Questions[step];
+        titleText.text = q.title;
+        hintText.text = q.hint;
         List<string> chosen = answers[step];
         foreach (var (code, label, sub) in q.options)
         {
@@ -150,6 +163,28 @@ public class PreferenceSurvey : MonoBehaviour
         nextButton.GetComponentInChildren<Text>().color = ready ? Color.white : KucaTheme.InkSoft;   // 비활성: 회색 칸 + 흐린 글자
     }
 
+    /// <summary>몸무게 (선택): 숫자 칸 하나 + 쓰는 곳 안내 + 건너뛰기. "완료" 는 비워 둬도 눌린다</summary>
+    void FillWeight()
+    {
+        titleText.text = "몸무게를 알려 줄래요?";
+        hintText.text = "선택이에요. 비워 두고 넘어가도 돼요";
+        weightInput = UIKit.Input(optionList, "예: 60 (kg)", KucaTheme.Heading, false, 3);
+        weightInput.contentType = InputField.ContentType.IntegerNumber;
+        weightInput.text = weightDraft;
+        weightInput.onValueChanged.AddListener(v => weightDraft = v);
+        weightInput.GetComponent<Image>().color = KucaTheme.Card;
+        UIKit.Size(weightInput, KucaTheme.TouchMin + KucaTheme.Space2);
+        UIKit.Paragraph(optionList, "코스와 산책 기록의 걸음 수 · 칼로리를 더 정확하게 보여 줄 때만 써요. " +
+                                    "이 폰에만 저장하고 서버에는 저장하지 않아요. 비워 두면 칼로리를 넓은 범위로 보여 줘요.",
+                        KucaTheme.Label, KucaTheme.InkMuted);
+        UIKit.Paragraph(optionList, "취향 다시 고르기에서 언제든 바꾸거나 지울 수 있어요.", KucaTheme.Caption, KucaTheme.InkSoft);
+        UIKit.SecondaryButton(optionList, "건너뛰기", () => { weightDraft = ""; Next(); });
+
+        nextButton.interactable = true;
+        nextButton.GetComponent<Image>().color = KucaTheme.Primary;
+        nextButton.GetComponentInChildren<Text>().color = Color.white;
+    }
+
     void Toggle(string code)
     {
         Question q = Questions[step];
@@ -173,14 +208,22 @@ public class PreferenceSurvey : MonoBehaviour
 
     void Next()
     {
-        if (answers[step].Count == 0)
+        if (step < WeightStep && answers[step].Count == 0)
             return;
-        if (step < Questions.Length - 1)
+        if (step < Steps - 1)
         {
             step++;
             Fill();
             return;
         }
+        // 몸무게: 비우면 지우고, 숫자면 30~200 kg 만
+        string w = weightDraft.Trim();
+        if (w.Length > 0 && (!int.TryParse(w, out int kg) || kg < HealthProfile.MinKg || kg > HealthProfile.MaxKg))
+        {
+            Toast($"몸무게는 {HealthProfile.MinKg}~{HealthProfile.MaxKg} 사이 숫자로 써 주세요 (kg)");
+            return;
+        }
+        HealthProfile.WeightKg = w.Length > 0 ? int.Parse(w) : (int?)null;
         var p = new WalkPreferences
         {
             walkTimes = new List<string>(answers[0]),

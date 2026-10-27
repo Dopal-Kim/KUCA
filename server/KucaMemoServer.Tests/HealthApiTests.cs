@@ -95,6 +95,9 @@ public class HealthApiTests : IDisposable
         HealthEstimate known = HealthRules.Estimate(1400, 20, "normal", 60);
         Assert.Equal(63, known.KcalMin);                         // 60kg ± 10%
         Assert.Equal(77, known.KcalMax);
+        Assert.Equal(unknown, HealthRules.Estimate(1400, 20, "normal", 0));   // 앱이 0 을 보내면 모름
+        Assert.True(HealthRules.ValidWeight(0));
+        Assert.False(HealthRules.ValidWeight(10));
         Assert.Equal("light", HealthRules.Estimate(1000, 20, "slow", null).Intensity);
         Assert.Equal("brisk", HealthRules.Estimate(1000, 20, "fast", null).Intensity);
     }

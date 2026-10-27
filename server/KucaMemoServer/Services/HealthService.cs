@@ -26,7 +26,10 @@ public static class HealthRules
     public const int SlowBelowMpm = 70, NormalBelowMpm = 85;
     public const string Disclaimer = "일반 건강 정보이며 의료 조언이 아닙니다.";
 
-    public static bool ValidWeight(double? kg) => kg == null || kg is >= MinWeightKg and <= MaxWeightKg;
+    /// <summary>0 이하는 "모름" (앱의 JsonUtility 는 칸을 뺄 수 없어 0 을 보낸다)</summary>
+    public static double? Known(double? kg) => kg is > 0 ? kg : null;
+
+    public static bool ValidWeight(double? kg) => Known(kg) is not { } w || w is >= MinWeightKg and <= MaxWeightKg;
 
     public static string PaceFromSpeed(int distanceM, int durationSec)
     {
@@ -38,7 +41,7 @@ public static class HealthRules
     public static HealthEstimate Estimate(int distanceM, int minutes, string pace, double? weightKg)
     {
         double hours = Math.Max(0, minutes) / 60.0, met = Met(pace);
-        (double lo, double hi) = weightKg is { } w
+        (double lo, double hi) = Known(weightKg) is { } w
             ? (w * (1 - KnownWeightSpread), w * (1 + KnownWeightSpread))
             : (UnknownWeightMin, UnknownWeightMax);
         int steps = (int)Math.Round(Math.Max(0, distanceM) / StrideM / 10.0) * 10;   // 10 걸음 단위

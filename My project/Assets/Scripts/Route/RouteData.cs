@@ -31,6 +31,8 @@ public class RouteRequest
     public string wish;
     /// <summary>장소마다 들른 횟수 (이 기기의 산책 기록). 서버가 "안 가 본 곳 · 자주 가던 곳" 을 판단할 때 쓴다</summary>
     public List<VisitCount> visitCounts = new List<VisitCount>();
+    /// <summary>(선택) 몸무게 kg — 칼로리 범위를 좁힌다 (HealthProfile, 이 기기에만 저장). 0 = 모름</summary>
+    public float weightKg;
 }
 
 [Serializable]
