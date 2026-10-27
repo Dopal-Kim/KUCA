@@ -27,11 +27,16 @@ DIRT = np.array([200, 172, 132], np.float32)        # 실사 대운동장: 마�
 BRICK_PAVE = np.array([170, 98, 80], np.float32)   # 실사 전자정보대학관 앞 붉은 벽돌 광장
 YELLOW = np.array([236, 192, 64], np.float32)       # 차도 중앙선
 LINE = np.array([248, 246, 238], np.float32)
+STONE_STEP = np.array([188, 184, 176], np.float32)  # 화강석 돌계단 (보도 블록보다 회색 · 단단하게)
+GRAVEL = np.array([206, 186, 150], np.float32)      # 공원 · 숲 흙길 (마사토) — 보도 블록과 구분
 
 ROAD_W = {'primary': 16, 'secondary': 14, 'tertiary': 11, 'residential': 8, 'unclassified': 8,
           'living_street': 6, 'service': 5}
 WALK_W = {'footway': 3.2, 'path': 2.6, 'pedestrian': 6, 'steps': 3.5, 'track': 3.2, 'cycleway': 3}
 CENTER_LINE = {'primary', 'secondary', 'tertiary'}
+# OSM 에 보도로만 있는 계단 (사용자 10/27: 중앙도서관 → 학생회관 사이 돌계단)
+STEPS_WAYS = {1389719862}
+TRAIL = {'path', 'track'}
 
 
 def _seamless(a):
@@ -83,6 +88,8 @@ class Ground:
         self.road_lines = list(self._lines(ROAD_W))   # (kind, [(x,z)...]) 월드 좌표
         self.walk_lines = list(self._lines(WALK_W))
         self.walk = self._stroke(self.walk_lines, WALK_W)
+        self.steps = self._stroke([l for l in self.walk_lines if l[0] == 'steps'], WALK_W)
+        self.trail = self._stroke([l for l in self.walk_lines if l[0] in TRAIL], WALK_W)
         self.curb = self._stroke(self.road_lines, ROAD_W, extra=2.2)
         self.road = self._stroke(self.road_lines, ROAD_W)
 
@@ -132,7 +139,7 @@ class Ground:
             t = e.get('tags', {})
             hw = t.get('highway')
             if e['type'] == 'way' and hw in kinds and e.get('geometry') and t.get('area') != 'yes':
-                yield hw, [to_world(p['lon'], p['lat']) for p in e['geometry']]
+                yield 'steps' if e['id'] in STEPS_WAYS else hw, [to_world(p['lon'], p['lat']) for p in e['geometry']]
 
     def _stroke(self, lines, widths, extra=0.0):
         m = Image.new('L', (self.W, self.H), 0)
@@ -455,6 +462,12 @@ class Ground:
         print('ground: roads')
         walk_m = self.walk
         blend(walk_m, paving, 0.7)
+        # 길마다 성격: 공원 · 숲 흙길은 마사토, 계단은 화강석 + 디딤판 줄 (보도 블록과 한눈에 구분되게, 길 사이클 R1)
+        blend(self.trail & ~self.steps, _recolor(paving_t, GRAVEL), 0.75)
+        blend(self.steps, _recolor(paving_t, STONE_STEP), 0.9)
+        treads = Image.new('L', (W, H), 0)
+        self._treads(ImageDraw.Draw(treads))
+        canvas *= (1 - 0.32 * ((np.asarray(treads) > 0) & self.steps))[..., None]
         if hasattr(self, 'brick'):
             blend(self.brick, _recolor(paving_t, BRICK_PAVE))
         blend(self.curb, flat(CURB), 0.7)
@@ -556,6 +569,25 @@ class Ground:
         acc *= 1.0 - 0.12 * np.clip(lap / 0.35, 0, 1)
         Image.fromarray((acc * 255).astype(np.uint8)).save(path)
         print('lights', len(lights), path)
+
+    def _treads(self, md):
+        """계단 디딤판: 0.9 m 마다 길과 직각인 어두운 줄 (단 아래 그늘)"""
+        w = max(1, int(0.22 * self.ppm))
+        half = WALK_W['steps'] / 2 + 0.2
+        for hw, pts in self.walk_lines:
+            if hw != 'steps':
+                continue
+            for a, b in zip(pts, pts[1:]):
+                L = math.hypot(b[0] - a[0], b[1] - a[1])
+                if L < 0.5:
+                    continue
+                rx, rz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+                nx, nz = -rz, rx
+                s = 0.45
+                while s < L:
+                    cx, cz = a[0] + rx * s, a[1] + rz * s
+                    md.line([self.r.px(cx - nx * half, cz - nz * half), self.r.px(cx + nx * half, cz + nz * half)], fill=255, width=w)
+                    s += 0.9
 
     def _crosswalks(self, md):
         """보행로가 차도를 가로지르는 곳에 얼룩말 무늬"""
