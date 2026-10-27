@@ -23,7 +23,7 @@ from kuca_art import figures
 
 # 고품질 피규어(kuca_art/figures.py, figs/) 로 지도용 두 단계 + 도감용 고품질을 만든다.
 #   CreatureMeshes.bytes     가까이 (LOD0, 약 18k 삼각형)  — 확대했을 때 매끈하게
-#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 8k 삼각형)   — 지도에서 여러 마리가 떠 있어도 부드럽게
+#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 9~13k 삼각형) — 지도에서 여러 마리가 떠 있어도 부드럽게 (복잡한 펫은 sculpt 하한으로 조금 더)
 #   --hq → CreatureMeshesHQ.bytes (도감 확대용 60k)
 LEVELS = {'near': ('CreatureMeshes.bytes', 13000, 0.045, 0.4, 6000),
           'far': ('CreatureMeshesFar.bytes', 5000, 0.05, 0.3, 3000),
