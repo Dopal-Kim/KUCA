@@ -41,6 +41,72 @@ public static class UiCapture
     [MenuItem("KUCA/구조물 사방 캡처")]
     public static void RunMap() => Start(MapDir, MapScript());
 
+    /// <summary>
+    /// 캠퍼스 길 · 광장 · 계단을 정해 둔 자리마다 위(80°)와 비스듬히(남쪽에서 40°) 찍는다 → Builds/RoadShots/&lt;자리&gt;_T.png · _S.png
+    ///   Unity.exe -batchmode -projectPath "My project" -executeMethod UiCapture.RunRoads -logFile roads.log
+    /// </summary>
+    [MenuItem("KUCA/길 캡처")]
+    public static void RunRoads() => Start(RoadDir, RoadScript());
+
+    static readonly string RoadDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "RoadShots"));
+
+    /// <summary>
+    /// 길 사이클 자리 (월드 x, z = 지도 m − 가운데). 지도 m 은 tools/keyart 의 geo.py 좌표 (왼쪽 위 북서, 1418 × 1548)
+    /// </summary>
+    static readonly (string name, float x, float z, float size)[] RoadSpots =
+    {
+        ("사색의광장", 96f, -354f, 220f), ("도서관_학생회관_계단", -41f, -276f, 90f), ("도서관_계단_가까이", -41f, -276f, 45f), ("정문_앞", -141f, 369f, 140f),
+        ("공학관_운동장길", -59f, 304f, 160f), ("대운동장_둘레", -149f, -6f, 200f), ("노천극장_천문대길", 221f, -606f, 160f),
+        ("생과대_체대_오르막", 1f, -36f, 160f), ("기숙사_학생회관길", -139f, -176f, 140f), ("외대_멀티_앞", -249f, 74f, 140f),
+        ("캠퍼스_전체", 51f, -126f, 1100f),
+    };
+
+    /// <summary>S(비스듬히)가 앞 건물 지붕에 가려지는 자리: (yaw, pitch) — 도서관 계단은 북쪽에서, 생과대 · 체대는 더 내려다보기 (ROAD_REVIEW_v1)</summary>
+    static readonly Dictionary<string, (float yaw, float pitch)> RoadSideView = new()
+    {
+        ["도서관_학생회관_계단"] = (180f, 55f), ["도서관_계단_가까이"] = (180f, 55f), ["생과대_체대_오르막"] = (0f, 62f),
+    };
+
+    static IEnumerator RoadScript()
+    {
+        Click("확인하고 시작");
+        yield return 1.5f;
+        Click("에디터: 로그인 건너뛰기");
+        yield return 5f;
+        yield return CloseAll();
+        Camera cam = Camera.main != null ? Camera.main : UnityEngine.Object.FindAnyObjectByType<Camera>();
+        if (cam == null)
+            yield break;
+        // 구조물 캡처와 같은 조건: 표지 · 캐릭터를 끄고 한낮 · 봄
+        foreach (string hide in new[] { "KyungHeeSpot", "ModularCharacter", "PartnerBuddy", "Collectible" })
+        {
+            Type ht = TypeOf(hide);
+            if (ht != null)
+                foreach (Component s in UnityEngine.Object.FindObjectsByType(ht, FindObjectsInactive.Exclude, FindObjectsSortMode.None).Cast<Component>())
+                    s.gameObject.SetActive(false);
+        }
+        object look = Find("KeyArtLook");
+        Type lookType = look?.GetType();
+        if (lookType != null)
+        {
+            Call(look, "SetMode", Enum.Parse(lookType.GetNestedType("Mode"), "Day"));
+            Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), "Spring"));
+        }
+        yield return 0.5f;
+        foreach (var (name, x, z, size) in RoadSpots)
+        {
+            float ground = Physics.Raycast(new Vector3(x, 1000f, z), Vector3.down, out RaycastHit hit, 2000f) ? hit.point.y : 0f;
+            Vector3 target = new Vector3(x, ground, z);
+            (float yaw, float pitch) side = RoadSideView.TryGetValue(name, out var v) ? v : (0f, 40f);
+            foreach (var (tag, pitch, yaw, k) in new[] { ("T", 80f, 0f, 0.9f), ("S", side.pitch, side.yaw, 1.1f) })
+            {
+                Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);   // yaw 0: 남쪽에서 북쪽을 본다, 180: 북쪽에서 남쪽
+                ShotFrom(cam, target - rot * Vector3.forward * (size * k), rot, $"{Safe(name)}_{tag}");
+            }
+            yield return 0.05f;
+        }
+    }
+
     static readonly string MapDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "MapShots"));
     static string outDir;
 

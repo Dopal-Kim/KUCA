@@ -5,8 +5,8 @@ namespace KucaMemoServer.Models;
 public record WalkStartRequest(string? RecommendationId, int? Minutes);
 public record WalkStarted(string Id, string StartedAt, int? PlannedDistanceM, List<string> Stops);
 
-/// <summary>WeightKg (선택): 칼로리 범위를 좁힌다. 서버에 저장하지 않는다</summary>
-public record WalkFinishRequest(int DistanceM, int DurationSec, List<string>? VisitedBuildingIds, double? WeightKg = null);
+/// <summary>WeightKg (선택): 칼로리 범위를 좁힌다. Steps (선택): 휴대폰 걸음 센서로 잰 이번 산책 걸음 수. 둘 다 서버에 저장하지 않는다</summary>
+public record WalkFinishRequest(int DistanceM, int DurationSec, List<string>? VisitedBuildingIds, double? WeightKg = null, int? Steps = null);
 /// <summary>리뷰는 코스 별점 · 한 줄만 받는다 (상대 별점은 받지 않음, 10/24 결정)</summary>
 public record WalkReviewRequest(int CourseRating, string? Text);
 

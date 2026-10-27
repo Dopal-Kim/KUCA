@@ -19,7 +19,7 @@ public partial class RoutePlanner
     InputField wishInput;
     /// <summary>말로 적은 산책 바람 (없으면 빈 값)</summary>
     string Wish => wishInput != null ? wishInput.text.Trim() : "";
-    Text mealNote, startValue, destValue, pickerTitle;
+    Text mealNote, startValue, destValue, pickerTitle, wishHint;
     RectTransform pickerList;
     RawImage loadingPartner;
 
@@ -98,47 +98,40 @@ public partial class RoutePlanner
     {
         sheet = Sheet("RouteSheet", "어디로 걸을까요?", HideSheet, 0.9f, 2, out RectTransform c, out RectTransform b, out _);
 
-        // AI 가 무엇을 하는지 시트 맨 위에: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0). 버튼 위에 두니 시트 아래로 밀려 안 보였음 (v24)
-        UIKit.Paragraph(c, "원하는 산책을 말로 적으면 AI 가 어떤 산책이 맞을지 먼저 판단하고, 날씨 · 가 본 횟수 · 경관 · 학생들의 최근 쪽지 · 학교 공지를 비교해 코스 3개를 짜요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
-
-        // 말로 하는 요청 (메인): 칩으로 못 고르는 "그늘 · 오르막 빼고 · 도서관 말고" 같은 바람. 키보드 마이크로 말해도 된다
+        // 메인은 말로 하는 요청: AI 가 문장을 읽고 코스를 짠다 (사용자 결정 10/27 — 칩은 작은 기본 조건으로)
         Question(c, "어떤 산책을 하고 싶어요?");
-        wishInput = UIKit.Input(c, "예: 그늘지고 조용한 데 30분, 오르막은 빼고", KucaTheme.Body, true, 200);
+        UIKit.Text(c, "적은 문장을 AI 가 읽고 코스를 짜요. 키보드 마이크로 말해도 돼요", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.PrimaryDeep);
+        wishInput = UIKit.Input(c, "예: 밥 먹고 소화시킬 겸 30분, 오르막은 빼고", KucaTheme.Body, true, 200);
         UIKit.Size(wishInput, 170f);
-        UIKit.Text(c, "키보드의 마이크로 말해도 돼요. 비워 두면 아래 선택만 써요", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        // 서버가 알아듣지 못한 문장이면 (422) 여기에 "다시 입력해 주세요" — 고쳐 쓰기 시작하면 지운다
+        wishHint = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.Crimson);
+        wishInput.onValueChanged.AddListener(_ => wishHint.text = "");
         RectTransform places = UIKit.ListGroup(c, null);
         places.GetComponent<Image>().color = KucaTheme.Fill;   // 흰 시트 위라 회색 묶음
         startValue = PlaceRow(places, "출발", () => ShowPicker(true));
         destValue = PlaceRow(places, "도착", () => ShowPicker(false));
 
-        Question(c, "얼마나 걸을까요?");
-        RectTransform timeRow = ChipRow(c);
+        // 기본 조건: 작은 칩 두 줄 (시간 + 식후 / 취향, 여러 개). 문장이 비면 이것만 쓴다
+        UIKit.Text(c, "기본 조건  ·  문장이 없으면 이것만 써요", KucaTheme.Label, TextAnchor.LowerLeft, InkQuiet);
+        RectTransform row = ChipRow(c, 80f);
         timeChips = new Image[TimeChoices.Length];
         for (int i = 0; i < TimeChoices.Length; i++)
         {
             int m = TimeChoices[i].minutes;
-            timeChips[i] = Chip(timeRow, TimeChoices[i].label, () => { minutes = m; RefreshChips(); });
+            timeChips[i] = Chip(row, TimeChoices[i].label, () => { minutes = m; RefreshChips(); }, true);
         }
-
-        Question(c, "무엇을 하고 싶어요?");
-        UIKit.Text(c, "여러 개 고를 수 있어요", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        mealChip = Chip(row, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); }, true);
+        row = ChipRow(c, 80f);
         tasteChips = new Image[TasteChoices.Length];
-        RectTransform row = null;
-        // 한 줄에 3개, "식후 걷기" 는 마지막 줄 끝에: 시트 맨 위 AI 안내가 들어간 뒤 마지막 칩 줄이 버튼 뒤로 잘려 빠진 것처럼 보였음 (REVIEW_v25 P1)
         for (int i = 0; i < TasteChoices.Length; i++)
         {
-            if (i % 3 == 0) row = ChipRow(c);
             string id = TasteChoices[i].id;
             tasteChips[i] = Chip(row, TasteChoices[i].label, () =>
             {
                 if (!tastes.Remove(id)) tastes.Add(id);
                 RefreshChips();
-            });
+            }, true);
         }
-        mealChip = Chip(TasteChoices.Length % 3 == 0 ? ChipRow(c) : row, "식후 걷기", () => { afterMeal = !afterMeal; RefreshChips(); });
-        // 마지막 줄도 3칸 격자 폭으로 (두 칩만 넓게 늘어나 더 중요해 보였음, REVIEW_v26)
-        for (Transform last = mealChip.transform.parent; last.childCount < 3;)
-            UIKit.Rect(last, "Spacer").gameObject.AddComponent<LayoutElement>().preferredWidth = 250f;
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
 
         // 코스 없이도: 고른 시간 · 취향으로 걸으며 들을 노래 (코스 카드에는 코스마다 따로 나온다)
@@ -343,14 +336,9 @@ public partial class RoutePlanner
         string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
         UIKit.Bold(UIKit.Text(chooserCards, o.variant.label, KucaTheme.Title, TextAnchor.UpperLeft, Ink));
         UIKit.Text(chooserCards, source + (o.returns ? "  ·  출발지로 돌아오는 한 바퀴" : ""), KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
-        // AI 판단 → 이해한 조건 → 코스를 이렇게 짠 이유 (해석이 틀렸으면 고쳐 적을 수 있게 먼저 보여 준다)
-        if (!string.IsNullOrEmpty(o.result.wish?.judgment))
-            UIKit.Paragraph(chooserCards, $"{(o.result.wish.source == "ai" ? "AI 판단" : "판단")}  ·  {Escape(o.result.wish.judgment)}",
-                KucaTheme.Label, KucaTheme.PrimaryDeep);
+        // 문장을 어떻게 읽었는지만 한 줄 (틀렸으면 고쳐 적게). 코스 설명은 길어서 뺌 (사용자 결정 10/27)
         if (!string.IsNullOrEmpty(o.result.wish?.summary))
-            UIKit.Paragraph(chooserCards, $"이렇게 이해했어요  ·  {Escape(o.result.wish.summary)}", KucaTheme.Label, InkQuiet);
-        if (!string.IsNullOrEmpty(o.result.why))
-            UIKit.Paragraph(chooserCards, $"코스 이유  ·  {Escape(o.result.why)}", KucaTheme.Label, InkQuiet);
+            UIKit.Paragraph(chooserCards, $"이렇게 이해했어요  ·  {Escape(o.result.wish.summary)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
         int visits = o.result.stops.Count - (o.returns ? 1 : 0);
         UIKit.StatRow(chooserCards, (RouteMath.Distance(o.meters), "거리"), ($"{o.walkMinutes}분", "걸리는 시간"), ($"{visits}곳", "들를 곳"));
         ShowCourseHealth(o);
@@ -384,12 +372,13 @@ public partial class RoutePlanner
         float byTime = grow ? Mathf.Max(1f, o.walkMinutes / (float)o.result.totalMinutes) : 1f;
         int steps = Mathf.RoundToInt(h.steps * byDistance / 10f) * 10;
         int kcalMin = Mathf.RoundToInt(h.kcalMin * byTime), kcalMax = Mathf.RoundToInt(h.kcalMax * byTime);
-        UIKit.StatRow(chooserCards, ($"{steps:N0}", "걸음 (약)"), ($"{kcalMin}~{kcalMax}", "kcal (약)"), (h.ShortIntensity, "강도"));
+        // 큰 숫자 줄(StatRow)은 거리 · 시간 · 들를 곳 하나만: 건강 숫자까지 크게 쓰면 360px 폭에서 칸끼리 겹친다 (10/27 폰 확인)
+        UIKit.Bold(UIKit.Paragraph(chooserCards, $"약 {steps:N0}걸음  ·  {kcalMin}~{kcalMax}kcal  ·  {Escape(h.intensityLabel)}", KucaTheme.Body, Ink));
         if (!string.IsNullOrEmpty(o.result.goal?.note))
             UIKit.Paragraph(chooserCards, $"이번 주 목표  ·  {Escape(o.result.goal.note)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
         string weight = HealthProfile.WeightKg.HasValue ? "입력한 몸무게" : "몸무게 50~70kg";
-        UIKit.Text(chooserCards, $"{Escape(h.intensityLabel)} 기준 · {weight}로 셈한 대략값이에요. 일반 건강 정보이며 의료 조언이 아닙니다.",
-            KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+        UIKit.Paragraph(chooserCards, $"걸음 수 · 칼로리는 {weight}로 셈한 대략값이에요. 일반 건강 정보이며 의료 조언이 아닙니다.",
+            KucaTheme.Caption, InkQuiet);
     }
 
     WalkMusic.Request CourseMusic(Option o)
@@ -773,17 +762,17 @@ public partial class RoutePlanner
     static void Question(RectTransform parent, string text) =>
         UIKit.Size(UIKit.Bold(UIKit.Text(parent, text, KucaTheme.Heading, TextAnchor.LowerLeft, Ink)), 96f);
 
-    static RectTransform ChipRow(RectTransform parent)
+    static RectTransform ChipRow(RectTransform parent, float height = 104f)
     {
         RectTransform row = UIKit.Rect(parent, "Chips");
-        UIKit.Size(row, 104f);
+        UIKit.Size(row, height);
         UIKit.Horizontal(row, KucaTheme.Space2);
         return row;
     }
 
-    static Image Chip(RectTransform row, string label, UnityEngine.Events.UnityAction onClick)
+    static Image Chip(RectTransform row, string label, UnityEngine.Events.UnityAction onClick, bool small = false)
     {
-        Button b = UIKit.Chip(row, label, false, onClick);
+        Button b = UIKit.Chip(row, label, false, onClick, small);
         b.gameObject.AddComponent<PressScale>();
         return b.GetComponent<Image>();
     }

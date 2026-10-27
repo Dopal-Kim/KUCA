@@ -388,8 +388,8 @@ public static class UIKit
         return row;
     }
 
-    /// <summary>선택 칩 (둥근 알약). on = 초록 바탕 + 흰 글자, off = 흰 바탕 + 회색 테 + 진한 글자</summary>
-    public static Button Chip(Transform parent, string label, bool on, UnityAction onClick)
+    /// <summary>선택 칩 (둥근 알약). on = 초록 바탕 + 흰 글자, off = 흰 바탕 + 회색 테 + 진한 글자. small = 보조 조건용 작은 칩</summary>
+    public static Button Chip(Transform parent, string label, bool on, UnityAction onClick, bool small = false)
     {
         Image img = Image(parent, label, on ? KucaTheme.Primary : KucaTheme.Card, raycast: true);
         img.sprite = HudIcons.Pill;
@@ -404,12 +404,12 @@ public static class UIKit
         var b = img.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
         b.onClick.AddListener(onClick);
-        Text t = Text(img.transform, label, KucaTheme.Label, TextAnchor.MiddleCenter, on ? Color.white : KucaTheme.Ink);
+        Text t = Text(img.transform, label, small ? KucaTheme.Caption : KucaTheme.Label, TextAnchor.MiddleCenter, on ? Color.white : KucaTheme.Ink);
         if (on) Bold(t);
-        Stretch(t.rectTransform, 32f, 0f);
+        Stretch(t.rectTransform, small ? 20f : 32f, 0f);
         var fit = img.gameObject.AddComponent<LayoutElement>();
-        fit.preferredHeight = fit.minHeight = 104f;
-        fit.preferredWidth = t.preferredWidth + 80f;
+        fit.preferredHeight = fit.minHeight = small ? 80f : 104f;
+        fit.preferredWidth = t.preferredWidth + (small ? 56f : 80f);
         return b;
     }
 

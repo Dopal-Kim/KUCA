@@ -1,5 +1,5 @@
-"""전자정보대 고슴도치: 갈색 가시 (끝마다 밤에 빛나는 따뜻한 LED), 크림 얼굴·배, 진홍 쿠션 헤드셋 + 마이크,
-회청색 조끼 (진홍 스티치), 손에 초록 회로 기판, 받침 위 마이크로칩"""
+"""전자정보대 고슴도치: 갈색 가시 (끝마다 밤에 빛나는 따뜻한 LED), 크림 얼굴, 진홍 쿠션 헤드셋 + 마이크,
+흰 작업복 (금 깃 고리·벨트·발목 테 — 키아트 턴어라운드), 손에 초록 회로 기판, 받침 위 마이크로칩"""
 import math
 
 import numpy as np
@@ -15,8 +15,7 @@ SPINE = (0.50, 0.32, 0.20)
 SPINE_TIP = (0.80, 0.62, 0.44)
 CREAM = (0.99, 0.94, 0.86)
 LED = (1.0, 0.86, 0.42)
-VEST = (0.42, 0.53, 0.70)
-VEST_DK = (0.44, 0.51, 0.62)
+SUIT = (0.97, 0.95, 0.91)
 HP_W = (0.96, 0.94, 0.90)
 PCB = (0.16, 0.52, 0.24)
 CHIP = (0.13, 0.13, 0.15)
@@ -77,36 +76,24 @@ def w_mouth(fig, f, w, col):
 def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     y0 = Fg.TOP
-    g = (Fg.GOLD, Fg.GOLD_HI)
+    g = (Fg.GOLD, (1.0, 0.84, 0.36))   # 가는 금 테가 탁한 카키로 뜨지 않게 반사색을 진하게
     # ---- 다리·발: 짧고 통통 ----
     for s in (-1, 1):
         x = s * 0.66
         fig.add(S.ellipsoid((x, y0 + 0.28, 0.28), (0.5, 0.3, 0.6)), CREAM, k=0.1, layer='feet')
-        fig.add(S.capsule((x, y0 + 0.5, 0.05), (x, y0 + 1.15, 0.0), 0.5, 0.56), BROWN, k=0.12)
+        fig.add(S.capsule((x, y0 + 0.5, 0.05), (x, y0 + 1.15, 0.0), 0.5, 0.56), SUIT, k=0.12)
+        fig.add(S.torus((x, y0 + 0.62, 0.04), 0.5, 0.075), Fg.GOLD, k=0.0, layer='trim', metal=g)   # 발목 금 테
     # ---- 몸통: 동그란 공 + 크림 배 ----
     BC, BR = (0, y0 + 2.2, 0.0), (1.48, 1.32, 1.3)
     ball = S.ellipsoid(BC, BR)
-    hips = ball
     chest = S.ellipsoid((0, y0 + 2.7, 0.0), (1.2, 0.95, 1.05))
-    fig.add(ball, BROWN, k=0.4)
-    fig.add(chest, BROWN, k=0.45)
-    # 조끼: 앞이 트인 회청색 조끼 + 진홍 스티치
-    vest0 = lambda P: S.smin(hips(P), chest(P), 0.45) - 0.1
-    vest = S.intersect(vest0, lambda P: np.maximum((y0 + 1.5) - P[:, 1], P[:, 1] - (y0 + 3.45)))
-    opening = lambda P: (np.abs(P[:, 0]) - 0.32 - 0.28 * np.clip((P[:, 1] - (y0 + 2.3)) / 1.1, 0, 1)) * 1.0
-    vest = S.subtract(vest, S.intersect(opening, lambda P: 0.15 - P[:, 2]), k=0.05)
-    for s in (-1, 1):     # 팔 구멍
-        vest = S.subtract(vest, S.ellipsoid((s * 1.38, y0 + 3.0, 0.05), (0.42, 0.55, 0.55)), k=0.05)
-    fig.add(vest, VEST, k=0.0, layer='vest')
-    fig.paint(lambda P: np.maximum(S.ellipsoid((0, y0 + 2.2, 1.0), (0.95, 1.3, 0.8))(P), 0.25 - 6 * vest(P)), CREAM, soft=0.2)
-    vest_shell = lambda P: np.abs(vest(P)) - 0.04
-    def stitch(P):
-        ax = np.abs(P[:, 0])
-        edge = np.abs(ax - (0.4 + 0.28 * np.clip((P[:, 1] - (y0 + 2.3)) / 1.1, 0, 1)))
-        hem = np.abs(P[:, 1] - (y0 + 1.6))
-        line = np.minimum(np.where(P[:, 2] > 0.3, edge, 9), hem)
-        return np.maximum(line - 0.05, vest_shell(P))
-    fig.paint(stitch, Fg.CRIMSON, soft=0.04)
+    fig.add(ball, SUIT, k=0.4)
+    fig.add(chest, SUIT, k=0.45)
+    # 흰 작업복의 금 벨트 + 목 둘레 금 고리 (갈색 머리와 흰 몸의 경계를 덮음)
+    fig.add(S.intersect(S.ellipsoid(BC, (BR[0] + 0.07, BR[1] + 0.07, BR[2] + 0.07)), S.box((0, y0 + 1.82, 0), (3, 0.14, 3))),
+            Fg.GOLD, k=0.0, layer='trim', metal=g)
+    fig.add(S.torus((0, y0 + 3.3, 0.05), 0.9, 0.14), Fg.GOLD, k=0.0, layer='trim', metal=g)
+    torso = lambda P: S.smin(ball(P), chest(P), 0.45)
     # ---- 팔: 짧은 갈색 팔 + 크림 손 ----
     hands = {}
     for s in (-1, 1):
@@ -115,9 +102,9 @@ def build(fig, rng):
             el, wr = np.array((1.72, y0 + 2.3, 0.45)), np.array((1.48, y0 + 2.5, 1.1))
         else:
             el, wr = np.array((-1.68, y0 + 2.35, 0.15)), np.array((-1.95, y0 + 1.8, 0.4))
-        fig.add(S.sphere(tuple(sh), 0.46), BROWN, k=0.15)
-        fig.add(S.capsule(tuple(sh), tuple(el), 0.42, 0.38), BROWN, k=0.12)
-        fig.add(S.capsule(tuple(el), tuple(wr), 0.38, 0.36), BROWN, k=0.1)
+        fig.add(S.sphere(tuple(sh), 0.46), SUIT, k=0.15)
+        fig.add(S.capsule(tuple(sh), tuple(el), 0.42, 0.38), SUIT, k=0.12)
+        fig.add(S.capsule(tuple(el), tuple(wr), 0.38, 0.36), SUIT, k=0.1)
         hand = wr + (wr - el) / np.linalg.norm(wr - el) * 0.25
         fig.add(S.sphere(tuple(hand), 0.36), CREAM, k=0.12, layer='paw')
         hands[s] = hand
@@ -162,22 +149,22 @@ def build(fig, rng):
         p = np.array(hc) + d * np.array(HRX) * 0.95
         dd = d + np.array((0, 0.15, -0.25))
         dd /= np.linalg.norm(dd)
-        L = 1.0 + 0.15 * rng.random()
+        L = 0.78 + 0.12 * rng.random()    # 키아트: 짧고 끝이 둥근 물방울 가시
         tip = p + dd * L
-        spines.append((p, tip, 0.5, 0.12))
-        tips.append(tip + dd * 0.06)
+        spines.append((p, tip, 0.52, 0.19))
+        tips.append(tip + dd * 0.15)
     fig.add(spine_field(spines, hc, (HRX[0] + 1.4, HRX[1] + 1.4, HRX[2] + 1.4), (HR * 0.75, HR * 0.7, HR * 0.75)), SPINE, k=0.12)
     bspines = []
     bc_ = np.array((0, y0 + 2.4, 0.0))
     for d in fib_dirs(52):
-        if d[2] > -0.35 or d[1] < -0.45 or d[1] > 0.8:
+        if d[2] > -0.35 or d[1] < -0.05 or d[1] > 0.8:    # 등 위쪽만 (아래는 흰 작업복)
             continue
         p = bc_ + d * np.array((1.55, 1.3, 1.36)) * 0.9
         dd = d + np.array((0, 0.25, -0.3))
         dd /= np.linalg.norm(dd)
-        tip = p + dd * (0.9 + 0.1 * rng.random())
-        bspines.append((p, tip, 0.46, 0.12))
-        tips.append(tip + dd * 0.06)
+        tip = p + dd * (0.7 + 0.1 * rng.random())
+        bspines.append((p, tip, 0.48, 0.18))
+        tips.append(tip + dd * 0.14)
     fig.add(spine_field(bspines, tuple(bc_), (2.6, 2.3, 2.5), (1.0, 0.8, 0.85)), SPINE, k=0.12)
     # 가시 끝은 밝은 갈색
     tipsA = np.array(tips)
@@ -189,7 +176,7 @@ def build(fig, rng):
     fig.paint(tipglow, SPINE_TIP, soft=0.35)
     fig.extra.emissive = True
     for t in tips:
-        Fg._ellipsoid(fig.extra, tuple(t), (0.13, 0.13, 0.13), LED, 10, 6)
+        Fg._ellipsoid(fig.extra, tuple(t), (0.12, 0.12, 0.12), LED, 10, 6)
     fig.extra.emissive = False
     # ---- 헤드셋: 크림 밴드, 진홍 쿠션, 금 테, 마이크 ----
     band = S.intersect(S.torus((0, hc[1] - 0.35, hc[2] + 0.1), 2.85, 0.19, Rm=S.rot(0, 90, 0)), lambda P: hc[1] - 0.05 - P[:, 1])
@@ -216,6 +203,8 @@ def build(fig, rng):
     Fg._ellipsoid(fig.extra, (0, 0, 0.02), (0.2, 0.15, 0.14), (0.12, 0.08, 0.07), 12, 6, nose_f)
     Fg._ellipsoid(fig.extra, (-0.06, 0.06, 0.12), (0.06, 0.035, 0.03), (0.6, 0.6, 0.6), 6, 4, nose_f)
     w_mouth(fig, mouth_f, 0.18, (0.3, 0.14, 0.12))
+    # 목 아래 몸통은 흰 작업복: 갈색 머리·가시 색이 가슴·등으로 번진 것을 덮음
+    fig.paint(lambda P: np.maximum(P[:, 1] - (y0 + 3.3), torso(P) - 0.2), SUIT, soft=0.06)
     # ---- 받침 소품: 마이크로칩 (왼쪽 앞) + 회색 돌 ----
     cx_, cz_ = -2.5, 1.9
     Rk = S.rot(25, 0, 0)

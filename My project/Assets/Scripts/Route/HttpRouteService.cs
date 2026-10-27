@@ -15,6 +15,8 @@ public class HttpRouteService : IRouteService
     readonly LocalRouteService fallback;
     const int RecommendTimeout = 30; // AI 가 코스를 짜는 시간 + 무료 요금제 서버가 깨어나는 시간
 
+    [Serializable] class ErrorBody { public string error; public string code; }
+
     public HttpRouteService(string baseUrl, LocalRouteService fallback)
     {
         this.baseUrl = baseUrl.TrimEnd('/');
@@ -37,6 +39,15 @@ public class HttpRouteService : IRouteService
         if (result != null && result.stops != null && result.stops.Count > 0)
         {
             onDone(result, null);
+            yield break;
+        }
+        // 말로 한 바람을 알아듣지 못함 (422 wish_unclear): 기본 추천으로 지어내지 않고 "다시 입력해 주세요" 를 그대로 보여 준다
+        if (req.responseCode == 422)
+        {
+            ErrorBody body = null;
+            try { body = JsonUtility.FromJson<ErrorBody>(req.downloadHandler.text); }
+            catch (ArgumentException) { }
+            onDone(null, string.IsNullOrEmpty(body?.error) ? "어떤 산책을 원하는지 알아듣지 못했어요. 다시 입력해 주세요" : body.error);
             yield break;
         }
         Debug.Log($"[Route] 서버 추천을 못 받아 기본 추천으로 ({req.responseCode} {req.error})");

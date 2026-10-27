@@ -116,12 +116,11 @@ public class HealthEstimate
     public string intensity;
     /// <summary>"가벼운 산책" · "보통 걷기" · "운동 되는 걷기"</summary>
     public string intensityLabel;
+    /// <summary>true 면 걸음 수가 휴대폰 걸음 센서 값 (산책 끝 응답만), false 면 거리로 어림</summary>
+    public bool stepsMeasured;
 
     /// <summary>JsonUtility 는 빠진 객체도 빈 객체로 채우니 숫자로 있는지 본다</summary>
     public static bool Has(HealthEstimate h) => h != null && h.steps > 0;
-
-    /// <summary>카드에 한 줄로: "보통" (강도 칸이 좁아서 짧게)</summary>
-    public string ShortIntensity => intensity switch { "light" => "가볍게", "brisk" => "활발히", _ => "보통" };
 }
 
 /// <summary>이번 주 걷기 목표 (월요일 0시부터, WHO 150분)</summary>

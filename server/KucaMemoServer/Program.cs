@@ -74,7 +74,10 @@ builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = PhotoS
 
 var app = builder.Build();
 // SQLite 표를 만드는 저장소는 시작할 때 만든다: 늦게 만들면 그 전에 열려 있던 연결이 새 표를 모른다("no such table")
-app.Services.GetRequiredService<NoticeStore>();
+// (memos 도 같은 문제: 장소 상태가 백그라운드에서 먼저 읽어 테스트가 가끔 500, 10/27)
+foreach (Type store in new[] { typeof(NoticeStore), typeof(MemoStore), typeof(WalkStore), typeof(AccountStore), typeof(MatchStore),
+                               typeof(MetricsStore), typeof(RecommendationStore), typeof(WalkShareStore) })
+    app.Services.GetService(store);
 
 app.UseSwagger();
 app.UseSwaggerUI();

@@ -85,6 +85,8 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
             throw new WalkException(400, "distanceM, durationSec 는 0 이상이어야 합니다 (최대 6시간).");
         if (!HealthRules.ValidWeight(body.WeightKg))
             throw new WalkException(400, $"weightKg 는 {HealthRules.MinWeightKg}~{HealthRules.MaxWeightKg} 입니다.");
+        if (!HealthRules.ValidSteps(body.Steps))
+            throw new WalkException(400, $"steps 는 {HealthRules.MaxSteps} 이하입니다.");
         WalkStore.Walk walk = Own(userId, walkId);
         if (walk.FinishedAt != null)
             throw new WalkException(409, "이미 끝낸 산책이에요.");
@@ -115,6 +117,9 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         // 건강: 실제로 걸은 거리 · 시간 · 빠르기로 걸음 수와 칼로리 범위 (몸무게는 저장하지 않는다)
         HealthEstimate healthNow = HealthRules.Estimate(distance, body.DurationSec / 60,
                                                         HealthRules.PaceFromSpeed(distance, body.DurationSec), body.WeightKg);
+        // 휴대폰 걸음 센서 값이 거리와 맞으면 그 값을 쓴다 (칼로리는 그대로 시간 · 빠르기로)
+        if (HealthRules.MeasuredSteps(body.Steps, distance) is { } measured)
+            healthNow = healthNow with { Steps = measured, StepsMeasured = true };
         return new WalkFinished(completed, distance, reward, ProgressOf(userId), healthNow);
     }
 

@@ -16,7 +16,7 @@ BLUEP = (0.46, 0.70, 1.0)
 LILAC = (0.70, 0.54, 0.98)
 PEACH = (1.0, 0.66, 0.46)
 BELLY = (0.99, 0.93, 0.74)
-BERET = (0.74, 0.07, 0.20)
+BERET = (0.54, 0.05, 0.19)
 LEATHER = (0.55, 0.32, 0.16)
 LEATHER_DK = (0.42, 0.23, 0.11)
 WOOD = (0.86, 0.66, 0.42)
@@ -75,11 +75,11 @@ def build(fig, rng):
     fig.add(S.ellipsoid(tuple(hc), (1.58, 1.3, 1.9)), B, k=0.45)
     fig.add(S.ellipsoid(tuple(hc + (0, -0.45, 0.35)), (1.5, 0.85, 1.55)), B, k=0.5)        # 넓은 턱 (볼 볼륨)
     fig.add(S.ellipsoid((0, y0 + 3.65, 0.3), (0.82, 0.48, 0.72)), B, k=0.3)              # 목
-    casque = S.ellipsoid(tuple(hc + (0, 0.82, -1.05)), (0.5, 0.95, 1.05), R=S.rot(0, -38, 0))
+    casque = S.ellipsoid(tuple(hc + (0, 0.7, -1.0)), (0.45, 0.82, 0.95), R=S.rot(0, -38, 0))
     fig.add(casque, B, k=0.35)                                                             # 투구 볏
     eyes = []
     for s in (-1, 1):
-        tc = hc + (s * 1.22, 0.32, 0.95)
+        tc = hc + (s * 1.15, 0.32, 0.95)
         fig.add(S.sphere(tuple(tc), 0.86), B, k=0.35)
         eyes.append((s, tc))
     # 등 볏 (작은 혹 줄: 투구 꼭대기 → 등 → 꼬리 시작)
@@ -99,7 +99,7 @@ def build(fig, rng):
     for i in range(-2, 16):
         col = bands[i % len(bands)]
         c0 = y0 + i * BW
-        lp(lambda P, c0=c0: np.abs(coord(P) - c0 - BW / 2) - BW / 2, col, 0.05)
+        lp(lambda P, c0=c0: np.abs(coord(P) - c0 - BW / 2) - BW / 2, col, 0.35)
     # 얼굴 앞 (차분한 민트 가면) · 배·턱 (크림, 또렷한 경계)
     lp(S.ellipsoid(tuple(hc + (0, -0.05, 1.45)), (1.1, 0.85, 0.75)), MINT, 0.04)
     lp(S.ellipsoid((0, y0 + 2.05, 0.95), (0.62, 0.95, 0.34)), BELLY, 0.04)
@@ -131,9 +131,9 @@ def build(fig, rng):
 
     # ---------- 베레모 ----------
     top = hit(fig, (0, y0 + 9, hc[2] + 0.35), (0, -1, 0))
-    bcn = top + (0.0, 0.0, -0.05)
+    bcn = top + (0.0, -0.2, -0.4)
     Rb = S.rot(0, -10, -13)
-    fig.add(S.ellipsoid(tuple(bcn + (0.2, 0.25, 0)), (2.0, 0.55, 1.8), R=Rb), BERET, k=0.25, layer='beret')
+    fig.add(S.ellipsoid(tuple(bcn + (0.2, 0.25, 0)), (2.0, 0.68, 1.95), R=Rb), BERET, k=0.25, layer='beret')
     fig.add(S.torus(tuple(bcn + (0.05, -0.08, 0)), 1.25, 0.18, Rm=Rb), BERET, k=0.2, layer='beret')
     fig.add(S.capsule(tuple(bcn + (0.15, 0.6, 0)), tuple(bcn + (0.2, 0.9, 0)), 0.15, 0.17), BERET, k=0.08, layer='beret')
 
@@ -170,17 +170,22 @@ def build(fig, rng):
     # ---------- 가방 끈 + 가방 (물감 튜브) ----------
     bag_c = np.array((-1.05, y0 + 1.5, 0.95))
     Rg = S.rot(-30, 0, 0)
+    def torso_only(P):
+        d = S.ellipsoid(*torso[0])(P)
+        for c_, r_ in torso[1:]:
+            d = S.smin(d, S.ellipsoid(c_, r_)(P), 0.4)
+        return d
     strap = []
     for i in range(13):   # 오른쪽 어깨 → 가슴 대각선 → 왼쪽 허리 가방
         t = i / 12
         x = 0.85 - 1.85 * t
         y = y0 + 3.2 - 1.3 * t
-        q = hit(fig, (x, y, 4.5), (0, 0, -1))
+        q = hit(fig, (x, y, 4.5), (0, 0, -1), field=torso_only)
         strap.append(q + (0, 0, 0.04))
     back = []
     for i in range(9):    # 등쪽
         t = i / 8
-        q = hit(fig, (0.85 - 1.85 * t, y0 + 3.2 - 1.2 * t, -4.5), (0, 0, 1))
+        q = hit(fig, (0.85 - 1.85 * t, y0 + 3.2 - 1.2 * t, -4.5), (0, 0, 1), field=torso_only)
         back.append(q + (0, 0, -0.04))
     for a_, b_ in zip(back, back[1:]):
         fig.add(S.capsule(tuple(a_), tuple(b_), 0.07), LEATHER, k=0.02, layer='strap')
