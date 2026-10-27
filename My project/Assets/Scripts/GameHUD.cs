@@ -903,6 +903,13 @@ public class GameHUD : MonoBehaviour
             WalkMusic.NextApp();
             UIKit.SetLabel(musicApp, MusicAppLabel());
         });
+        // 걸음 센서 (켜면 산책 중 휴대폰이 센 걸음 수, 끄면 거리로 어림). 이번 산책 걸음 수만 서버에 보내고 서버는 저장하지 않는다
+        Button stepSensor = null;
+        stepSensor = UIKit.ListRow(walkGroup, StepSensorLabel(), chevron: false, onClick: () =>
+        {
+            StepTracker.Enabled = !StepTracker.Enabled;
+            UIKit.SetLabel(stepSensor, StepSensorLabel());
+        });
         // 체험 계정만: 캠퍼스 밖에서도 정문부터 가상으로 걸어 보기 (공모전 심사 설명용)
         virtualWalkButton = UIKit.ListRow(walkGroup, "가상 산책 켜기 (체험 계정)", chevron: false, onClick: () =>
         {
@@ -963,6 +970,8 @@ public class GameHUD : MonoBehaviour
 
         UIKit.Size(UIKit.Text(settingsList, "KUCA · 경희대 국제캠퍼스를 함께 걷는 산책 동반자", KucaTheme.Caption, TextAnchor.MiddleCenter, KucaTheme.InkSoft), 100f);
     }
+
+    static string StepSensorLabel() => $"걸음 센서로 걸음 세기: {(StepTracker.Enabled ? "켜짐" : "꺼짐")}";
 
     static string MusicAppLabel() => $"노래 들을 앱: {WalkMusic.AppName}";
 

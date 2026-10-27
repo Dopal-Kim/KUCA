@@ -20,6 +20,11 @@ public static class HealthRules
     public const double MinWeightKg = 30, MaxWeightKg = 200;
     /// <summary>[가정] 보폭 (m). 키를 받지 않으므로 성인 평균</summary>
     public const double StrideM = 0.7;
+    /// <summary>[가정] 센서 걸음 수를 믿는 보폭 범위 (m). 이 밖이면 GPS 거리와 안 맞으니 어림값을 쓴다</summary>
+    public const double MinMeasuredStrideM = 0.25, MaxMeasuredStrideM = 1.6;
+    /// <summary>[가정] 이보다 짧게 걸었으면 거리로 걸음 수를 맞춰 볼 수 없어 센서 값을 쓰지 않는다 (m)</summary>
+    public const int MinDistanceForMeasuredM = 100;
+    public const int MaxSteps = 100_000;
     /// <summary>WHO 권장: 일주일에 중간 강도 활동 150분</summary>
     public const int WeeklyGoalMinutes = 150;
     /// <summary>[가정] 속도로 걷기 빠르기를 나눈다 (m/분): 70 미만 느긋 · 85 미만 보통 · 이상 빠름</summary>
@@ -53,6 +58,19 @@ public static class HealthRules
         };
         return new HealthEstimate(steps, (int)Math.Round(met * lo * hours), (int)Math.Round(met * hi * hours), key, label);
     }
+
+    /// <summary>
+    /// 센서 걸음 수를 쓸지: 0 이하는 "모름" (앱이 칸을 뺄 수 없음), 걸은 거리로 나눈 보폭이 0.25~1.6m 일 때만 믿는다.
+    /// 걸음 수는 보상 · 완료에 쓰지 않고 화면에만 보이므로, 안 맞으면 거절하지 않고 어림값으로 돌아간다.
+    /// </summary>
+    public static int? MeasuredSteps(int? steps, int distanceM)
+    {
+        if (steps is not > 0 || distanceM < MinDistanceForMeasuredM) return null;
+        double stride = distanceM / (double)steps.Value;
+        return stride is >= MinMeasuredStrideM and <= MaxMeasuredStrideM ? steps : null;
+    }
+
+    public static bool ValidSteps(int? steps) => steps is null or <= MaxSteps;
 
     /// <summary>이번 주가 시작된 때 (한국 시각 월요일 0시)</summary>
     public static DateTimeOffset WeekStart(DateTimeOffset now)

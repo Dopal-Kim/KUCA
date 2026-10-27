@@ -74,6 +74,24 @@ public class WalkCompleteTests
     }
 
     [Test]
+    public void 센서로_잰_걸음_수는_약_없이_보인다()
+    {
+        const string json = "{\"completed\":true,\"reward\":{\"tickets\":0,\"xp\":30}," +
+            "\"health\":{\"steps\":2875,\"kcalMin\":88,\"kcalMax\":123,\"intensity\":\"moderate\",\"intensityLabel\":\"보통 걷기\",\"stepsMeasured\":true}}";
+        var req = new WalkCompleteRequest { kind = WalkSession.Course, walkId = "w_3", meters = 2100, steps = 2875 };
+        WalkCompleteResult r = HttpWalkService.ParseFinish(req, json, 0);
+        Assert.IsTrue(r.health.stepsMeasured);
+        Assert.AreEqual("2,875걸음  ·  88~123kcal  ·  보통 걷기", WalkCompleteScreen.HealthLine(r.health));
+    }
+
+    [Test]
+    public void 에디터에서는_걸음_센서를_켜지_않는다()
+    {
+        StepTracker.Begin(12345);
+        Assert.AreEqual(-1, StepTracker.Finish(12345));   // 센서 없음 → 서버가 거리로 어림
+    }
+
+    [Test]
     public void 코치_응답은_글이_있을_때만_보인다()
     {
         CoachMessage c = HttpWalkService.ParseCoach("{\"text\":\"이번 주 82분 걸었어요.\",\"source\":\"ai\"," +

@@ -19,6 +19,8 @@ public class WalkCompleteRequest
     public int plannedMeters, stopsDone, stopsTotal;
     /// <summary>코스에서 들른 경희스팟 건물 ID</summary>
     public List<string> visitedBuildingIds = new List<string>();
+    /// <summary>휴대폰 걸음 센서로 센 이번 산책 걸음 수 (StepTracker). 못 셌으면 0 → 서버가 거리로 어림</summary>
+    public int steps;
     /// <summary>걸은 길 (지도 월드 좌표, WalkTrack 이 기록). 서버에는 보내지 않고 돌아보기 · 산책 기록에만 쓴다</summary>
     [NonSerialized] public List<Vector3> track = new List<Vector3>();
     [NonSerialized] public string title = "";
@@ -147,6 +149,7 @@ public static class WalkSession
         PartnerNickname = nickname;
         startMeters = Progress != null ? Progress.walkedMeters : 0f;
         startTime = Time.realtimeSinceStartup;
+        StepTracker.Begin(session);
     }
 
     /// <summary>시작하고 지난 시간 (초)</summary>
@@ -172,10 +175,15 @@ public static class WalkSession
             visitedBuildingIds = visited != null ? new List<string>(visited) : new List<string>(),
             track = WalkTrack.Points(session),
             title = Title ?? "",
+            steps = Mathf.Max(0, StepTracker.Finish(session)),
         };
         Active = false;
         return r;
     }
 
-    public static void Abandon() => Active = false;
+    public static void Abandon()
+    {
+        Active = false;
+        StepTracker.Stop();
+    }
 }

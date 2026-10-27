@@ -43,7 +43,7 @@ public class WalkCompleteScreen : MonoBehaviour
     Text title, sub, statMeters, statMinutes, statStops, reason, rewardText, levelText, reviewNote;
     RectTransform levelFill, weekFill;
     GameObject weekCard;
-    Text healthLine, weekText, weekLeft, coachText, coachNote;
+    Text healthLine, healthHow, weekText, weekLeft, coachText, coachNote;
     int coachAsk;   // 코치 응답이 늦게 와도 다음 산책 화면에 섞이지 않게
     Image[] partnerStarImages, courseStarImages;
     InputField comment;
@@ -297,10 +297,12 @@ public class WalkCompleteScreen : MonoBehaviour
         bool has = HealthEstimate.Has(h);
         healthLine.gameObject.SetActive(has);
         if (has) healthLine.text = HealthLine(h);
+        healthHow.text = (has && h.stepsMeasured ? "걸음 수는 휴대폰 걸음 센서 값, 칼로리는 시간 · 빠르기로 셈한 대략값이에요. "
+                                                 : "걸음 수 · 칼로리는 거리 · 시간으로 셈한 대략값이에요. ") + RouteMath.HealthNote;
     }
 
     public static string HealthLine(HealthEstimate h) =>
-        $"약 {h.steps:N0}걸음  ·  {h.kcalMin}~{h.kcalMax}kcal  ·  {h.intensityLabel}";
+        $"{(h.stepsMeasured ? "" : "약 ")}{h.steps:N0}걸음  ·  {h.kcalMin}~{h.kcalMax}kcal  ·  {h.intensityLabel}";
 
     /// <summary>이번 주 목표 막대가 이번 산책 전 → 후로 차오른다. 값이 없으면 (코치도 없으면) 카드를 숨긴다</summary>
     void ShowWeek(WeekGoal w, int walkedNow)
@@ -444,7 +446,7 @@ public class WalkCompleteScreen : MonoBehaviour
         UIKit.Size(reason, 64f);
         healthLine = UIKit.Bold(UIKit.Text(summary, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink));
         UIKit.Size(healthLine, 56f);
-        UIKit.Paragraph(summary, "걸음 수 · 칼로리는 거리 · 시간으로 셈한 대략값이에요. " + RouteMath.HealthNote, KucaTheme.Caption, KucaTheme.InkSoft);
+        healthHow = UIKit.Paragraph(summary, "", KucaTheme.Caption, KucaTheme.InkSoft);
 
         // 이번 주 걷기 목표 (WHO 150분) + AI 코치 한 줄
         RectTransform wc = UIKit.CardBox(list, "Week", KucaTheme.Space2);
