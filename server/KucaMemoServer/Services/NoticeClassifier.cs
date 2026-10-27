@@ -129,7 +129,7 @@ public class AiNoticeClassifier : INoticeClassifier
         return new JsonObject
         {
             ["model"] = model,
-            ["max_tokens"] = 400,
+            ["max_tokens"] = 1000,   // 400 이면 요약 · 기간을 쓰다 잘려 대체 요약(본문 앞부분)으로 빠졌다
             ["messages"] = new JsonArray
             {
                 new JsonObject { ["role"] = "system", ["content"] = system },
