@@ -5,8 +5,9 @@ using UnityEngine.UI;
 
 /// <summary>
 /// 산책 완료 화면 (B-V4). 추천 코스를 다 돌았거나 (또는 80% 이상), 산책메이트와 "산책 끝내기" 를 누르면 뜬다.
-/// - 걸은 거리 · 시간 · 칼로리, "파트너와 사진 찍기" (A-V4 AR 사진 화면을 여는 진입점: PartnerPhoto)
+/// - 걸은 거리 · 시간, 걸음 수 · 칼로리 범위 (서버 공식), "파트너와 사진 찍기" (A-V4 AR 사진 화면을 여는 진입점: PartnerPhoto)
 /// - 리뷰: 산책메이트 별점 (함께 걸었을 때) · 코스 별점 · 한 줄 → 서버
+/// - 이번 주 걷기 목표 (150분) 막대 + AI 코치 한 줄 (로그인 · 서버가 있을 때만, 기기 판정이면 카드를 숨긴다)
 /// - 보상: 서버가 정한 경험치 · 티켓 · 파트너 진화 경험치를 받아 더하고, 레벨 막대를 채운다
 /// 서버 호출은 IWalkService: 서버에 API 가 없으면 기기 계산 (HttpWalkService → LocalWalkService).
 /// v4 (docs/디자인_v4.md): 애플 피트니스 운동 요약 + 듀오링고 레슨 완료 — 큰 숫자 3개 · 걸은 길 카드 · 보상 카드 · 리뷰 카드,
@@ -40,7 +41,10 @@ public class WalkCompleteScreen : MonoBehaviour
     RenderTexture recapTexture;
     WalkHistory.Entry saved;
     Text title, sub, statMeters, statMinutes, statStops, reason, rewardText, levelText, reviewNote;
-    RectTransform levelFill;
+    RectTransform levelFill, weekFill;
+    GameObject weekCard;
+    Text healthLine, weekText, weekLeft, coachText, coachNote;
+    int coachAsk;   // 코치 응답이 늦게 와도 다음 산책 화면에 섞이지 않게
     Image[] partnerStarImages, courseStarImages;
     InputField comment;
     Button sendButton;
@@ -109,6 +113,10 @@ public class WalkCompleteScreen : MonoBehaviour
         partnerRow.SetActive(false);   // 리뷰는 코스만 평가 (10/24 결정, 상대 별점 없음)
         rewardText.text = "";
         levelText.text = "";
+        ShowHealth(null);
+        ShowWeek(null, 0);
+        ShowCoach(null);
+        int ask = ++coachAsk;
         RefreshStars();
         root.SetActive(true);
         UIInputBlocker.SetModal(this, true);
@@ -138,6 +146,11 @@ public class WalkCompleteScreen : MonoBehaviour
             reason.color = r.completed ? Green : Ink;
             ApplyReward(r.xp, r.tickets, r.growth);
             StartCoroutine(FillLevel(score, r));
+            ShowHealth(r.health);
+            ShowWeek(r.week, walk.minutes);
+            // 코치는 이번 산책이 주간 기록에 들어간 뒤에 묻는다 (서버 산책일 때만)
+            if (r.week != null && service is HttpWalkService http)
+                StartCoroutine(http.Coach(c => { if (ask == coachAsk) ShowCoach(c); }));
         }));
     }
 
@@ -276,6 +289,57 @@ public class WalkCompleteScreen : MonoBehaviour
         }
     }
 
+    // ---------- 건강 (걸음 수 · 칼로리 · 이번 주 목표 · 코치) ----------
+
+    /// <summary>요약 카드 한 줄: "약 2,000걸음 · 58~82kcal · 보통 걷기". 서버 값이 없으면 숨긴다</summary>
+    void ShowHealth(HealthEstimate h)
+    {
+        bool has = HealthEstimate.Has(h);
+        healthLine.gameObject.SetActive(has);
+        if (has) healthLine.text = HealthLine(h);
+    }
+
+    public static string HealthLine(HealthEstimate h) =>
+        $"약 {h.steps:N0}걸음  ·  {h.kcalMin}~{h.kcalMax}kcal  ·  {h.intensityLabel}";
+
+    /// <summary>이번 주 목표 막대가 이번 산책 전 → 후로 차오른다. 값이 없으면 (코치도 없으면) 카드를 숨긴다</summary>
+    void ShowWeek(WeekGoal w, int walkedNow)
+    {
+        bool has = WeekGoal.Has(w);
+        weekCard.SetActive(has);
+        if (!has) return;
+        weekText.text = WeekLine(w);
+        weekLeft.text = w.minutesLeft > 0 ? $"목표까지 {w.minutesLeft}분 남았어요" : "이번 주 목표를 채웠어요!";
+        weekLeft.color = w.minutesLeft > 0 ? InkQuiet : Green;
+        float to = Mathf.Clamp01(w.weekMinutes / (float)w.goalMinutes);
+        float from = Mathf.Clamp01(Mathf.Max(0, w.weekMinutes - walkedNow) / (float)w.goalMinutes);
+        StartCoroutine(FillBar(weekFill, from, to));
+    }
+
+    public static string WeekLine(WeekGoal w) => $"이번 주 {w.weekMinutes} / {w.goalMinutes}분  ·  {w.weekWalks}번 걸었어요";
+
+    void ShowCoach(CoachMessage c)
+    {
+        bool has = c != null && !string.IsNullOrWhiteSpace(c.text);
+        coachText.gameObject.SetActive(has);
+        coachNote.gameObject.SetActive(has);
+        if (!has) return;
+        coachText.text = (c.source == "ai" ? "AI 코치  ·  " : "코치  ·  ") + c.text;
+        coachNote.text = string.IsNullOrEmpty(c.note) ? RouteMath.HealthNote : c.note;
+        if (!weekCard.activeSelf && WeekGoal.Has(c.week))
+            ShowWeek(c.week, 0);
+    }
+
+    static IEnumerator FillBar(RectTransform fill, float from, float to)
+    {
+        for (float t = 0f; t < 0.8f; t += Time.unscaledDeltaTime)
+        {
+            fill.anchorMax = new Vector2(Mathf.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / 0.8f)), 1f);
+            yield return null;
+        }
+        fill.anchorMax = new Vector2(to, 1f);
+    }
+
     /// <summary>레벨 막대가 보상 전 값에서 보상 뒤 값으로 차오른다</summary>
     IEnumerator FillLevel(int before, WalkCompleteResult r)
     {
@@ -378,7 +442,21 @@ public class WalkCompleteScreen : MonoBehaviour
         statStops = stats.GetChild(2).GetComponentInChildren<Text>();
         reason = UIKit.Bold(UIKit.Text(summary, "", KucaTheme.Body, TextAnchor.MiddleLeft, InkQuiet));
         UIKit.Size(reason, 64f);
-        UIKit.Paragraph(summary, RouteMath.HealthNote, KucaTheme.Caption, KucaTheme.InkSoft);
+        healthLine = UIKit.Bold(UIKit.Text(summary, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink));
+        UIKit.Size(healthLine, 56f);
+        UIKit.Paragraph(summary, "걸음 수 · 칼로리는 거리 · 시간으로 셈한 대략값이에요. " + RouteMath.HealthNote, KucaTheme.Caption, KucaTheme.InkSoft);
+
+        // 이번 주 걷기 목표 (WHO 150분) + AI 코치 한 줄
+        RectTransform wc = UIKit.CardBox(list, "Week", KucaTheme.Space2);
+        weekCard = wc.gameObject;
+        UIKit.SectionTitle(wc, "이번 주 걷기 목표");
+        weekText = UIKit.Bold(UIKit.Text(wc, "", KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
+        UIKit.Size(weekText, 64f);
+        weekFill = Bar(wc, "WeekTrack", Green);
+        weekLeft = UIKit.Text(wc, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
+        UIKit.Size(weekLeft, 56f);
+        coachText = UIKit.Paragraph(wc, "", KucaTheme.Body, KucaTheme.PrimaryDeep);
+        coachNote = UIKit.Paragraph(wc, "", KucaTheme.Caption, KucaTheme.InkSoft);
 
         // 걸은 길 돌아보기
         RectTransform recapCard = UIKit.CardBox(list, "RecapCard", KucaTheme.Space2);
@@ -397,19 +475,7 @@ public class WalkCompleteScreen : MonoBehaviour
         rewardText = UIKit.Paragraph(rc, "", KucaTheme.Body, Ink);
         levelText = UIKit.Text(rc, "", KucaTheme.Label, TextAnchor.MiddleLeft, InkQuiet);
         UIKit.Size(levelText, 56f);
-        Image track = UIKit.Image(rc, "Track", KucaTheme.Fill);
-        track.sprite = HudIcons.Pill;
-        track.type = Image.Type.Sliced;
-        track.pixelsPerUnitMultiplier = 4f;
-        UIKit.Size(track, 32f);
-        Image fill = UIKit.Image(track.transform, "Fill", Gold);
-        fill.sprite = HudIcons.Pill;
-        fill.type = Image.Type.Sliced;
-        fill.pixelsPerUnitMultiplier = 4f;
-        levelFill = fill.rectTransform;
-        levelFill.anchorMin = Vector2.zero;
-        levelFill.anchorMax = new Vector2(0f, 1f);
-        levelFill.offsetMin = levelFill.offsetMax = Vector2.zero;
+        levelFill = Bar(rc, "Track", Gold);
 
         UIKit.SecondaryButton(list, "파트너와 사진 찍기", TakePhoto);
 
@@ -431,6 +497,25 @@ public class WalkCompleteScreen : MonoBehaviour
         UIKit.Size(reviewNote, 56f);
 
         UIKit.PrimaryButton(page.bottom, "확인", Close);
+    }
+
+    /// <summary>둥근 막대 (회색 길 + 색 채움). 채움 비율은 돌려준 RectTransform 의 anchorMax.x</summary>
+    static RectTransform Bar(Transform parent, string name, Color color)
+    {
+        Image track = UIKit.Image(parent, name, KucaTheme.Fill);
+        track.sprite = HudIcons.Pill;
+        track.type = Image.Type.Sliced;
+        track.pixelsPerUnitMultiplier = 4f;
+        UIKit.Size(track, 32f);
+        Image fill = UIKit.Image(track.transform, "Fill", color);
+        fill.sprite = HudIcons.Pill;
+        fill.type = Image.Type.Sliced;
+        fill.pixelsPerUnitMultiplier = 4f;
+        RectTransform rt = fill.rectTransform;
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+        return rt;
     }
 
     static void Label(Transform parent, string text) =>

@@ -32,6 +32,22 @@ public class WalkCompleteResult
     public string reason;
     public int xp, tickets, growth;
     public int level, xpInLevel, xpNeeded;
+    /// <summary>서버가 셈한 걸음 수 · 칼로리 범위 (기기 판정이면 비어 있음 → HealthEstimate.Has 로 본다)</summary>
+    public HealthEstimate health;
+    /// <summary>이번 주 걷기 목표 진행 (기기 판정이면 비어 있음 → WeekGoal.Has)</summary>
+    public WeekGoal week;
+}
+
+/// <summary>GET /api/me/coach: 이번 주 숫자로 AI 가 쓴 한 줄 (검사에 걸리면 서버가 틀 문장으로 바꾼다)</summary>
+[Serializable]
+public class CoachMessage
+{
+    public string text;
+    /// <summary>"ai" · "fallback"</summary>
+    public string source;
+    public WeekGoal week;
+    /// <summary>"일반 건강 정보이며 의료 조언이 아닙니다." (화면에 함께 보인다)</summary>
+    public string note;
 }
 
 [Serializable]

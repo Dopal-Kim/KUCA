@@ -21,7 +21,8 @@ public class HttpWalkService : IWalkService
     [Serializable] class FinishBody { public int distanceM; public int durationSec; public List<string> visitedBuildingIds = new List<string>(); public float weightKg; }
     [Serializable] class RewardPart { public string kind; public int xp; }
     [Serializable] class Reward { public int tickets; public int xp; public List<RewardPart> breakdown = new List<RewardPart>(); }
-    [Serializable] class FinishResult { public bool completed; public int distanceM; public Reward reward; }
+    [Serializable] class FinishProgress { public WeekGoal week; }
+    [Serializable] class FinishResult { public bool completed; public int distanceM; public Reward reward; public HealthEstimate health; public FinishProgress progress; }
     [Serializable] class ReviewResult { public Reward reward; }
 
     public HttpWalkService(string baseUrl, LocalWalkService fallback)
@@ -143,9 +144,34 @@ public class HttpWalkService : IWalkService
             xp = xp,
             tickets = f.reward != null ? f.reward.tickets : 0,
             growth = f.completed ? LocalWalkService.CompleteGrowth : 0,
+            health = HealthEstimate.Has(f.health) ? f.health : null,
+            week = f.progress != null && WeekGoal.Has(f.progress.week) ? f.progress.week : null,
         };
         GameHUD.LevelOf(score + r.xp, out r.level, out r.xpInLevel, out r.xpNeeded);
         return r;
+    }
+
+    /// <summary>
+    /// 이번 주 AI 코치 한 줄 (GET /api/me/coach). 로그인 안 함 · 오프라인 · 오류면 onDone(null) — 화면은 그 줄을 숨긴다.
+    /// 기기 판정(LocalWalkService)에는 없다 (주간 기록이 서버에만 있음).
+    /// </summary>
+    public IEnumerator Coach(Action<CoachMessage> onDone)
+    {
+        if (!AuthService.HasToken) { onDone(null); yield break; }
+        using var req = UnityWebRequest.Get(baseUrl + "/api/me/coach");
+        req.SetRequestHeader("Authorization", "Bearer " + AuthService.Token);
+        req.timeout = 20;
+        yield return req.SendWebRequest();
+        onDone(req.result == UnityWebRequest.Result.Success ? ParseCoach(req.downloadHandler.text) : null);
+    }
+
+    /// <summary>코치 응답 JSON → 한 줄 (테스트에서도 씀). 글이 없으면 null</summary>
+    public static CoachMessage ParseCoach(string json)
+    {
+        CoachMessage c = null;
+        try { c = JsonUtility.FromJson<CoachMessage>(json); }
+        catch (ArgumentException) { }
+        return c != null && !string.IsNullOrWhiteSpace(c.text) ? c : null;
     }
 
     public IEnumerator Review(string walkId, WalkReviewRequest request, Action<WalkReviewResult, string> onDone)
