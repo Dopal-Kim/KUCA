@@ -76,7 +76,7 @@ def build(fig, rng):
         lug = cc + Rcam @ (np.array((s * 0.68, 0.22, 0)) * cs)
         pts = [lug, np.array((s * 0.6, y0 + 4.05, 0.7))]
         for th in np.radians(np.linspace(38, 180, 7)):   # 목 둘레 표면을 따라 뒤로 (목 속에 묻히지 않게)
-            o = np.array((s * math.sin(th) * 4.0, y0 + 4.55 + 0.2 * (th / math.pi), math.cos(th) * 4.0))
+            o = np.array((s * math.sin(th) * 4.0, y0 + 4.45 + 0.2 * (th / math.pi), math.cos(th) * 4.0))
             q = np.asarray(Fg.surface_frame(fig, o, (-s * math.sin(th), 0, -math.cos(th))).o)
             pts.append(q + np.array((s * math.sin(th), 0, math.cos(th))) * 0.05)
         for a, b in zip(pts, pts[1:]):
@@ -101,7 +101,7 @@ def build(fig, rng):
         fig.add(S.capsule(tuple(a), tuple(b), r0, r1), SAND, k=0.25)
     fig.paint(S.sphere(tuple(tp[-1]), 0.7), DARK, soft=0.2)
     # ---- 머리: 좁고 긴 두상 (세로 타원) + 앞으로 가늘어지는 주둥이, 따로 붙인 볼 없음 ----
-    hc = (0, y0 + 6.45, 0.1)
+    hc = (0, y0 + 6.3, 0.1)   # 머리를 살짝 내려 목이 길게 보이지 않게
     hr = np.array((1.42, 1.72, 1.5))
     head_f = S.ellipsoid(hc, tuple(hr))
     fig.add(head_f, SAND, k=0.3)
