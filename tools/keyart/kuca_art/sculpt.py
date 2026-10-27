@@ -224,9 +224,11 @@ class Sculpt:
         vol = self._grid_field(lo, hi, voxel)
         V, F, _, _ = measure.marching_cubes(vol, 0.0, spacing=(voxel,) * 3)
         V = V + lo
+        # 마칭 큐브 면의 1/38 아래로는 줄이지 않는다: 그보다 세게 줄이면 이차 오차 간략화가 귀·팔·받침 잔디판을 찢어
+        # 뾰족하게 무너뜨렸다 (우주 토끼 지도용 LOD1: 35만 → 5천 에서 긴 귀가 고양이 귀처럼). 단순한 펫은 그대로 tris.
+        tris = max(tris, len(F) // 38)
         if len(F) > tris:
-            # agg 3 (기본 7 보다 덜 공격적): 수십만 → 수천 개로 크게 줄일 때 기본값은 귀·다리·받침 잔디판을 찢어 뾰족하게 무너뜨렸다 (지도용 LOD1)
-            V, F = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), 1.0 - tris / len(F), agg=3)
+            V, F = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), 1.0 - tris / len(F))
             V = V.astype(np.float64)
         V = self._relax(V, F)
         # 감는 방향: 면 법선이 SDF 기울기(바깥)와 같은 쪽이 되게

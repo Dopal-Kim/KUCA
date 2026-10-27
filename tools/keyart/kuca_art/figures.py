@@ -524,7 +524,7 @@ def _reduce_extra(fig, cap):
         V = uniq * 0.0005
         F = inv.reshape(-1, 3)
         F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 0] != F[:, 2])]
-        V2, F2 = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), max(0.0, 1.0 - budget / max(len(F), 1)), agg=3)
+        V2, F2 = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), max(0.0, 1.0 - budget / max(len(F), 1)))
         V2 = np.asarray(V2, np.float64)
         tri = V2[F2]
         cen = tri.mean(axis=1)

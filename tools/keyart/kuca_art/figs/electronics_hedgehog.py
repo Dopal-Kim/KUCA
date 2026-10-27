@@ -125,8 +125,8 @@ def build(fig, rng):
         hands[s] = hand
         # 옷 신호 (펫 검토 v1: 흰 작업복이 맨몸처럼 읽힘): 손목 금 소매 테 + 윗팔 빨간 줄 2개 (키아트 턴어라운드)
         fig.add(S.torus(tuple(wr - (wr - el) * 0.05), 0.37, 0.085, Rm=axis_R(wr - el)), Fg.GOLD, k=0.0, layer='trim', metal=g)
-        for t in (0.38, 0.6):
-            fig.add(S.torus(tuple(sh + (el - sh) * t), 0.4, 0.055, Rm=axis_R(el - sh)), STRIPE, k=0.0, layer='decal')
+        for t in (0.5, 0.7):
+            fig.add(S.torus(tuple(sh + (el - sh) * t), 0.43, 0.06, Rm=axis_R(el - sh)), STRIPE, k=0.0, layer='decal')
     # ---- 회로 기판 (오른손) ----
     hb = hands[1]
     Rb = S.rot(-12, -8, 8)
