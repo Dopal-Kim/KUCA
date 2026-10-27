@@ -54,6 +54,37 @@ public class WalkCompleteTests
     }
 
     [Test]
+    public void 서버_완료_응답의_걸음_칼로리와_이번_주_목표를_읽는다()
+    {
+        const string json = "{\"completed\":true,\"distanceM\":1400,\"reward\":{\"tickets\":1,\"xp\":30,\"breakdown\":[]}," +
+            "\"health\":{\"steps\":2000,\"kcalMin\":58,\"kcalMax\":82,\"intensity\":\"moderate\",\"intensityLabel\":\"보통 걷기\"}," +
+            "\"progress\":{\"level\":2,\"week\":{\"weekMinutes\":82,\"goalMinutes\":150,\"minutesLeft\":68,\"weekWalks\":3}}}";
+        var req = new WalkCompleteRequest { kind = WalkSession.Course, walkId = "w_2", meters = 1400 };
+        WalkCompleteResult r = HttpWalkService.ParseFinish(req, json, 0);
+        Assert.AreEqual(2000, r.health.steps);
+        Assert.AreEqual((58, 82), (r.health.kcalMin, r.health.kcalMax));
+        Assert.AreEqual("약 2,000걸음  ·  58~82kcal  ·  보통 걷기", WalkCompleteScreen.HealthLine(r.health));
+        Assert.AreEqual(82, r.week.weekMinutes);
+        Assert.AreEqual("이번 주 82 / 150분  ·  3번 걸었어요", WalkCompleteScreen.WeekLine(r.week));
+
+        // 예전 서버 (health · week 없음): JsonUtility 가 빈 객체로 채워도 "없음" 으로 본다
+        WalkCompleteResult old = HttpWalkService.ParseFinish(req, "{\"completed\":true,\"reward\":{\"tickets\":0,\"xp\":30}}", 0);
+        Assert.IsNull(old.health);
+        Assert.IsNull(old.week);
+    }
+
+    [Test]
+    public void 코치_응답은_글이_있을_때만_보인다()
+    {
+        CoachMessage c = HttpWalkService.ParseCoach("{\"text\":\"이번 주 82분 걸었어요.\",\"source\":\"ai\"," +
+            "\"week\":{\"weekMinutes\":82,\"goalMinutes\":150,\"minutesLeft\":68,\"weekWalks\":3},\"note\":\"일반 건강 정보이며 의료 조언이 아닙니다.\"}");
+        Assert.AreEqual("ai", c.source);
+        Assert.AreEqual(68, c.week.minutesLeft);
+        Assert.IsNull(HttpWalkService.ParseCoach("{\"text\":\"\"}"));
+        Assert.IsNull(HttpWalkService.ParseCoach("이상한 글"));
+    }
+
+    [Test]
     public void 완료_보상과_레벨()
     {
         var local = new LocalWalkService();

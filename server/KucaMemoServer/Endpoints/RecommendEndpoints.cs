@@ -10,14 +10,18 @@ public static class RecommendEndpoints
     public static void MapRecommendEndpoints(this WebApplication app)
     {
         app.MapPost("/api/recommendations", async (RecommendRequest? request, HttpRequest http, AccountStore accounts,
-                                                   RouteRecommender recommender, CancellationToken ct) =>
+                                                   RouteRecommender recommender, HealthService health, CancellationToken ct) =>
         {
             if (request is null)
                 return Results.BadRequest(new { error = "본문(JSON)이 필요합니다." });
             if (RouteRecommender.Validate(request) is { } error)
                 return Results.BadRequest(new { error });
-            string pace = request.Pace ?? PaceOf(AuthEndpoints.Current(http, accounts)) ?? "normal";
-            return Results.Ok(await recommender.RecommendAsync(request, pace, ct));
+            if (!HealthRules.ValidWeight(request.WeightKg))
+                return Results.BadRequest(new { error = $"weightKg 는 {HealthRules.MinWeightKg}~{HealthRules.MaxWeightKg} 입니다." });
+            Account? user = AuthEndpoints.Current(http, accounts);
+            string pace = request.Pace ?? PaceOf(user) ?? "normal";
+            WeekGoal? week = user == null ? null : health.Week(user.Id);   // 로그인했으면 이번 주 목표에 맞춰
+            return Results.Ok(await recommender.RecommendAsync(request, pace, ct, week: week));
         }).WithTags("Recommendations");
     }
 

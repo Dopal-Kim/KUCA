@@ -353,6 +353,7 @@ public partial class RoutePlanner
             UIKit.Paragraph(chooserCards, $"코스 이유  ·  {Escape(o.result.why)}", KucaTheme.Label, InkQuiet);
         int visits = o.result.stops.Count - (o.returns ? 1 : 0);
         UIKit.StatRow(chooserCards, (RouteMath.Distance(o.meters), "거리"), ($"{o.walkMinutes}분", "걸리는 시간"), ($"{visits}곳", "들를 곳"));
+        ShowCourseHealth(o);
 
         UIKit.SectionTitle(chooserCards, "들를 곳");
         for (int s = 0; s < o.result.stops.Count; s++)
@@ -368,6 +369,27 @@ public partial class RoutePlanner
         RectTransform songs = UIKit.Rect(chooserCards, "Music");
         UIKit.Vertical(songs, KucaTheme.Space2);
         WalkMusic.Fill(this, songs, CourseMusic(o), $"{request}:{o.Key}");   // 탭을 오가도 같은 추천의 같은 코스는 한 번만
+    }
+
+    /// <summary>
+    /// 걸음 수 · 칼로리 범위 · 강도 한 줄 + 이번 주 목표 한 줄 (서버 health · goal 이 있을 때만).
+    /// 앱이 출발지로 돌아오는 길을 붙였으면 (o.returns) 서버 값을 늘어난 거리 · 시간만큼 키운다.
+    /// </summary>
+    void ShowCourseHealth(Option o)
+    {
+        HealthEstimate h = o.result.health;
+        if (!HealthEstimate.Has(h)) return;
+        bool grow = o.returns && o.result.totalDistanceM > 0 && o.result.totalMinutes > 0;
+        float byDistance = grow ? Mathf.Max(1f, o.meters / (float)o.result.totalDistanceM) : 1f;
+        float byTime = grow ? Mathf.Max(1f, o.walkMinutes / (float)o.result.totalMinutes) : 1f;
+        int steps = Mathf.RoundToInt(h.steps * byDistance / 10f) * 10;
+        int kcalMin = Mathf.RoundToInt(h.kcalMin * byTime), kcalMax = Mathf.RoundToInt(h.kcalMax * byTime);
+        UIKit.StatRow(chooserCards, ($"{steps:N0}", "걸음 (약)"), ($"{kcalMin}~{kcalMax}", "kcal (약)"), (h.ShortIntensity, "강도"));
+        if (!string.IsNullOrEmpty(o.result.goal?.note))
+            UIKit.Paragraph(chooserCards, $"이번 주 목표  ·  {Escape(o.result.goal.note)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
+        string weight = HealthProfile.WeightKg.HasValue ? "입력한 몸무게" : "몸무게 50~70kg";
+        UIKit.Text(chooserCards, $"{Escape(h.intensityLabel)} 기준 · {weight}로 셈한 대략값이에요. 일반 건강 정보이며 의료 조언이 아닙니다.",
+            KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
     }
 
     WalkMusic.Request CourseMusic(Option o)

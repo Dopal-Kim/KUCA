@@ -152,7 +152,7 @@ public partial class RouteRecommender(
     /// pace 는 엔드포인트가 정해서 넣는다 (요청 → 계정 취향 → normal).
     /// countAsShown: 매칭 코스처럼 혼자 걷기 추천이 아닌 경우 false (추천 수락률 집계에서 뺀다)
     /// </summary>
-    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct, bool countAsShown = true)
+    public async Task<RecommendResult> RecommendAsync(RecommendRequest r, string pace, CancellationToken ct, bool countAsShown = true, WeekGoal? week = null)
     {
         DateTimeOffset now = clock.GetUtcNow();
         DateTimeOffset kst = now.ToOffset(TimeSpan.FromHours(9));
@@ -173,7 +173,7 @@ public partial class RouteRecommender(
         (double lat, double lon) = StartPoint(r);
         var events = notices.ActiveEvents(kst.ToString("yyyy-MM-dd")).GroupBy(e => e.BuildingId).ToDictionary(g => g.Key, g => g.ToList());
         var plan = new Plan(wish?.Minutes ?? r.Minutes, wish?.Pace ?? pace, afterMeal, lat, lon, tastes, context,
-                            wish, priorities, states.Current(), events);
+                            wish, priorities, states.Current(), events, week);
 
         List<Candidate> candidates = Candidates(r, plan, visits);
         string source = "fallback";
@@ -196,7 +196,9 @@ public partial class RouteRecommender(
             stops.Sum(s => s.DistanceM), stops.Sum(s => s.WalkMinutes),
             plan.AfterMeal ? RecommendRules.AfterMealNote : null,
             wish == null ? null : new RecommendWish(wish.Summary, wish.Source, wish.Minutes, wish.Want, wish.Avoid, wish.Judgment),
-            why);
+            why,
+            HealthRules.Estimate(stops.Sum(s => s.DistanceM), stops.Sum(s => s.WalkMinutes), plan.Pace, r.WeightKg),
+            week == null ? null : HealthService.ForCourse(week, stops.Sum(s => s.WalkMinutes)));
         saved.Add(new RecommendationStore.Saved(result.Id, source, plan.Minutes,
             stops.Select(s => s.BuildingId).ToArray(), result.TotalDistanceM, now));
         if (countAsShown)
@@ -206,7 +208,8 @@ public partial class RouteRecommender(
     }
 
     record Plan(int Minutes, string Pace, bool AfterMeal, double Lat, double Lon, List<string> Tastes, RecommendContext Context,
-                WalkWish? Wish, WalkPriorities Priorities, IReadOnlyDictionary<string, PlaceState> States, Dictionary<string, List<NoticeStore.ActiveEvent>> Events)
+                WalkWish? Wish, WalkPriorities Priorities, IReadOnlyDictionary<string, PlaceState> States, Dictionary<string, List<NoticeStore.ActiveEvent>> Events,
+                WeekGoal? Week = null)
     {
         public int Speed => RecommendRules.MetersPerMinute(Pace);
         public double WalkBudgetMinutes => Minutes * RecommendRules.WalkTimeRatio;
@@ -336,6 +339,9 @@ public partial class RouteRecommender(
         user.AppendLine($"지금: {Korean[cx.Season]} {Korean[cx.TimeOfDay]}, 날씨 {(cx.Weather is { } w ? Korean.GetValueOrDefault(w, w) : "모름")}");
         if (plan.AfterMeal)
             user.AppendLine("식사 뒤 가볍게 걷는 산책이야. 가깝고 편한 곳 위주로.");
+        // 목표 맞춤 (건강): 이번 주 목표까지 남은 시간. 숫자는 서버가 따로 보여 주니 이유 문장에는 숫자를 쓰지 않게
+        if (plan.Week is { MinutesLeft: > 0 } wk)
+            user.AppendLine($"이번 주 걷기 목표({wk.GoalMinutes}분)까지 {wk.MinutesLeft}분 남았어. 꾸준히 걷도록 응원하는 마음을 title 이나 why 에 담아도 돼 (숫자는 쓰지 마).");
         user.AppendLine("고른 취향: " + (plan.Tastes.Count > 0 ? string.Join(", ", plan.Tastes.Select(t => TasteNames[t])) : "없음"));
         user.AppendLine("후보 장소 (id | 이름 | 거리 | 방문 | 오늘 날씨 | 경관 | 조용함 | 실내 | 누구나 들어감 | 소개 | 요즘 | 공지):");
         foreach (Candidate c in top)

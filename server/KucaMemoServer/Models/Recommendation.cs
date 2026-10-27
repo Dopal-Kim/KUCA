@@ -13,7 +13,8 @@ public record RecommendRequest(
     string? Pace = null,          // "slow" · "normal" · "fast" (없으면 계정 취향, 그것도 없으면 normal)
     bool AfterMeal = false,       // 식후 걷기 버튼으로 요청
     string? Wish = null,          // 말로 한 산책 바람 (200자 이내). 있으면 AI 가 판단해 코스를 짠다
-    List<VisitCount>? VisitCounts = null);   // 장소마다 들른 횟수 (앱의 산책 기록). 안 가 본 곳 · 자주 가던 곳 판단에 씀
+    List<VisitCount>? VisitCounts = null,
+    double? WeightKg = null);     // (선택) 몸무게 kg — 칼로리 범위를 좁힌다. 서버에 저장하지 않는다   // 장소마다 들른 횟수 (앱의 산책 기록). 안 가 본 곳 · 자주 가던 곳 판단에 씀
 
 /// <summary>한 장소를 몇 번 들렀는지</summary>
 public record VisitCount(string BuildingId, int Count);
@@ -36,7 +37,9 @@ public record RecommendResult(
     int TotalMinutes,
     string? HealthNote,
     RecommendWish? Wish = null,
-    string? Why = null);          // 코스 전체를 이렇게 짠 이유 한 문장 (AI 또는 비중으로 만든 문장)
+    string? Why = null,
+    HealthEstimate? Health = null,   // 코스 걸음 수 · 칼로리 범위 · 강도
+    CourseGoal? Goal = null);        // 로그인했으면 이번 주 목표와 이 코스의 관계          // 코스 전체를 이렇게 짠 이유 한 문장 (AI 또는 비중으로 만든 문장)
 
 /// <summary>바람을 어떻게 이해했는지 (앱이 "이렇게 이해했어요" 로 보여 준다). Source: "ai" 또는 "fallback"</summary>
 /// <param name="Judgment">어떤 산책이 맞는지 판단과 이유 한 문장</param>
