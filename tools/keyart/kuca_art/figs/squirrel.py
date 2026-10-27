@@ -92,7 +92,7 @@ def build(fig, rng):
         for k, (yw, pt, L) in enumerate(((74, -24, 0.34), (84, -10, 0.28), (64, -36, 0.3))):
             p, n = surf_point(head, hc, s * yw, pt)
             dvec = n + np.array((s * 0.2, -0.7, 0.0)); dvec /= np.linalg.norm(dvec)
-            fig.add(S.capsule(tuple(p - n * 0.2), tuple(p + dvec * L), 0.24, 0.05), FUR, k=0.2, layer='body')
+            fig.add(S.capsule(tuple(p - n * 0.2), tuple(p + dvec * L * 0.8), 0.27, 0.1), FUR, k=0.25, layer='body')   # 뿔처럼 뾰족하지 않게 둥근 볼털
     for k, (yw, pt) in enumerate(((-12, 82), (10, 84))):   # 정수리 털
         p, n = surf_point(head0, hc, yw, pt)
         fig.add(S.capsule(tuple(p - n * 0.1), tuple(p + n * 0.35 + np.array((yw * 0.01, 0, -0.1))), 0.15, 0.03), FUR, k=0.12, layer='body')
@@ -123,8 +123,8 @@ def build(fig, rng):
     # ---- 꼬리: 큰 S 자 곡선 (엉덩이 → 뒤로 솟아 → 끝이 바깥으로 말려 내려옴), 겹친 털 뭉치들로 ----
     # 키아트 옆모습: 엉덩이에서 가늘게 나와 위로 갈수록 넓어지고, 꼭대기가 뒤로 말려 내려오는 '?' 모양 (받침 범위 z>-4.8 안)
     ctrl = np.array([(0.0, y0 + 1.0, -0.8), (0.0, y0 + 1.4, -1.7), (0.0, y0 + 2.4, -2.3), (0.0, y0 + 3.7, -2.45),
-                     (0.0, y0 + 5.0, -2.3), (0.0, y0 + 6.1, -2.5), (0.0, y0 + 6.75, -3.2), (0.0, y0 + 6.45, -3.85),
-                     (0.0, y0 + 5.65, -4.0)])
+                     (0.0, y0 + 5.0, -2.3), (0.0, y0 + 6.1, -2.5), (0.12, y0 + 6.75, -3.2), (0.25, y0 + 6.45, -3.8),
+                     (0.3, y0 + 5.8, -3.7)])     # 말린 끝은 기둥에 부드럽게 녹여 붙임 (틈이 뒤에서 눈처럼 보이지 않게)
     rads = np.array([0.45, 0.8, 1.15, 1.35, 1.2, 1.25, 1.05, 0.78, 0.55])
 
     def crom(t):   # Catmull-Rom 위 점 (t: 0..1)

@@ -262,7 +262,7 @@ def build(fig, rng):
     torso = S.ellipsoid((0, y0 + 2.25, 0.0), (1.98, 1.78, 1.78))
     belly = S.ellipsoid((0, y0 + 1.92, 0.32), (1.82, 1.5, 1.6))
     trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
-    core = lambda P: S.smin(head(P), trunk(P), 0.4)
+    core = lambda P: S.smin(head(P), trunk(P), 0.75)     # 목이 잘록한 눈사람처럼 보이지 않게 머리·몸을 넓게 녹여 붙임
     fig.add(core, INK, k=0.3)
     # 정수리 깃털 (가운데 위로, 양옆으로 휘어진 뾰족한 깃 + 뒤 작은 깃)
     top = hc + np.array((0, 1.88, -0.15))
@@ -276,9 +276,9 @@ def build(fig, rng):
     fig.add(U(tuft, 0.08), INK, k=0.25)
     # 화난 눈썹 능선 (안쪽 끝이 아래로)
     for s in (-1, 1):
-        a = surf(head, hc, s * 8, 13, -0.04)
-        m = surf(head, hc, s * 20, 18.5, -0.04)
-        b = surf(head, hc, s * 33, 19.5, -0.05)
+        a = surf(head, hc, s * 9, 21, -0.04)       # 눈 위로 올려 눈에 묻히지 않게 (안쪽 끝이 낮은 찡그린 눈썹)
+        m = surf(head, hc, s * 21, 27, -0.04)
+        b = surf(head, hc, s * 34, 28.5, -0.05)
         fig.add(U([S.capsule(a, m, 0.12, 0.12), S.capsule(m, b, 0.12, 0.06)], 0.06), (0.36, 0.36, 0.42), k=0.0, layer='brow')
     # 다리·발
     for s in (-1, 1):
@@ -302,18 +302,20 @@ def build(fig, rng):
                 INK_HI, k=0.06, layer='wing')
     # 꼬리 깃 (뒤 아래로 부채꼴)
     tp = np.array((0, y0 + 1.6, -1.35))
-    fig.add(U([feather(tp, 0, 42, roll, 0.85, (0.28, 0.7, 0.11)) for roll in (-36, -18, 0, 18, 36)], 0.04), INK, k=0.05, layer='tail')
+    # 키아트 뒷모습: 등 아래에서 뒤로 뻗은 짧고 둥근 깃 부채 (아래로 늘어지면 바닥의 새 발처럼 보였다)
+    fig.add(U([feather(tp, 0, 66, roll, 0.75, (0.3, 0.62, 0.12)) for roll in (-30, -15, 0, 15, 30)], 0.06), INK, k=0.08, layer='tail')
     # 부리 (회색, 위·아래)
     bf = frame_at(head, hc, 0, -10)
     bp = np.array(bf.p((0, 0, -0.12)))
     fwd = np.array(bf.dir((0, 0, 1)))
     up = np.array(bf.dir((0, 1, 0)))
-    fig.add(S.capsule(bp + up * 0.05, bp + fwd * 1.05 - up * 0.16, 0.42, 0.06), BEAK, k=0.12, layer='beak')
+    fig.add(S.capsule(bp + up * 0.05, bp + fwd * 0.85 - up * 0.16, 0.42, 0.07), BEAK, k=0.12, layer='beak')   # 키아트: 짧고 굵은 부리
     fig.add(S.ellipsoid(bp + fwd * 0.18 + up * 0.06, (0.45, 0.28, 0.34)), BEAK, k=0.15, layer='beak')
     fig.add(S.capsule(bp - up * 0.24, bp + fwd * 0.6 - up * 0.32, 0.21, 0.05), (0.40, 0.40, 0.43), k=0.08, layer='beak')
     # 눈·볼
     # 당돌한 아몬드 눈 (눈꼬리 살짝 올라감, 눈썹 능선이 안쪽으로 찡그림)
-    face_eyes(fig, hc, spread=24, pitch=0, style='almond', size=0.76, iris=(0.38, 0.21, 0.11), tilt=7)
+    # 키아트: 크고 동그란 갈색 눈 + 찡그린 눈썹 능선이 당돌함을 만든다 (아몬드 눈은 졸려 보였다)
+    face_eyes(fig, hc, spread=27, pitch=1, style='round', size=0.6, iris=(0.40, 0.22, 0.11), tilt=0)
     for s in (-1, 1):
         p = surf(head, hc, s * 41, -18)
         fig.paint(S.ellipsoid(p, (0.36, 0.26, 0.3)), (1.0, 0.58, 0.64), soft=0.3)
