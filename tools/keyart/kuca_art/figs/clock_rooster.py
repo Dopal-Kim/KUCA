@@ -17,7 +17,7 @@ FOOT = (1.0, 0.70, 0.16)
 RUST = (0.68, 0.28, 0.13)
 RUST_DK = (0.55, 0.20, 0.10)
 RUST_LT = (0.80, 0.40, 0.20)
-DKRED = (0.58, 0.11, 0.10)
+DKRED = (0.52, 0.17, 0.10)
 BROW = (0.55, 0.32, 0.20)
 G = (Fg.GOLD, Fg.GOLD_HI)
 
@@ -240,7 +240,7 @@ def build(fig, rng):
     # ---------- 조끼 (크림): 몸 전체를 엉덩이까지 감싼 껍질, 목 아래 작은 V 트임 ----------
     yv = y0 + 2.62                   # V 트임 꼭짓점
     hem_y = y0 + 1.12
-    top_y = y0 + 3.12
+    top_y = y0 + 3.0
     slope = 0.75
 
     def top_f(P):        # 목둘레: 뒤가 높고 앞이 낮게 기운 선
@@ -250,9 +250,9 @@ def build(fig, rng):
         return np.minimum(P[:, 2] - 0.6, (P[:, 1] - yv) * slope - np.abs(P[:, 0]))
 
     def vest(P):
-        d = np.abs(shell_f(P) - 0.11) - 0.07
-        d = rmax(d, hem_y - P[:, 1], 0.05)
-        d = rmax(d, P[:, 1] - top_f(P), 0.05)
+        d = np.abs(shell_f(P) - 0.08) - 0.05
+        d = rmax(d, hem_y - P[:, 1], 0.06)
+        d = rmax(d, P[:, 1] - top_f(P), 0.06)
         return np.maximum(d, vopen_f(P))
     fig.add(vest, CREAM, k=0.0, layer='vest')
 
@@ -273,7 +273,7 @@ def build(fig, rng):
     for y in (y0 + 2.4, y0 + 1.95, y0 + 1.5):
         fig.add(S.sphere((-0.17, y, vz(-0.17, y, 0.02)), 0.11), Fg.GOLD, k=0.0, layer='btn', metal=G)
     # 아랫단 금테 (둘레 전체)
-    fig.add(S.intersect(S.onion(lambda P: shell_f(P) - 0.11, 0.085), lambda P: np.abs(P[:, 1] - (hem_y + 0.05)) - 0.065),
+    fig.add(S.intersect(S.onion(lambda P: shell_f(P) - 0.08, 0.07), lambda P: np.abs(P[:, 1] - (hem_y + 0.05)) - 0.065),
             Fg.GOLD, k=0.0, layer='trim', metal=G)
     # 진홍 보석 + 뒤 단추
     gx, gy = -0.58, y0 + 2.45
@@ -314,13 +314,14 @@ def build(fig, rng):
 
     # ---------- 날개: 조끼 아래 옆구리에서 바깥으로 펼친 적갈색 깃 부채 ----------
     for s in (-1, 1):
-        root = np.array((s * 1.36, y0 + 2.6, 0.0))
-        fan = ((28, 1.4, RUST_DK), (48, 1.65, RUST), (68, 1.7, DKRED), (88, 1.55, RUST), (108, 1.25, RUST_LT))
+        root = np.array((s * 1.42, y0 + 2.75, 0.05))
+        fig.add(S.ellipsoid(tuple(root + (s * 0.12, -0.05, 0.0)), (0.42, 0.62, 0.58), R=S.rot(0, 0, s * 30)), WHITE, k=0.15, layer='wingw')
+        fan = ((18, 1.05, RUST_DK), (36, 1.25, RUST), (54, 1.3, DKRED), (72, 1.15, RUST))
         for i, (ang, L, col) in enumerate(fan):
             a_ = math.radians(ang)
             d = np.array((s * math.sin(a_), -math.cos(a_), 0.0))
-            mid = root + d * L * 0.55 + np.array((0, 0, 0.12 - i * 0.07))
-            fig.add(S.ellipsoid(tuple(mid), (0.36, L * 0.56, 0.15), R=S.rot(s * 6, 0, s * ang)), col, k=0.06, layer='wing%d' % (i % 2))
+            mid = root + d * L * 0.62 + np.array((0, 0, 0.1 - i * 0.08))
+            fig.add(S.ellipsoid(tuple(mid), (0.3, L * 0.52, 0.13), R=S.rot(s * 6, 0, s * ang)), col, k=0.06, layer='wing%d' % (i % 2))
 
     # ---------- 꼬리: 따로 떨어진 낫깃 부채 (뒤에서 보면 펼쳐짐) ----------
     tb = np.array((0.0, y0 + 2.45, -1.12))
@@ -341,10 +342,10 @@ def build(fig, rng):
             tt = b_ - a_
             L = float(np.linalg.norm(tt))
             tt = tt / L
-            w = 0.3 * (1 - 0.6 * (k + 0.5) / 11)
+            w = 0.4 * (1 - 0.55 * (k + 0.5) / 11)
             wide = np.cross(tt, nperp)
             R = np.stack([nperp, tt, wide], axis=1)
-            fig.add(S.ellipsoid(tuple((a_ + b_) / 2), (w * 1.05, L * 0.8, w * 0.7), R=R), col, k=0.1, layer='tail%d' % i)
+            fig.add(S.ellipsoid(tuple((a_ + b_) / 2), (w * 1.05, L * 0.8, w * 0.42), R=R), col, k=0.1, layer='tail%d' % i)
 
     # ---------- 머리: 달걀형 (위가 좁고 아래 볼 쪽이 부드럽게 넓음), 볼 구 없음 ----------
     hc = np.array((0, y0 + 5.05, 0.15))

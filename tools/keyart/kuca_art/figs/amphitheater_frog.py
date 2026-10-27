@@ -16,7 +16,7 @@ BOW_DK = (0.62, 0.08, 0.12)
 PAD = (0.24, 0.52, 0.22)
 PAD_HI = (0.36, 0.64, 0.30)
 SILV = (0.78, 0.80, 0.83)
-SV = (SILV, (1.0, 1.0, 1.0))
+SV = (SILV, (0.93, 0.94, 0.96))   # 순백 반사 대신 크롬 회색: 마이크 머리가 하얗게 뜨지 않게
 G = (Fg.GOLD, Fg.GOLD_HI)
 
 
@@ -53,8 +53,8 @@ def build(fig, rng):
     fig.add(S.ellipsoid((0, y0 + 1.3, 0.05), (1.6, 0.68, 1.2)), B, k=0.45)
 
     # ---------- 팔 (짧고 통통) ----------
-    shL, elL, hdL = (-1.3, y0 + 2.55, 0.15), (-1.72, y0 + 2.05, 0.3), (-1.9, y0 + 1.62, 0.5)
-    fig.add(S.capsule(shL, elL, 0.38, 0.34), B, k=0.25)
+    shL, elL, hdL = (-1.15, y0 + 2.5, 0.12), (-1.68, y0 + 2.05, 0.3), (-1.88, y0 + 1.62, 0.5)
+    fig.add(S.capsule(shL, elL, 0.38, 0.34), B, k=0.45)   # 어깨가 혹처럼 튀지 않게 넓게 녹임
     fig.add(S.capsule(elL, hdL, 0.34, 0.3), B, k=0.2)
     fig.add(S.sphere(hdL, 0.32), B, k=0.15)
     for a in (-30, 5, 40):
@@ -63,8 +63,8 @@ def build(fig, rng):
         fig.add(S.sphere(tuple(tip), 0.14), B, k=0.06)
     # 오른팔: 마이크 스탠드를 잡음
     mx, mz = 2.3, 1.45
-    shR, elR, hdR = (1.3, y0 + 2.55, 0.15), (1.85, y0 + 2.05, 0.6), (mx - 0.13, y0 + 2.3, mz - 0.08)
-    fig.add(S.capsule(shR, elR, 0.38, 0.34), B, k=0.25)
+    shR, elR, hdR = (1.15, y0 + 2.5, 0.12), (1.82, y0 + 2.05, 0.6), (mx - 0.13, y0 + 2.3, mz - 0.08)
+    fig.add(S.capsule(shR, elR, 0.38, 0.34), B, k=0.45)
     fig.add(S.capsule(elR, hdR, 0.34, 0.3), B, k=0.2)
     fig.add(S.sphere(hdR, 0.32), B, k=0.15)
     for k in range(3):   # 기둥을 감싼 손가락
@@ -85,18 +85,18 @@ def build(fig, rng):
 
     # 크림 턱·배
     lp = lambda f, c, soft, tol=0.06: layer_paint(fig, 'body', f, c, soft, tol=tol)
-    lp(S.ellipsoid((0, y0 + 3.25, 1.2), (1.85, 0.95, 1.2)), CREAMY, 0.025)
-    lp(S.ellipsoid((0, y0 + 1.75, 1.0), (1.05, 1.0, 0.5)), CREAMY, 0.025)
+    lp(S.ellipsoid((0, y0 + 3.25, 1.2), (1.85, 0.95, 1.2)), CREAMY, 0.2)   # 경계를 부드럽게 (톱니 자국 방지)
+    lp(S.ellipsoid((0, y0 + 1.75, 1.0), (1.05, 1.0, 0.5)), CREAMY, 0.2)
 
     # 눈 (눈 언덕 안의 흰 눈알 + 동그란 갈색 눈, 살짝 바깥을 봄)
     for s, dc in domes:
         yaw, pitch = s * 16, 4
         d = np.array((math.cos(math.radians(pitch)) * math.sin(math.radians(yaw)), math.sin(math.radians(pitch)),
                       math.cos(math.radians(pitch)) * math.cos(math.radians(yaw))))
-        ec = dc + d * 0.42
-        WR = 0.68
-        Fg._ellipsoid(fig.extra, tuple(ec), (WR, WR, WR), (0.995, 0.995, 0.99), 40, 20)   # 흰자
-        f = frame_at(ec + d * (WR - 0.06), d)
+        # 흰자: 앞뒤로 납작한 원반을 눈 언덕 앞면에 얹음 (크게 보이되 옆에서 공처럼 튀어나오지 않게)
+        ec = dc + d * 0.64
+        Fg._ellipsoid(fig.extra, (0, 0, 0), (0.6, 0.62, 0.3), (0.995, 0.995, 0.99), 40, 20, frame_at(ec, d))
+        f = frame_at(ec + d * 0.24, d)
         Fg.eye_at(fig, f, style='round', size=0.43, side=s)
     # 콧구멍
     for s in (-1, 1):
@@ -105,14 +105,14 @@ def build(fig, rng):
     # 큰 입선: 볼에서 볼까지 넓게, 양끝이 살짝 올라간 미소
     f0 = face_frame(fig, hc, 0, -16)
     surf_beads(fig, f0, [(u, 0.12 * (u / 1.12) ** 4 - 0.04 * (1 - (u / 1.12) ** 2)) for u in np.linspace(-1.12, 1.12, 25)],
-               0.05, (0.20, 0.32, 0.12))
+               0.035, (0.20, 0.32, 0.12))
     # 분홍 볼 (칠만, 표면과 같은 높이)
     for s in (-1, 1):
         q = np.asarray(face_frame(fig, hc, s * 50, -6).o)
         lp(S.sphere(tuple(q), 0.38), (1.0, 0.56, 0.60), 0.03, tol=0.08)
 
     # ---------- 나비넥타이 (턱 아래 목) ----------
-    bc = hit(fig, (0, y0 + 2.66, 4.5), (0, 0, -1)) + (0, 0, 0.3)
+    bc = hit(fig, (0, y0 + 2.66, 4.5), (0, 0, -1)) + (0, 0, 0.16)   # 목에 붙게 (뜨지 않게)
     for s in (-1, 1):
         lobe = S.capsule(tuple(bc + (s * 0.1, 0, 0)), tuple(bc + (s * 0.6, 0.0, -0.06)), 0.1, 0.32)
         lobe = S.intersect(lobe, lambda P, z=bc[2] - 0.03: np.abs(P[:, 2] - z) - 0.14)

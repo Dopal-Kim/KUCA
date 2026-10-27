@@ -257,7 +257,7 @@ def book_closed(fig, c, R, size, col, layer):
     c = np.asarray(c, np.float64)
     w, t, d = size
     fig.add(S.box(c, (w, t, d), round_=0.06, R=R), col, k=0.0, layer=layer)
-    fig.add(S.box(c + R @ np.array((-0.05, 0, -0.06)), (w - 0.02, t - 0.05, d - 0.02), round_=0.02, R=R), PAGE, k=0.0, layer=layer + 'p')
+    fig.add(S.box(c + R @ np.array((-0.05, 0, -0.06)), (w - 0.02, t - 0.09, d - 0.02), round_=0.02, R=R), PAGE, k=0.0, layer=layer + 'p')
     for u in (-0.62, 0.62):
         fig.add(S.box(c + R @ np.array((u * w, 0, d - 0.005)), (0.035, t + 0.012, 0.03), round_=0.012, R=R), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
 
@@ -303,9 +303,9 @@ def build(fig, rng):
             fig.paint(on(sc), SCALE, soft=0.05)
     # 얼굴 원반: 짙은 테두리 → 크림 원 2개 + 아래 → 이마 갈색 V
     # 얼굴판: 눈 둘레 크림 원 두 개 + 부리 아래 크림 (또렷한 경계)
-    for s in (-1, 1):
-        fig.paint(on(S.sphere(surf(head, hc, s * 24, -3, -0.3), 1.38)), CREAM, soft=0.04)
-    fig.paint(on(S.sphere(surf(head, hc, 0, -26, -0.3), 0.95)), CREAM, soft=0.04)
+    # 얼굴판은 칠 대신 살짝 도드라진 판으로 (줄인 메시에서 칠 경계가 얼룩져 보였다)
+    discs = U([S.sphere(surf(head, hc, s * 24, -3, -0.3), 1.38) for s in (-1, 1)] + [S.sphere(surf(head, hc, 0, -26, -0.3), 0.95)])
+    fig.add(lambda P: np.maximum(np.abs(head(P) - 0.02) - 0.035, discs(P)), CREAM, k=0.0, layer='face')
     fig.paint(on(S.ellipsoid(surf(head, hc, 0, 26, 0), (0.38, 0.8, 0.6))), FUR, soft=0.12)
     # 귀뿔 (깃털 3장씩, 위·바깥으로)
     for s in (-1, 1):
@@ -318,7 +318,7 @@ def build(fig, rng):
         fig.paint(S.sphere(piv + S.rot(0, 0, s * -40) @ np.array((0, 1.25, 0)), 0.55), FUR_DK, soft=0.25)
     # 눈 (호박색) · 부리 · 볼
     # 크고 동그란 눈, 주황 홍채 (안경 안)
-    face_eyes(fig, hc, spread=24, pitch=-1, style='round', size=0.72, iris=(0.66, 0.32, 0.07), sink=0.16)
+    face_eyes(fig, hc, spread=24, pitch=-1, style='round', size=0.72, iris=(0.66, 0.32, 0.07), sink=0.16, layer='face')
     bf = frame_at(head, hc, 0, -13)
     bp, fwd, up = np.array(bf.p((0, 0, -0.08))), np.array(bf.dir((0, 0, 1))), np.array(bf.dir((0, 1, 0)))
     fig.add(S.capsule(bp + up * 0.1, bp + fwd * 0.55 - up * 0.5, 0.32, 0.06), BEAKC, k=0.1, layer='beak')
@@ -343,33 +343,29 @@ def build(fig, rng):
     br = [l + (r - l) * t + np.array((0, 0.18 * math.sin(math.pi * t) + 0.05, 0.12 * math.sin(math.pi * t))) for t in np.linspace(0.33, 0.67, 6)]
     for p, q in zip(br, br[1:]):
         fig.add(S.capsule(p, q, 0.055), Fg.GOLD, k=0.02, layer='glasses', metal=GLD)
-    # 날개 (망토 아래로 나와 앞으로 모아 책을 받침): 어깨 덩어리 + 깃 + 밝은 깃끝
-    bc = np.array((0.15, y0 + 2.15, 2.22))
+    # 날개: 키아트처럼 몸 옆에 붙어 아래로 늘어진 날개 (끝 깃이 살짝 바깥으로) + 밝은 깃끝
     for s in (-1, 1):
-        sh = np.array((s * 1.75, y0 + 2.75, 0.1))
-        tip = np.array((s * 1.35, y0 + 1.75, 1.95))
-        mid = (sh + tip) / 2 + np.array((s * 0.45, 0, 0))
-        fig.add(S.capsule(sh, mid, 0.5, 0.52), FUR, k=0.25, layer='wing')
-        fig.add(S.capsule(mid, tip, 0.55, 0.36), FUR, k=0.25, layer='wing')
-        fs = []
-        for i in range(4):
-            a = mid + np.array((s * 0.25, -0.35 - i * 0.12, -0.3 + i * 0.32))
-            fs.append(S.ellipsoid(a + np.array((0, -0.35, 0)), (0.26, 0.55, 0.18), R=S.rot(s * 70, 0, s * 15)))
-        fig.add(U(fs, 0.06), FUR_LT, k=0.08, layer='wing')
-    # 펼친 책 (배 앞, 보는 사람 쪽으로 기울임)
-    open_book(fig, bc, S.rot(0, 42, 0))
+        Rw = S.rot(s * 8, 0, s * 14)
+        wc = np.array((s * 1.92, y0 + 2.2, 0.0))
+        fs = [S.ellipsoid(wc, (0.42, 1.05, 0.95), R=Rw)]
+        for i, u in enumerate((-0.5, 0.0, 0.5)):
+            fs.append(S.ellipsoid(wc + Rw @ np.array((s * 0.05, -0.95 + 0.08 * abs(u), u)), (0.2, 0.42, 0.24), R=Rw @ S.rot(0, u * 20, 0)))
+        fig.add(U(fs, 0.18), FUR, k=0.0, layer='wing')
+        fig.paint(lambda P, wc=wc, Rw=Rw, s=s: S.ellipsoid(wc + Rw @ np.array((s * 0.3, -0.75, 0.0)), (0.5, 0.55, 1.2), R=Rw)(P), FUR_LT, soft=0.25)
+    # 펼친 책: 받침 앞 오른쪽 잔디 위에 펼쳐 놓음
+    open_book(fig, (2.55, y0 + 0.32, 1.75), S.rot(-35, 18, 0))
     # 망토: 어깨를 덮는 남색 케이프 + 아래 가장자리 금 테 + 앞 여밈 보석
-    bell = S.capsule((0, y0 + 4.0, -0.05), (0, y0 + 2.2, -0.05), 1.45, 2.35)
+    bell = S.capsule((0, y0 + 4.0, -0.05), (0, y0 + 2.2, -0.05), 1.4, 2.1)
     cb = lambda P: S.smin(core(P), bell(P), 0.3)
     # 망토 밑단: 앞은 가슴 높이, 옆을 지나 등 쪽은 등 가운데까지 내려오는 둥근 U 자 (작은 망토)
     cth = lambda P: np.cos(np.arctan2(P[:, 0], P[:, 2] - 0.05))
-    edge = lambda P: y0 + 2.3 + 0.45 * np.clip(cth(P), 0, None) - 1.3 * np.clip(-cth(P), 0, None) ** 1.1
+    edge = lambda P: y0 + 2.85 + 0.25 * np.clip(cth(P), 0, None) - 0.5 * np.clip(-cth(P), 0, None)
     front_open = lambda P: np.maximum(np.abs(P[:, 0]) - 0.04 - 0.25 * np.clip(y0 + 3.45 - P[:, 1], 0, None), -P[:, 2])
-    drop = lambda P: np.clip((y0 + 4.0 - P[:, 1]) / 2.4, 0, 1)
-    flare = lambda P: 0.08 + 0.42 * drop(P) ** 1.1 + 0.07 * drop(P) * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 7)   # 아래로 퍼지며 세로 주름
-    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.08, edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.02), -front_open(P)))
+    drop = lambda P: np.clip((y0 + 4.0 - P[:, 1]) / 1.6, 0, 1)
+    flare = lambda P: 0.05 + 0.38 * drop(P) ** 1.4 + 0.03 * drop(P) * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 7)   # 아래로 퍼지며 세로 주름
+    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.035 - 0.05 * drop(P), edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.02), -front_open(P)))
     fig.add(cape, NAVY, k=0.0, layer='cape')
-    trim = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P) - 0.01) - 0.11, np.abs(P[:, 1] - edge(P) - 0.03) - 0.06), -front_open(P))
+    trim = lambda P: np.maximum(np.hypot(cb(P) - flare(P), P[:, 1] - edge(P) - 0.02) - 0.1, -front_open(P))   # 밑단을 따라가는 둥근 금 관
     fig.add(trim, Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     cl = surf(cb, np.array((0, y0 + 3.4, 0)), 0, 0, 0.3)
     fig.add(S.torus(cl, 0.2, 0.06, Rm=S.rot(0, 80, 0)), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
@@ -381,8 +377,8 @@ def build(fig, rng):
         fig.add(U([S.capsule(a, a + _dir(yw, -6) * 0.55, 0.2, 0.16) for yw in (-28 + s * 6, s * 6, 28 + s * 6)] + [S.sphere(a + np.array((0, 0.1, -0.2)), 0.3)], 0.12),
                 FOOT, k=0.0, layer='feet')
     # 꼬리 깃 (뒤, 망토 아래)
-    tp = np.array((0, y0 + 1.5, -1.3))
-    fig.add(U([feather(tp, 0, 40, roll, 0.7, (0.3, 0.6, 0.12)) for roll in (-30, -10, 10, 30)], 0.05), FUR_DK, k=0.08, layer='tail')
+    tp = np.array((0, y0 + 1.75, -1.45))
+    fig.add(U([feather(tp, 0, 25, roll, 0.75, (0.3, 0.62, 0.14)) for roll in (-30, -10, 10, 30)], 0.08), FUR_DK, k=0.08, layer='tail')
     # 받침 소품: 책 3권 더미 (아래부터 초록·남색·빨강)
     bx, bz = -2.75, 1.6
     yy = y0 + 0.0

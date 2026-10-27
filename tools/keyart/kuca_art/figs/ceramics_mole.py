@@ -6,7 +6,7 @@ import numpy as np
 
 from .. import sculpt as S
 from .. import figures as Fg
-from .clock_rooster import Fast, hit, layer_paint, beads, face_frame, surf_beads
+from .clock_rooster import Fast, hit, layer_paint, beads, face_frame, surf_beads, rmax
 
 TIER = 'gold'
 
@@ -78,11 +78,11 @@ def build(fig, rng):
         return S.smin(d, S.ellipsoid(hc, hr)(P), 0.72)
 
     # 긴 주둥이 (앞으로 뻗어 끝이 살짝 올라감)
-    fig.add(S.capsule((0, y0 + 4.32, 0.95), (0, y0 + 4.24, 2.05), 0.56, 0.3), FUR_LT, k=0.4)
+    fig.add(S.capsule((0, y0 + 4.3, 0.95), (0, y0 + 4.3, 1.8), 0.6, 0.36), FUR_LT, k=0.4)
 
     # ---------- 팔 + 분홍 손 ----------
     # 왼팔: 옆으로 벌림 (화면 왼쪽)
-    shL, hdL = (-1.4, y0 + 3.1, 0.2), (-2.35, y0 + 2.6, 0.55)
+    shL, hdL = (-1.4, y0 + 3.1, 0.2), (-2.08, y0 + 2.3, 0.6)
     fig.add(S.capsule(shL, hdL, 0.48, 0.38), FUR, k=0.3)
     fig.add(S.ellipsoid(hdL, (0.36, 0.4, 0.34)), PAW, k=0.12, layer='paw')
     for j in range(4):
@@ -117,10 +117,10 @@ def build(fig, rng):
         d = np.abs(torso_f(P) - 0.11) - 0.055
         y = P[:, 1]
         bib_w = np.where(y > y0 + 2.75, 0.9, 1.95)
-        d = np.maximum(d, np.abs(P[:, 0]) - bib_w)
-        d = np.maximum(d, -(P[:, 2] + 0.15))
-        d = np.maximum(d, y - (y0 + 3.5))
-        d = np.maximum(d, (y0 + 0.75) - y)
+        d = rmax(d, np.abs(P[:, 0]) - bib_w, 0.05)
+        d = rmax(d, -(P[:, 2] + 0.15), 0.05)
+        d = rmax(d, y - (y0 + 3.5), 0.05)
+        d = rmax(d, (y0 + 0.75) - y, 0.05)
         d = np.maximum(d, -(np.minimum(S.capsule(shL, hdL, 0.48, 0.38)(P), S.capsule(shR, hdR, 0.48, 0.4)(P)) - 0.16))   # 팔 자리는 비움
         return d
     fig.add(apron, LINEN, k=0.0, layer='apron')
@@ -182,10 +182,10 @@ def build(fig, rng):
     bw = hit(fig, (0, y0 + 2.95, -4.5), (0, 0, 1), field=lambda P: torso_f(P) - 0.12) + (0, 0, -0.14)
     fig.add(S.ellipsoid(tuple(bw), (0.22, 0.2, 0.15)), LINEN, k=0.05, layer='bowknot')
     for s in (-1, 1):
-        loop = S.subtract(S.ellipsoid(tuple(bw + (s * 0.5, 0.08, 0.02)), (0.5, 0.28, 0.13), R=S.rot(0, 0, s * 14)),
-                          S.ellipsoid(tuple(bw + (s * 0.52, 0.08, -0.12)), (0.3, 0.12, 0.1), R=S.rot(0, 0, s * 14)), k=0.04)
+        loop = S.subtract(S.ellipsoid(tuple(bw + (s * 0.4, 0.08, 0.04)), (0.4, 0.23, 0.11), R=S.rot(0, 0, s * 14)),
+                          S.ellipsoid(tuple(bw + (s * 0.42, 0.08, -0.08)), (0.24, 0.1, 0.08), R=S.rot(0, 0, s * 14)), k=0.04)
         fig.add(loop, LINEN, k=0.08, layer='bow')
-        fig.add(S.capsule(tuple(bw + (s * 0.1, -0.12, 0)), tuple(bw + (s * 0.45, -0.85, 0.05)), 0.13, 0.1), LINEN, k=0.06, layer='bow')
+        fig.add(S.capsule(tuple(bw + (s * 0.1, -0.12, 0)), tuple(bw + (s * 0.38, -0.75, 0.03)), 0.12, 0.09), LINEN, k=0.06, layer='bow')
     # 허리 끈 (뒤로 이어짐)
     for s in (-1, 1):
         pts = []
@@ -200,7 +200,7 @@ def build(fig, rng):
     # ---------- 얼굴 ----------
     hcv = np.asarray(hc)
     # 분홍 별 코 (긴 주둥이 끝)
-    sn = hit(fig, (0, y0 + 4.25, 4.5), (0, 0, -1))
+    sn = hit(fig, (0, y0 + 4.3, 4.5), (0, 0, -1))
     Rs = S.rot(0, -8, 0)
     fig.add(star_sdf(tuple(sn + (0, 0, 0.06)), 0.4, 0.19, 0.1, Rs), STAR, k=0.0, layer='star')
     fig.add(S.sphere(tuple(sn + (0, 0, 0.02)), 0.19), STAR, k=0.0, layer='star')

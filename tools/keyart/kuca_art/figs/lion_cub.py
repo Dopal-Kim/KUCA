@@ -18,7 +18,7 @@ EAR_IN = (0.97, 0.66, 0.62)
 NOSE = (0.86, 0.48, 0.48)
 SUIT = (0.975, 0.965, 0.95)
 SUIT_SH = (0.90, 0.89, 0.87)
-STRIPE = (0.74, 0.13, 0.18)
+STRIPE = (0.62, 0.12, 0.17)
 BAND = (0.99, 0.985, 0.975)
 STONE = (0.82, 0.80, 0.76)
 STONE_DK = (0.68, 0.66, 0.62)
@@ -402,20 +402,20 @@ def build(fig, rng):
     mbase = lambda P: np.maximum(S.smin(ring_core(P), back(P), 0.4), keep(P))
     front, rear = [], []
     mcen = hc + np.array((0, -0.2, -0.45))
-    MRr = np.array((2.05, 2.0, 1.75))
-    for i, el_ in enumerate(range(-52, 40, 19)):
+    MRr = np.array((2.12, 2.02, 1.78))
+    for i, el_ in enumerate(range(-50, 50, 16)):
         n = max(4, int(round(360 / 21 * math.cos(math.radians(el_)))))
         for j in range(n):
             az = 360 * (j + 0.5 * (i % 2)) / n
             d = _dir(az, el_)
-            if d[2] > 0.42 or (el_ > 20 and d[2] > -0.35):      # 얼굴 앞·정수리 앞쪽은 비움
+            if d[2] > 0.55 or (el_ > 25 and d[2] > -0.25):      # 얼굴 앞·정수리 앞쪽은 비움
                 continue
             p = mcen + d * MRr
             out = d / np.linalg.norm(d)
             down = np.array((0, -1.0, 0)) - out * out[1]
-            back_ = d[2] < -0.1
-            tip = p + out * (0.42 if back_ else 0.5) + down * (0.42 if back_ else 0.2)
-            lock = S.capsule(p - out * 0.3, tip, 0.52 if back_ else 0.45, 0.19 if back_ else 0.16)
+            down = down / max(np.linalg.norm(down), 1e-6)
+            # 둥근 잎 모양 털 뭉치: 바깥으로 살짝, 아래로 처진 방향 (끝이 뾰족하게 흘러내리지 않게)
+            lock = S.ellipsoid(p + out * 0.1 + down * 0.12, (0.5, 0.6, 0.4), R=axes(down * 0.75 + out * 0.45, out))
             (front if d[2] > 0.0 else rear).append(lock)
     mane_r = U(rear, 0.1)
     mane_f = U(front, 0.1)
@@ -423,9 +423,9 @@ def build(fig, rng):
     fig.add(mane_f, MANE_LT, k=0.0, layer='mane2')
     mb = mbase
     # 정수리 작은 앞머리 한 가닥 (밴드 위)
-    p = surf(head, hc, 0, 46, -0.15)
-    R = axes(np.array((0, 0.75, 0.55)), _dir(0, 10))
-    fig.add(S.capsule(p, p + R @ np.array((0, 0.75, 0)), 0.3, 0.07), MANE_LT, k=0.0, layer='tuft')
+    p = surf(head, hc, 0, 50, -0.1)
+    R = axes(np.array((0, 0.55, 0.85)), _dir(0, 60))
+    fig.add(S.ellipsoid(p + R @ np.array((0, 0.3, 0)), (0.38, 0.55, 0.26), R=R), MANE_LT, k=0.0, layer='tuft')
     # 귀 (갈기 위로 나온 둥근 귀, 분홍 안쪽)
     for s in (-1, 1):
         ec = surf(head, hc, s * 40, 52, -0.25) + np.array((s * 0.12, 0.3, -0.1))
