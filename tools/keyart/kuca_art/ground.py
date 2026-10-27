@@ -104,8 +104,8 @@ class Ground:
                            and t.get('service') not in ('parking_aisle', 'driveway') and _length(pts) >= MAIN_ROAD_M]
         self.road_p = self._stroke(self.paint_roads, ROAD_W)
         self.curb_p = self._stroke(self.paint_roads, ROAD_W, extra=1.0)
-        # shortcut: 이름 있는 찻길(덕영대로 · 서천동로… 캠퍼스 밖 시내 길)은 보도를 안 칠함 — 이름 붙은 구내 길이 생기면 캠퍼스 경계로 가르기 (ROAD_REVIEW_v3: 정문 건너 주택가에 칠해짐)
-        campus_roads = [(t['highway'], pts) for t, pts in roads_t if t.get('service') != 'parking_aisle' and not t.get('name')]
+        # 캠퍼스 안 찻길은 OSM 에서 모두 service — 그것만 보도를 칠함 (residential · tertiary 는 정문 건너 주택가 · 시내 길, ROAD_REVIEW_v3)
+        campus_roads = [(t['highway'], pts) for t, pts in roads_t if t['highway'] == 'service' and t.get('service') != 'parking_aisle']
         self.sidewalk = self._stroke(campus_roads, ROAD_W, extra=4.2) | self._stroke(
             [(t['highway'], pts) for t, pts in self._tagged(WALK_W) if t.get('footway') == 'sidewalk'], WALK_W)
         self.rough = self._stroke([('steps', pts) for t, pts in self._tagged(WALK_W) if t['__id'] in ROUGH_STEPS], WALK_W)
