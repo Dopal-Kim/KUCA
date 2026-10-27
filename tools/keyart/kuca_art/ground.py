@@ -28,14 +28,21 @@ BRICK_PAVE = np.array([170, 98, 80], np.float32)   # 실사 전자정보대학�
 YELLOW = np.array([236, 192, 64], np.float32)       # 차도 중앙선
 LINE = np.array([248, 246, 238], np.float32)
 STONE_STEP = np.array([188, 184, 176], np.float32)  # 화강석 돌계단 (보도 블록보다 회색 · 단단하게)
-GRAVEL = np.array([206, 186, 150], np.float32)      # 공원 · 숲 흙길 (마사토) — 보도 블록과 구분
+GRAVEL = np.array([184, 152, 108], np.float32)      # 공원 · 숲 흙길 (마사토) — 보도 블록과 구분 (R1 은 너무 비슷하다는 ROAD_REVIEW_v1 → 더 갈색)
+SIDEWALK = np.array([178, 108, 90], np.float32)     # 찻길 옆 보도: 붉은 갈색 블록 (VR 실사, docs/길_사이클.md 1장)
+CURB_GRANITE = np.array([216, 214, 208], np.float32)  # 화강석 연석
+PLAZA_BAND = np.array([214, 198, 172], np.float32)  # 광장 가장자리 베이지 화강석 띠 (실사: 약 1 m 띠로 나뉨)
+SPEED_BUMP = np.array([238, 196, 52], np.float32)
 
 ROAD_W = {'primary': 16, 'secondary': 14, 'tertiary': 11, 'residential': 8, 'unclassified': 8,
           'living_street': 6, 'service': 5}
 WALK_W = {'footway': 3.2, 'path': 2.6, 'pedestrian': 6, 'steps': 3.5, 'track': 3.2, 'cycleway': 3}
 CENTER_LINE = {'primary', 'secondary', 'tertiary'}
-# OSM 에 보도로만 있는 계단 (사용자 10/27: 중앙도서관 → 학생회관 사이 돌계단)
+# OSM 에 보도로만 있는 계단 (사용자 10/27: 중앙도서관 → 학생회관 사이 돌계단 — VR 실사로는 거친 막돌 계단)
 STEPS_WAYS = {1389719862}
+ROUGH_STEPS = {1389719862}
+MAIN_ROAD_M = 150      # 이보다 긴 구내 찻길(주차장 통로 · 진입로 제외)만 중앙선 · 과속방지턱 (짧은 진입로와 구분, ROAD_REVIEW_v1)
+BUMP_EVERY_M = 110
 TRAIL = {'path', 'track'}
 
 
@@ -89,6 +96,16 @@ class Ground:
         self.walk_lines = list(self._lines(WALK_W))
         self.walk = self._stroke(self.walk_lines, WALK_W)
         self.steps = self._stroke([l for l in self.walk_lines if l[0] == 'steps'], WALK_W)
+        # 칠하기 전용 (나무 · 가로등 자리를 정하는 마스크는 그대로: 바꾸면 캠퍼스 전체 배치가 바뀜, M26)
+        roads_t = [(t, pts) for t, pts in self._tagged(ROAD_W)]
+        self.paint_roads = [(t['highway'], pts) for t, pts in roads_t if t.get('service') != 'parking_aisle']   # 주차장 통로 꼬리 빼기 (공학관 앞, ROAD_REVIEW_v1)
+        self.main_roads = [pts for t, pts in roads_t if t['highway'] in ('residential', 'service', 'unclassified', 'living_street')
+                           and t.get('service') not in ('parking_aisle', 'driveway') and _length(pts) >= MAIN_ROAD_M]
+        self.road_p = self._stroke(self.paint_roads, ROAD_W)
+        self.curb_p = self._stroke(self.paint_roads, ROAD_W, extra=0.6)
+        self.sidewalk = self._stroke(self.paint_roads, ROAD_W, extra=3.8) | self._stroke(
+            [(t['highway'], pts) for t, pts in self._tagged(WALK_W) if t.get('footway') == 'sidewalk'], WALK_W)
+        self.rough = self._stroke([('steps', pts) for t, pts in self._tagged(WALK_W) if t['__id'] in ROUGH_STEPS], WALK_W)
         self.trail = self._stroke([l for l in self.walk_lines if l[0] in TRAIL], WALK_W)
         self.curb = self._stroke(self.road_lines, ROAD_W, extra=2.2)
         self.road = self._stroke(self.road_lines, ROAD_W)
@@ -140,6 +157,13 @@ class Ground:
             hw = t.get('highway')
             if e['type'] == 'way' and hw in kinds and e.get('geometry') and t.get('area') != 'yes':
                 yield 'steps' if e['id'] in STEPS_WAYS else hw, [to_world(p['lon'], p['lat']) for p in e['geometry']]
+
+    def _tagged(self, kinds):
+        """_lines 와 같지만 태그(+ __id)도 준다"""
+        for e in self.osm:
+            t = e.get('tags', {})
+            if e['type'] == 'way' and t.get('highway') in kinds and e.get('geometry') and t.get('area') != 'yes':
+                yield {**t, '__id': e['id']}, [to_world(p['lon'], p['lat']) for p in e['geometry']]
 
     def _stroke(self, lines, widths, extra=0.0):
         m = Image.new('L', (self.W, self.H), 0)
@@ -443,6 +467,9 @@ class Ground:
         parking = _recolor(paving_t, PARKING)
         blend(self.square, plaza)
         blend(self.paved, plaza)
+        # 광장 가장자리 1 m 베이지 화강석 띠 (실사: 화강석 띠로 나뉨 · ROAD_REVIEW_v1 "칼로 자른 직선이라 바닥 그림처럼")
+        sq = self.square | self.paved
+        blend(sq & (ndimage.distance_transform_edt(sq) / ppm < 1.0), _recolor(paving_t, PLAZA_BAND), 0.6)
         blend(self.parking, parking)
         blend(self.apron, paving, 0.8)
 
@@ -462,17 +489,26 @@ class Ground:
         print('ground: roads')
         walk_m = self.walk
         blend(walk_m, paving, 0.7)
-        # 길마다 성격: 공원 · 숲 흙길은 마사토, 계단은 화강석 + 디딤판 줄 (보도 블록과 한눈에 구분되게, 길 사이클 R1)
-        blend(self.trail & ~self.steps, _recolor(paving_t, GRAVEL), 0.75)
+        # 찻길 옆 보도: 붉은 갈색 블록 1.6 m + 화강석 연석 (VR 실사 · 길 사이클 R2). 광장 · 건물 · 물 · 주차장 · 운동장 위에는 안 칠함
+        side = self.sidewalk & ~(self.buildings | self.water | self.square | self.paved | self.parking | self.pitch | self.track | self.steps)
+        blend(side, _recolor(paving_t, SIDEWALK), 0.7)
+        # 길마다 성격: 공원 · 숲 흙길은 마사토 + 가장자리 들쭉날쭉, 계단은 화강석 + 디딤판 (길 사이클 R1 · R2)
+        ragged = self._grow(self.trail, 0.5) & (_smooth_noise((H, W), 900, 5) > 0.15) & ~(self.road | self.buildings | self.water)
+        blend((self.trail | ragged) & ~self.steps, _recolor(paving_t, GRAVEL), 0.75)
         blend(self.steps, _recolor(paving_t, STONE_STEP), 0.9)
-        treads = Image.new('L', (W, H), 0)
-        self._treads(ImageDraw.Draw(treads))
-        canvas *= (1 - 0.32 * ((np.asarray(treads) > 0) & self.steps))[..., None]
+        if self.rough.any():
+            canvas = np.where(self.rough[..., None], self._rubble(), canvas)   # 막돌 계단 (도서관 → 학생회관, VR 실사)
+        dark, light = Image.new('L', (W, H), 0), Image.new('L', (W, H), 0)
+        self._treads(ImageDraw.Draw(dark), ImageDraw.Draw(light))
+        canvas *= (1 - 0.38 * ((np.asarray(dark) > 0) & self.steps))[..., None]
+        canvas = np.where(((np.asarray(light) > 0) & self.steps)[..., None], canvas * 0.7 + 255 * 0.3, canvas)
+        # 계단 양옆 진한 경계석 0.4 m
+        blend(self.steps & (ndimage.distance_transform_edt(self.steps) / ppm < 0.4), flat(STONE_STEP * 0.72), 0.3)
         if hasattr(self, 'brick'):
             blend(self.brick, _recolor(paving_t, BRICK_PAVE))
-        blend(self.curb, flat(CURB), 0.7)
+        blend(self.curb_p, flat(CURB_GRANITE), 0.7)
         asphalt = _recolor(self._tile('road', 9, crop=(0.10, 0.0, 0.40, 1.0)), ASPHALT)
-        blend(self.road, asphalt, 0.7)
+        blend(self.road_p, asphalt, 0.7)
         marks = Image.new('L', (W, H), 0)
         md = ImageDraw.Draw(marks)
         center = Image.new('L', (W, H), 0)
@@ -481,9 +517,14 @@ class Ground:
         for hw, pts in self.road_lines:
             if hw in CENTER_LINE:
                 cd.line([self.r.px(*p) for p in pts], fill=255, width=lw, joint='curve')
+        for pts in self.main_roads:   # 구내 큰 순환로도 노란 중앙선 (실사: 노란 겹 중앙선, 짧은 진입로 · 주차장 통로는 없음)
+            cd.line([self.r.px(*p) for p in pts], fill=255, width=lw, joint='curve')
+        bumps = Image.new('L', (W, H), 0)
+        self._bumps(ImageDraw.Draw(bumps))
         self._crosswalks(md)
         blend(np.asarray(marks) > 0, flat(LINE), 0.5)
-        blend((np.asarray(center) > 0) & self.road, flat(YELLOW), 0.6)
+        blend((np.asarray(center) > 0) & self.road_p, flat(YELLOW), 0.6)
+        blend((np.asarray(bumps) > 0) & self.road_p, flat(SPEED_BUMP), 0.5)   # 과속방지턱 (실사: 노랑 · 흰 줄, 아주 많음)
 
         # 포장 가장자리 선: 포장 안쪽 0.35 m 를 살짝 어둡게 (타일 테두리처럼 또렷하게)
         light_paved = walk_m | self.square | self.paved | self.apron | self.parking
@@ -570,9 +611,39 @@ class Ground:
         Image.fromarray((acc * 255).astype(np.uint8)).save(path)
         print('lights', len(lights), path)
 
-    def _treads(self, md):
-        """계단 디딤판: 0.9 m 마다 길과 직각인 어두운 줄 (단 아래 그늘)"""
-        w = max(1, int(0.22 * self.ppm))
+    def _rubble(self):
+        """막돌: 크기 0.4~0.9 m 자연석을 회색 · 갈색으로 흩뿌리고 사이는 어두운 줄눈"""
+        rng = np.random.default_rng(23)
+        img = Image.new('RGB', (self.W, self.H), (112, 104, 94))
+        d = ImageDraw.Draw(img)
+        ys, xs = np.nonzero(self._grow(self.rough, 0.5))
+        for i in rng.choice(len(xs), size=min(len(xs), 4000), replace=False):
+            r = rng.uniform(0.2, 0.45) * self.ppm
+            g = rng.uniform(150, 200)
+            c = (int(g), int(g - rng.uniform(4, 16)), int(g - rng.uniform(10, 28)))
+            d.ellipse((xs[i] - r, ys[i] - r * rng.uniform(0.6, 1.0), xs[i] + r, ys[i] + r * rng.uniform(0.6, 1.0)), fill=c)
+        return np.asarray(img).astype(np.float32)
+
+    def _bumps(self, md):
+        """구내 큰 찻길에 BUMP_EVERY_M 마다 길과 직각인 1.2 m 띠"""
+        w = max(2, int(1.2 * self.ppm))
+        for pts in self.main_roads:
+            s0, walked = BUMP_EVERY_M / 2, 0.0
+            for a, b in zip(pts, pts[1:]):
+                L = math.hypot(b[0] - a[0], b[1] - a[1])
+                while L > 0 and s0 <= walked + L:
+                    t = (s0 - walked) / L
+                    cx, cz = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+                    nx, nz = -(b[1] - a[1]) / L, (b[0] - a[0]) / L
+                    half = ROAD_W['service'] / 2 + 1
+                    md.line([self.r.px(cx - nx * half, cz - nz * half), self.r.px(cx + nx * half, cz + nz * half)], fill=255, width=w)
+                    s0 += BUMP_EVERY_M
+                walked += L
+
+    def _treads(self, md, light=None):
+        """계단 디딤판: 1.2 m 마다 길과 직각인 어두운 줄 (단 앞면 그늘) + 바로 위 밝은 줄 (단 윗면 모서리)
+        0.9 m 는 텍셀 2~3 개라 벽돌처럼 깨져 보였음 (ROAD_REVIEW_v1)"""
+        w = max(1, int(0.3 * self.ppm))
         half = WALK_W['steps'] / 2 + 0.2
         for hw, pts in self.walk_lines:
             if hw != 'steps':
@@ -583,11 +654,14 @@ class Ground:
                     continue
                 rx, rz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
                 nx, nz = -rz, rx
-                s = 0.45
+                s = 0.6
                 while s < L:
                     cx, cz = a[0] + rx * s, a[1] + rz * s
                     md.line([self.r.px(cx - nx * half, cz - nz * half), self.r.px(cx + nx * half, cz + nz * half)], fill=255, width=w)
-                    s += 0.9
+                    if light is not None:
+                        lx, lz = cx + rx * 0.4, cz + rz * 0.4
+                        light.line([self.r.px(lx - nx * half, lz - nz * half), self.r.px(lx + nx * half, lz + nz * half)], fill=255, width=w)
+                    s += 1.2
 
     def _crosswalks(self, md):
         """보행로가 차도를 가로지르는 곳에 얼룩말 무늬"""
@@ -622,6 +696,10 @@ class Ground:
         a = a - ndimage.gaussian_filter(a, 24, mode='wrap')
         a = 128 + a / (np.abs(a).max() + 1e-6) * 90
         Image.fromarray(np.clip(a, 0, 255).astype(np.uint8)).save(path)
+
+
+def _length(pts):
+    return sum(math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(pts, pts[1:]))
 
 
 def _seg_intersect(a, b, c, d):

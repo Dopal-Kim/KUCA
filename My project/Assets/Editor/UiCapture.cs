@@ -55,10 +55,16 @@ public static class UiCapture
     /// </summary>
     static readonly (string name, float x, float z, float size)[] RoadSpots =
     {
-        ("사색의광장", 96f, -354f, 220f), ("도서관_학생회관_계단", -41f, -276f, 90f), ("정문_앞", -141f, 369f, 140f),
+        ("사색의광장", 96f, -354f, 220f), ("도서관_학생회관_계단", -41f, -276f, 90f), ("도서관_계단_가까이", -41f, -276f, 45f), ("정문_앞", -141f, 369f, 140f),
         ("공학관_운동장길", -59f, 304f, 160f), ("대운동장_둘레", -149f, -6f, 200f), ("노천극장_천문대길", 221f, -606f, 160f),
         ("생과대_체대_오르막", 1f, -96f, 160f), ("기숙사_학생회관길", -139f, -176f, 140f), ("외대_멀티_앞", -249f, 74f, 140f),
         ("캠퍼스_전체", 51f, -126f, 1100f),
+    };
+
+    /// <summary>S(비스듬히)가 앞 건물 지붕에 가려지는 자리: (yaw, pitch) — 도서관 계단은 북쪽에서, 생과대 · 체대는 더 내려다보기 (ROAD_REVIEW_v1)</summary>
+    static readonly Dictionary<string, (float yaw, float pitch)> RoadSideView = new()
+    {
+        ["도서관_학생회관_계단"] = (180f, 55f), ["도서관_계단_가까이"] = (180f, 55f), ["생과대_체대_오르막"] = (0f, 62f),
     };
 
     static IEnumerator RoadScript()
@@ -91,9 +97,10 @@ public static class UiCapture
         {
             float ground = Physics.Raycast(new Vector3(x, 1000f, z), Vector3.down, out RaycastHit hit, 2000f) ? hit.point.y : 0f;
             Vector3 target = new Vector3(x, ground, z);
-            foreach (var (tag, pitch, k) in new[] { ("T", 80f, 0.9f), ("S", 40f, 1.1f) })
+            (float yaw, float pitch) side = RoadSideView.TryGetValue(name, out var v) ? v : (0f, 40f);
+            foreach (var (tag, pitch, yaw, k) in new[] { ("T", 80f, 0f, 0.9f), ("S", side.pitch, side.yaw, 1.1f) })
             {
-                Quaternion rot = Quaternion.Euler(pitch, 0f, 0f);   // yaw 0: 남쪽에서 북쪽을 본다
+                Quaternion rot = Quaternion.Euler(pitch, yaw, 0f);   // yaw 0: 남쪽에서 북쪽을 본다, 180: 북쪽에서 남쪽
                 ShotFrom(cam, target - rot * Vector3.forward * (size * k), rot, $"{Safe(name)}_{tag}");
             }
             yield return 0.05f;
