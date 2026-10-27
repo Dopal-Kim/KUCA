@@ -312,7 +312,10 @@ public partial class RoutePlanner : MonoBehaviour
         ShowLoading(false);
         if (options.Count == 0)
         {
-            Toast(error ?? "코스를 만들지 못했어요. 잠시 뒤 다시 해 주세요");
+            if (error != null && error.Contains("다시 입력해 주세요"))
+                wishHint.text = error;   // 입력칸 바로 아래에 (토스트는 금방 사라져 무엇을 고칠지 놓침)
+            else
+                Toast(error ?? "코스를 만들지 못했어요. 잠시 뒤 다시 해 주세요");
             ShowSheet();
             return;
         }

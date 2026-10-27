@@ -13,7 +13,7 @@ WHITE = (0.985, 0.98, 0.97)
 BILL = (1.0, 0.60, 0.15)
 BILL_DK = (0.93, 0.47, 0.10)
 HAT = (1.0, 0.84, 0.22)
-HAT_DK = (0.93, 0.72, 0.18)
+HAT_DK = (0.97, 0.78, 0.2)
 RING = (1.0, 0.82, 0.18)
 BTN = (0.80, 0.12, 0.18)
 WATER = (0.50, 0.76, 0.97)
@@ -297,23 +297,28 @@ def build(fig, rng):
     # 동글동글 통통한 몸 (배가 앞으로 빵빵)
     torso = S.ellipsoid((0, y0 + 2.2, 0.0), (1.66, 1.58, 1.58))
     belly = S.ellipsoid((0, y0 + 1.98, 0.28), (1.52, 1.32, 1.46))
-    trunk = lambda P: S.smin(torso(P), belly(P), 0.4)
+    bottom = S.ellipsoid((0, y0 + 1.4, 0.0), (1.38, 0.82, 1.3))
+    trunk = lambda P: S.smin(S.smin(torso(P), belly(P), 0.4), bottom(P), 0.4)
     core = lambda P: S.smin(head(P), trunk(P), 0.45)
     fig.add(core, WHITE, k=0.3)
     # 모자: 단단한 둥근 머리통 + 아래로 처진 챙 (뒤로 기울임) + 솔기 + 빨간 단추 + 흰 컬 꼭지
-    Rh = S.rot(0, -18, 5)
-    Hc = hc + np.array((0, 0.9, -0.3))
-    crown = lambda P: np.maximum(S.ellipsoid(Hc, (2.18, 1.55, 2.24), R=Rh)(P), -((P - Hc) @ Rh[:, 1]) - 0.55)
+    Rh = S.rot(0, -10, 5)
+    Hc = hc + np.array((0, 0.62, -0.18))
+    crown = lambda P: np.maximum(S.ellipsoid(Hc, (2.18, 1.72, 2.24), R=Rh)(P), -((P - Hc) @ Rh[:, 1]) - 0.55)
     fig.add(crown, HAT, k=0.0, layer='hat')
 
     def brim(P):
         q = (P - Hc) @ Rh
         r = np.linalg.norm(q[:, [0, 2]], axis=1)
-        a, b = np.array((2.0, -0.5)), np.array((3.1, -0.98))
         p2 = np.stack([r, q[:, 1]], axis=1)
-        ba = b - a
-        h = np.clip(((p2 - a) @ ba) / (ba @ ba), 0, 1)
-        return np.linalg.norm(p2 - a - h[:, None] * ba, axis=1) - 0.075
+        d = None
+        # 챙 단면: 안쪽은 완만하게, 바깥 끝은 아래로 처지는 곡선 (꺾인 원뿔 대신)
+        for a, b in ((np.array((2.0, -0.5)), np.array((2.6, -0.66))), (np.array((2.6, -0.66)), np.array((3.12, -1.0)))):
+            ba = b - a
+            h = np.clip(((p2 - a) @ ba) / (ba @ ba), 0, 1)
+            e = np.linalg.norm(p2 - a - h[:, None] * ba, axis=1)
+            d = e if d is None else np.minimum(d, e)
+        return d - 0.075
     fig.add(brim, HAT, k=0.12, layer='hat')
     for k in range(4):
         a = math.pi * k / 4 + math.pi / 8
@@ -327,7 +332,7 @@ def build(fig, rng):
     for k in range(4):
         a = math.pi / 4 + k * math.pi / 2
         fig.add(S.sphere(bpos + bd * 0.06 + bR @ np.array((math.cos(a) * 0.13, math.sin(a) * 0.13, 0)), 0.06), (0.98, 0.78, 0.72), k=0.0, layer='btn_d')
-    top = Hc + Rh @ np.array((0, 1.52, 0))
+    top = Hc + Rh @ np.array((0, 1.69, 0))
     fig.add(curl(top - Rh[:, 1] * 0.15, S.rot(25, 0, 0) @ Rh, 0.27, 0.42), WHITE, k=0.0, layer='curl')
     fig.add(curl(surf(head, hc, -15, 5, -0.08), S.rot(-15, 4, 14), 0.14, 0.22), WHITE, k=0.16)
     # 얼굴: 눈·부리·볼
@@ -342,7 +347,7 @@ def build(fig, rng):
         fig.paint(S.sphere(surf(head, hc, s * 40, -24), 0.42), Fg.BLUSH, soft=0.35)
     # 다리·물갈퀴
     for s in (-1, 1):
-        fig.add(S.ellipsoid((s * 0.62, y0 + 1.0, 0.1), (0.5, 0.55, 0.5)), WHITE, k=0.3)
+        fig.add(S.ellipsoid((s * 0.62, y0 + 0.95, 0.1), (0.58, 0.5, 0.56)), WHITE, k=0.3)
         fig.add(S.capsule((s * 0.66, y0 + 0.75, 0.25), (s * 0.7, y0 + 0.28, 0.4), 0.16), BILL, k=0.06, layer='feet')
         fc = np.array((s * 0.74, y0 + 0.16, 0.75))
         R = S.rot(s * 12, 0, 0)
@@ -361,12 +366,12 @@ def build(fig, rng):
     fig.add(S.ellipsoid(ff + np.array((0, -0.08, 0.04)), (0.27, 0.1, 0.16)), BILL, k=0.0, layer='ringbill')
     # 날개: 튜브 위에 얹은 작은 흰 날개 (깃 끝 3)
     for s in (-1, 1):
-        sh = np.array((s * 1.45, y0 + 3.2, 0.2))
-        tip = np.array((s * 1.8, y0 + 2.62, 1.2))
-        R = axes(tip - sh, (s * 0.8, 0.2, 0.3))
-        w = [S.ellipsoid((sh + tip) / 2, (0.32, 0.62, 0.42), R=R)]
-        for u in (-0.2, 0.05, 0.28):
-            w.append(S.ellipsoid(tip + R @ np.array((u, 0.0, u * 1.2)), (0.14, 0.32, 0.17), R=R))
+        sh = np.array((s * 1.38, y0 + 3.45, 0.05))
+        tip = np.array((s * 1.78, y0 + 2.6, 0.3))
+        R = axes(tip - sh, (s * 1.0, 0.15, 0.1))          # 로컬 Z = 바깥 (얇은 방향)
+        w = [S.ellipsoid((sh + tip) / 2, (0.48, 0.62, 0.26), R=R)]
+        for u in (-0.26, 0.0, 0.26):
+            w.append(S.ellipsoid(tip + R @ np.array((u, 0.02, 0.0)), (0.15, 0.3, 0.17), R=R))
         fig.add(U(w, 0.12), WHITE, k=0.25)
     # 받침 소품: 물웅덩이 + 연잎 2 + 흰 수련
     fig.add(lambda P: pud(P) - 0.0, WATER, k=0.0, layer='water')

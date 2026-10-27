@@ -53,8 +53,9 @@ def build(fig, rng):
         fig.add(S.capsule((x, y0 + 0.42, 0.03), (x * 1.05, y0 + 1.65, 0.0), 0.32, 0.42), SAND, k=0.12)
     # ---- 몸통: 키 크고 가는 몸, 꼿꼿이 선 자세, 크림 배 ----
     fig.add(S.ellipsoid((0, y0 + 2.0, 0.0), (0.9, 0.78, 0.78)), SAND, k=0.4)
-    fig.add(S.ellipsoid((0, y0 + 3.3, 0.0), (0.78, 1.35, 0.7)), SAND, k=0.6)
-    fig.add(S.capsule((0, y0 + 4.2, -0.02), (0, y0 + 5.2, 0.02), 0.52, 0.5), SAND, k=0.3)
+    fig.add(S.ellipsoid((0, y0 + 3.3, 0.0), (0.86, 1.35, 0.76)), SAND, k=0.6)
+    # 목: 굵고 짧게 녹여 머리가 막대 위에 얹힌 것처럼 보이지 않게 (키아트는 목이 거의 안 보임)
+    fig.add(S.capsule((0, y0 + 4.2, -0.02), (0, y0 + 5.2, 0.02), 0.66, 0.7), SAND, k=0.5)
     fig.paint(S.ellipsoid((0, y0 + 2.9, 0.62), (0.55, 1.75, 0.42)), CREAM, soft=0.25)
     # ---- 카메라: 가슴 앞, 두 손으로 받쳐 든 모습 (검정 몸 + 은색 윗판 + 렌즈) ----
     cc = np.array((0, y0 + 3.35, 0.98))
@@ -73,7 +74,11 @@ def build(fig, rng):
     Fg._ellipsoid(fig.extra, C((0.06, 0.04, 0.47)), (0.06, 0.06, 0.025), (1, 1, 1), 8, 4)
     for s in (-1, 1):   # 끈: 카메라 양옆 → 어깨 → 목 뒤
         lug = cc + Rcam @ (np.array((s * 0.68, 0.22, 0)) * cs)
-        pts = [lug, np.array((s * 0.6, y0 + 4.05, 0.62)), np.array((s * 0.52, y0 + 4.55, 0.3)), np.array((s * 0.42, y0 + 4.75, -0.2)), np.array((0, y0 + 4.8, -0.5))]
+        pts = [lug, np.array((s * 0.6, y0 + 4.05, 0.7))]
+        for th in np.radians(np.linspace(38, 180, 7)):   # 목 둘레 표면을 따라 뒤로 (목 속에 묻히지 않게)
+            o = np.array((s * math.sin(th) * 4.0, y0 + 4.45 + 0.2 * (th / math.pi), math.cos(th) * 4.0))
+            q = np.asarray(Fg.surface_frame(fig, o, (-s * math.sin(th), 0, -math.cos(th))).o)
+            pts.append(q + np.array((s * math.sin(th), 0, math.cos(th))) * 0.05)
         for a, b in zip(pts, pts[1:]):
             fig.add(S.capsule(tuple(a), tuple(b), 0.065), STRAP, k=0.03, layer='strap')
         fig.add(S.torus(tuple(lug), 0.07, 0.03, Rm=S.rot(0, 0, 90)), (0.95, 0.75, 0.2), k=0.0, layer='ring', metal=g)
@@ -91,12 +96,12 @@ def build(fig, rng):
             fig.add(S.capsule(tuple(hand + np.array((-s * 0.05, 0.12 - k * 0.12, 0.12))), tuple(hand + np.array((-s * 0.22, 0.12 - k * 0.12, 0.22))), 0.06, 0.055), DARK, k=0.05, layer='hand')
     # ---- 꼬리: 등 뒤로 길게, 끝은 짙은 갈색 ----
     tp = [np.array(p) for p in ((-0.1, y0 + 1.5, -0.6), (-0.4, y0 + 0.65, -1.35), (-1.0, y0 + 0.45, -2.05), (-1.7, y0 + 0.8, -2.45), (-2.15, y0 + 1.35, -2.55))]
-    tr = (0.36, 0.3, 0.27, 0.22, 0.12)
+    tr = (0.44, 0.4, 0.35, 0.28, 0.17)   # 쥐꼬리처럼 가늘지 않게 굵고 끝이 뭉툭
     for (a, b), (r0, r1) in zip(zip(tp, tp[1:]), zip(tr, tr[1:])):
         fig.add(S.capsule(tuple(a), tuple(b), r0, r1), SAND, k=0.25)
     fig.paint(S.sphere(tuple(tp[-1]), 0.7), DARK, soft=0.2)
     # ---- 머리: 좁고 긴 두상 (세로 타원) + 앞으로 가늘어지는 주둥이, 따로 붙인 볼 없음 ----
-    hc = (0, y0 + 6.45, 0.1)
+    hc = (0, y0 + 6.3, 0.1)   # 머리를 살짝 내려 목이 길게 보이지 않게
     hr = np.array((1.42, 1.72, 1.5))
     head_f = S.ellipsoid(hc, tuple(hr))
     fig.add(head_f, SAND, k=0.3)
@@ -126,7 +131,8 @@ def build(fig, rng):
 
     def rib(P, n=44, amp=0.022):
         q = (P - bc) @ Rb
-        return amp * np.cos(np.arctan2(q[:, 0], q[:, 2]) * n)
+        fade = np.clip((1.45 - q[:, 1]) / 0.6, 0, 1)   # 골이 모이는 정수리에서는 골을 지움 (톱니 자국 방지)
+        return amp * fade * np.cos(np.arctan2(q[:, 0], q[:, 2]) * n)
     dome0 = S.ellipsoid(tuple(np.array(hc) + (0, 0.1, -0.05)), tuple(hr + (0.13, 0.3, 0.13)))
     fig.add(lambda P: rmax(dome0(P) + rib(P), 0.5 - qy(P), 0.05), KNIT, k=0.0, layer='beanie')
     cuff0 = S.ellipsoid(hc, tuple(hr + 0.26))

@@ -14,7 +14,8 @@ public record RecommendRequest(
     bool AfterMeal = false,       // 식후 걷기 버튼으로 요청
     string? Wish = null,          // 말로 한 산책 바람 (200자 이내). 있으면 AI 가 판단해 코스를 짠다
     List<VisitCount>? VisitCounts = null,
-    double? WeightKg = null);     // (선택) 몸무게 kg — 칼로리 범위를 좁힌다. 서버에 저장하지 않는다   // 장소마다 들른 횟수 (앱의 산책 기록). 안 가 본 곳 · 자주 가던 곳 판단에 씀
+    double? WeightKg = null,      // (선택) 몸무게 kg — 칼로리 범위를 좁힌다. 서버에 저장하지 않는다   // 장소마다 들른 횟수 (앱의 산책 기록). 안 가 본 곳 · 자주 가던 곳 판단에 씀
+    bool Talk = false);           // 걸으며 이야기하기 (산책 메이트 코스): 조용하고 걷기 쉬운 곳만
 
 /// <summary>한 장소를 몇 번 들렀는지</summary>
 public record VisitCount(string BuildingId, int Count);

@@ -46,12 +46,17 @@ def leaf_fn(O, R, u0, u1, Wm, k_tip, k_base, k_cup, th=0.08, rib=0.05, tip_pow=0
     def f(P):
         v, y, u = local(P)
         h, dhu, dhv = height(u, v)
-        d = (y - h) / np.sqrt(1 + dhu * dhu + dhv * dhv)
+        nn = np.sqrt(1 + dhu * dhu + dhv * dhv)
+        d = (y - h) / nn
         thk = th + rib * np.exp(-(v / 0.07) ** 2) * np.clip((u1 - u) / 0.6, 0, 1)
-        shell = np.abs(d) - thk
-        w = width(u)
-        outline = np.maximum(np.abs(v) - w, np.maximum(u0 - u, u - u1))
-        return -S.smin(-shell, -outline, 0.08)
+        # 윤곽은 판 표면 위로 내린 점에서 잰다 (수직으로 자르면 휜 가장자리가 비스듬한 칼날이 되어 메시가 찢어진다)
+        vs, us = v + d * dhv / nn, u + d * dhu / nn
+        w = width(us)
+        outline = np.maximum(np.abs(vs) - w, np.maximum(u0 - us, us - u1))
+        # 둥근 테두리 (판 두께만 한 반지름): 모서리가 날카로운 판은 메시를 줄일 때 가장자리가 찢어져 보인다
+        rr = thk * 0.85
+        a_, b_ = np.abs(d) - (thk - rr), outline + rr
+        return np.hypot(np.maximum(a_, 0), np.maximum(b_, 0)) + np.minimum(np.maximum(a_, b_), 0) - rr
 
     def to_world(u, v, off=0.0):
         h, dhu, dhv = height(np.array([u]), np.array([v]))
@@ -106,8 +111,8 @@ def build(fig, rng):
     Fg.base(fig, rng, flowers=6)
     y0 = Fg.TOP
     # ---- 몸: 말랑한 물방울형 머리가 목 없이 아래로 넓어지며 몸으로 흘러내리는 덩어리 (약 1.9 등신) ----
-    hc = np.array((0.0, y0 + 4.55, 0.1))
-    head = soft_head(hc, (1.75, 1.8, 1.6), flare=0.1, taper=0.11, flare_y=-0.55)
+    hc = np.array((0.0, y0 + 4.5, 0.1))
+    head = soft_head(hc, (1.85, 1.72, 1.65), flare=0.1, taper=0.05, flare_y=-0.55)   # 키아트: 가로로 살짝 넓은 둥근 머리
     torso = S.ellipsoid((0, y0 + 2.05, 0.0), (1.5, 1.4, 1.22))
     parts = [head, torso]
     for s in (-1, 1):
@@ -117,14 +122,14 @@ def build(fig, rng):
     hand_l = np.array((-1.9, y0 + 2.0, 0.45))
     parts += [S.capsule(sh_r, hand_r, 0.4, 0.34), S.sphere(hand_r, 0.4),
               S.capsule(sh_l, hand_l, 0.4, 0.34), S.sphere(hand_l, 0.38)]
-    # 눈자루 + 눈 공 (정수리에서 V 자로)
+    # 눈자루 + 눈 공 (정수리에서 V 자로): 키아트처럼 짧고 굵은 자루 + 큰 눈 공
     balls = []
     for s in (-1, 1):
-        b0 = np.array((s * 0.55, y0 + 5.9, 0.0))
-        bc = np.array((s * 0.98, y0 + 7.3, 0.2))
-        parts.append(S.capsule(b0, bc, 0.34, 0.28))
+        b0 = np.array((s * 0.6, y0 + 5.7, 0.05))
+        bc = np.array((s * 0.95, y0 + 6.75, 0.3))
+        parts.append(S.capsule(b0, bc, 0.4, 0.34))
         balls.append(bc)
-        parts.append(S.ellipsoid(bc, (0.6, 0.56, 0.56)))
+        parts.append(S.ellipsoid(bc, (0.68, 0.64, 0.62)))
 
     def core(P):
         d = S.smin(parts[0](P), parts[1](P), 0.6)
@@ -135,7 +140,7 @@ def build(fig, rng):
     near_body = lambda P: np.abs(core(P))
     # 배 살짝 밝게
     fig.paint(masked(lambda P: np.hypot(P[:, 0] / 1.0, (P[:, 1] - y0 - 2.0) / 1.0) - 0.9 + (0.6 - P[:, 2]) * 2, near_body, 0.1),
-              (1.0, 0.97, 0.88), soft=0.6)
+              (1.0, 0.93, 0.79), soft=0.6)
 
     # ---- 얼굴: 동그랗고 짙은 눈 (넓게, 조금 아래), 작은 'w' 입, 칠한 볼터치, 엷은 팔자 눈썹 ----
     eye_pair(fig, hc, 25, -12, 'round', 0.44, iris=(0.24, 0.13, 0.07), layer='body', sink=0.16)
@@ -147,8 +152,8 @@ def build(fig, rng):
         fig.paint(masked(S.capsule(p0, p1, 0.09, 0.06), near_body, 0.15), BROW, soft=0.03)
     # 눈자루 끝: 반쯤 감긴 졸린 눈 (eye_at droopy, 크림색 눈꺼풀)
     for s, bc in zip((-1, 1), balls):
-        f = face_frame(fig, bc, s * 6, -6, 'body', out=-0.06)
-        Fg.eye_at(fig, f, 'droopy', 0.36, (0.30, 0.17, 0.08), side=s, lid=(0.93, 0.79, 0.58))
+        f = face_frame(fig, bc, s * 4, -4, 'body', out=-0.06)
+        Fg.eye_at(fig, f, 'droopy', 0.44, (0.30, 0.17, 0.08), side=s, lid=(0.93, 0.79, 0.58))
 
     # ---- 껍데기 (등, 나선 면이 -x/뒤를 향함) + 진홍 점 ----
     axis = np.array((-1.0, 0.12, -0.85)); axis /= np.linalg.norm(axis)
@@ -157,7 +162,7 @@ def build(fig, rng):
     fig.add(shell_f, SHELL, k=0.0, layer='shell')
     near_shell = lambda P: np.abs(shell_f(P))
     fig.paint(masked(lambda P: (0.25 - coil(P)[0]) * 3, near_shell, 0.08), SHELL_D, soft=1.2)
-    fig.paint(masked(lambda P: (coil(P)[0] - 0.85) * -3 + 0.0, near_shell, 0.08), SHELL_HI, soft=0.6)
+    fig.paint(masked(lambda P: (coil(P)[0] - 0.6) * -3 + 0.0, near_shell, 0.08), SHELL_HI, soft=1.5)
     fig.paint(masked(lambda P: P[:, 1] - (y0 + 1.6), near_shell, 0.08), SHELL_D, soft=0.8)
     gem = scn + np.array((0.25, 1.62, 0.25))
     p_g, n_g = surf_point(shell_f, scn, -95, 58)
@@ -169,7 +174,8 @@ def build(fig, rng):
     d = np.array((1.0, 0.0, 0.3)); d /= np.linalg.norm(d)
     R = np.stack([np.cross((0, 1, 0), d), np.array((0, 1.0, 0)), d], axis=1)
     u0, u1 = -2.9, 3.4
-    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 3.15, 0.3, 0.17, 0.19, th=0.12, rib=0.06, tip_pow=0.65)
+    # 두껍게 (얇은 판은 가장자리가 찢어져 보임), 잎맥 능선은 낮게 (천막처럼 꺾여 보이지 않게)
+    lf, local, height, width, to_world = leaf_fn(O, R, u0, u1, 3.15, 0.28, 0.17, 0.16, th=0.17, rib=0.025, tip_pow=0.65)
     fig.add(lf, LEAF, k=0.0, layer='leaf')
     leaf_paints(fig, lf, local, height, width, u0, u1, spacing=0.9)
     # 물방울
@@ -182,8 +188,16 @@ def build(fig, rng):
     top, _ = to_world(0.0, 0.0, -0.05)
     pts = [hand_r + (0.12, -0.95, 0.05), hand_r + (0.05, 0.0, 0.0), hand_r + (-0.05, 1.6, -0.1),
            np.array((1.4, y0 + 6.6, 0.6)), np.array((1.15, y0 + 8.0, 0.4)), top]
-    for a, b in zip(pts, pts[1:]):
-        fig.add(S.capsule(tuple(a), tuple(b), 0.13, 0.12), STEM, k=0.15, layer='stem')
+    # 마디가 보이지 않게 Catmull-Rom 으로 촘촘히 이은 매끈한 줄기
+    P_ = [pts[0]] + pts + [pts[-1]]
+    smooth = []
+    for i in range(1, len(P_) - 2):
+        p0, p1, p2, p3 = P_[i - 1], P_[i], P_[i + 1], P_[i + 2]
+        for f in np.linspace(0, 1, 6, endpoint=False):
+            smooth.append(0.5 * (2 * p1 + (-p0 + p2) * f + (2 * p0 - 5 * p1 + 4 * p2 - p3) * f * f + (-p0 + 3 * p1 - 3 * p2 + p3) * f ** 3))
+    smooth.append(pts[-1])
+    stem_parts = [S.capsule(tuple(a), tuple(b), 0.13) for a, b in zip(smooth, smooth[1:])]
+    fig.add(lambda P: np.min(np.stack([g(P) for g in stem_parts]), axis=0), STEM, k=0.15, layer='stem')
     # 손가락 (줄기를 감싼 짧은 손가락 두 개)
     for k in range(2):
         fig.add(S.capsule(tuple(hand_r + (0.25, 0.12 - k * 0.22, 0.25)), tuple(hand_r + (-0.05, 0.1 - k * 0.22, 0.42)), 0.13, 0.12), CREAM, k=0.1, layer='fing')

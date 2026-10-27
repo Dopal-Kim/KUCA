@@ -294,7 +294,7 @@ def build(fig, rng):
     for s in (-1, 1):
         for (dy, dz, L) in ((0.35, 0.3, 0.5), (-0.05, 0.6, 0.55), (-0.45, 0.85, 0.45)):
             a = np.array((s * 2.2, hc[1] - 0.62 + dy, dz))
-            tufts.append(S.capsule(a, a + np.array((s * L, -0.25, 0.05)), 0.26, 0.07))
+            tufts.append(S.capsule(a, a + np.array((s * L * 0.8, -0.25, 0.05)), 0.32, 0.14))   # 뿔처럼 뾰족하지 않게 둥근 볼털
     fig.add(U(tufts, 0.1), FUR, k=0.25)
     # 주둥이
     mz = surf(face, hc, 0, -26, -0.35)
@@ -309,16 +309,17 @@ def build(fig, rng):
         Re = S.rot(s * -12, -8, -s * 22)
         ear = S.ellipsoid(ec, (0.82, 0.85, 0.38), R=Re)
         inner = S.ellipsoid(ec + Re @ np.array((0, -0.05, 0.3)), (0.52, 0.56, 0.22), R=Re)
-        fig.add(S.subtract(ear, inner, k=0.08), FUR_DK, k=0.3, layer='ear')
+        fig.add(S.subtract(ear, inner, k=0.08), FUR_DK, k=0.25)    # 머리와 같은 층: 귀 뿌리가 부드럽게 이어짐 (따로 층이면 맞닿은 선이 지글거림)
         fig.paint(S.ellipsoid(ec + Re @ np.array((0, -0.08, 0.25)), (0.56, 0.6, 0.3), R=Re), EAR_IN, soft=0.06)
     # 얼굴 무늬: 흰 아래 얼굴 + 눈 위 흰 눈썹 띠 → 짙은 눈가 가면 → 이마 점
     # 또렷한 영역: 크림 주둥이·아래뺨 → 짙은 눈 가면 → 눈 위 크림 눈썹 점 (모두 얼굴 표면에만, 경계 날카롭게)
     def decal(E, col, name, lift=0.012, base=None):
+        # 칠로 (얇은 판 조각은 줄인 메시에서 가장자리가 찢어져 보였다): 표면 근처만, 경계는 조금 부드럽게
         g = base or face
-        fig.add(lambda P: np.maximum(E(P), np.abs(g(P) - lift) - 0.03), col, k=0.0, layer=name)
+        fig.paint(lambda P: np.maximum(E(P), (np.abs(g(P)) - 0.12) * 4), col, soft=0.07)
     decal(S.ellipsoid(surf(face, hc, 0, -27, -0.1), (1.12, 0.62, 0.9)), CREAM, 'm_cream', 0.01)
     for s in (-1, 1):
-        decal(S.ellipsoid(surf(face, hc, s * 25.5, -5.5, -0.1), (0.74, 0.56, 0.7), R=S.rot(s * 25, 0, s * 24)), FUR_DK, 'm_mask', 0.022)
+        decal(S.ellipsoid(surf(face, hc, s * 27, -7, -0.1), (0.98, 0.7, 0.8), R=S.rot(s * 27, 0, s * 24)), FUR_DK, 'm_mask', 0.022)   # 키아트: 눈보다 훨씬 큰 짙은 가면
         decal(S.ellipsoid(surf(face, hc, s * 21, 18, -0.05), (0.42, 0.25, 0.5), R=S.rot(s * 21, 0, -s * 12)), CREAM, 'm_brow', 0.012)
     # 가슴 흰 털 (V 자 + 삐죽 끝)
     bib = lambda P: S.smin(S.ellipsoid((0, y0 + 2.75, 1.3), (0.8, 0.6, 0.7))(P), S.ellipsoid((0, y0 + 2.2, 1.35), (0.42, 0.62, 0.7))(P), 0.2)
@@ -347,7 +348,7 @@ def build(fig, rng):
     tail = [((-0.05, 1.15, -1.2), 0.6), ((-0.15, 0.98, -1.95), 0.82), ((-0.25, 1.2, -2.6), 0.78), ((-0.3, 1.62, -2.95), 0.58), ((-0.3, 1.95, -3.0), 0.36)]
     tf = U([S.capsule(np.array(a) + (0, y0, 0), np.array(b) + (0, y0, 0), ra, rb) for (a, ra), (b, rb) in zip(tail, tail[1:])], 0.3)
     fig.add(tf, FUR, k=0.3, layer='body')
-    fig.paint(S.sphere(np.array((-0.3, y0 + 2.05, -3.05)), 0.62), FUR_DK, soft=0.03)
+    fig.paint(S.sphere(np.array((-0.3, y0 + 2.05, -3.05)), 0.62), FUR_DK, soft=0.3)
     # 배낭 (등): 몸통 + 앞주머니 + 빨간 단추 + 손잡이 + 옆주머니 + 어깨끈 (앞가슴에 빨간 단추)
     pc = np.array((0, y0 + 2.95, -2.1))
     fig.add(S.box(pc, (1.3, 1.22, 0.6), round_=0.5), BLUE, k=0.0, layer='pack')

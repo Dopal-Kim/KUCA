@@ -37,23 +37,83 @@ for e in data['elements']:
             adj[a].add(b)
             adj[b].add(a)
 
+def xy(nid):
+    lon, lat = coord[nid]
+    return (lon - 127.08) * 88_700, (lat - 37.244) * 111_320   # m (캠퍼스 위도에서)
+
+
+def components():
+    seen, out = set(), []
+    for start in adj:
+        if start in seen:
+            continue
+        comp, stack = [], [start]
+        seen.add(start)
+        while stack:
+            n = stack.pop()
+            comp.append(n)
+            for m in adj[n]:
+                if m not in seen:
+                    seen.add(m)
+                    stack.append(m)
+        out.append(comp)
+    return sorted(out, key=len, reverse=True)
+
+
+def inside(p, poly):
+    x, y, c = p[0], p[1], False
+    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            c = not c
+    return c
+
+
+# 1) 끊긴 길 잇기: OSM 에서 몇 m 떨어져 그려진 길 (사색의 광장 안 길은 둘레 길과 4 m 떨어져 통째로 빠졌었음, 10/27)
+JOIN_M = 6.0
+main, *rest = components()
+main_pts = [(xy(n), n) for n in main]
+joined = 0
+for comp in rest:
+    for n in comp:
+        p = xy(n)
+        d, m = min(((abs(q[0] - p[0]) + abs(q[1] - p[1]), m) for q, m in main_pts), default=(1e9, None))
+        if m is not None and d <= JOIN_M:
+            adj[n].add(m)
+            adj[m].add(n)
+            joined += 1
+
+# 2) 열린 광장: 둘레 · 안의 점끼리 광장 안을 가로질러 걸을 수 있다 (사용자 10/27: "사색의 광장은 모든 공간을 다 거닐 수 있음")
+#    광장 = place=square · 보행 구역(highway=pedestrian + area=yes · area:highway). 연못(natural=water) 위는 지나지 않는다
+def polys(test):
+    for e in data['elements']:
+        t = e.get('tags', {})
+        if e.get('type') == 'way' and e.get('geometry') and test(t):
+            yield [((g['lon'] - 127.08) * 88_700, (g['lat'] - 37.244) * 111_320) for g in e['geometry']]
+
+
+squares = list(polys(lambda t: t.get('place') == 'square' or t.get('area:highway') or (t.get('highway') == 'pedestrian' and t.get('area') == 'yes')))
+waters = list(polys(lambda t: t.get('natural') == 'water'))
+ACROSS_M = 80.0
+crossings = 0
+for sq in squares:
+    xs, ys = [p[0] for p in sq], [p[1] for p in sq]
+    ins = [n for n in adj if min(xs) - 3 <= xy(n)[0] <= max(xs) + 3 and min(ys) - 3 <= xy(n)[1] <= max(ys) + 3
+           and (inside(xy(n), sq) or min(abs(xy(n)[0] - x) + abs(xy(n)[1] - y) for x, y in sq) < 3)]
+    for i, a in enumerate(ins):
+        for b in ins[i + 1:]:
+            pa, pb = xy(a), xy(b)
+            d = ((pa[0] - pb[0]) ** 2 + (pa[1] - pb[1]) ** 2) ** 0.5
+            if d > ACROSS_M or b in adj[a]:
+                continue
+            samples = [(pa[0] + (pb[0] - pa[0]) * k / 10, pa[1] + (pb[1] - pa[1]) * k / 10) for k in range(1, 10)]
+            if all(inside(q, sq) for q in samples) and not any(inside(q, w) for q in samples for w in waters):
+                adj[a].add(b)
+                adj[b].add(a)
+                crossings += 1
+
 # 가장 큰 연결 덩어리
-seen, best = set(), []
-for start in adj:
-    if start in seen:
-        continue
-    comp, stack = [], [start]
-    seen.add(start)
-    while stack:
-        n = stack.pop()
-        comp.append(n)
-        for m in adj[n]:
-            if m not in seen:
-                seen.add(m)
-                stack.append(m)
-    if len(comp) > len(best):
-        best = comp
-keep = set(best)
+keep = set(components()[0])
+print(f'joined {joined} near-miss ends, {crossings} open-square crossings in {len(squares)} squares')
 index = {nid: i for i, nid in enumerate(sorted(keep))}
 nodes = [list(coord[nid]) for nid in sorted(keep)]
 edges = sorted({tuple(sorted((index[a], index[b]))) for a in keep for b in adj[a] if b in keep})

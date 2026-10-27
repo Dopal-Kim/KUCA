@@ -18,7 +18,7 @@ EAR_IN = (0.97, 0.66, 0.62)
 NOSE = (0.86, 0.48, 0.48)
 SUIT = (0.975, 0.965, 0.95)
 SUIT_SH = (0.90, 0.89, 0.87)
-STRIPE = (0.74, 0.13, 0.18)
+STRIPE = (0.62, 0.12, 0.17)
 BAND = (0.99, 0.985, 0.975)
 STONE = (0.82, 0.80, 0.76)
 STONE_DK = (0.68, 0.66, 0.62)
@@ -402,42 +402,46 @@ def build(fig, rng):
     mbase = lambda P: np.maximum(S.smin(ring_core(P), back(P), 0.4), keep(P))
     front, rear = [], []
     mcen = hc + np.array((0, -0.2, -0.45))
-    MRr = np.array((2.05, 2.0, 1.75))
-    for i, el_ in enumerate(range(-52, 40, 19)):
-        n = max(4, int(round(360 / 21 * math.cos(math.radians(el_)))))
+    MRr = np.array((2.12, 1.9, 1.78))
+    for i, el_ in enumerate(range(-38, 52, 22)):
+        n = max(4, int(round(360 / 31 * math.cos(math.radians(el_)))))
         for j in range(n):
             az = 360 * (j + 0.5 * (i % 2)) / n
             d = _dir(az, el_)
-            if d[2] > 0.42 or (el_ > 20 and d[2] > -0.35):      # 얼굴 앞·정수리 앞쪽은 비움
+            if d[2] > 0.55 or (25 < el_ < 40 and d[2] > -0.25) or (el_ > 40 and d[2] > 0.3):   # 띠 위 정수리도 갈기로 덮는다      # 얼굴 앞·정수리 앞쪽은 비움
                 continue
             p = mcen + d * MRr
             out = d / np.linalg.norm(d)
             down = np.array((0, -1.0, 0)) - out * out[1]
-            back_ = d[2] < -0.1
-            tip = p + out * (0.42 if back_ else 0.5) + down * (0.42 if back_ else 0.2)
-            lock = S.capsule(p - out * 0.3, tip, 0.52 if back_ else 0.45, 0.19 if back_ else 0.16)
+            down = down / max(np.linalg.norm(down), 1e-6)
+            # 둥근 잎 모양 털 뭉치: 바깥으로 살짝, 아래로 처진 방향 (끝이 뾰족하게 흘러내리지 않게)
+            lock = S.ellipsoid(p + out * 0.04 + down * 0.12, (0.85, 0.75, 0.5) if el_ > 40 else (0.68, 0.82, 0.36), R=axes(down * 0.8 + out * 0.4, out))
             (front if d[2] > 0.0 else rear).append(lock)
-    mane_r = U(rear, 0.1)
-    mane_f = U(front, 0.1)
-    fig.add(lambda P: S.smin(mbase(P), mane_r(P), 0.2), MANE, k=0.0, layer='mane')
+    bn = np.array((0, 1.0, 0.12))
+    bn /= np.linalg.norm(bn)
+    bcen = hc + np.array((0, 0.98, 0))
+    groove = lambda P: 0.21 - np.abs((P - bcen) @ bn)            # 띠 자리 (갈기를 파낸다)
+    mane_r0 = U(rear, 0.16)
+    mane_f0 = U(front, 0.16)
+    mane_r = lambda P: np.maximum(mane_r0(P), groove(P))
+    mane_f = lambda P: np.maximum(mane_f0(P), groove(P))
+    fig.add(lambda P: np.maximum(S.smin(mbase(P), mane_r0(P), 0.2), groove(P)), MANE, k=0.0, layer='mane')
     fig.add(mane_f, MANE_LT, k=0.0, layer='mane2')
+    mane_env = S.ellipsoid(mcen, MRr + 0.22)
     mb = mbase
     # 정수리 작은 앞머리 한 가닥 (밴드 위)
-    p = surf(head, hc, 0, 46, -0.15)
-    R = axes(np.array((0, 0.75, 0.55)), _dir(0, 10))
-    fig.add(S.capsule(p, p + R @ np.array((0, 0.75, 0)), 0.3, 0.07), MANE_LT, k=0.0, layer='tuft')
+    p = surf(head, hc, 0, 50, -0.1)
+    R = axes(np.array((0, 0.85, 0.5)), _dir(0, 20))
+    fig.add(S.ellipsoid(p + R @ np.array((0, 0.4, 0)), (0.34, 0.66, 0.22), R=R), MANE_LT, k=0.0, layer='tuft')
     # 귀 (갈기 위로 나온 둥근 귀, 분홍 안쪽)
     for s in (-1, 1):
-        ec = surf(head, hc, s * 40, 52, -0.25) + np.array((s * 0.12, 0.3, -0.1))
+        ec = surf(head, hc, s * 40, 52, -0.25) + np.array((s * 0.2, 0.45, -0.1))
         Re = S.rot(s * 12, 0, -s * 28)
         fig.add(S.subtract(S.ellipsoid(ec, (0.66, 0.64, 0.38), R=Re), S.ellipsoid(ec + Re @ np.array((0, -0.05, 0.3)), (0.4, 0.38, 0.2), R=Re), k=0.06),
                 FUR, k=0.12, layer='head')
         fig.paint(S.ellipsoid(ec + Re @ np.array((0, -0.06, 0.26)), (0.48, 0.46, 0.25), R=Re), EAR_IN, soft=0.05)
     # 땀띠 (흰 헤어밴드): 이마를 가로질러 갈기 둘레를 감는 띠
-    allh = face
-    bn = np.array((0, 1.0, 0.12))
-    bn /= np.linalg.norm(bn)
-    bcen = hc + np.array((0, 0.98, 0))
+    allh = lambda P: np.minimum(face(P), mane_env(P))
     band = lambda P: np.maximum(np.abs(allh(P) - 0.08) - 0.07, np.abs((P - bcen) @ bn) - 0.2) - 0.035
     fig.add(lambda P: band(P) - 0.01 * np.sin(P[:, 0] * 20) * np.sin(P[:, 1] * 22) * np.sin(P[:, 2] * 18), BAND, k=0.0, layer='band')
     fig.paint(lambda P: band(P) - 0.03, BAND, soft=0.02)

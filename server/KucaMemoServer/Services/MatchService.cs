@@ -388,7 +388,7 @@ public class MatchService(
             var fresh = all.Where(id => !m.CourseSeen.Contains(id)).ToList();
             var tastes = m.A.Prefs.Tastes.Intersect(m.B.Prefs.Tastes).Where(RecommendRules.AllowedTastes.Contains).ToList();
             request = new RecommendRequest(m.Minutes, tastes, m.SpotBuilding.Lat, m.SpotBuilding.Lon, null,
-                                           fresh.Count >= RecommendRules.MaxStops(m.Minutes) ? fresh : all);
+                                           fresh.Count >= RecommendRules.MaxStops(m.Minutes) ? fresh : all, Talk: true);   // 둘이 이야기하며 걷기 좋은 곳으로
             version = ++m.CourseVersion;
         }
         RecommendResult course = await recommender.RecommendAsync(request, "normal", ct, countAsShown: false);

@@ -11,7 +11,7 @@ from .pigeon import (axis_R, basis, surf_point, surf_frame, masked, pebble, ell,
 TIER = 'blue'
 
 FUR = (0.98, 0.69, 0.33)
-STRIPE = (0.87, 0.43, 0.10)
+STRIPE = (0.90, 0.50, 0.17)     # 키아트: 부드러운 진주황 줄 (너무 짙으면 지저분해 보임)
 WHITE = (0.995, 0.975, 0.95)
 EAR_IN = (0.99, 0.70, 0.73)
 PAD = (0.98, 0.62, 0.66)
@@ -28,12 +28,13 @@ def build(fig, rng):
     hc = np.array((0.0, y0 + 6.25, 0.1))
     head_parts = [soft_head(hc, (2.12, 1.72, 1.8), flare=0.14, taper=0.05, flare_y=-0.45)]
     # ---- 몸통 / 다리 / 팔: 날씬하고 유연한 몸, 다리가 조금 긴 편 (약 2.2 등신) ----
-    torso = S.ellipsoid((0, y0 + 2.95, 0.0), (1.1, 1.55, 0.95))
-    chest = S.ellipsoid((0, y0 + 3.5, 0.28), (0.88, 0.9, 0.8))
+    # 키아트: 날씬하지만 통통한 아기 고양이 몸 (머리 폭의 약 0.65)
+    torso = S.ellipsoid((0, y0 + 2.9, 0.0), (1.28, 1.55, 1.05))
+    chest = S.ellipsoid((0, y0 + 3.45, 0.3), (1.0, 0.95, 0.85))
     legs = []
     for s in (-1, 1):
-        legs.append(S.ellipsoid((s * 0.6, y0 + 1.55, 0.02), (0.56, 0.85, 0.64)))
-        legs.append(S.capsule((s * 0.6, y0 + 1.2, 0.15), (s * 0.63, y0 + 0.42, 0.28), 0.4, 0.37))
+        legs.append(S.ellipsoid((s * 0.62, y0 + 1.55, 0.02), (0.64, 0.88, 0.7)))
+        legs.append(S.capsule((s * 0.62, y0 + 1.2, 0.15), (s * 0.64, y0 + 0.42, 0.28), 0.46, 0.42))
         legs.append(S.ellipsoid((s * 0.64, y0 + 0.31, 0.48), (0.44, 0.3, 0.56)))
     sh_l, sh_r = np.array((-0.95, y0 + 3.95, 0.12)), np.array((0.95, y0 + 3.95, 0.12))
     paw_l = np.array((-1.85, y0 + 3.35, 0.95))
@@ -42,8 +43,9 @@ def build(fig, rng):
     arms = [S.capsule(sh_l, paw_l, 0.4, 0.34), S.ellipsoid(tuple(paw_l), (0.42, 0.44, 0.32), R=basis((-0.3, 0.1, 1.0))),
             S.capsule(sh_r, el_r, 0.4, 0.35), S.capsule(el_r, paw_r, 0.35, 0.34), S.sphere(paw_r, 0.39)]
     # 꼬리 (뒤에서 +x 쪽으로 감아 올림)
-    tail_pts = [np.array(p) for p in ((0.1, y0 + 1.7, -0.8), (0.55, y0 + 1.2, -1.6), (0.9, y0 + 1.7, -2.2),
-                                       (0.95, y0 + 2.7, -2.3), (0.7, y0 + 3.5, -2.0))]
+    # 키아트: 꼬리는 엉덩이에서 뒤로 나와 등 뒤 가운데로 말려 올라감 (앞에서 옆으로 삐져나오지 않게)
+    tail_pts = [np.array(p) for p in ((0.0, y0 + 1.7, -0.8), (-0.2, y0 + 1.25, -1.6), (-0.35, y0 + 1.75, -2.25),
+                                       (-0.35, y0 + 2.75, -2.3), (-0.2, y0 + 3.45, -1.95))]
     tail = [S.capsule(tuple(a), tuple(b), 0.36, 0.38) for a, b in zip(tail_pts, tail_pts[1:])]
     tail.append(S.sphere(tuple(tail_pts[-1]), 0.4))
 
@@ -96,7 +98,7 @@ def build(fig, rng):
         y = P[:, 1]
         back = -P[:, 2] + 0.55 - 0.15 * np.abs(P[:, 0])
         w = 0.12 * taper(back, 0.25, 0.85)
-        d = band_d(y - (y0 + 2.0) - 0.12 * np.abs(P[:, 0]), 0.62, 0) - w
+        d = band_d(y - (y0 + 2.0) - 0.12 * np.abs(P[:, 0]), 0.7, 0) - w
         return np.maximum(d, (y - (y0 + 4.2)) * 3)
 
     head0 = head_parts[0]
@@ -105,16 +107,16 @@ def build(fig, rng):
         th = np.arctan2(q[:, 0], q[:, 2])
         ath = np.abs(th)
         # 옆·뒤 가로 줄: 머리 둘레를 따라 고른 폭
-        side_w = 0.11 * taper(ath, 1.05, 1.5)
-        d_side = band_d(q[:, 1] + 0.35, 0.58, 0) - side_w
+        side_w = 0.12 * taper(ath, 1.05, 1.5)
+        d_side = band_d(q[:, 1] + 0.35, 0.72, 0) - side_w
         d_side = np.maximum(d_side, q[:, 1] - 0.9)
         # 정수리 세로 줄 (앞이마 → 뒤통수, x 방향 간격 고르게)
         top_w = 0.1 * taper(q[:, 1], 0.55, 1.1)
         d_top = np.minimum(np.abs(q[:, 0]) - top_w, np.abs(np.abs(q[:, 0]) - 0.48) - top_w * 0.85)
         d_top = np.maximum(d_top, (-0.7 - q[:, 2]) * 2)     # 정수리 세로 줄은 뒤통수 위쪽에서 끝남
         return np.minimum(d_side, d_top)
-    fig.paint(masked(stripes_body, nb, 0.1), STRIPE, soft=0.2)
-    fig.paint(masked(stripes_head, lambda P: np.abs(head0(P)), 0.12), STRIPE, soft=0.2)
+    fig.paint(masked(stripes_body, nb, 0.1), STRIPE, soft=0.35)
+    fig.paint(masked(stripes_head, lambda P: np.abs(head0(P)), 0.12), STRIPE, soft=0.35)
     for s in (-1, 1):     # 볼 옆 짧은 가로 줄 2 개
         for k, pt in enumerate((-4, -16)):
             p0 = np.array(face_frame(fig, hc, s * 64, pt, 'body').o)
@@ -157,6 +159,9 @@ def build(fig, rng):
     fig.paint(masked(lambda P: np.linalg.norm(P - paw_l, axis=1) - 0.5, nb, 0.1), WHITE, soft=0.12)
     fig.paint(masked(lambda P: np.linalg.norm(P - paw_r, axis=1) - 0.52, nb, 0.1), WHITE, soft=0.12)
     fig.paint(masked(lambda P: np.linalg.norm(P - tail_pts[-1], axis=1) - 0.62, nb, 0.1), WHITE, soft=0.06)
+    # 귀 바깥: 평평한 귀 판이 빛을 받아 노랗게 떠 보이지 않게 조금 짙은 주황
+    for s_, e, b_, t_, Re in ear_fs:
+        fig.paint(lambda P, e=e: e(P) - 0.03, (0.92, 0.54, 0.21), soft=0.3)
     # 귀 안쪽 분홍 + 흰 솜털
     for s, e, b, t, Re in ear_fs:
         inner_c = (b + t) / 2 + Re[:, 2] * 0.1
@@ -171,7 +176,8 @@ def build(fig, rng):
     # ---- 얼굴 ----
     face_all = head_parts[0]
     # 고양이 눈: 호박색 큰 홍채 + 세로 동공, 눈꼬리 살짝 올라감
-    eye_pair(fig, hc, 28, -4, 'cat', 0.56, iris=(0.88, 0.56, 0.12), layer='body', tilt=8, sink=0.15)
+    # 키아트: 크고 반짝이는 짙은 갈색 둥근 눈 (세로 동공 아님)
+    eye_pair(fig, hc, 28, -4, 'round', 0.6, iris=(0.34, 0.19, 0.09), layer='body', tilt=0, sink=0.15)
     fn_ = face_frame(fig, hc, 0, -17, 'body', out=-0.02)
     Fg._ellipsoid(fig.extra, (0, 0.02, 0), (0.15, 0.1, 0.08), PAD, 12, 6, fn_)
     mouth_w(fig, face_frame(fig, hc, 0, -24, 'body', out=0.0), w=0.3)

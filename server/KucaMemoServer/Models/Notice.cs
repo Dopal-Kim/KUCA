@@ -23,4 +23,6 @@ public record Spot(
     bool Indoor = false,
     string[]? Tastes = null,      // 어울리는 취향 코드 (photo · quiet · food · …)
     bool Restricted = false,      // 거주자 · 관계자만 드나드는 곳 (기숙사 등). 추천 후보에서 빠진다
-    bool OpenInside = false);     // 누구나 들어가 쉬는 실내 (도서관 · 학생회관 · 라운지 · 체육관). 아니면 추천 이유에 건물 안 이야기를 쓰지 않는다
+    bool OpenInside = false,      // 누구나 들어가 쉬는 실내 (도서관 · 학생회관 · 라운지 · 체육관). 아니면 추천 이유에 건물 안 이야기를 쓰지 않는다
+    bool Noisy = false,           // 찻길 옆이거나 늘 붐벼 걸으며 이야기하기 어려운 곳 (큰길 80 m 안 · 식당가)
+    bool Hill = false);           // 가는 길에 힘든 오르막이 있는 곳 (사용자 표시 10/27: 천문대 · 선승관 · 국제대학)

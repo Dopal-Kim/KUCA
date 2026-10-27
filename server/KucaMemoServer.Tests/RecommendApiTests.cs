@@ -66,9 +66,9 @@ public class RecommendApiTests : IDisposable
         foreach (IDisposable d in owned) d.Dispose();
     }
 
-    static object Body(int minutes = 30, string[]? tastes = null, string[]? visited = null) => new
+    static object Body(int minutes = 30, string[]? tastes = null, string[]? visited = null, double lat = Lat) => new
     {
-        minutes, tastes = tastes ?? ["unvisited"], lat = Lat, lon = Lon,
+        minutes, tastes = tastes ?? ["unvisited"], lat, lon = Lon,
         visitedBuildingIds = visited ?? Array.Empty<string>(), candidateBuildingIds = Spots,
     };
 
@@ -98,7 +98,8 @@ public class RecommendApiTests : IDisposable
     public async Task 안_가_본_곳을_고르면_가_본_곳보다_먼저_나온다()
     {
         string[] visited = Spots[..5];
-        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations", Body(15, visited: visited)));
+        // 기본 위치(Lat, Lon)는 체육대학관 바로 앞이라 출발지로 빠진다 → 200 m 남쪽에서
+        JsonElement r = await Ok(await Client().PostAsJsonAsync("/api/recommendations", Body(15, visited: visited, lat: Lat - 0.002)));
         Assert.Equal(Spots[5], r.GetProperty("stops")[0].GetProperty("buildingId").GetString());
     }
 
@@ -147,6 +148,13 @@ public class RecommendApiTests : IDisposable
     // ───── 추천 v2 ─────
 
     const string Library = "way-474085534", Amphitheater = "way-474531805", Observatory = "way-474521125", Sports = "way-455726113";
+
+    /// <summary>건물에서 약 110 m 남쪽 (건물 바로 앞은 출발지로 보고 들를 곳에서 뺀다)</summary>
+    static async Task<(double Lat, double Lon)> Beside(HttpClient client, string id)
+    {
+        var at = await Midpoint(client, id, id);
+        return (at.Lat - 0.001, at.Lon);
+    }
 
     /// <summary>두 건물의 가운데 (어느 쪽도 가깝지 않게)</summary>
     static async Task<(double Lat, double Lon)> Midpoint(HttpClient client, string a, string b)
@@ -275,7 +283,7 @@ public class RecommendApiTests : IDisposable
     public async Task 규칙_이유는_소개글에서_가져오고_확인필요_표시는_뺀다()
     {
         HttpClient client = Client();
-        var at = await Midpoint(client, Observatory, Observatory);
+        var at = await Beside(client, Observatory);
         JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [Observatory])));
         string reason = r.GetProperty("stops")[0].GetProperty("reason").GetString()!;
         Assert.Equal("가는 길에 들르기 좋아요", reason);   // 천문대 소개의 "좋" 문장은 "어두우니" 주의가 섞여 있어 쓰지 않음
@@ -287,7 +295,7 @@ public class RecommendApiTests : IDisposable
     public async Task 규칙_이유는_추천_문장을_고르고_주의_문장은_쓰지_않는다(string spot, string expected)
     {
         HttpClient client = Client();
-        var at = await Midpoint(client, spot, spot);
+        var at = await Beside(client, spot);
         JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [spot])));
         Assert.Equal(expected, r.GetProperty("stops")[0].GetProperty("reason").GetString());
     }
@@ -353,7 +361,7 @@ public class RecommendApiTests : IDisposable
     public async Task 규칙_이유도_건물_안_이야기는_쓰지_않는다(string spot)
     {
         HttpClient client = Client();
-        var at = await Midpoint(client, spot, spot);
+        var at = await Beside(client, spot);
         JsonElement r = await Ok(await client.PostAsJsonAsync("/api/recommendations", Between(at, [spot])));
         string reason = r.GetProperty("stops")[0].GetProperty("reason").GetString()!;
         foreach (string word in new[] { "전시실", "작업", "공방", "층", "안에서" })

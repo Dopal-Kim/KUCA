@@ -110,7 +110,7 @@ def build(fig, rng):
     SH_Y = y0 + 2.42
 
     def shorts(P):
-        d = np.abs(torso_f(P) - 0.08) - 0.06
+        d = np.abs(torso_f(P) - 0.1) - 0.08     # 껍질을 두껍게: 얇으면 흰 털이 점점이 비침
         return rmax(d, np.abs(P[:, 1] - SH_Y) - 0.4, 0.05)
     fig.add(shorts, RED, k=0.0, layer='shorts')
     for s in (-1, 1):
@@ -128,12 +128,12 @@ def build(fig, rng):
     ARM = {s_: ((s_ * 1.02, y0 + 3.75, 0.02), (s_ * 1.35, y0 + 2.95, 0.18)) for s_ in (-1, 1)}
 
     def neck_u(P):
-        return np.hypot(P[:, 0] / 0.48, (P[:, 1] - T_TOP) / 0.34)
+        return np.hypot(P[:, 0] / 0.42, (P[:, 1] - T_TOP) / 0.34)
 
     def armcut(P):
         d = None
         for sh_, el_ in ARM.values():
-            v = np.minimum(S.capsule(sh_, el_, 0.31, 0.28)(P), S.sphere(sh_, 0.36)(P))
+            v = np.minimum(S.capsule(sh_, el_, 0.31, 0.28)(P), S.sphere(sh_, 0.3)(P))
             d = v if d is None else np.minimum(d, v)
         return d
 
@@ -142,7 +142,7 @@ def build(fig, rng):
         d = rmax(d, (y0 + 2.62) - P[:, 1], 0.05)
         d = np.maximum(d, P[:, 1] - T_TOP)
         d = np.maximum(d, -np.maximum(neck_u(P) - 1.0, -(P[:, 2] - 0.15)))
-        d = np.maximum(d, -(armcut(P) - 0.05))
+        d = np.maximum(d, -(armcut(P) - 0.11))   # 팔 털과 맞닿지 않게 여유
         return d
     fig.add(tank, SHIRT, k=0.0, layer='tank')
 
@@ -165,9 +165,15 @@ def build(fig, rng):
         R = S.rot(0, 0, s * 16)
         fig.add(S.cylinder(tuple(wc), 0.34, 0.13, round_=0.05, R=R), RED, k=0.0, layer='band')
 
-    # 민소매 빨간 테: 목 U 둘레 + 팔 구멍 둘레 (또렷한 띠)
-    layer_paint(fig, 'tank', lambda P: np.where(P[:, 2] > 0.15, neck_u(P) - 1.28, 1.0), RED, 0.02, tol=0.04)
-    layer_paint(fig, 'tank', lambda P: armcut(P) - 0.2, RED, 0.02, tol=0.04)
+    # 민소매 빨간 테: 칠 대신 옷 가장자리를 감싼 매끈한 띠 (칠 경계가 팔 털까지 번져 톱니가 생기던 것 방지)
+    def trim(P):
+        d = np.abs(torso_f(P) - 0.16) - 0.12
+        d = np.maximum(d, P[:, 1] - T_TOP - 0.03)
+        neck = np.maximum(np.abs(neck_u(P) - 1.06) * 0.42 - 0.06, 0.15 - P[:, 2])     # 옷 자른 면을 띠가 덮도록 안쪽까지
+        arm = np.maximum(np.abs(armcut(P) - 0.15) - 0.07, (y0 + 2.8) - P[:, 1])
+        return rmax(d, np.minimum(neck, arm), 0.05)
+    # 옷과 같은 layer 에 작은 k 로 붙임: 다른 layer 끼리의 날카로운 홈은 반짝이는 톱니 이음새가 된다
+    fig.add(trim, RED, k=0.04, layer='tank')
     # ---------- 바통 (왼손, 화면 왼쪽) ----------
     hd = np.array(arms[-1][2])
     b0 = hd + np.array((0.12, 0.4, 0.22))
@@ -179,10 +185,11 @@ def build(fig, rng):
         fig.add(S.sphere(tuple(p), 0.13), FUR, k=0.08)
 
     # ---------- 꼬리 (등 위로 말린 진돗개 꼬리) ----------
-    tail = [((0, y0 + 2.55, -0.7), 0.26), ((0, y0 + 3.0, -1.2), 0.34), ((0.05, y0 + 3.55, -1.38), 0.38),
-            ((0.12, y0 + 3.95, -1.12), 0.36), ((0.18, y0 + 3.92, -0.8), 0.28), ((0.22, y0 + 3.65, -0.66), 0.2)]
+    # 키아트: 엉덩이 높이에서 뒤로 나와 위로 동그랗게 말린 복슬 꼬리 (등 위까지 올라가지 않음)
+    tail = [((0, y0 + 2.3, -0.72), 0.24), ((0, y0 + 2.55, -1.12), 0.32), ((0.03, y0 + 2.98, -1.3), 0.36),
+            ((0.06, y0 + 3.32, -1.12), 0.32), ((0.08, y0 + 3.3, -0.86), 0.24)]
     for (a, ra), (b, rb) in zip(tail, tail[1:]):
-        fig.add(S.capsule(a, b, ra, rb), FUR, k=0.25, layer='tail')
+        fig.add(S.capsule(a, b, ra, rb), FUR, k=0.3, layer='tail')
 
     # ---------- 머리: 주둥이가 앞으로 나온 진돗개 두상 (볼 구 없음, 아래 볼 볼륨만) ----------
     hc = np.array((0, y0 + 5.55, 0.0))
@@ -198,18 +205,21 @@ def build(fig, rng):
         base_c = (s * 0.9, hc[1] + 1.05, -0.12)
         ear = tri_ear(base_c, R, 0.56, 1.0, 0.2, 0.12)
         inner = tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.18))), R, 0.3, 0.74, 0.07, 0.05)
-        fig.add(S.subtract(ear, inner, k=0.05), FUR, k=0.25, layer='ear')
+        fig.add(S.subtract(ear, inner, k=0.05), FUR, k=0.15)   # 머리와 같은 layer: 귀 뿌리에 갈라진 홈이 생기지 않게
         fig.paint(tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.13))), R, 0.34, 0.8, 0.11, 0.05), EAR_IN, soft=0.05)
 
     # 머리띠 (이마를 두른 빨간 밴드, 귀 아래)
     hb_c = hc + (0, 0.78, 0)
     Rh = S.rot(0, -6, 0)
 
+    lower = (tuple(hc + (0, -0.45, 0.1)), (1.5, 0.98, 1.32))
+
     def headband(P):
-        d = np.abs(S.ellipsoid(*cran)(P) - 0.06) - 0.1
+        head = S.smin(S.ellipsoid(*cran)(P), S.ellipsoid(*lower)(P), 0.5)   # 실제 두상을 따라감 (가장자리로 털이 비치지 않게)
+        d = np.abs(head - 0.04) - 0.14
         q = (P - hb_c) @ Rh
-        return rmax(d, np.abs(q[:, 1]) - 0.24, 0.07)
-    fig.add(headband, RED, k=0.0, layer='headband')
+        return rmax(d, np.abs(q[:, 1]) - 0.24, 0.06)
+    fig.add(headband, RED, k=0.05)   # 머리와 같은 layer + 작은 k: 가장자리 홈이 톱니·반짝이로 깨지지 않게
 
     # ---------- 얼굴: 밝은 아몬드 눈 (눈꼬리 살짝 올라감) ----------
     for s in (-1, 1):

@@ -38,7 +38,7 @@ def stripe_w(origin, axis, n, duty=0.38, phase=math.pi, ref=(0, 0, 1)):
 
 
 def add_striped(fig, f, sw, k, relief=0.02):
-    """줄무늬를 살짝 돋운 잠옷 천 (돋움이 있어야 줄 경계가 메시에 남는다) + 분홍 칠"""
+    """줄무늬를 살짝 돋운 잠옷 천 (돋움이 있어야 메시를 줄여도 줄 경계에 정점이 남는다 — 돋움 없이 칠만 하면 줄이 톱니 얼룩이 됨) + 분홍 칠"""
     fig.add(lambda P: f(P) - relief * sw(P), PJ_W, k=k, layer='pj')
     fig.paint(lambda P: (0.5 - sw(P)) * 0.2 + np.maximum(0, f(P) - relief * sw(P) - 0.05), PJ_P, soft=0.03)
 
@@ -146,7 +146,7 @@ def build(fig, rng):
     head_u = lambda P: S.smin(head_f(P), puff(P), 0.9)
     fig.add(S.capsule((0, y0 + 3.1, 0.0), (0, hc[1] - 1.2, 0.05), 0.85), CREAM, k=0.25, layer='head')
     # 털 무늬: 위쪽·뒤쪽 주황, 가운데 흰 이마 줄
-    fig.paint(lambda P: np.maximum.reduce([head_u(P) - 0.1, (hc[1] - 1.25) - P[:, 1], (hc[1] + 0.05 - 0.62 * np.abs(P[:, 0])) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 1.3) * 0.6]), FUR, soft=0.08)
+    fig.paint(lambda P: np.maximum.reduce([head_u(P) - 0.1, (hc[1] - 1.25) - P[:, 1], (hc[1] + 0.05 - 0.62 * np.abs(P[:, 0])) - P[:, 1] + np.maximum(0, P[:, 2] - hc[2] - 1.3) * 0.6]), FUR, soft=0.22)
     fig.paint(S.ellipsoid((0, hc[1] + 0.35, hc[2] + 1.95), (0.5, 1.2, 0.75)), CREAM, soft=0.14)
     # ---- 귀: 둥근 주황 귀 + 분홍 안쪽 ----
     for s in (-1, 1):
