@@ -57,7 +57,7 @@ public class StatsService(MetricsStore metrics, TimeProvider clock, IConfigurati
         var matching = new Matching(requests, Count(MetricsStore.MatchProposed), met, Count(MetricsStore.MatchWalking),
                                     matchCompleted, Rate(met, requests), Rate(matchCompleted, met), endReasons, byReason, byPick);
 
-        var ai = new[] { "recommend", "wish", "place_state", "smalltalk", "moderation", "match_reason", "match_pick" }.ToDictionary(s => s, s =>
+        var ai = new[] { "recommend", "wish", "place_state", "smalltalk", "moderation", "match_reason", "match_pick", "music" }.ToDictionary(s => s, s =>
         {
             int yes = Count(MetricsStore.AiCall, s, 1), no = Count(MetricsStore.AiCall, s, 0);
             return new AiUse(yes, no, Rate(no, yes + no));

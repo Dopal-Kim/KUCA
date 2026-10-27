@@ -1,0 +1,50 @@
+{
+  "calm": [
+    { "title": "밤편지", "artist": "아이유" },
+    { "title": "모든 날, 모든 순간", "artist": "폴킴" },
+    { "title": "거리에서", "artist": "성시경" },
+    { "title": "주저하는 연인들을 위해", "artist": "잔나비" },
+    { "title": "바람이 분다", "artist": "이소라" },
+    { "title": "Don't Know Why", "artist": "Norah Jones" },
+    { "title": "Banana Pancakes", "artist": "Jack Johnson" },
+    { "title": "Bubbly", "artist": "Colbie Caillat" }
+  ],
+  "bright": [
+    { "title": "여행", "artist": "볼빨간사춘기" },
+    { "title": "좋은 날", "artist": "아이유" },
+    { "title": "한 페이지가 될 수 있게", "artist": "DAY6 (데이식스)" },
+    { "title": "200%", "artist": "악동뮤지션" },
+    { "title": "Hype Boy", "artist": "NewJeans" },
+    { "title": "Happy", "artist": "Pharrell Williams" },
+    { "title": "I'm Yours", "artist": "Jason Mraz" },
+    { "title": "Walking On Sunshine", "artist": "Katrina and the Waves" }
+  ],
+  "energetic": [
+    { "title": "Dynamite", "artist": "방탄소년단" },
+    { "title": "아주 NICE", "artist": "세븐틴" },
+    { "title": "I AM", "artist": "IVE (아이브)" },
+    { "title": "Next Level", "artist": "aespa" },
+    { "title": "Levitating", "artist": "Dua Lipa" },
+    { "title": "Believer", "artist": "Imagine Dragons" },
+    { "title": "Can't Stop the Feeling!", "artist": "Justin Timberlake" },
+    { "title": "Uptown Funk", "artist": "Mark Ronson, Bruno Mars" }
+  ],
+  "rainy": [
+    { "title": "우산 (Feat. 윤하)", "artist": "에픽하이" },
+    { "title": "비도 오고 그래서 (Feat. 신용재)", "artist": "헤이즈" },
+    { "title": "비", "artist": "폴킴" },
+    { "title": "눈의 꽃", "artist": "박효신" },
+    { "title": "Umbrella", "artist": "Rihanna" },
+    { "title": "Set Fire to the Rain", "artist": "Adele" },
+    { "title": "Rain On Me", "artist": "Lady Gaga, Ariana Grande" }
+  ],
+  "night": [
+    { "title": "Square (2017)", "artist": "백예린" },
+    { "title": "Everything", "artist": "검정치마" },
+    { "title": "TOMBOY", "artist": "혁오" },
+    { "title": "Beautiful", "artist": "크러쉬" },
+    { "title": "밤편지", "artist": "아이유" },
+    { "title": "Blinding Lights", "artist": "The Weeknd" },
+    { "title": "Night Changes", "artist": "One Direction" }
+  ]
+}

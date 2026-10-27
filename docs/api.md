@@ -545,6 +545,31 @@ v1 요청 본문(위 "POST /api/recommendations")은 **그대로 받습니다.**
 
 **사진 쪽지:** AI 가 사진을 보지 못하고 금지어 검사만 통과한 사진 쪽지는 `pending`(검토 대기)입니다.
 
+### POST /api/music (산책 음악 추천, 10/27 B)
+
+산책하며 들을 노래를 AI 가 고른다. 로그인은 선택 (로그인했으면 계정의 걷는 속도를 쓴다). 본문은 모두 선택.
+
+```json
+{ "minutes": 30, "tastes": ["quiet", "photo"], "pace": "slow",
+  "courseTitle": "가을 조용한 캠퍼스길", "courseWhy": "사람이 적고 단풍이 예쁜 길을 이었어요",
+  "places": ["중앙도서관", "사색의 광장"], "count": 3 }
+```
+
+- 코스 카드에서는 `courseTitle` · `courseWhy` · `places` 를 같이 보내 그 코스 분위기에 맞춘다. 시트의 "산책 음악" 은 취향만.
+- `count` 3~8 (기본 5). 서버가 지금 시간대 · 계절 · 날씨를 더한다.
+
+응답 200:
+
+```json
+{ "source": "ai", "mood": "calm", "theme": "가을 캠퍼스에 어울리는 잔잔한 길",
+  "tracks": [ { "title": "가을 아침", "artist": "아이유", "why": "가을 풍경과 잘 어울려요" } ] }
+```
+
+- `mood`: calm · bright · energetic · rainy · night. `why` 는 없을 수 있다 (기본 목록).
+- AI 가 실패하면 `source: "fallback"`: 분위기 규칙 (비 · 눈 → rainy, 운동 · 빠르게 → energetic, 밤 → night, 조용한 곳 · 천천히 → calm, 그 밖 → bright) 으로 `Data/music.json` 에서 고른다.
+- 앱은 곡을 재생하지 않고, 설정의 음악 앱 (멜론 · Spotify · YouTube Music) 검색을 "가수 곡 이름" 으로 연다. AI 가 곡명을 조금 틀려도 검색 결과는 나온다.
+- 400: 모르는 `tastes` · `pace`, `count` 범위 밖, 코스 정보가 너무 김. 지표: `/api/admin/health` 의 `aiLast24h.music`.
+
 ### 매칭 흐름 한눈에
 
 ```

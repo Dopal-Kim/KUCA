@@ -12,7 +12,8 @@ public partial class RoutePlanner
     static readonly string SoftHex = ColorUtility.ToHtmlStringRGB(KucaTheme.InkSoft);
     static readonly string PrimaryHex = ColorUtility.ToHtmlStringRGB(KucaTheme.Primary);
 
-    GameObject sheet, picker, loading, chooser, walkPanel, placePopup;
+    GameObject sheet, picker, loading, chooser, walkPanel, placePopup, musicSheet;
+    RectTransform musicList;
     Image[] timeChips, tasteChips;
     Image mealChip;
     InputField wishInput;
@@ -139,6 +140,11 @@ public partial class RoutePlanner
         for (Transform last = mealChip.transform.parent; last.childCount < 3;)
             UIKit.Rect(last, "Spacer").gameObject.AddComponent<LayoutElement>().preferredWidth = 250f;
         mealNote = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+
+        // 코스 없이도: 고른 시간 · 취향으로 걸으며 들을 노래 (코스 카드에는 코스마다 따로 나온다)
+        RectTransform music = UIKit.ListGroup(c, null);
+        music.GetComponent<Image>().color = KucaTheme.Fill;
+        UIKit.ListRow(music, "산책하며 들을 노래 추천 받기", ShowMusic);
 
         UIKit.PrimaryButton(b, "AI 코스 3개 추천 받기", RequestRoutes);
         UIKit.SecondaryButton(b, "코스 없이 자유 산책 시작", () => { HideSheet(); FreeWalk.Begin(); });
@@ -357,6 +363,52 @@ public partial class RoutePlanner
         }
         if (!string.IsNullOrEmpty(o.result.healthNote))
             UIKit.Text(chooserCards, Escape(o.result.healthNote), KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+
+        UIKit.SectionTitle(chooserCards, "이 코스와 어울리는 노래");
+        RectTransform songs = UIKit.Rect(chooserCards, "Music");
+        UIKit.Vertical(songs, KucaTheme.Space2);
+        WalkMusic.Fill(this, songs, CourseMusic(o), $"{request}:{o.Key}");   // 탭을 오가도 같은 추천의 같은 코스는 한 번만
+    }
+
+    WalkMusic.Request CourseMusic(Option o)
+    {
+        WalkMusic.Request r = MusicRequest(3);
+        r.minutes = o.minutes;
+        r.courseTitle = string.IsNullOrEmpty(o.result.title) ? o.variant.label : o.result.title;
+        r.courseWhy = o.result.why;
+        int visits = o.result.stops.Count - (o.returns ? 1 : 0);
+        for (int i = 0; i < visits && r.places.Count < 10; i++)
+            r.places.Add(o.result.stops[i].name);
+        return r;
+    }
+
+    /// <summary>시트에서 고른 시간 · 취향 + 체크리스트의 걷는 속도</summary>
+    WalkMusic.Request MusicRequest(int count)
+    {
+        var r = new WalkMusic.Request { minutes = minutes, count = count, tastes = new List<string>(tastes) };
+        string pace = WalkPreferences.Load().pace;
+        if (!string.IsNullOrEmpty(pace)) r.pace = pace;
+        return r;
+    }
+
+    // ---------- 산책하며 들을 노래 (시트에서) ----------
+
+    void ShowMusic()
+    {
+        Clear(musicList);
+        string what = tastes.Count > 0 ? "고른 취향 · " : "";
+        UIKit.Paragraph(musicList, $"{what}{minutes}분 산책 · 지금 날씨와 시간대에 맞춰 AI 가 골라요.", KucaTheme.Label, InkQuiet);
+        RectTransform songs = UIKit.Rect(musicList, "Music");
+        UIKit.Vertical(songs, KucaTheme.Space2);
+        WalkMusic.Fill(this, songs, MusicRequest(5), null);
+        musicSheet.SetActive(true);
+        musicSheet.transform.SetAsLastSibling();   // 경로 시트 위에
+    }
+
+    void BuildMusicSheet()
+    {
+        musicSheet = Sheet("MusicSheet", "산책하며 들을 노래", () => musicSheet.SetActive(false), 0.82f, 1, out musicList, out RectTransform b, out _);
+        UIKit.PrimaryButton(b, "다른 노래 추천 받기", ShowMusic);
     }
 
     /// <summary>들를 곳 한 줄: 번호 원 + 굵은 이름 (+ 거리) + 이유</summary>

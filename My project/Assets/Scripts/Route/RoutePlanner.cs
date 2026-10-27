@@ -136,6 +136,7 @@ public partial class RoutePlanner : MonoBehaviour
         BuildLoading();
         BuildChooser();
         BuildPlacePopup();
+        BuildMusicSheet();
     }
 
     void EnsureService()
