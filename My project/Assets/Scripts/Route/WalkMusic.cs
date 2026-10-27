@@ -220,10 +220,11 @@ public static class WalkMusic
         d.pivot = new Vector2(0f, 0.5f);
         d.anchoredPosition = new Vector2(left, 0f);
         d.sizeDelta = new Vector2(size, size);
+        disc.gameObject.AddComponent<Mask>();   // 정사각형 로고 그림의 흰 모서리가 원 밖으로 튀어나왔음 (고른 칩의 초록 위에서 보임)
         Image icon = UIKit.Image(disc.transform, "Logo", Color.white);
         icon.sprite = logo;
         icon.preserveAspect = true;
-        UIKit.Stretch(icon.rectTransform, 6f, 6f);
+        UIKit.Stretch(icon.rectTransform, 4f, 4f);
         Text t = chip.GetComponentInChildren<Text>();
         // 글자 칸을 한 줄 높이로: 두 줄로 꺾이지 못하게 해서 best fit 이 글자를 줄이게 한다 ("유튜브 / 뮤직" 으로 꺾였음)
         RectTransform tr = t.rectTransform;
