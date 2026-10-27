@@ -142,25 +142,10 @@ def build(fig, rng):
     tang /= np.linalg.norm(tang, axis=1, keepdims=True)
     outn = np.stack([np.zeros(len(T)), -tang[:, 2], tang[:, 1]], axis=1)       # yz 평면 법선
     outn *= np.where(outn[:, 2:3] < 0, 1, -1)                                  # 몸 반대쪽(뒤)을 향하게
+    # 키아트: 큰 S 자 꼬리는 하나의 매끈한 털 뭉치 (따로 붙인 털 뭉치 캡슐은 사마귀처럼 돋아 보여 뺐다)
     parts_t = []
-    for a, b, ra, rb in zip(spine[:-1:3], spine[3::3], srad[:-1:3], srad[3::3]):
-        parts_t.append(S.capsule(tuple(a), tuple(b), ra * 0.88, rb * 0.88))      # 속 심
-    clumps = []
-    for j, t in enumerate(np.linspace(0.1, 0.97, 9)):
-        k = int(t * (len(T) - 1))
-        c, r, tg, n_ = spine[k], srad[k], tang[k], outn[k]
-        side = np.cross(tg, n_)
-        for phi in (-110, -66, -22, 22, 66, 110) if j % 2 == 0 else (-88, -44, 0, 44, 88):
-            ph = math.radians(phi)
-            d = n_ * math.cos(ph) + side * math.sin(ph)
-            inner = d @ (-n_)
-            if inner > 0.6:      # 곡선 안쪽(몸·말린 속) 면은 뭉치 생략 → 얇은 막·구멍 방지
-                continue
-            L = 1.0 if t < 0.7 else 0.6
-            base = c + d * r * 0.25 - tg * r * 0.45
-            tip = c + d * r * 0.88 + tg * r * 1.0 * L
-            clumps.append((base, tip, r * 0.55))
-            parts_t.append(S.capsule(tuple(base), tuple(tip), r * 0.55, r * 0.12))
+    for a, b, ra, rb in zip(spine[:-1:2], spine[2::2], srad[:-1:2], srad[2::2]):
+        parts_t.append(S.capsule(tuple(a), tuple(b), ra * 1.05, rb * 1.05))
     # 말린 끝과 꼬리 기둥 사이를 메워 (뒤에서 볼 때 구멍 없이) 하나의 큰 덩어리로
     parts_t.append(S.ellipsoid((0.0, y0 + 5.6, -2.95), (1.3, 0.9, 0.8)))
     lo_b = spine.min(axis=0) - 3.2
@@ -173,8 +158,8 @@ def build(fig, rng):
             Q = P[m]
             d = parts_t[0](Q)
             for g in parts_t[1:]:
-                d = S.smin(d, g(Q), 0.25)
-            out[m] = d
+                d = S.smin(d, g(Q), 0.45)
+            out[m] = d + fuzz(Q, 0.03, 4.5)     # 아주 은은한 털결
         return out
     fig.add(tail, FUR, k=0.0, layer='tail')
 
@@ -187,7 +172,7 @@ def build(fig, rng):
             k = D.argmin(axis=1)
             out[m] = (srad[k] * 1.2 - D[np.arange(len(Q)), k]) * 2.0
         return out
-    fig.paint(masked(tail_tip, lambda P: np.abs(tail(P)), 0.1), FUR_L, soft=0.5)
+    fig.paint(masked(tail_tip, lambda P: np.abs(tail(P)), 0.1), (0.64, 0.50, 0.40), soft=0.8)
 
     # ---- 파란 털모자 (머리 위, 골지 테 + 방울) ----
     top, tn = surf_point(head0, hc, 0, 75)

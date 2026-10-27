@@ -66,7 +66,7 @@ def tri_head(c, r, taper):
     def f(P):
         q = P - c
         t = np.clip(q[:, 1] / r[1], -1, 1)
-        sx = 1 + taper * t
+        sx = 1 + taper * t * np.clip(0.35 + q[:, 2] / r[2], 0, 1)   # 역삼각은 얼굴 쪽만: 뒤통수는 둥글게 (뒤에서 V 모양 턱 방지)
         q2 = q.copy()
         q2[:, 0] = q[:, 0] / sx
         return base_(q2) * np.minimum(sx, 1.0)
@@ -128,7 +128,7 @@ def build(fig, rng):
         fig.add(S.sphere(tuple(wr + (wr - el) * 0.35), 0.32), DARK, k=0.14, layer='arm')
     # ---- 꼬리: 아주 크고 복슬복슬, 오른쪽 뒤에서 위로, 흰 끝 ----
     pts = [np.array(p) for p in ((0.3, y0 + 1.75, -0.75), (1.1, y0 + 1.45, -1.5), (2.05, y0 + 1.9, -1.85), (2.6, y0 + 2.85, -1.7), (2.7, y0 + 3.75, -1.3))]
-    rs = (0.32, 0.75, 1.0, 0.92, 0.5)
+    rs = (0.32, 0.66, 0.86, 0.8, 0.46)   # 키아트처럼 몸보다 작은 꼬리
     for (a, b), (r0, r1) in zip(zip(pts, pts[1:]), zip(rs, rs[1:])):
         fig.add(S.capsule(tuple(a), tuple(b), r0, r1), ORANGE, k=0.4, layer='tail')
     fig.add(S.cone(tuple(pts[-1]), tuple(pts[-1] + (0.05, 0.55, 0.18)), 0.48, 0.06), ORANGE, k=0.35, layer='tail')
@@ -157,7 +157,7 @@ def build(fig, rng):
     nose_f = head_frame(fig, hc, 0, -19.5)
     mouth_f = head_frame(fig, hc, 0, -24)
     for s in (-1, 1):   # 눈 위 흰 점
-        fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.28, 0.17, 0.3)), WHITE, soft=0.03)
+        fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.2, 0.12, 0.3)), WHITE, soft=0.06)
     # ---- 귀: 큰 삼각 귀, 짙은 끝, 밝은 안쪽 ----
     for s in (-1, 1):
         Re = S.rot(s * 12, -8, -s * 20)
