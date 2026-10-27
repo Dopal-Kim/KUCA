@@ -384,12 +384,13 @@ public partial class RoutePlanner
         float byTime = grow ? Mathf.Max(1f, o.walkMinutes / (float)o.result.totalMinutes) : 1f;
         int steps = Mathf.RoundToInt(h.steps * byDistance / 10f) * 10;
         int kcalMin = Mathf.RoundToInt(h.kcalMin * byTime), kcalMax = Mathf.RoundToInt(h.kcalMax * byTime);
-        UIKit.StatRow(chooserCards, ($"{steps:N0}", "걸음 (약)"), ($"{kcalMin}~{kcalMax}", "kcal (약)"), (h.ShortIntensity, "강도"));
+        // 큰 숫자 줄(StatRow)은 거리 · 시간 · 들를 곳 하나만: 건강 숫자까지 크게 쓰면 360px 폭에서 칸끼리 겹친다 (10/27 폰 확인)
+        UIKit.Bold(UIKit.Paragraph(chooserCards, $"약 {steps:N0}걸음  ·  {kcalMin}~{kcalMax}kcal  ·  {Escape(h.intensityLabel)}", KucaTheme.Body, Ink));
         if (!string.IsNullOrEmpty(o.result.goal?.note))
             UIKit.Paragraph(chooserCards, $"이번 주 목표  ·  {Escape(o.result.goal.note)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
         string weight = HealthProfile.WeightKg.HasValue ? "입력한 몸무게" : "몸무게 50~70kg";
-        UIKit.Text(chooserCards, $"{Escape(h.intensityLabel)} 기준 · {weight}로 셈한 대략값이에요. 일반 건강 정보이며 의료 조언이 아닙니다.",
-            KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
+        UIKit.Paragraph(chooserCards, $"걸음 수 · 칼로리는 {weight}로 셈한 대략값이에요. 일반 건강 정보이며 의료 조언이 아닙니다.",
+            KucaTheme.Caption, InkQuiet);
     }
 
     WalkMusic.Request CourseMusic(Option o)
