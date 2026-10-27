@@ -3,14 +3,16 @@
 1단계(Ground): 마스크와 도로 선 → 건물 입구·나무 배치가 피할 영역을 알려 준다.
 2단계(paint): 입구 앞 포장, 나무·산울타리 그늘(AO), 건물 둘레 그늘까지 넣어 저장.
 """
+import json
 import math
+import os
 import random
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 from scipy import ndimage
 
-from .geo import Raster, to_world
+from .geo import MAP_H, MAP_W, Raster, to_world
 
 # 키아트 아이콘에서 뽑은 색 (sRGB)
 GRASS = np.array([124, 166, 64], np.float32)       # 햇빛 받은 잔디가 이 색이 되게 (실사 비교: 형광 연두 → 차분한 여름 잔디)
@@ -43,6 +45,9 @@ STEPS_WAYS = {1389719862}
 ROUGH_STEPS = {1389719862}
 MAIN_ROAD_M = 150      # 이보다 긴 구내 찻길(주차장 통로 · 진입로 제외)만 중앙선 · 과속방지턱 (짧은 진입로와 구분, ROAD_REVIEW_v1)
 BUMP_EVERY_M = 110
+# 사용자가 산책길 지도에 표시한 오르막 (tools/route/slopes.json) — 길 양옆에 경사 빗금 (지도 기호, 길 사이클 R5)
+SLOPES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'route', 'slopes.json')
+SLOPE_INK = np.array([96, 84, 72], np.float32)
 JUNCTION_GAP_M = 20   # 중앙선은 길 끝(합류 · 교차)에서 이만큼 앞에서 멈추고, 과속방지턱은 교차점에서 이만큼 띄운다
 TRAIL = {'path', 'track'}
 
@@ -534,6 +539,9 @@ class Ground:
         blend(np.asarray(marks) > 0, flat(LINE), 0.5)
         blend((np.asarray(center) > 0) & self.road_p, flat(YELLOW), 0.6)
         blend((np.asarray(bumps) > 0) & self.road_p, flat(SPEED_BUMP), 0.5)   # 과속방지턱 (실사: 노랑 · 흰 줄, 아주 많음)
+        ticks = Image.new('L', (W, H), 0)
+        self._slope_ticks(ImageDraw.Draw(ticks))
+        blend((np.asarray(ticks) > 0) & ~(self.road_p | self.buildings | self.water), flat(SLOPE_INK), 0.4)
 
         # 포장 가장자리 선: 포장 안쪽 0.35 m 를 살짝 어둡게 (타일 테두리처럼 또렷하게)
         light_paved = walk_m | self.square | self.paved | self.apron | self.parking
@@ -632,6 +640,31 @@ class Ground:
             c = (int(g), int(g - rng.uniform(4, 16)), int(g - rng.uniform(10, 28)))
             d.ellipse((xs[i] - r, ys[i] - r * rng.uniform(0.6, 1.0), xs[i] + r, ys[i] + r * rng.uniform(0.6, 1.0)), fill=c)
         return np.asarray(img).astype(np.float32)
+
+    def _slope_ticks(self, md):
+        """오르막 길 양옆 빗금: 많이 힘듦은 2 m 마다 1.6 m, 조금 힘듦은 3.5 m 마다 1.0 m (오르는 방향은 표시가 없어 양옆 같게)"""
+        if not os.path.exists(SLOPES):
+            return
+        w = max(1, int(0.35 * self.ppm))
+        for o in json.load(open(SLOPES, encoding='utf-8'))['slopes']:
+            p = o['p']
+            pts = [(p[i] - MAP_W / 2, MAP_H / 2 - p[i + 1]) for i in range(0, len(p), 2)]
+            inner = (ROAD_W['service'] / 2 + 2.3) if o['kind'] in ('service', 'road') else 2.0
+            every, length = (2.0, 1.6) if o['level'] == 2 else (3.5, 1.0)
+            for a, b in zip(pts, pts[1:]):
+                L = math.hypot(b[0] - a[0], b[1] - a[1])
+                if L < 0.5:
+                    continue
+                rx, rz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
+                nx, nz = -rz, rx
+                s = every / 2
+                while s < L:
+                    cx, cz = a[0] + rx * s, a[1] + rz * s
+                    for side in (1, -1):
+                        x0, z0 = cx + nx * inner * side, cz + nz * inner * side
+                        x1, z1 = cx + nx * (inner + length) * side, cz + nz * (inner + length) * side
+                        md.line([self.r.px(x0, z0), self.r.px(x1, z1)], fill=255, width=w)
+                    s += every
 
     def _bumps(self, md):
         """구내 큰 찻길에 BUMP_EVERY_M 마다 길과 직각인 1.2 m 띠"""
