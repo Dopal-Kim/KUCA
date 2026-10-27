@@ -213,6 +213,17 @@ def kawaii_eyes(fig, head_c, R, spread=24, pitch=-12, size=0.62, iris=IRIS, tall
 
 
 def eye_at(fig, f, style='round', size=0.45, iris=IRIS, side=1, tilt=0.0, lid=None):
+    """눈 하나 (_eye_at). 지도용(LOD < 1)에서도 눈은 조금 더 촘촘히: 거친 다각형이면 동공이 홍채 밖으로 삐죽 나온다"""
+    global LOD
+    keep = LOD
+    LOD = max(LOD, 0.5)
+    try:
+        _eye_at(fig, f, style, size, iris, side, tilt, lid)
+    finally:
+        LOD = keep
+
+
+def _eye_at(fig, f, style='round', size=0.45, iris=IRIS, side=1, tilt=0.0, lid=None):
     """
     한쪽 눈. f = 표면 위 좌표계 (로컬 +Z 바깥, +Y 위) — 머리가 구가 아니어도 실제 표면 점에서 만든 Frame 을 넘긴다.
     style (캐릭터 개성에 맞춰 고른다):
@@ -386,13 +397,9 @@ def space_rabbit(fig, rng):
         fig.add(S.box((-1.5, y0 + 3.55 - k * 0.17, 0.38), (0.06, 0.05, 0.22), round_=0.025, R=S.rot(-62, 0, -28)), RED, k=0.0, layer='decal')
     fig.add(S.sphere((1.18, y0 + 3.95, 0.72), 0.08), CRIMSON, k=0.0, layer='decal')
     # 금색 코일 호스 (벨트 앞 → 등)
-    hose = lambda t: (-1.5 - 0.32 * math.sin(t * math.pi), y0 + 2.5 - 0.7 * math.sin(t * math.pi), 0.95 - 2.1 * t)
-    if lo:
-        for k in range(8):
-            fig.add(S.capsule(hose(k / 8), hose((k + 1) / 8), 0.13), GOLD, k=0.0, layer='trim', metal=g)
-    for k in range(0 if lo else 34):
+    for k in range(34):
         t = k / 33
-        x, y, z = hose(t)
+        x, y, z = -1.5 - 0.32 * math.sin(t * math.pi), y0 + 2.5 - 0.7 * math.sin(t * math.pi), 0.95 - 2.1 * t
         a = t * 30 * math.pi
         fig.add(S.sphere((x + math.cos(a) * 0.09, y + math.sin(a) * 0.09, z), 0.09), GOLD, k=0.0, layer='trim', metal=g)
     fig.add(S.torus((0, y0 + 4.32, 0.0), 0.95, 0.2), (0.95, 0.96, 0.98), k=0.0, layer='trim')          # 목 고리 (흰 옷깃: 금색은 얼굴 아래 갈색 얼룩처럼 보였다)
@@ -401,9 +408,7 @@ def space_rabbit(fig, rng):
     HR = 2.3                                     # 헬멧 반지름
     cut = 0.55                                   # 바이저 경계 (로컬 z)
     shell = S.subtract(S.sphere(hc, HR), S.box((0, hc[1], hc[2] + cut + 3), (4, 4, 3)))
-    lo = LOD < 1.0   # 지도용: 얇은 껍질·오목한 귀 안쪽·코일 구슬은 간략화에서 찢어진다 (귀가 짧고 뾰족한 고양이 귀처럼) → 속이 찬 단순한 모양
-    if not lo:
-        shell = S.subtract(shell, S.sphere(hc, HR - 0.14))
+    shell = S.subtract(shell, S.sphere(hc, HR - 0.14))
     fig.add(shell, W, k=0.0, layer='helmet')
     fc, FR = (0, hc[1] - 0.12, hc[2] + 0.12), 1.95
     # 두상: 세로로 살짝 긴 타원, 아래쪽(턱·볼)이 자연스럽게 넓어지는 형태 — 따로 붙인 볼살 없음
@@ -415,7 +420,7 @@ def space_rabbit(fig, rng):
     for s in (-1, 1):   # 귀: 헬멧 위로 뚫고 나온 흰 귀 + 오목한 분홍 안쪽 + 헬멧 귀 고리
         ear = S.ellipsoid((s * 0.98, hc[1] + 2.95, -0.35), (0.8, 1.38, 0.52), R=S.rot(0, 0, -s * 8))
         inner = S.ellipsoid((s * 1.0, hc[1] + 3.05, 0.14), (0.5, 1.02, 0.3), R=S.rot(0, 0, -s * 8))
-        fig.add(ear if lo else S.subtract(ear, inner, k=0.1), W, k=0.35, layer='helmet')
+        fig.add(S.subtract(ear, inner, k=0.1), W, k=0.35, layer='helmet')
         fig.paint(S.ellipsoid((s * 1.0, hc[1] + 3.05, 0.06), (0.56, 1.08, 0.42), R=S.rot(0, 0, -s * 8)), EAR_PINK, soft=0.05)
         fig.add(S.torus((s * HR * 0.99, hc[1] - 0.15, hc[2] - 0.2), 0.5, 0.15, Rm=S.rot(0, 0, 90)), GOLD, k=0.0, layer='trim', metal=g)
         fig.add(S.ellipsoid((s * HR * 0.99, hc[1] - 0.15, hc[2] - 0.2), (0.14, 0.4, 0.4)), (0.97, 0.97, 0.98), k=0.0, layer='port')
@@ -519,7 +524,7 @@ def _reduce_extra(fig, cap):
         V = uniq * 0.0005
         F = inv.reshape(-1, 3)
         F = F[(F[:, 0] != F[:, 1]) & (F[:, 1] != F[:, 2]) & (F[:, 0] != F[:, 2])]
-        V2, F2 = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), max(0.0, 1.0 - budget / max(len(F), 1)))
+        V2, F2 = fast_simplification.simplify(V.astype(np.float32), F.astype(np.int32), max(0.0, 1.0 - budget / max(len(F), 1)), agg=3)
         V2 = np.asarray(V2, np.float64)
         tri = V2[F2]
         cen = tri.mean(axis=1)
