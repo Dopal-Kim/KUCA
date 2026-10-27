@@ -31,7 +31,7 @@ STONE_STEP = np.array([188, 184, 176], np.float32)  # 화강석 돌계단 (보�
 GRAVEL = np.array([200, 170, 112], np.float32)      # 공원 · 숲 흙길: 황토 · 모래색 (R2 갈색은 붉은 보도 · 찻길과 같은 색 가족이 됨, ROAD_REVIEW_v2)
 SIDEWALK = np.array([150, 102, 88], np.float32)     # 찻길 옆 보도: 채도 낮춘 벽돌 갈색 (VR 실사 · R2 주황빛 빨강은 번진 후광처럼 보임, ROAD_REVIEW_v2)
 CURB_GRANITE = np.array([226, 224, 218], np.float32)  # 화강석 연석 (0.5 m: 0.3 m 는 텍셀 1개 미만이라 안 보였음)
-PLAZA_BAND = np.array([176, 170, 160], np.float32)  # 광장 가장자리 회색 화강석 띠 1.5 m (베이지는 포장과 명도가 같아 안 보였음, ROAD_REVIEW_v2)
+PLAZA_BAND = np.array([150, 144, 136], np.float32)  # 광장 가장자리 회색 화강석 띠 1.5 m (베이지는 포장과 명도가 같아 안 보였음, ROAD_REVIEW_v2)
 SPEED_BUMP = np.array([238, 196, 52], np.float32)
 
 ROAD_W = {'primary': 16, 'secondary': 14, 'tertiary': 11, 'residential': 8, 'unclassified': 8,
@@ -104,7 +104,9 @@ class Ground:
                            and t.get('service') not in ('parking_aisle', 'driveway') and _length(pts) >= MAIN_ROAD_M]
         self.road_p = self._stroke(self.paint_roads, ROAD_W)
         self.curb_p = self._stroke(self.paint_roads, ROAD_W, extra=1.0)
-        self.sidewalk = self._stroke(self.paint_roads, ROAD_W, extra=4.2) | self._stroke(
+        # shortcut: 이름 있는 찻길(덕영대로 · 서천동로… 캠퍼스 밖 시내 길)은 보도를 안 칠함 — 이름 붙은 구내 길이 생기면 캠퍼스 경계로 가르기 (ROAD_REVIEW_v3: 정문 건너 주택가에 칠해짐)
+        campus_roads = [(t['highway'], pts) for t, pts in roads_t if t.get('service') != 'parking_aisle' and not t.get('name')]
+        self.sidewalk = self._stroke(campus_roads, ROAD_W, extra=4.2) | self._stroke(
             [(t['highway'], pts) for t, pts in self._tagged(WALK_W) if t.get('footway') == 'sidewalk'], WALK_W)
         self.rough = self._stroke([('steps', pts) for t, pts in self._tagged(WALK_W) if t['__id'] in ROUGH_STEPS], WALK_W)
         self.trail = self._stroke([l for l in self.walk_lines if l[0] in TRAIL], WALK_W)
@@ -470,7 +472,9 @@ class Ground:
         blend(self.paved, plaza)
         # 광장 가장자리 1 m 베이지 화강석 띠 (실사: 화강석 띠로 나뉨 · ROAD_REVIEW_v1 "칼로 자른 직선이라 바닥 그림처럼")
         sq = self.square | self.paved
-        blend(sq & (ndimage.distance_transform_edt(sq) / ppm < 1.5), _recolor(paving_t, PLAZA_BAND), 0.4)
+        d_sq = ndimage.distance_transform_edt(sq) / ppm
+        blend(sq & (d_sq < 1.5), _recolor(paving_t, PLAZA_BAND), 0.4)
+        blend(sq & (d_sq < 0.4), flat(PLAZA_BAND * 0.75), 0.3)   # 바깥 한 줄 더 진하게 (회색 띠도 지도 거리에서 안 보였음, ROAD_REVIEW_v3)
         blend(self.parking, parking)
         blend(self.apron, paving, 0.8)
 
