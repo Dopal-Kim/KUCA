@@ -66,7 +66,7 @@ def tri_head(c, r, taper):
     def f(P):
         q = P - c
         t = np.clip(q[:, 1] / r[1], -1, 1)
-        sx = 1 + taper * t * np.clip(0.35 + q[:, 2] / r[2], 0, 1)   # 역삼각은 얼굴 쪽만: 뒤통수는 둥글게 (뒤에서 V 모양 턱 방지)
+        sx = 1 + taper * t * np.clip(0.5 + 0.5 * q[:, 2] / r[2], 0, 1)   # 역삼각은 얼굴 쪽만, 뒤로 갈수록 둥글게 (뒤에서 V 턱·주름 방지)
         q2 = q.copy()
         q2[:, 0] = q[:, 0] / sx
         return base_(q2) * np.minimum(sx, 1.0)
@@ -149,15 +149,15 @@ def build(fig, rng):
     # 앞머리 털 (작은 불꽃 모양)
     for x, ang, ln in ((-0.25, 20, 0.55), (0.05, -5, 0.7), (0.32, -25, 0.5)):
         a = np.array((x, hc[1] + HR * 0.84, hc[2] + 0.5))
-        fig.add(S.cone(tuple(a), tuple(a + S.rot(0, -35, ang) @ np.array((0, ln, 0))), 0.24, 0.04), ORANGE, k=0.22)
+        fig.add(S.cone(tuple(a), tuple(a + S.rot(0, -35, ang) @ np.array((0, ln * 0.85, 0))), 0.26, 0.09), ORANGE, k=0.25)   # 끝이 둥근 앞머리 (뾰족한 왕관처럼 보이지 않게)
     # 얼굴 부품 자리 (귀 넣기 전 표면)
     eye_f = {s: head_frame(fig, hc, s * 27, 2) for s in (-1, 1)}
-    dot_p = {s: np.array(head_frame(fig, hc, s * 24, 25).o) for s in (-1, 1)}
+    dot_f = {s: head_frame(fig, hc, s * 24, 25) for s in (-1, 1)}
     blush_p = {s: np.array(head_frame(fig, hc, s * 44, -16).o) for s in (-1, 1)}
     nose_f = head_frame(fig, hc, 0, -19.5)
     mouth_f = head_frame(fig, hc, 0, -24)
-    for s in (-1, 1):   # 눈 위 흰 점
-        fig.paint(S.ellipsoid(tuple(dot_p[s]), (0.2, 0.12, 0.3)), WHITE, soft=0.06)
+    for s in (-1, 1):   # 눈 위 흰 점: 칠 대신 표면에 붙인 매끈한 타원 (칠은 메시에서 얼룩덜룩해짐)
+        Fg._ellipsoid(fig.extra, (0, 0, -0.01), (0.17, 0.1, 0.035), WHITE, 12, 6, dot_f[s])
     # ---- 귀: 큰 삼각 귀, 짙은 끝, 밝은 안쪽 ----
     for s in (-1, 1):
         Re = S.rot(s * 12, -8, -s * 20)
