@@ -122,6 +122,12 @@ public static class HudIcons
 
     /// <summary>Apple 로그인 버튼의 사과 로고 (Resources/KUCA/AppleLogo.png, 흰색 · 투명 바탕이라 색을 입혀 쓴다)</summary>
     public static Sprite AppleLogo => appleLogo != null ? appleLogo : appleLogo = Resources.Load<Sprite>("KUCA/AppleLogo");
+
+    static Sprite melonLogo, spotifyLogo, youTubeMusicLogo;
+    /// <summary>노래 들을 앱 고르기 칩의 로고 (Resources/KUCA/*Logo.png, 흰 바탕 정사각형 그림이라 흰 원 안에 넣어 쓴다)</summary>
+    public static Sprite MelonLogo => melonLogo != null ? melonLogo : melonLogo = Resources.Load<Sprite>("KUCA/MelonLogo");
+    public static Sprite SpotifyLogo => spotifyLogo != null ? spotifyLogo : spotifyLogo = Resources.Load<Sprite>("KUCA/SpotifyLogo");
+    public static Sprite YouTubeMusicLogo => youTubeMusicLogo != null ? youTubeMusicLogo : youTubeMusicLogo = Resources.Load<Sprite>("KUCA/YouTubeMusicLogo");
     static Sprite appleLogo;
 
     public static Sprite Footprints => Cached("foot", 128, p =>
