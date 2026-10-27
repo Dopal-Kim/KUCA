@@ -98,7 +98,7 @@ public partial class RoutePlanner
         sheet = Sheet("RouteSheet", "어디로 걸을까요?", HideSheet, 0.9f, 2, out RectTransform c, out RectTransform b, out _);
 
         // AI 가 무엇을 하는지 시트 맨 위에: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0). 버튼 위에 두니 시트 아래로 밀려 안 보였음 (v24)
-        UIKit.Paragraph(c, "원하는 산책을 말로 적으면 AI 가 해석해서, 지금 시간 · 날씨 · 학교 공지 · 학생들의 최근 쪽지까지 보고 코스 3개와 들를 이유를 골라요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
+        UIKit.Paragraph(c, "원하는 산책을 말로 적으면 AI 가 어떤 산책이 맞을지 먼저 판단하고, 날씨 · 가 본 횟수 · 경관 · 학생들의 최근 쪽지 · 학교 공지를 비교해 코스 3개를 짜요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
 
         // 말로 하는 요청 (메인): 칩으로 못 고르는 "그늘 · 오르막 빼고 · 도서관 말고" 같은 바람. 키보드 마이크로 말해도 된다
         Question(c, "어떤 산책을 하고 싶어요?");
@@ -337,10 +337,14 @@ public partial class RoutePlanner
         string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
         UIKit.Bold(UIKit.Text(chooserCards, o.variant.label, KucaTheme.Title, TextAnchor.UpperLeft, Ink));
         UIKit.Text(chooserCards, source + (o.returns ? "  ·  출발지로 돌아오는 한 바퀴" : ""), KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
-        // 바람을 어떻게 이해했는지 먼저 보여 준다 (해석이 틀렸으면 고쳐 적을 수 있게)
-        if (!string.IsNullOrEmpty(o.result.wish?.summary))
-            UIKit.Paragraph(chooserCards, $"이렇게 이해했어요{(o.result.wish.source == "ai" ? " (AI)" : "")}  ·  {Escape(o.result.wish.summary)}",
+        // AI 판단 → 이해한 조건 → 코스를 이렇게 짠 이유 (해석이 틀렸으면 고쳐 적을 수 있게 먼저 보여 준다)
+        if (!string.IsNullOrEmpty(o.result.wish?.judgment))
+            UIKit.Paragraph(chooserCards, $"{(o.result.wish.source == "ai" ? "AI 판단" : "판단")}  ·  {Escape(o.result.wish.judgment)}",
                 KucaTheme.Label, KucaTheme.PrimaryDeep);
+        if (!string.IsNullOrEmpty(o.result.wish?.summary))
+            UIKit.Paragraph(chooserCards, $"이렇게 이해했어요  ·  {Escape(o.result.wish.summary)}", KucaTheme.Label, InkQuiet);
+        if (!string.IsNullOrEmpty(o.result.why))
+            UIKit.Paragraph(chooserCards, $"코스 이유  ·  {Escape(o.result.why)}", KucaTheme.Label, InkQuiet);
         int visits = o.result.stops.Count - (o.returns ? 1 : 0);
         UIKit.StatRow(chooserCards, (RouteMath.Distance(o.meters), "거리"), ($"{o.walkMinutes}분", "걸리는 시간"), ($"{visits}곳", "들를 곳"));
 
