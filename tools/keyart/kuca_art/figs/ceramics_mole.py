@@ -118,7 +118,7 @@ def build(fig, rng):
         y = P[:, 1]
         bib_w = np.where(y > y0 + 2.75, 0.9, 1.95)
         d = rmax(d, np.abs(P[:, 0]) - bib_w, 0.05)
-        d = rmax(d, -(P[:, 2] + 0.15), 0.05)
+        d = rmax(d, -(P[:, 2] - np.where(y > y0 + 2.75, 0.35, -0.15)), 0.05)   # 가슴판은 앞쪽만 (어깨 위로 넘어가 등에서 너덜너덜해 보였다)
         d = rmax(d, y - (y0 + 3.5), 0.05)
         d = rmax(d, (y0 + 0.75) - y, 0.05)
         d = np.maximum(d, -(np.minimum(S.capsule(shL, hdL, 0.48, 0.38)(P), S.capsule(shR, hdR, 0.48, 0.4)(P)) - 0.16))   # 팔 자리는 비움

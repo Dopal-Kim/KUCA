@@ -389,7 +389,7 @@ def space_rabbit(fig, rng):
         x, y, z = -1.5 - 0.32 * math.sin(t * math.pi), y0 + 2.5 - 0.7 * math.sin(t * math.pi), 0.95 - 2.1 * t
         a = t * 30 * math.pi
         fig.add(S.sphere((x + math.cos(a) * 0.09, y + math.sin(a) * 0.09, z), 0.09), GOLD, k=0.0, layer='trim', metal=g)
-    fig.add(S.torus((0, y0 + 4.32, 0.0), 0.95, 0.2), GOLD, k=0.0, layer='trim', metal=g)          # 목 고리
+    fig.add(S.torus((0, y0 + 4.32, 0.0), 0.95, 0.2), (0.95, 0.96, 0.98), k=0.0, layer='trim')          # 목 고리 (흰 옷깃: 금색은 얼굴 아래 갈색 얼룩처럼 보였다)
     # ---- 머리: 토끼 얼굴 (유리 안) + 뒤쪽 흰 헬멧 껍질 + 귀 ----
     hc = (0, y0 + 6.2, 0.05)
     HR = 2.3                                     # 헬멧 반지름
@@ -439,8 +439,8 @@ def space_rabbit(fig, rng):
         fig.add(S.capsule((s * 1.05, y0 + 2.55, -1.42), (s * 1.05, y0 + 2.2, -1.42), 0.26, 0.34), GOLD, k=0.0, layer='trim', metal=g)
     # ---- 받침 소품: 로켓 · 달 돌 · 톱니 ----
     rx, rz = -3.0, 1.5
-    fig.add(S.capsule((rx, y0 + 0.4, rz), (rx, y0 + 1.75, rz), 0.44, 0.38), WHITE, k=0.0, layer='prop')
-    fig.add(S.capsule((rx, y0 + 1.68, rz), (rx, y0 + 2.45, rz), 0.39, 0.04), RED, k=0.0, layer='prop2')
+    fig.add(S.capsule((rx, y0 + 0.4, rz), (rx, y0 + 1.45, rz), 0.44, 0.38), WHITE, k=0.0, layer='prop')   # 위 반구가 빨간 코 밖으로 비치지 않게
+    fig.add(S.capsule((rx, y0 + 1.62, rz), (rx, y0 + 2.45, rz), 0.39, 0.04), RED, k=0.0, layer='prop2')
     fig.add(S.torus((rx, y0 + 1.2, rz + 0.41), 0.17, 0.06, Rm=S.rot(0, 90, 0)), GOLD, k=0.0, layer='prop3', metal=g)
     fig.add(S.sphere((rx, y0 + 1.2, rz + 0.37), 0.13), (0.25, 0.25, 0.3), k=0.0, layer='prop3')
     for k in range(3):

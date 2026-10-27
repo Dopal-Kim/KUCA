@@ -317,11 +317,11 @@ def build(fig, rng):
     fig = Fast(fig)
     hc = np.array((0.0, y0 + 5.55, 0.28))
     # 매끈한 둥근 머리 (앞으로 살짝 숙임), 아래쪽이 아주 살짝 넓다 (볼 구 없음)
-    head_up = S.ellipsoid(hc, (1.72, 1.7, 1.72), R=S.rot(0, 10, 0))
-    head_lo = S.ellipsoid(hc + np.array((0, -0.48, 0.1)), (1.8, 1.2, 1.62))
+    head_up = S.ellipsoid(hc, (1.86, 1.78, 1.8), R=S.rot(0, 10, 0))
+    head_lo = S.ellipsoid(hc + np.array((0, -0.48, 0.1)), (1.92, 1.24, 1.7))
     head = lambda P: S.smin(head_up(P), head_lo(P), 0.5)
     # 날씬하지만 배는 둥근 몸: 아래 둥근 배 → 위로 갈수록 좁아지는 가슴
-    belly = S.ellipsoid((0, y0 + 2.15, 0.15), (1.82, 1.62, 1.66))
+    belly = S.ellipsoid((0, y0 + 2.15, 0.15), (1.72, 1.6, 1.62))
     chest = S.ellipsoid((0, y0 + 3.6, 0.12), (1.6, 1.25, 1.46))
     trunk = lambda P: S.smin(belly(P), chest(P), 0.7)
     core = lambda P: S.smin(head(P), trunk(P), 0.55)
@@ -382,11 +382,11 @@ def build(fig, rng):
     envelope(fig, (1.0, y0 + 3.2, 2.15), S.rot(-18, -10, 12))
     # 벨보이 모자: 검은 원통 + 진홍 띠 + 금 테 2줄 + 앞 금 단추 + 작은 챙
     Rc = S.rot(0, -6, -8)
-    cp = hc + np.array((0.2, 1.67, -0.12))
+    cp = hc + np.array((0.2, 1.75, -0.12))
     fig.add(S.cylinder(cp + Rc @ np.array((0, 0.44, 0)), 1.28, 0.3, round_=0.2, R=Rc), CAP, k=0.0, layer='cap')
     fig.add(S.cylinder(cp + Rc @ np.array((0, -0.1, 0)), 1.21, 0.21, round_=0.04, R=Rc), CRIMSON, k=0.0, layer='band')
     for yy in (0.12, -0.32):
-        fig.add(S.torus(cp + Rc @ np.array((0, yy, 0)), 1.24, 0.065, Rm=Rc), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
+        fig.add(S.torus(cp + Rc @ np.array((0, yy, 0)), 1.24, 0.085, Rm=Rc), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     fig.add(S.cylinder(cp + Rc @ np.array((0, -0.11, 1.2)), 0.17, 0.05, round_=0.04, R=Rc @ S.rot(0, 90, 0)), Fg.GOLD, k=0.0, layer='trim', metal=GLD)
     visor = lambda P: np.maximum(S.cylinder(cp + Rc @ np.array((0, -0.38, 0.25)), 1.3, 0.05, round_=0.04, R=Rc @ S.rot(0, 14, 0))(P), -((P - cp) @ Rc[:, 2]) + 0.6)
     fig.add(visor, CAP, k=0.0, layer='cap')

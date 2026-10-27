@@ -362,8 +362,8 @@ def build(fig, rng):
     edge = lambda P: y0 + 2.85 + 0.25 * np.clip(cth(P), 0, None) - 0.5 * np.clip(-cth(P), 0, None)
     front_open = lambda P: np.maximum(np.abs(P[:, 0]) - 0.04 - 0.25 * np.clip(y0 + 3.45 - P[:, 1], 0, None), -P[:, 2])
     drop = lambda P: np.clip((y0 + 4.0 - P[:, 1]) / 1.6, 0, 1)
-    flare = lambda P: 0.05 + 0.38 * drop(P) ** 1.4 + 0.03 * drop(P) * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 7)   # 아래로 퍼지며 세로 주름
-    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.035 - 0.05 * drop(P), edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.02), -front_open(P)))
+    flare = lambda P: 0.0 + 0.42 * drop(P) ** 1.3 + 0.03 * drop(P) * np.cos(np.arctan2(P[:, 0], P[:, 2]) * 7)   # 아래로 퍼지며 세로 주름
+    cape = lambda P: np.maximum(np.maximum(np.abs(cb(P) - flare(P)) - 0.045 - 0.04 * drop(P), edge(P) - P[:, 1]), np.maximum(P[:, 1] - (y0 + 4.02), -front_open(P)))
     fig.add(cape, NAVY, k=0.0, layer='cape')
     trim = lambda P: np.maximum(np.hypot(cb(P) - flare(P), P[:, 1] - edge(P) - 0.02) - 0.1, -front_open(P))   # 밑단을 따라가는 둥근 금 관
     fig.add(trim, Fg.GOLD, k=0.0, layer='trim', metal=GLD)

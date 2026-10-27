@@ -169,10 +169,11 @@ def build(fig, rng):
     def trim(P):
         d = np.abs(torso_f(P) - 0.16) - 0.12
         d = np.maximum(d, P[:, 1] - T_TOP - 0.03)
-        neck = np.maximum(np.abs(neck_u(P) - 1.12) * 0.42 - 0.055, 0.15 - P[:, 2])
-        arm = np.maximum(np.abs(armcut(P) - 0.18) - 0.075, (y0 + 2.8) - P[:, 1])
+        neck = np.maximum(np.abs(neck_u(P) - 1.06) * 0.42 - 0.06, 0.15 - P[:, 2])     # 옷 자른 면을 띠가 덮도록 안쪽까지
+        arm = np.maximum(np.abs(armcut(P) - 0.15) - 0.07, (y0 + 2.8) - P[:, 1])
         return rmax(d, np.minimum(neck, arm), 0.05)
-    fig.add(trim, RED, k=0.0, layer='tanktrim')
+    # 옷과 같은 layer 에 작은 k 로 붙임: 다른 layer 끼리의 날카로운 홈은 반짝이는 톱니 이음새가 된다
+    fig.add(trim, RED, k=0.04, layer='tank')
     # ---------- 바통 (왼손, 화면 왼쪽) ----------
     hd = np.array(arms[-1][2])
     b0 = hd + np.array((0.12, 0.4, 0.22))
@@ -204,7 +205,7 @@ def build(fig, rng):
         base_c = (s * 0.9, hc[1] + 1.05, -0.12)
         ear = tri_ear(base_c, R, 0.56, 1.0, 0.2, 0.12)
         inner = tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.18))), R, 0.3, 0.74, 0.07, 0.05)
-        fig.add(S.subtract(ear, inner, k=0.05), FUR, k=0.25, layer='ear')
+        fig.add(S.subtract(ear, inner, k=0.05), FUR, k=0.15)   # 머리와 같은 layer: 귀 뿌리에 갈라진 홈이 생기지 않게
         fig.paint(tri_ear(tuple(np.array(base_c) + R @ np.array((0, 0.12, 0.13))), R, 0.34, 0.8, 0.11, 0.05), EAR_IN, soft=0.05)
 
     # 머리띠 (이마를 두른 빨간 밴드, 귀 아래)
@@ -215,10 +216,10 @@ def build(fig, rng):
 
     def headband(P):
         head = S.smin(S.ellipsoid(*cran)(P), S.ellipsoid(*lower)(P), 0.5)   # 실제 두상을 따라감 (가장자리로 털이 비치지 않게)
-        d = np.abs(head - 0.05) - 0.13
+        d = np.abs(head - 0.04) - 0.14
         q = (P - hb_c) @ Rh
-        return rmax(d, np.abs(q[:, 1]) - 0.24, 0.04)
-    fig.add(headband, RED, k=0.0, layer='headband')
+        return rmax(d, np.abs(q[:, 1]) - 0.24, 0.06)
+    fig.add(headband, RED, k=0.05)   # 머리와 같은 layer + 작은 k: 가장자리 홈이 톱니·반짝이로 깨지지 않게
 
     # ---------- 얼굴: 밝은 아몬드 눈 (눈꼬리 살짝 올라감) ----------
     for s in (-1, 1):

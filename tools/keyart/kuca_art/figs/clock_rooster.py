@@ -316,11 +316,11 @@ def build(fig, rng):
     for s in (-1, 1):
         root = np.array((s * 1.42, y0 + 2.75, 0.05))
         fig.add(S.ellipsoid(tuple(root + (s * 0.12, -0.05, 0.0)), (0.42, 0.62, 0.58), R=S.rot(0, 0, s * 30)), WHITE, k=0.15, layer='wingw')
-        fan = ((18, 1.05, RUST_DK), (36, 1.25, RUST), (54, 1.3, DKRED), (72, 1.15, RUST))
+        fan = ((16, 1.35, RUST_DK), (34, 1.55, RUST), (52, 1.6, DKRED), (70, 1.4, RUST))
         for i, (ang, L, col) in enumerate(fan):
             a_ = math.radians(ang)
             d = np.array((s * math.sin(a_), -math.cos(a_), 0.0))
-            mid = root + d * L * 0.62 + np.array((0, 0, 0.1 - i * 0.08))
+            mid = root + np.array((s * 0.15, 0, 0)) + d * L * 0.6 + np.array((0, 0, 0.1 - i * 0.08))
             fig.add(S.ellipsoid(tuple(mid), (0.3, L * 0.52, 0.13), R=S.rot(s * 6, 0, s * ang)), col, k=0.06, layer='wing%d' % (i % 2))
 
     # ---------- 꼬리: 따로 떨어진 낫깃 부채 (뒤에서 보면 펼쳐짐) ----------

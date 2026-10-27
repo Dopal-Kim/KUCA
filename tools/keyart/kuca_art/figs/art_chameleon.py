@@ -16,7 +16,7 @@ BLUEP = (0.46, 0.70, 1.0)
 LILAC = (0.70, 0.54, 0.98)
 PEACH = (1.0, 0.66, 0.46)
 BELLY = (0.99, 0.93, 0.74)
-BERET = (0.62, 0.05, 0.19)
+BERET = (0.54, 0.05, 0.19)
 LEATHER = (0.55, 0.32, 0.16)
 LEATHER_DK = (0.42, 0.23, 0.11)
 WOOD = (0.86, 0.66, 0.42)
@@ -131,9 +131,9 @@ def build(fig, rng):
 
     # ---------- 베레모 ----------
     top = hit(fig, (0, y0 + 9, hc[2] + 0.35), (0, -1, 0))
-    bcn = top + (0.0, -0.1, -0.4)
+    bcn = top + (0.0, -0.2, -0.4)
     Rb = S.rot(0, -10, -13)
-    fig.add(S.ellipsoid(tuple(bcn + (0.2, 0.25, 0)), (2.0, 0.6, 1.95), R=Rb), BERET, k=0.25, layer='beret')
+    fig.add(S.ellipsoid(tuple(bcn + (0.2, 0.25, 0)), (2.0, 0.68, 1.95), R=Rb), BERET, k=0.25, layer='beret')
     fig.add(S.torus(tuple(bcn + (0.05, -0.08, 0)), 1.25, 0.18, Rm=Rb), BERET, k=0.2, layer='beret')
     fig.add(S.capsule(tuple(bcn + (0.15, 0.6, 0)), tuple(bcn + (0.2, 0.9, 0)), 0.15, 0.17), BERET, k=0.08, layer='beret')
 
