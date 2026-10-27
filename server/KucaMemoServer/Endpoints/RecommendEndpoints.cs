@@ -22,7 +22,7 @@ public static class RecommendEndpoints
     }
 
     /// <summary>계정 취향(WalkPreferences JSON)의 pace. 없거나 읽지 못하면 null</summary>
-    static string? PaceOf(Account? account)
+    internal static string? PaceOf(Account? account)
     {
         if (account?.PreferencesJson is not { Length: > 0 } json)
             return null;
