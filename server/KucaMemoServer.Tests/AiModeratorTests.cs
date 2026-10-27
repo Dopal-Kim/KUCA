@@ -115,6 +115,17 @@ public class AiModeratorTests
     public void 형식이_틀린_응답은_null(string content) => Assert.Null(AiModerator.ParseResponse(ChatResponse(content)));
 
     [Fact]
+    public void 길이_제한에_잘린_응답도_판단은_읽는다()
+    {
+        // 운영에서 실제로 온 답: 판단 이유(note) 가 길어 max_tokens 에서 끊겼다
+        var result = AiModerator.ParseResponse(ChatResponse(
+            """{"verdict": "block", "reason": "personal_info", "note": "실명과 학번 정보로 특정인을 지목하면서 비하 표현으로 비방하고 있어 개인"""));
+        Assert.NotNull(result);
+        Assert.Equal(Verdict.Block, result!.Verdict);
+        Assert.Equal(ModerationReasons.PersonalInfo, result.Reason);
+    }
+
+    [Fact]
     public void 응답_구조가_다르면_null() => Assert.Null(AiModerator.ParseResponse("""{"error":"bad"}"""));
 
     [Fact]

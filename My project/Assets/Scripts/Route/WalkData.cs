@@ -19,6 +19,8 @@ public class WalkCompleteRequest
     public int plannedMeters, stopsDone, stopsTotal;
     /// <summary>코스에서 들른 경희스팟 건물 ID</summary>
     public List<string> visitedBuildingIds = new List<string>();
+    /// <summary>휴대폰 걸음 센서로 센 이번 산책 걸음 수 (StepTracker). 못 셌으면 0 → 서버가 거리로 어림</summary>
+    public int steps;
     /// <summary>걸은 길 (지도 월드 좌표, WalkTrack 이 기록). 서버에는 보내지 않고 돌아보기 · 산책 기록에만 쓴다</summary>
     [NonSerialized] public List<Vector3> track = new List<Vector3>();
     [NonSerialized] public string title = "";
@@ -32,6 +34,22 @@ public class WalkCompleteResult
     public string reason;
     public int xp, tickets, growth;
     public int level, xpInLevel, xpNeeded;
+    /// <summary>서버가 셈한 걸음 수 · 칼로리 범위 (기기 판정이면 비어 있음 → HealthEstimate.Has 로 본다)</summary>
+    public HealthEstimate health;
+    /// <summary>이번 주 걷기 목표 진행 (기기 판정이면 비어 있음 → WeekGoal.Has)</summary>
+    public WeekGoal week;
+}
+
+/// <summary>GET /api/me/coach: 이번 주 숫자로 AI 가 쓴 한 줄 (검사에 걸리면 서버가 틀 문장으로 바꾼다)</summary>
+[Serializable]
+public class CoachMessage
+{
+    public string text;
+    /// <summary>"ai" · "fallback"</summary>
+    public string source;
+    public WeekGoal week;
+    /// <summary>"일반 건강 정보이며 의료 조언이 아닙니다." (화면에 함께 보인다)</summary>
+    public string note;
 }
 
 [Serializable]
@@ -131,6 +149,7 @@ public static class WalkSession
         PartnerNickname = nickname;
         startMeters = Progress != null ? Progress.walkedMeters : 0f;
         startTime = Time.realtimeSinceStartup;
+        StepTracker.Begin(session);
     }
 
     /// <summary>시작하고 지난 시간 (초)</summary>
@@ -156,10 +175,15 @@ public static class WalkSession
             visitedBuildingIds = visited != null ? new List<string>(visited) : new List<string>(),
             track = WalkTrack.Points(session),
             title = Title ?? "",
+            steps = Mathf.Max(0, StepTracker.Finish(session)),
         };
         Active = false;
         return r;
     }
 
-    public static void Abandon() => Active = false;
+    public static void Abandon()
+    {
+        Active = false;
+        StepTracker.Stop();
+    }
 }

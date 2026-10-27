@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 
 namespace KucaMemoServer.Services;
 
@@ -129,7 +130,7 @@ public class AiModerator : IContentModerator
         return new JsonObject
         {
             ["model"] = model,
-            ["max_tokens"] = 300,
+            ["max_tokens"] = 1000,   // 300 이면 판단 이유(note) 가 길 때 JSON 이 잘려 대체 검사로 빠졌다
             ["messages"] = new JsonArray
             {
                 new JsonObject { ["role"] = "system", ["content"] = SystemPrompt },
@@ -150,17 +151,25 @@ public class AiModerator : IContentModerator
             if (content is null)
                 return null;
 
+            string? verdict, reason, note, caption = null;
             int start = content.IndexOf('{');
             int end = content.LastIndexOf('}');
-            if (start < 0 || end <= start)
-                return null;
-
-            JsonNode? json = JsonNode.Parse(content[start..(end + 1)]);
-            string? verdict = json?["verdict"]?.GetValue<string>()?.Trim().ToLowerInvariant();
-            string? reason = json?["reason"]?.GetValue<string>()?.Trim().ToLowerInvariant();
-            string? note = json?["note"]?.GetValue<string>()?.Trim();
-            string? caption = json?["caption"] is JsonValue cv && cv.TryGetValue(out string? c) && c.Trim() is { Length: > 0 and <= MaxCaptionLength } ct
-                              && !ct.Contains("http") ? ct : null;
+            if (start >= 0 && end > start)
+            {
+                JsonNode? json = JsonNode.Parse(content[start..(end + 1)]);
+                verdict = json?["verdict"]?.GetValue<string>()?.Trim().ToLowerInvariant();
+                reason = json?["reason"]?.GetValue<string>()?.Trim().ToLowerInvariant();
+                note = json?["note"]?.GetValue<string>()?.Trim();
+                caption = json?["caption"] is JsonValue cv && cv.TryGetValue(out string? c) && c.Trim() is { Length: > 0 and <= MaxCaptionLength } ct
+                          && !ct.Contains("http") ? ct : null;
+            }
+            else
+            {
+                // 답이 길이 제한에 걸려 note 중간에서 잘린 경우: 앞쪽의 verdict · reason 은 다 들어 있다
+                verdict = Field(content, "verdict");
+                reason = Field(content, "reason");
+                note = null;
+            }
 
             return verdict switch
             {
@@ -176,4 +185,7 @@ public class AiModerator : IContentModerator
             return null;
         }
     }
+
+    static string? Field(string content, string name) =>
+        Regex.Match(content, $"\"{name}\"\\s*:\\s*\"(\\w+)\"") is { Success: true } m ? m.Groups[1].Value.ToLowerInvariant() : null;
 }

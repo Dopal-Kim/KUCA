@@ -161,6 +161,21 @@ public class WalkStore
 
     public int TotalXp(string userId) => Scalar<int>("SELECT COALESCE(SUM(xp), 0) FROM xp_events WHERE user_id = $u", ("$u", userId));
 
+    /// <summary>끝낸 산책의 시작 시각과 걸은 초 (since 이후). 주간 건강 목표 · 코치가 쓴다</summary>
+    public List<(DateTimeOffset StartedAt, int DurationSec)> FinishedSince(string userId, DateTimeOffset since)
+    {
+        using var conn = Open();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT started_at, COALESCE(duration_sec, 0) FROM walks WHERE user_id = $u AND finished_at IS NOT NULL AND started_at >= $s";
+        cmd.Parameters.AddWithValue("$u", userId);
+        cmd.Parameters.AddWithValue("$s", since.ToUnixTimeSeconds());
+        using var r = cmd.ExecuteReader();
+        var list = new List<(DateTimeOffset, int)>();
+        while (r.Read())
+            list.Add((DateTimeOffset.FromUnixTimeSeconds(r.GetInt64(0)), r.GetInt32(1)));
+        return list;
+    }
+
     public (int Walks, int DistanceM, int Together) Totals(string userId)
     {
         using var conn = Open();

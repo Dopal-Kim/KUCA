@@ -5,7 +5,7 @@ using UnityEngine;
 
 // 산책 추천 · 장소 공지 (B-4). docs/api.md 의 "산책 추천", "장소 공지" 와 같은 모양 (JsonUtility 로 그대로 읽는다).
 // v2 칸 (B-V2) 은 docs/api.md "POST /api/recommendations (v2)". 응답에 없으면 (기기 추천) 앱이 RouteMath 로 채운다.
-// 시간대 · 계절 · 날씨는 서버가 정하고, 칼로리는 다루지 않는다 (10/23 결정).
+// 시간대 · 계절 · 날씨는 서버가 정한다. 걸음 수 · 칼로리는 서버 공식의 대략 범위만 보여 준다 (10/27, docs/api.md "건강").
 
 /// <summary>POST /api/recommendations 본문</summary>
 [Serializable]
@@ -31,6 +31,8 @@ public class RouteRequest
     public string wish;
     /// <summary>장소마다 들른 횟수 (이 기기의 산책 기록). 서버가 "안 가 본 곳 · 자주 가던 곳" 을 판단할 때 쓴다</summary>
     public List<VisitCount> visitCounts = new List<VisitCount>();
+    /// <summary>(선택) 몸무게 kg — 칼로리 범위를 좁힌다 (HealthProfile, 이 기기에만 저장). 0 = 모름</summary>
+    public float weightKg;
 }
 
 [Serializable]
@@ -99,6 +101,43 @@ public class RouteResult
     public RouteWish wish;
     /// <summary>코스 전체를 이렇게 짠 이유 한 문장</summary>
     public string why;
+    /// <summary>걸음 수 · 칼로리 범위 · 강도 (서버 공식, 기기 추천이면 비어 있음 → steps 0)</summary>
+    public HealthEstimate health;
+    /// <summary>로그인했을 때만: 이 코스로 이번 주 목표(150분)에 얼마나 다가가는지 (note 가 비면 없음)</summary>
+    public CourseGoal goal;
+}
+
+/// <summary>걸음 수 · 칼로리 범위 · 강도 (docs/api.md "건강"). 걸음 센서가 없어 대략값이다</summary>
+[Serializable]
+public class HealthEstimate
+{
+    public int steps, kcalMin, kcalMax;
+    /// <summary>"light" · "moderate" · "brisk"</summary>
+    public string intensity;
+    /// <summary>"가벼운 산책" · "보통 걷기" · "운동 되는 걷기"</summary>
+    public string intensityLabel;
+    /// <summary>true 면 걸음 수가 휴대폰 걸음 센서 값 (산책 끝 응답만), false 면 거리로 어림</summary>
+    public bool stepsMeasured;
+
+    /// <summary>JsonUtility 는 빠진 객체도 빈 객체로 채우니 숫자로 있는지 본다</summary>
+    public static bool Has(HealthEstimate h) => h != null && h.steps > 0;
+}
+
+/// <summary>이번 주 걷기 목표 (월요일 0시부터, WHO 150분)</summary>
+[Serializable]
+public class WeekGoal
+{
+    public int weekMinutes, goalMinutes, minutesLeft, weekWalks;
+    public static bool Has(WeekGoal w) => w != null && w.goalMinutes > 0;
+}
+
+/// <summary>이 코스를 걸으면 이번 주 목표가 어떻게 되는지</summary>
+[Serializable]
+public class CourseGoal
+{
+    public int weekMinutes, goalMinutes, minutesLeft;
+    public bool completesGoal;
+    public string note;
 }
 
 /// <summary>학교 공지 중 특정 장소와 관련된 것 (GET /api/notices)</summary>
