@@ -362,16 +362,25 @@ public static class UIKit
     {
         RectTransform row = Rect(parent, "Stats");
         Size(row, 190f);
-        Horizontal(row, KucaTheme.Space2);
+        Horizontal(row, KucaTheme.Space4);   // 숫자끼리 붙어 보였음 (Space2)
         foreach (var (value, label) in stats)
         {
             RectTransform cell = Rect(row, label);
             Text v = Bold(Text(cell, value, KucaTheme.Display - 20, TextAnchor.LowerLeft, KucaTheme.Ink));
-            v.horizontalOverflow = HorizontalWrapMode.Overflow;
+            // 칸이 좁으면 한 줄 그대로 작게 (넘쳐서 옆 칸 숫자와 겹쳤음: 프로필 "11.4 km" + "7", 세로로 긴 폰)
+            v.horizontalOverflow = HorizontalWrapMode.Wrap;
+            v.verticalOverflow = VerticalWrapMode.Truncate;
+            v.resizeTextForBestFit = true;
+            v.resizeTextMaxSize = KucaTheme.Display - 20;
+            v.resizeTextMinSize = KucaTheme.Label;
             v.rectTransform.anchorMin = new Vector2(0f, 0.38f);
             v.rectTransform.anchorMax = Vector2.one;
             v.rectTransform.offsetMin = v.rectTransform.offsetMax = Vector2.zero;
             Text l = Text(cell, label, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+            l.verticalOverflow = VerticalWrapMode.Truncate;   // 이름도 한 줄 그대로 작게 ("함께하는 경희펫")
+            l.resizeTextForBestFit = true;
+            l.resizeTextMaxSize = KucaTheme.Label;
+            l.resizeTextMinSize = KucaTheme.Caption;
             l.rectTransform.anchorMin = Vector2.zero;
             l.rectTransform.anchorMax = new Vector2(1f, 0.36f);
             l.rectTransform.offsetMin = l.rectTransform.offsetMax = Vector2.zero;

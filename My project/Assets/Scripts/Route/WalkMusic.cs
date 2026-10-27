@@ -59,16 +59,60 @@ public static class WalkMusic
     /// <summary>설정의 한 줄: 누를 때마다 다음 앱으로</summary>
     public static void NextApp() => Current = (App)(((int)Current + 1) % AppNames.Length);
 
-    /// <summary>앱이 깔려 있으면 앱으로, 없으면 웹 검색으로 열리는 주소 (유니버설 링크)</summary>
-    public static string SearchUrl(Track t)
+    /// <summary>
+    /// (앱 주소, 웹 주소). 멜론 웹 검색은 결과를 자바스크립트로 불러와 폰 사파리에서 비어 보였다 → 앱 주소를 먼저 연다.
+    /// 앱 주소: 멜론 검색 페이지가 쓰는 melonapp://search, Spotify 의 spotify:search. YouTube Music 은 웹 주소가 앱으로 열린다
+    /// </summary>
+    public static (string app, string web) SearchUrls(Track t)
     {
         string q = UnityWebRequest.EscapeURL($"{t.artist} {t.title}").Replace("+", "%20");
         switch (Current)
         {
-            case App.Spotify: return "https://open.spotify.com/search/" + q;
-            case App.YouTubeMusic: return "https://music.youtube.com/search?q=" + q;
-            default: return "https://m.app.melon.com/search/searchMcom.htm?s=" + q;
+            case App.Spotify: return ("spotify:search:" + q, "https://open.spotify.com/search/" + q);
+            case App.YouTubeMusic: return (null, "https://music.youtube.com/search?q=" + q);
+            default: return ("melonapp://search?keyword=" + q, "https://m.app.melon.com/search/searchMcom.htm?s=" + q);
         }
+    }
+
+    /// <summary>음악 앱을 연다. 앱이 없어 이 앱이 그대로 있으면 (잠깐 기다려 봄) 웹 검색을 연다</summary>
+    public static void Open(Track t)
+    {
+        (string app, string web) = SearchUrls(t);
+        if (app == null) { Application.OpenURL(web); return; }
+        Opener.Run(app, web);
+    }
+
+    /// <summary>앱 주소를 열고 1.5초 안에 이 앱이 뒤로 가지 않으면 웹 주소로</summary>
+    class Opener : MonoBehaviour
+    {
+        static Opener instance;
+        bool left;
+
+        public static void Run(string app, string web)
+        {
+            if (instance == null)
+            {
+                instance = new GameObject("MusicOpener").AddComponent<Opener>();
+                instance.gameObject.hideFlags = HideFlags.HideInHierarchy;
+                DontDestroyOnLoad(instance.gameObject);
+            }
+            instance.StopAllCoroutines();
+            instance.StartCoroutine(instance.Go(app, web));
+        }
+
+        IEnumerator Go(string app, string web)
+        {
+            left = false;
+            Application.OpenURL(app);
+            float until = Time.realtimeSinceStartup + 1.5f;
+            while (!left && Time.realtimeSinceStartup < until)
+                yield return null;
+            if (!left)
+                Application.OpenURL(web);
+        }
+
+        void OnApplicationPause(bool paused) { if (paused) left = true; }
+        void OnApplicationFocus(bool focus) { if (!focus) left = true; }
     }
 
     // ---------- 서버 ----------
@@ -130,12 +174,32 @@ public static class WalkMusic
                 UIKit.Text(parent, error, KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.InkMuted);
                 return;
             }
-            string by = result.source == "ai" ? "AI 추천" : "기본 추천";
-            UIKit.Paragraph(parent, string.IsNullOrEmpty(result.theme) ? by : $"{by}  ·  {Escape(result.theme)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
-            foreach (Track t in result.tracks)
-                TrackRow(parent, t);
-            UIKit.Text(parent, $"누르면 {AppName}에서 찾아요 (설정에서 바꿀 수 있어요)", KucaTheme.Caption, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+            Render(parent, result);
         }));
+    }
+
+    /// <summary>주제 한 줄 · 들을 앱 고르기 칩 · 곡 줄. 칩을 누르면 같은 곡으로 다시 그린다</summary>
+    static void Render(RectTransform parent, Result result)
+    {
+        for (int i = parent.childCount - 1; i >= 0; i--)
+            UnityEngine.Object.Destroy(parent.GetChild(i).gameObject);
+        string by = result.source == "ai" ? "AI 추천" : "기본 추천";
+        UIKit.Paragraph(parent, string.IsNullOrEmpty(result.theme) ? by : $"{by}  ·  {Escape(result.theme)}", KucaTheme.Label, KucaTheme.PrimaryDeep);
+        foreach (Track t in result.tracks)
+            TrackRow(parent, t);
+        UIKit.Text(parent, "누르면 이 앱에서 찾아요", KucaTheme.Caption, TextAnchor.UpperLeft, KucaTheme.InkMuted);
+        RectTransform chips = UIKit.Rect(parent, "Apps");
+        UIKit.Size(chips, 96f);
+        UIKit.Horizontal(chips, KucaTheme.Space2);
+        for (int i = 0; i < AppNames.Length; i++)
+        {
+            App app = (App)i;
+            UIKit.Chip(chips, AppNames[i], app == Current, () =>
+            {
+                Current = app;   // 설정의 "노래 들을 앱" 과 같은 값
+                Render(parent, result);
+            });
+        }
     }
 
     /// <summary>곡 한 줄: 굵은 곡 이름 + 가수 · 이유, 오른쪽 "멜론 ›". 누르면 음악 앱 검색</summary>
@@ -149,7 +213,7 @@ public static class WalkMusic
         row.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         Button b = row.gameObject.AddComponent<Button>();
         b.transition = Selectable.Transition.None;
-        b.onClick.AddListener(() => Application.OpenURL(SearchUrl(t)));
+        b.onClick.AddListener(() => Open(t));
         row.gameObject.AddComponent<PressScale>();
 
         string open = $"<color=#{ColorUtility.ToHtmlStringRGB(KucaTheme.Primary)}>{AppName} ›</color>";
