@@ -422,6 +422,7 @@ public class CharacterCustomizer : MonoBehaviour
         g.spacing = new Vector2(KucaTheme.Space2, KucaTheme.Space2);
         g.constraint = GridLayoutGroup.Constraint.FixedColumnCount;
         g.constraintCount = columns;
+        FitGridColumns.Attach(g);   // 1080 기준 칸 너비라 세로로 긴 폰에서 마지막 칸이 잘렸음 ("또렷" · "후드티")
         return grid;
     }
 
