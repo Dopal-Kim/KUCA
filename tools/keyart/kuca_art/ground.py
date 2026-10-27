@@ -106,8 +106,7 @@ class Ground:
         self.curb_p = self._stroke(self.paint_roads, ROAD_W, extra=1.0)
         # 캠퍼스 안 찻길은 OSM 에서 모두 service — 그것만 보도를 칠함 (residential · tertiary 는 정문 건너 주택가 · 시내 길, ROAD_REVIEW_v3)
         campus_roads = [(t['highway'], pts) for t, pts in roads_t if t['highway'] == 'service' and t.get('service') != 'parking_aisle']
-        self.sidewalk = self._stroke(campus_roads, ROAD_W, extra=4.2) | self._stroke(
-            [(t['highway'], pts) for t, pts in self._tagged(WALK_W) if t.get('footway') == 'sidewalk'], WALK_W)
+        self.sidewalk = self._stroke(campus_roads, ROAD_W, extra=4.2)   # OSM footway=sidewalk 는 모두 캠퍼스 밖 시내 보도라 칠하지 않음
         self.rough = self._stroke([('steps', pts) for t, pts in self._tagged(WALK_W) if t['__id'] in ROUGH_STEPS], WALK_W)
         self.trail = self._stroke([l for l in self.walk_lines if l[0] in TRAIL], WALK_W)
         self.curb = self._stroke(self.road_lines, ROAD_W, extra=2.2)
