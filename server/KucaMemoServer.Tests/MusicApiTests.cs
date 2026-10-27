@@ -158,6 +158,48 @@ public class MusicApiTests : IDisposable
     }
 
     [Fact]
+    public void 계절에_안_맞는_제목은_뺀다()
+    {
+        MusicResult? r = MusicRecommender.Parse("""
+            {"tracks":[{"title":"벚꽃 엔딩","artist":"버스커 버스커"},{"title":"봄봄봄","artist":"로이킴"},
+                       {"title":"가을 아침","artist":"아이유"},{"title":"거리에서","artist":"성시경"},{"title":"Yellow","artist":"Coldplay"}]}
+            """, 3, season: "autumn");
+        Assert.NotNull(r);
+        Assert.Equal(["가을 아침", "거리에서", "Yellow"], r!.Tracks.Select(t => t.Title));
+        Assert.False(MusicRecommender.FitsSeason("Last Christmas", "summer"));
+        Assert.True(MusicRecommender.FitsSeason("눈물", "summer"));   // "눈" 하나로는 빼지 않는다
+    }
+
+    [Fact]
+    public void 최근에_추천한_곡은_뒤로_미룬다()
+    {
+        MusicResult? r = MusicRecommender.Parse("""
+            {"tracks":[{"title":"밤편지","artist":"아이유"},{"title":"거리에서","artist":"성시경"},{"title":"Yellow","artist":"Coldplay"}]}
+            """, 2, recent: t => t.Title == "밤편지");
+        Assert.Equal(["거리에서", "Yellow"], r!.Tracks.Select(t => t.Title));
+    }
+
+    [Fact]
+    public async Task 최근_추천곡을_다음_요청의_AI_에게_알려_준다()
+    {
+        var ai = new FakeAi(FiveSongs);
+        HttpClient client = Client(ai);
+        await Ok(await client.PostAsJsonAsync("/api/music", new { count = 3 }));
+        Assert.DoesNotContain("최근에", ai.LastPrompt);
+        await Ok(await client.PostAsJsonAsync("/api/music", new { count = 3 }));
+        Assert.Contains("최근에 다른 학생에게 추천한 곡", ai.LastPrompt);
+        Assert.Contains("아이유 — 밤편지", ai.LastPrompt);
+    }
+
+    [Fact]
+    public async Task 분위기마다_구체적인_기준을_준다()
+    {
+        var ai = new FakeAi(FiveSongs);
+        await Ok(await Client(ai).PostAsJsonAsync("/api/music", new { tastes = new[] { "exercise" } }));
+        Assert.Contains("발라드는 빼", ai.LastPrompt);
+    }
+
+    [Fact]
     public void 링크_곡명은_버린다() =>
         Assert.Null(MusicRecommender.Parse("""{"tracks":[{"title":"http://x","artist":"a"},{"title":"b","artist":"c"},{"title":"d","artist":"e"}]}""", 3));
 }
