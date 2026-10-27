@@ -55,6 +55,9 @@ builder.Services.AddSingleton<MetricsStore>();
 builder.Services.AddSingleton<StatsService>();
 // 산책 완료 · 리뷰 · 보상 (C-V4): 경험치 · 레벨은 서버가 계산
 builder.Services.AddSingleton<WalkStore>();
+// 건강 (걸음 수 · 칼로리 범위 · 주간 150분 목표) 과 주간 AI 코치
+builder.Services.AddSingleton<HealthService>();
+builder.Services.AddTransient<CoachService>();
 builder.Services.AddSingleton<WalkService>();
 // 경희스팟 목록 (공지·추천·매칭이 같이 씀), 장소 공지 (C-4): 공지 저장소, AI 공지 판별 (내용 검사와 같은 게이트웨이·키)
 builder.Services.AddSingleton<SpotStore>();

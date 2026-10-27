@@ -59,7 +59,7 @@ public class WalkException(int status, string error, string? reason = null) : Ex
 /// 산책 시작 · 끝(완료 판정 · 보상) · 리뷰 · 내 진행도. 경험치는 서버만 계산하고 앱은 받은 값을 보여 준다 (D9).
 /// 매칭 산책은 MatchService 가 둘 다 도착할 때 만들고, 두 사람이 모두 끝내면 매칭이 completed 로 끝난다.
 /// </summary>
-public class WalkService(WalkStore store, RecommendationStore recommendations, MatchService matches, MetricsStore metrics, TimeProvider clock)
+public class WalkService(WalkStore store, RecommendationStore recommendations, MatchService matches, MetricsStore metrics, HealthService health, TimeProvider clock)
 {
     public WalkStarted Start(string userId, WalkStartRequest? body)
     {
@@ -83,6 +83,8 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
     {
         if (body == null || body.DistanceM < 0 || body.DurationSec < 0 || body.DurationSec > WalkRules.MaxDurationSec)
             throw new WalkException(400, "distanceM, durationSec 는 0 이상이어야 합니다 (최대 6시간).");
+        if (!HealthRules.ValidWeight(body.WeightKg))
+            throw new WalkException(400, $"weightKg 는 {HealthRules.MinWeightKg}~{HealthRules.MaxWeightKg} 입니다.");
         WalkStore.Walk walk = Own(userId, walkId);
         if (walk.FinishedAt != null)
             throw new WalkException(409, "이미 끝낸 산책이에요.");
@@ -110,7 +112,10 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         metrics.Record(MetricsStore.WalkFinished, SourceOf(walk), completed ? 1 : 0);
 
         var reward = new WalkReward(completed ? WalkRules.CompleteTickets : 0, items.Sum(i => i.Xp), items);
-        return new WalkFinished(completed, distance, reward, ProgressOf(userId));
+        // 건강: 실제로 걸은 거리 · 시간 · 빠르기로 걸음 수와 칼로리 범위 (몸무게는 저장하지 않는다)
+        HealthEstimate healthNow = HealthRules.Estimate(distance, body.DurationSec / 60,
+                                                        HealthRules.PaceFromSpeed(distance, body.DurationSec), body.WeightKg);
+        return new WalkFinished(completed, distance, reward, ProgressOf(userId), healthNow);
     }
 
     public ReviewSaved Review(string userId, string walkId, WalkReviewRequest? body, string? text)
@@ -142,7 +147,8 @@ public class WalkService(WalkStore store, RecommendationStore recommendations, M
         int xp = store.TotalXp(userId);
         int level = WalkRules.LevelOf(xp);
         (int walks, int distance, int together) = store.Totals(userId);
-        return new Progress(level, xp, WalkRules.LevelStartXp(level), WalkRules.LevelStartXp(level + 1), walks, distance, together);
+        return new Progress(level, xp, WalkRules.LevelStartXp(level), WalkRules.LevelStartXp(level + 1), walks, distance, together,
+                            health.Week(userId));
     }
 
     /// <summary>지표용 산책 종류: 매칭 · 추천(ai/fallback) · 자유</summary>

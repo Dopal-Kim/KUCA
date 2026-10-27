@@ -47,6 +47,12 @@ public static class WalkEndpoints
 
         app.MapGet("/api/me/progress", (HttpRequest req, AccountStore accounts, WalkService service) =>
             Run(req, accounts, user => Results.Ok(service.ProgressOf(user.Id)))).WithTags("Walks");
+
+        // 주간 건강 코치 한 줄 (AI, 실패하면 틀 문장). 숫자는 이번 주 기록에서 서버가 계산한다
+        app.MapGet("/api/me/coach", async (HttpRequest req, AccountStore accounts, CoachService coach, CancellationToken ct) =>
+            AuthEndpoints.Current(req, accounts) is { } user
+                ? Results.Ok(await coach.GetAsync(user.Id, ct))
+                : Results.Json(new { error = "로그인이 필요해요." }, statusCode: 401)).WithTags("Walks");
     }
 
     static IResult Run(HttpRequest req, AccountStore accounts, Func<Account, IResult> action)
