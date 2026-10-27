@@ -98,7 +98,7 @@ public partial class RoutePlanner
         sheet = Sheet("RouteSheet", "어디로 걸을까요?", HideSheet, 0.9f, 2, out RectTransform c, out RectTransform b, out _);
 
         // AI 가 무엇을 하는지 시트 맨 위에: 심사 · 처음 사용자가 AI 기능을 못 찾았음 (REVIEW_v22_day P0). 버튼 위에 두니 시트 아래로 밀려 안 보였음 (v24)
-        UIKit.Paragraph(c, "원하는 산책을 말로 적으면 AI 가 어떤 산책이 맞을지 먼저 판단하고, 날씨 · 가 본 횟수 · 경관 · 학생들의 최근 쪽지 · 학교 공지를 비교해 코스 3개를 짜요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
+        UIKit.Paragraph(c, "원하는 산책을 말로 적으면 AI 가 어떤 산책이 맞을지 먼저 판단하고, 방문 횟수 · 날씨 · 경관 · 학생들의 최근 쪽지 · 학교 공지를 비교해 코스 3개를 짜요.", KucaTheme.Caption, KucaTheme.PrimaryDeep);
 
         // 말로 하는 요청 (메인): 칩으로 못 고르는 "그늘 · 오르막 빼고 · 도서관 말고" 같은 바람. 키보드 마이크로 말해도 된다
         Question(c, "어떤 산책을 하고 싶어요?");
