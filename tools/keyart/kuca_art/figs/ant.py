@@ -35,14 +35,14 @@ def build(fig, rng):
     head = soft_head(hc, (1.92, 1.8, 1.78), flare=0.06, flare_y=-0.35)
     fig.add(head, HEAD, k=0.2, layer='head')
     near_head = lambda P: np.abs(head(P))
-    fig.paint(masked(lambda P: (y0 + 6.3 - P[:, 1]) * 2, near_head, 0.1), (0.76, 0.43, 0.22), soft=1.0)   # 정수리 조금 짙게
+    fig.paint(masked(lambda P: (y0 + 6.3 - P[:, 1]) * 2, near_head, 0.03), (0.76, 0.43, 0.22), soft=1.0)   # 정수리 조금 짙게 (잎 모자에 번지지 않게 좁게)
     for s in (-1, 1):
         f = face_frame(fig, hc, s * 24, -6, 'head', out=-0.1)
         dazed_eye(fig, f, 0.66, s)
     # 눈썹 점 (짧은 짙은 점 두 개씩)
     for s in (-1, 1):
-        for a, p in ((17, 25), (29, 23)):
-            fig.paint(S.sphere(face_frame(fig, hc, s * a, p, 'head').o, 0.08), (0.62, 0.34, 0.16), soft=0.06)
+        for a, p in ((18, 20), (29, 18)):
+            fig.paint(masked(S.sphere(face_frame(fig, hc, s * a, p, 'head').o, 0.08), near_head, 0.03), (0.62, 0.34, 0.16), soft=0.06)
     # 'o' 입 + 콧구멍 점 + 칠한 볼터치
     fm = face_frame(fig, hc, 0, -25, 'head', out=-0.03)
     ell(fig.extra, fm, (0, 0, 0), (0.12, 0.155, 0.06), (0.30, 0.10, 0.10), 14, 8)
@@ -77,10 +77,10 @@ def build(fig, rng):
     neck = S.capsule((0, y0 + 3.3, 0.08), (0, y0 + 3.75, 0.1), 0.32)
     waist = S.capsule((0, y0 + 2.45, 0.02), (0, y0 + 2.2, -0.1), 0.2)
     gaster = S.ellipsoid((0, y0 + 1.6, -0.55), (0.95, 0.9, 1.0))
-    thighs = [S.ellipsoid((s * 0.46, y0 + 1.32, 0.22), (0.52, 0.58, 0.52)) for s in (-1, 1)]
+    thighs = [S.ellipsoid((s * 0.4, y0 + 1.32, 0.22), (0.52, 0.58, 0.52)) for s in (-1, 1)]
     def body(P):
         d = S.smin(S.smin(thor(P), neck(P), 0.15), waist(P), 0.12)
-        g = S.smin(gaster(P), S.smin(thighs[0](P), thighs[1](P), 0.12), 0.25)
+        g = S.smin(gaster(P), S.smin(thighs[0](P), thighs[1](P), 0.25), 0.25)
         yy = P[:, 1] - (y0 + 1.5)
         groove = 0.035 * np.exp(-((yy - 0.38) / 0.05) ** 2) * (P[:, 2] < 0.2)
         g = g + groove
