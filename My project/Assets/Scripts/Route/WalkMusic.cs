@@ -46,7 +46,7 @@ public static class WalkMusic
     public enum App { Melon, Spotify, YouTubeMusic }
 
     const string AppKey = "music_app";
-    static readonly string[] AppNames = { "멜론", "Spotify", "YouTube Music" };
+    static readonly string[] AppNames = { "멜론", "Spotify", "유튜브 뮤직" };   // 곡 줄 · 칩에 한 줄로 (YouTube Music 은 두 줄로 꺾였음)
 
     public static App Current
     {
@@ -189,17 +189,56 @@ public static class WalkMusic
             TrackRow(parent, t);
         UIKit.Text(parent, "누르면 이 앱에서 찾아요", KucaTheme.Caption, TextAnchor.UpperLeft, KucaTheme.InkMuted);
         RectTransform chips = UIKit.Rect(parent, "Apps");
-        UIKit.Size(chips, 96f);
-        UIKit.Horizontal(chips, KucaTheme.Space2);
+        UIKit.Size(chips, 104f);
+        HorizontalLayoutGroup h = UIKit.Horizontal(chips, KucaTheme.Space2);
+        h.childControlWidth = h.childForceExpandWidth = true;   // 세 칩을 같은 너비로 (긴 이름 칩이 줄을 넘쳤음)
         for (int i = 0; i < AppNames.Length; i++)
         {
             App app = (App)i;
-            UIKit.Chip(chips, AppNames[i], app == Current, () =>
+            Button chip = UIKit.Chip(chips, AppNames[i], app == Current, () =>
             {
                 Current = app;   // 설정의 "노래 들을 앱" 과 같은 값
                 Render(parent, result);
             });
+            AddLogo(chip, app);
         }
+    }
+
+    public static Sprite Logo(App app) =>
+        app == App.Spotify ? HudIcons.SpotifyLogo : app == App.YouTubeMusic ? HudIcons.YouTubeMusicLogo : HudIcons.MelonLogo;
+
+    /// <summary>칩 글자 왼쪽에 앱 로고 (흰 원 안): 어떤 앱인지 한눈에. 고른 칩은 초록 바탕이라 흰 원이 로고를 받쳐 준다</summary>
+    static void AddLogo(Button chip, App app)
+    {
+        Sprite logo = Logo(app);
+        if (logo == null) return;
+        const float size = 64f, left = 20f;
+        Image disc = UIKit.Image(chip.transform, "LogoDisc", Color.white);
+        disc.sprite = HudIcons.Circle;
+        RectTransform d = disc.rectTransform;
+        d.anchorMin = d.anchorMax = new Vector2(0f, 0.5f);
+        d.pivot = new Vector2(0f, 0.5f);
+        d.anchoredPosition = new Vector2(left, 0f);
+        d.sizeDelta = new Vector2(size, size);
+        Image icon = UIKit.Image(disc.transform, "Logo", Color.white);
+        icon.sprite = logo;
+        icon.preserveAspect = true;
+        UIKit.Stretch(icon.rectTransform, 6f, 6f);
+        Text t = chip.GetComponentInChildren<Text>();
+        // 글자 칸을 한 줄 높이로: 두 줄로 꺾이지 못하게 해서 best fit 이 글자를 줄이게 한다 ("유튜브 / 뮤직" 으로 꺾였음)
+        RectTransform tr = t.rectTransform;
+        tr.anchorMin = new Vector2(0f, 0.5f);
+        tr.anchorMax = new Vector2(1f, 0.5f);
+        tr.offsetMin = new Vector2(left + size + 8f, -26f);
+        tr.offsetMax = new Vector2(-16f, 26f);
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.resizeTextForBestFit = true;   // 좁은 폰에서도 한 줄
+        t.resizeTextMaxSize = KucaTheme.Label;
+        t.resizeTextMinSize = KucaTheme.Caption - 4;
+        LayoutElement fit = chip.GetComponent<LayoutElement>();
+        fit.preferredWidth = 0f;
+        fit.flexibleWidth = 1f;
     }
 
     /// <summary>곡 한 줄: 굵은 곡 이름 + 가수 · 이유, 오른쪽 "멜론 ›". 누르면 음악 앱 검색</summary>
