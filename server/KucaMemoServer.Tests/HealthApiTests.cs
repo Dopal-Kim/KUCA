@@ -174,6 +174,41 @@ public class HealthApiTests : IDisposable
         Assert.Equal(0, next.GetProperty("week").GetProperty("weekMinutes").GetInt32());
     }
 
+    [Fact]
+    public void 센서_걸음_수는_거리와_맞을_때만_믿는다()
+    {
+        Assert.Equal(2400, HealthRules.MeasuredSteps(2400, 1400));   // 보폭 0.58m
+        Assert.Null(HealthRules.MeasuredSteps(0, 1400));             // 앱이 0 을 보내면 모름
+        Assert.Null(HealthRules.MeasuredSteps(null, 1400));
+        Assert.Null(HealthRules.MeasuredSteps(20000, 1400));         // 보폭 0.07m: 흔들기 · 다른 걸음까지
+        Assert.Null(HealthRules.MeasuredSteps(500, 1400));           // 보폭 2.8m: 센서가 덜 셈
+        Assert.Null(HealthRules.MeasuredSteps(150, 80));             // 너무 짧아 맞춰 볼 수 없음
+        Assert.False(HealthRules.ValidSteps(HealthRules.MaxSteps + 1));
+    }
+
+    [Fact]
+    public async Task 산책_끝에_센서_걸음_수를_보내면_그_값을_쓰고_안_맞으면_어림값()
+    {
+        HttpClient client = Client();
+        string me = await Guest(client);
+        string id = (await Send(client, HttpMethod.Post, "/api/walks", me, new { }, HttpStatusCode.Created)).GetProperty("id").GetString()!;
+        JsonElement done = await Send(client, HttpMethod.Post, $"/api/walks/{id}/finish", me,
+            new { distanceM = 2100, durationSec = 1800, weightKg = 0, steps = 2875 }, HttpStatusCode.OK);
+        JsonElement health = done.GetProperty("health");
+        Assert.Equal(2875, health.GetProperty("steps").GetInt32());
+        Assert.True(health.GetProperty("stepsMeasured").GetBoolean());
+
+        string id2 = (await Send(client, HttpMethod.Post, "/api/walks", me, new { }, HttpStatusCode.Created)).GetProperty("id").GetString()!;
+        JsonElement odd = await Send(client, HttpMethod.Post, $"/api/walks/{id2}/finish", me,
+            new { distanceM = 2100, durationSec = 1800, steps = 40000 }, HttpStatusCode.OK);
+        Assert.Equal(3000, odd.GetProperty("health").GetProperty("steps").GetInt32());   // 2100m ÷ 0.7m
+        Assert.False(odd.GetProperty("health").GetProperty("stepsMeasured").GetBoolean());
+
+        string id3 = (await Send(client, HttpMethod.Post, "/api/walks", me, new { }, HttpStatusCode.Created)).GetProperty("id").GetString()!;
+        await Send(client, HttpMethod.Post, $"/api/walks/{id3}/finish", me,
+            new { distanceM = 2100, durationSec = 1800, steps = HealthRules.MaxSteps + 1 }, HttpStatusCode.BadRequest);
+    }
+
     // ───── 주간 AI 코치 ─────
 
     [Fact]
