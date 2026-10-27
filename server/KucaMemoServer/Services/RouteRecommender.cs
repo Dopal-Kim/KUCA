@@ -35,6 +35,14 @@ public static class RecommendRules
     public const double PathFactor = 1.3;
     /// <summary>[가정] 걷는 시간은 고른 시간의 이 비율까지 (나머지는 둘러보는 시간)</summary>
     public const double WalkTimeRatio = 0.8;
+    /// <summary>[가정] 출발점에서 이만큼(m) 안의 건물은 들를 곳으로 고르지 않는다 (서 있는 건물을 첫 장소로 고르던 문제, 10/27 시험)</summary>
+    public const double StartGapM = 50;
+    /// <summary>[가정] 들를 곳끼리 이만큼(m)은 떨어져야 한다 (40~80 m 붙은 세 건물이 한 코스에 몰리던 문제)</summary>
+    public const double StopGapM = 60;
+    /// <summary>이 말을 피하고 싶다고 하면 Hill · Noisy 장소를 후보에서 뺀다</summary>
+    public static readonly string[] HillWords = ["오르막", "계단"], NoiseWords = ["붐빔", "시끄러움", "찻길"];
+    /// <summary>걸으며 이야기하기 (산책 메이트 · "얘기하면서"): 조용함과 가까움을 가장 크게, 붐비는 곳 · 오르막은 뺀다</summary>
+    public static readonly WalkPriorities Talk = new(0, 0, 0, 0, 3, 2);
     /// <summary>들를 곳 최대 개수: 15분 2 · 30분 4 · 60분 6 (코스가 짧다는 피드백으로 늘림, 10/26)</summary>
     public static int MaxStops(int minutes) => minutes <= 15 ? 2 : minutes <= 30 ? 4 : 6;
     /// <summary>위치 근처 후보 수 (가까운 순)</summary>
@@ -170,10 +178,14 @@ public partial class RouteRecommender(
         // 판단 비중: 바람의 판단 + 고른 취향 칩 (둘 중 큰 쪽). 바람이 없으면 취향 칩으로만
         WalkPriorities choices = WalkPriorities.FromChoices(tastes, afterMeal);
         WalkPriorities priorities = wish?.Priorities.Max(choices) ?? choices;
+        bool talk = r.Talk || WishRules.IsTalk(r.Wish);
+        if (talk)
+            priorities = priorities.Max(RecommendRules.Talk);
+        var avoidTags = (wish?.Avoid ?? []).Concat(talk ? ["붐빔", "오르막"] : Array.Empty<string>()).ToHashSet();
         (double lat, double lon) = StartPoint(r);
         var events = notices.ActiveEvents(kst.ToString("yyyy-MM-dd")).GroupBy(e => e.BuildingId).ToDictionary(g => g.Key, g => g.ToList());
         var plan = new Plan(wish?.Minutes ?? r.Minutes, wish?.Pace ?? pace, afterMeal, lat, lon, tastes, context,
-                            wish, priorities, states.Current(), events, week);
+                            wish, priorities, states.Current(), events, week, avoidTags);
 
         List<Candidate> candidates = Candidates(r, plan, visits);
         string source = "fallback";
@@ -209,8 +221,10 @@ public partial class RouteRecommender(
 
     record Plan(int Minutes, string Pace, bool AfterMeal, double Lat, double Lon, List<string> Tastes, RecommendContext Context,
                 WalkWish? Wish, WalkPriorities Priorities, IReadOnlyDictionary<string, PlaceState> States, Dictionary<string, List<NoticeStore.ActiveEvent>> Events,
-                WeekGoal? Week = null)
+                WeekGoal? Week = null, HashSet<string>? AvoidTags = null)
     {
+        public bool Avoids(string[] words) => AvoidTags?.Overlaps(words) == true;
+        public bool Wants(string id) => Wish?.WantPlaces.Contains(id) == true;
         public int Speed => RecommendRules.MetersPerMinute(Pace);
         public double WalkBudgetMinutes => Minutes * RecommendRules.WalkTimeRatio;
         public int MaxStops => RecommendRules.MaxStops(Minutes);
@@ -232,7 +246,10 @@ public partial class RouteRecommender(
             : spots.All.Select(s => buildings.Find(s.Id)).OfType<Building>();
         var avoid = new HashSet<string>(plan.Wish?.AvoidPlaces ?? []);
         var want = new HashSet<string>(plan.Wish?.WantPlaces ?? []);
-        return pool.Where(b => b.Name != null && spots.Find(b.Id)?.Restricted != true && !avoid.Contains(b.Id) && !Closed(b.Id, plan))
+        bool Unfit(Building b) => spots.Find(b.Id) is { } s && !want.Contains(b.Id)
+                                  && (s.Hill && plan.Avoids(RecommendRules.HillWords) || s.Noisy && plan.Avoids(RecommendRules.NoiseWords));
+        return pool.Where(b => b.Name != null && spots.Find(b.Id)?.Restricted != true && !avoid.Contains(b.Id) && !Closed(b.Id, plan)
+                               && Meters(plan.Lat, plan.Lon, b.Lat, b.Lon) >= RecommendRules.StartGapM && !Unfit(b))
                    .Select(b => (b, d: Meters(plan.Lat, plan.Lon, b.Lat, b.Lon)))
                    .OrderBy(x => want.Contains(x.b.Id) ? 0 : 1).ThenBy(x => x.d)   // 이름을 말한 곳은 멀어도 후보에 남긴다
                    .Take(RecommendRules.NearbyCandidates)
@@ -274,7 +291,7 @@ public partial class RouteRecommender(
         };
         List<string> scenery = SceneryWords.Where(text.Contains).Take(2).ToList();
         bool quietWord = spot?.Tastes?.Contains("quiet") == true || new[] { "조용", "한적", "한산" }.Any(text.Contains);
-        bool noisy = state?.Bad.Any(x => x is "붐빔" or "시끄러움") == true || CleanIntro(spot?.Intro).Contains("붐비");
+        bool noisy = spot?.Noisy == true || state?.Bad.Any(x => x is "붐빔" or "시끄러움") == true || CleanIntro(spot?.Intro).Contains("붐비");
         double quiet = noisy ? -1 : quietWord ? 1 : 0;
         double near = Math.Max(0, 1 - meters / RecommendRules.NearRangeM);
         return new Facts(visits, novelty, familiar, weather, scenery.Count / 2.0, quiet, near, scenery);
@@ -388,7 +405,8 @@ public partial class RouteRecommender(
                               + " " + plan.Wish?.Judgment + " " + string.Join(' ', WalkPriorities.Factors.Select(f => f.Name)) + " " + Korean[cx.Season] + " " + Korean[cx.TimeOfDay];
             string? why = doc.RootElement.TryGetProperty("why", out JsonElement wy) && wy.ValueKind == JsonValueKind.String
                           && Polite(wy.GetString() ?? "") is { Length: > 0 and <= RecommendRules.MaxWhyLength } ww && !ww.Contains("http")
-                          && KeywordModerator.Check(ww).Verdict == Verdict.Allow && PlaceStateService.Shares(ww, material) ? ww : null;
+                          && KeywordModerator.Check(ww).Verdict == Verdict.Allow && PlaceStateService.Shares(ww, material)
+                          && !picked.Where(p => !chosen.Contains(p.C)).Any(p => ww.Contains(p.C.Spot?.Name ?? p.C.Building.Name ?? "\u0000")) ? ww : null;   // 빠진 곳을 말하는 이유는 버림
             return (title, stops, why);
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
@@ -411,9 +429,9 @@ public partial class RouteRecommender(
             foreach (Candidate c in left)
             {
                 double d = Meters(atLat, atLon, c.Building.Lat, c.Building.Lon);
-                if (minutes + LegMinutes(d, plan) > plan.WalkBudgetMinutes)
+                if (minutes + LegMinutes(d, plan) > plan.WalkBudgetMinutes && !plan.Wants(c.Building.Id) || TooClose(order.Select(o => o.C), c))
                     continue;
-                double value = c.Score - d / RecommendRules.LegPenaltyM;
+                double value = c.Score - d / RecommendRules.LegPenaltyM + (plan.Wants(c.Building.Id) ? 100 : 0);   // 말한 곳부터 (들를 곳 수가 차서 빠지지 않게)
                 if (value > bestValue) (best, bestValue) = (c, value);
             }
             // 시간 안에 닿는 곳이 하나도 없으면 가장 가까운 한 곳만
@@ -430,10 +448,18 @@ public partial class RouteRecommender(
         return Walk(plan, order, (c, _) => RuleReason(c, plan));
     }
 
-    /// <summary>고른 순서대로 거리·시간을 붙인다. 걷는 시간 예산을 넘는 장소부터는 뺀다 (첫 곳은 남김).</summary>
+    /// <summary>앞서 고른 곳과 StopGapM 안으로 붙어 있는지</summary>
+    static bool TooClose(IEnumerable<Candidate> chosen, Candidate c) =>
+        chosen.Any(o => Meters(o.Building.Lat, o.Building.Lon, c.Building.Lat, c.Building.Lon) < RecommendRules.StopGapM);
+
+    /// <summary>
+    /// 고른 순서대로 거리·시간을 붙인다. 걷는 시간 예산을 넘는 곳 · 앞 장소와 붙어 있는 곳은 건너뛴다 (첫 곳은 남김).
+    /// 이름을 말한 곳은 시간이 넘어도 남긴다 (말한 곳이 조용히 빠지던 문제, 10/27 시험)
+    /// </summary>
     static List<RecommendStop> Walk(Plan plan, List<(Candidate C, string Reason)> order, Func<Candidate, string, string> reasonOf)
     {
         var stops = new List<RecommendStop>();
+        var kept = new List<Candidate>();
         double atLat = plan.Lat, atLon = plan.Lon, minutes = 0;
         foreach ((Candidate c, string reason) in order)
         {
@@ -441,8 +467,10 @@ public partial class RouteRecommender(
                 break;
             double straight = Meters(atLat, atLon, c.Building.Lat, c.Building.Lon);
             int leg = LegMinutes(straight, plan);
-            if (stops.Count > 0 && minutes + leg > plan.WalkBudgetMinutes)
-                break;
+            bool wanted = plan.Wants(c.Building.Id);
+            if (stops.Count > 0 && !wanted && (minutes + leg > plan.WalkBudgetMinutes || TooClose(kept, c)))
+                continue;
+            kept.Add(c);
             minutes += leg;
             stops.Add(new RecommendStop(c.Building.Id, c.Spot?.Name ?? c.Building.Name ?? c.Building.Id,
                 Shorten(reasonOf(c, reason)), leg, (int)Math.Round(straight * RecommendRules.PathFactor),
@@ -633,7 +661,7 @@ public partial class RouteRecommender(
     static string Shorten(string s) => s.Length <= RecommendRules.MaxReasonLength ? s : s[..(RecommendRules.MaxReasonLength - 1)].TrimEnd() + "…";
 
     /// <summary>두 위경도 사이 직선거리 (m)</summary>
-    static double Meters(double lat1, double lon1, double lat2, double lon2)
+    public static double Meters(double lat1, double lon1, double lat2, double lon2)
     {
         const double R = 6371000;
         double dLat = (lat2 - lat1) * Math.PI / 180, dLon = (lon2 - lon1) * Math.PI / 180;

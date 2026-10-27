@@ -19,7 +19,7 @@ public partial class RoutePlanner
     InputField wishInput;
     /// <summary>말로 적은 산책 바람 (없으면 빈 값)</summary>
     string Wish => wishInput != null ? wishInput.text.Trim() : "";
-    Text mealNote, startValue, destValue, pickerTitle;
+    Text mealNote, startValue, destValue, pickerTitle, wishHint;
     RectTransform pickerList;
     RawImage loadingPartner;
 
@@ -103,6 +103,9 @@ public partial class RoutePlanner
         UIKit.Text(c, "적은 문장을 AI 가 읽고 코스를 짜요. 키보드 마이크로 말해도 돼요", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.PrimaryDeep);
         wishInput = UIKit.Input(c, "예: 밥 먹고 소화시킬 겸 30분, 오르막은 빼고", KucaTheme.Body, true, 200);
         UIKit.Size(wishInput, 170f);
+        // 서버가 알아듣지 못한 문장이면 (422) 여기에 "다시 입력해 주세요" — 고쳐 쓰기 시작하면 지운다
+        wishHint = UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, KucaTheme.Crimson);
+        wishInput.onValueChanged.AddListener(_ => wishHint.text = "");
         RectTransform places = UIKit.ListGroup(c, null);
         places.GetComponent<Image>().color = KucaTheme.Fill;   // 흰 시트 위라 회색 묶음
         startValue = PlaceRow(places, "출발", () => ShowPicker(true));

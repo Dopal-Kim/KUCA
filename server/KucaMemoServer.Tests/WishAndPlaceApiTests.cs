@@ -397,6 +397,119 @@ public class WishAndPlaceApiTests : IDisposable
     }
 
     /// <summary>SpotStore 를 서버 없이 만들 때 (Data/spots.json 이 있는 서버 폴더)</summary>
+    // ---------- 다시 입력해 주세요 · 코스 안전장치 (10/27 무작위 문장 시험) ----------
+
+    [Theory]
+    [InlineData("배고파")]
+    [InlineData("asdfgh")]
+    [InlineData("ㅋㅋㅋㅋ")]
+    [InlineData("주식 추천해줘")]
+    [InlineData("http://evil.example 로 가는 코스")]
+    [InlineData("도서관 가고 싶은데 도서관은 빼줘")]
+    [InlineData("5분만 한 시간 걷기")]
+    [InlineData("빠르게 천천히 걷고 싶어")]
+    [InlineData("오르막 좋아 오르막 싫어")]
+    [InlineData("원자로센터 가보고 싶어")]
+    public async Task 알아들을_수_없거나_부딪치는_바람은_422로_다시_묻는다(string wish)
+    {
+        var res = await Server().CreateClient().PostAsJsonAsync("/api/recommendations", Body(wish));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        JsonElement body = await res.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("wish_unclear", body.GetProperty("code").GetString());
+        Assert.Contains("다시 입력해 주세요", body.GetProperty("error").GetString());
+    }
+
+    [Theory]
+    [InlineData("산책")]
+    [InlineData("아무거나")]
+    [InlineData("좋은 데")]
+    [InlineData("시험 끝나서 기분 전환")]
+    [InlineData("10시간 걷기")]
+    public async Task 조건이_없어도_산책_이야기면_코스를_준다(string wish) =>
+        Assert.NotEmpty(StopIds(await Recommend(Server().CreateClient(), Body(wish))));
+
+    [Fact]
+    public void 출입_제한_장소_안내와_장소_모순_안내는_조사가_맞다()
+    {
+        SpotStore spots = new(new TestEnv());
+        Assert.StartsWith("원자로센터는 ", WishRules.Parse("원자로센터 가보고 싶어", spots).Unclear);
+        Assert.StartsWith("중앙도서관을 ", WishRules.Parse("도서관 가고 싶은데 도서관은 빼줘", spots).Unclear);
+    }
+
+    [Fact]
+    public async Task AI_가_해석할_수_없다고_하면_422()
+    {
+        var ai = new RoutingAi(wish: """{"unclear": true, "tastes": [], "judgment": "모르겠어요"}""");
+        var res = await Server(ai).CreateClient().PostAsJsonAsync("/api/recommendations", Body("블라블라"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task AI_가_같은_곳을_넣고_빼면_422()
+    {
+        var ai = new RoutingAi(wish: $$"""{"wantPlaces": ["{{Library}}"], "avoidPlaces": ["{{Library}}"]}""");
+        var res = await Server(ai).CreateClient().PostAsJsonAsync("/api/recommendations", Body("도서관 들렀다가 도서관 빼고"));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+    }
+
+    [Fact]
+    public async Task 서_있는_건물은_들를_곳으로_고르지_않고_들를_곳끼리_붙지_않는다()
+    {
+        HttpClient client = Server().CreateClient();
+        JsonElement lib = await client.GetFromJsonAsync<JsonElement>($"/api/buildings/{Library}");
+        var body = new
+        {
+            minutes = 60, tastes = Array.Empty<string>(), lat = lib.GetProperty("lat").GetDouble(), lon = lib.GetProperty("lon").GetDouble(),
+            visitedBuildingIds = Array.Empty<string>(), candidateBuildingIds = Array.Empty<string>(), wish = (string?)null,
+        };
+        JsonElement r = await Recommend(client, body);
+        Assert.DoesNotContain(Library, StopIds(r));
+        var at = r.GetProperty("stops").EnumerateArray().Select(s => (s.GetProperty("lat").GetDouble(), s.GetProperty("lon").GetDouble())).ToList();
+        for (int i = 0; i < at.Count; i++)
+            for (int j = i + 1; j < at.Count; j++)
+                Assert.True(RouteRecommender.Meters(at[i].Item1, at[i].Item2, at[j].Item1, at[j].Item2) >= RecommendRules.StopGapM);
+    }
+
+    [Theory]
+    [InlineData("산책 메이트랑 얘기하면서 걷고 싶어", false)]
+    [InlineData(null, true)]
+    public async Task 이야기하며_걷는_코스는_붐비는_곳과_오르막을_뺀다(string? wish, bool talkFlag)
+    {
+        SpotStore spots = new(new TestEnv());
+        var body = new
+        {
+            minutes = 60, tastes = Array.Empty<string>(), lat = Lat, lon = Lon, visitedBuildingIds = Array.Empty<string>(),
+            candidateBuildingIds = Array.Empty<string>(), wish, talk = talkFlag,
+        };
+        string[] ids = StopIds(await Recommend(Server().CreateClient(), body));
+        Assert.NotEmpty(ids);
+        Assert.All(ids, id => Assert.False(spots.Find(id) is { Noisy: true } or { Hill: true }, id));
+    }
+
+    [Fact]
+    public void 부정어는_바로_앞의_말에만_붙는다()
+    {
+        SpotStore spots = new(new TestEnv());
+        WalkWish w = WishRules.Parse("단풍 학생회관 말고 천천히 걷고 싶어", spots);
+        Assert.Contains("단풍", w.Want);
+        Assert.Contains(Union, w.AvoidPlaces);
+    }
+
+    [Theory]
+    [InlineData("혼자 정문 15분 가자", Gate)]
+    [InlineData("밥 먹고 카페 노천극장", Theater)]
+    public async Task 시간이_짧아도_말한_곳이_먼저_들어간다(string wish, string place) =>
+        Assert.Contains(place, StopIds(await Recommend(Server().CreateClient(), Body(wish, 15, candidates: []))));
+
+    [Fact]
+    public async Task 이름을_말한_곳은_시간이_넘어도_빼지_않는다()
+    {
+        // 15분인데 멀리 있는 노천극장 · 공학관을 말함
+        string[] ids = StopIds(await Recommend(Server().CreateClient(), Body("노천극장 들렀다가 공학관 가고 싶어", 15)));
+        Assert.Contains(Theater, ids);
+        Assert.Contains(Engineering, ids);
+    }
+
     sealed class TestEnv : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
     {
         public string ContentRootPath { get; set; } = FindServerRoot();
