@@ -213,8 +213,10 @@ public class StatsApiTests : IDisposable
     {
         string me = await User("민지");
         await Send(HttpMethod.Post, "/api/walks", me, new { }, HttpStatusCode.Created);
-        string id = root.Services.GetRequiredService<AccountStore>().FindBySession(me)!.Id;
-        var rows = root.Services.GetRequiredService<MetricsStore>().Since(DateTimeOffset.UnixEpoch);
+        // 요청을 받은 (시계를 고정한) 서버의 저장소로 본다. root 는 실제 시계라 10/27 부터 체험 계정 세션이 만료로 보였음
+        IServiceProvider services = ((WebApplicationFactory<Program>)owned[^1]).Services;
+        string id = services.GetRequiredService<AccountStore>().FindBySession(me)!.Id;
+        var rows = services.GetRequiredService<MetricsStore>().Since(DateTimeOffset.UnixEpoch);
         Assert.NotEmpty(rows);
         Assert.DoesNotContain(rows, r => r.Source == id);
     }

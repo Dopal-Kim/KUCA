@@ -19,15 +19,50 @@ namespace KucaMemoServer.Services;
 /// <param name="AvoidPlaces">빼고 싶은 경희스팟 ID</param>
 /// <param name="Summary">앱에 보여 줄 "이렇게 이해했어요" 한 줄 (서버가 위 칸으로 만든다)</param>
 /// <param name="Source">"ai" 또는 "fallback"(말 찾기)</param>
+/// <param name="Judgment">어떤 산책이 맞는지 판단과 이유 한 문장 (~요). 앱이 "AI 판단" 으로 보여 준다</param>
+/// <param name="Priorities">판단에 따른 요소별 비중 — 코스를 짤 때 무엇을 먼저 볼지</param>
 public record WalkWish(
     string Text, int? Minutes, List<string> Tastes, bool? Indoor, bool AfterMeal, string? Pace,
-    List<string> Want, List<string> Avoid, List<string> WantPlaces, List<string> AvoidPlaces, string Summary, string Source);
+    List<string> Want, List<string> Avoid, List<string> WantPlaces, List<string> AvoidPlaces, string Summary, string Source,
+    string Judgment, WalkPriorities Priorities);
+
+/// <summary>
+/// 코스를 짤 때 볼 요소의 비중 (0 안 봄 ~ 3 가장 중요). 바람 해석이 정하고, 바람이 없으면 고른 취향 · 식후로 정한다.
+/// Novelty 안 가 본 곳 · Familiar 자주 가던 곳 · Scenery 경관(노을 · 단풍 · 꽃 · 초록) · Weather 오늘 날씨에 맞는 곳 · Quiet 조용함 · Near 가까움
+/// </summary>
+public record WalkPriorities(int Novelty, int Familiar, int Scenery, int Weather, int Quiet, int Near)
+{
+    public static readonly WalkPriorities Default = new(1, 0, 1, 2, 0, 1);
+
+    public static readonly (string Key, string Name)[] Factors =
+        [("novelty", "안 가 본 곳"), ("familiar", "자주 가던 곳"), ("scenery", "경관"), ("weather", "날씨에 맞는 곳"), ("quiet", "조용한 곳"), ("near", "가까운 곳")];
+
+    public int Of(string key) => key switch
+    {
+        "novelty" => Novelty, "familiar" => Familiar, "scenery" => Scenery, "weather" => Weather, "quiet" => Quiet, _ => Near,
+    };
+
+    /// <summary>두 비중 중 큰 쪽 (바람 + 고른 취향)</summary>
+    public WalkPriorities Max(WalkPriorities o) => new(Math.Max(Novelty, o.Novelty), Math.Max(Familiar, o.Familiar), Math.Max(Scenery, o.Scenery),
+        Math.Max(Weather, o.Weather), Math.Max(Quiet, o.Quiet), Math.Max(Near, o.Near));
+
+    /// <summary>비중이 높은 요소 이름 (2 이상, 높은 순)</summary>
+    public List<string> Top() => Factors.Where(f => Of(f.Key) >= 2).OrderByDescending(f => Of(f.Key)).Select(f => f.Name).ToList();
+
+    /// <summary>고른 취향 칩 · 식후로 정하는 비중 (바람이 없을 때, 그리고 바람과 합칠 때)</summary>
+    public static WalkPriorities FromChoices(IEnumerable<string> tastes, bool afterMeal)
+    {
+        var t = tastes.ToHashSet();
+        return new(t.Contains("unvisited") ? 3 : Default.Novelty, 0, t.Contains("photo") ? 3 : Default.Scenery, Default.Weather,
+                   t.Contains("quiet") ? 3 : 0, afterMeal ? 3 : Default.Near);
+    }
+}
 
 /// <summary>말로 한 바람을 조건으로 바꾼다. AI 가 안 되면 정해 둔 말을 찾는다 (WishRules). 해석 결과를 10분 기억하는 싱글턴</summary>
 public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, MetricsStore metrics, TimeProvider clock, ILogger<WishInterpreter> log)
 {
     public const int MaxLength = 200;
-    public const int MaxWords = 5, MaxWordLength = 10;
+    public const int MaxWords = 5, MaxWordLength = 10, MaxJudgmentLength = 60;
     static readonly TimeSpan CacheFor = TimeSpan.FromMinutes(10);
 
     // 앱은 코스 3개를 같은 바람으로 동시에 요청한다: 같은 문장은 한 번만 해석한다
@@ -75,10 +110,14 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
         "minutes 는 15 · 30 · 60 중 가장 가까운 값 (말하지 않았으면 null). " +
         "tastes 는 photo(사진) · quiet(조용한 곳) · food(밥 · 카페) · unvisited(안 가 본 곳) · partner(경희펫과 걷기) · exercise(운동) 중에서. " +
         $"want · avoid 는 장소의 모습을 짧은 명사로 (각 최대 {MaxWords}개, {MaxWordLength}자 이내. 예: 그늘, 단풍, 노을, 한산함, 오르막, 붐빔, 공사). " +
-        "말에 나온 장소는 아래 목록의 id 로 wantPlaces 나 avoidPlaces 에 넣어. 목록에 없는 장소는 넣지 마.\n" +
+        "말에 나온 장소는 아래 목록의 id 로 wantPlaces 나 avoidPlaces 에 넣어. 목록에 없는 장소는 넣지 마. " +
+        $"judgment 는 이 학생에게 오늘 어떤 산책이 맞는지 판단과 그 이유를 한 문장으로 ({MaxJudgmentLength}자 이내, 말끝 '~요', 예: '기분 전환이 필요해 보여 안 가 본 경치 좋은 곳 위주로 골라요'). " +
+        "priorities 는 코스를 짤 때 볼 요소의 비중 0~3: novelty(안 가 본 곳) · familiar(자주 가던 익숙한 곳) · scenery(경관 · 풍경) · " +
+        "weather(오늘 날씨에 맞는 곳) · quiet(조용함) · near(가까움). 말에 드러나지 않은 요소는 1.\n" +
         "경희스팟 (id: 이름):\n" + string.Join("\n", spots.All.Where(s => !s.Restricted).Select(s => $"- {s.Id}: {s.Name}")) + "\n" +
         "반드시 JSON 하나만 답해: {\"minutes\": 30 | null, \"tastes\": [], \"indoor\": true | false | null, \"afterMeal\": false, " +
-        "\"pace\": \"slow\" | \"normal\" | \"fast\" | null, \"want\": [], \"avoid\": [], \"wantPlaces\": [], \"avoidPlaces\": []}";
+        "\"pace\": \"slow\" | \"normal\" | \"fast\" | null, \"want\": [], \"avoid\": [], \"wantPlaces\": [], \"avoidPlaces\": [], " +
+        "\"judgment\": \"…\", \"priorities\": {\"novelty\": 1, \"familiar\": 1, \"scenery\": 1, \"weather\": 1, \"quiet\": 1, \"near\": 1}}";
 
     /// <summary>AI 답을 검사하며 읽는다. 목록 밖 코드 · 장소는 버린다. 형식이 틀리면 null</summary>
     public static WalkWish? Parse(string? answer, string text, SpotStore spots)
@@ -102,7 +141,18 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
             List<string> Places(string name) => Strings(root, name).Where(id => spots.Find(id) is { Restricted: false }).Distinct().ToList();
             List<string> avoidPlaces = Places("avoidPlaces");
             List<string> wantPlaces = Places("wantPlaces").Except(avoidPlaces).ToList();
-            return WishRules.Make(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, "ai", spots);
+            // 판단 문장은 앱에 그대로 보이므로 길이 · 링크 · 금지어를 본다. 틀리면 서버가 비중으로 만든 문장
+            string? judgment = Str(root, "judgment") is { Length: > 0 and <= MaxJudgmentLength } j && !j.Contains("http")
+                               && KeywordModerator.Check(j).Verdict == Verdict.Allow ? j : null;
+            WalkPriorities? priorities = null;
+            if (root.TryGetProperty("priorities", out JsonElement pr) && pr.ValueKind == JsonValueKind.Object)
+            {
+                int P(string key) => pr.TryGetProperty(key, out JsonElement v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out int n)
+                    ? Math.Clamp(n, 0, 3) : 1;
+                priorities = new(P("novelty"), P("familiar"), P("scenery"), P("weather"), P("quiet"), P("near"));
+            }
+            return WishRules.Make(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, "ai", spots,
+                                  judgment, priorities ?? WishRules.PrioritiesOf(text, tastes, afterMeal, pace));
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException)
         {
@@ -192,7 +242,22 @@ public static partial class WishRules
         want = want.Distinct().Except(avoid).Take(WishInterpreter.MaxWords).ToList();
         avoid = avoid.Distinct().Take(WishInterpreter.MaxWords).ToList();
         avoidPlaces = avoidPlaces.Distinct().ToList();
-        return Make(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces.Distinct().Except(avoidPlaces).ToList(), avoidPlaces, "fallback", spots);
+        return Make(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces.Distinct().Except(avoidPlaces).ToList(), avoidPlaces, "fallback", spots,
+                    null, PrioritiesOf(text, tastes, afterMeal, pace));
+    }
+
+    /// <summary>말 찾기로 정하는 비중: 새로운 · 익숙한 · 경치 · 조용 · 가볍게 같은 말 + 고른 취향</summary>
+    public static WalkPriorities PrioritiesOf(string text, List<string> tastes, bool afterMeal, string? pace)
+    {
+        bool Any(params string[] words) => words.Any(text.Contains);
+        var p = new WalkPriorities(
+            Any("새로운", "안 가 본", "처음", "낯선", "색다른", "안 가본") ? 3 : 1,
+            Any("늘 가던", "자주 가던", "익숙한", "단골", "가던 데", "가던 곳") ? 3 : 0,
+            Any("예쁜", "이쁜", "경치", "풍경", "경관", "노을", "단풍", "꽃", "야경", "사진") ? 3 : 1,
+            Any("비 ", "비와", "비 와", "비가", "눈 와", "추워", "더워", "날씨", "햇살", "맑") ? 3 : 2,
+            Any("조용", "한적", "혼자", "생각", "머리 식") ? 3 : 0,
+            Any("가볍게", "잠깐", "짧게", "가까운", "다리 아파", "피곤") || pace == "slow" ? 3 : 1);
+        return p.Max(WalkPriorities.FromChoices(tastes, afterMeal));
     }
 
     /// <summary>word 바로 뒤에 "빼고 · 말고 · 싫어 · 피해" 같은 말이 오는지</summary>
@@ -216,7 +281,8 @@ public static partial class WishRules
 
     /// <summary>칸을 정리하고 "이렇게 이해했어요" 한 줄을 만든다</summary>
     public static WalkWish Make(string text, int? minutes, List<string> tastes, bool? indoor, bool afterMeal, string? pace,
-                                List<string> want, List<string> avoid, List<string> wantPlaces, List<string> avoidPlaces, string source, SpotStore spots)
+                                List<string> want, List<string> avoid, List<string> wantPlaces, List<string> avoidPlaces, string source, SpotStore spots,
+                                string? judgment, WalkPriorities priorities)
     {
         var parts = new List<string>();
         if (minutes != null) parts.Add($"{minutes}분");
@@ -232,8 +298,10 @@ public static partial class WishRules
         var skip = avoid.Concat(avoidPlaces.Select(id => spots.Find(id)?.Name ?? id)).ToList();
         if (skip.Count > 0)
             summary += (summary.Length > 0 ? " · " : "") + string.Join(" · ", skip) + " 피하기";
-        if (summary.Length == 0)
-            summary = "특별한 조건 없이 지금 걷기 좋은 곳";
-        return new WalkWish(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, summary, source);
+        List<string> top = priorities.Top();
+        if (summary.Length == 0)   // 칸으로 못 담은 바람 ("늘 가던 곳 위주로") 은 판단 비중으로
+            summary = top.Except(["날씨에 맞는 곳"]).Any() ? string.Join(" · ", top.Except(["날씨에 맞는 곳"]).Take(3)) : "특별한 조건 없이 지금 걷기 좋은 곳";
+        judgment ??= top.Count > 0 ? $"말한 바람에 맞춰 {string.Join(" · ", top.Take(3))} 위주로 골라요" : "지금 걷기 좋은 곳을 고루 골라요";
+        return new WalkWish(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, summary, source, judgment, priorities);
     }
 }

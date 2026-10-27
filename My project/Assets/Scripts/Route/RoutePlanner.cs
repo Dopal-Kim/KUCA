@@ -332,6 +332,13 @@ public partial class RoutePlanner : MonoBehaviour
         }
         if (collect != null && collect.Progress != null)
             req.visitedBuildingIds = new List<string>(collect.Progress.visitedSpots);
+        // 몇 번 들렀는지: 이 기기의 산책 기록에서 센다 (안 가 본 곳 · 자주 가던 곳 판단)
+        var counts = new Dictionary<string, int>();
+        foreach (WalkHistory.Entry e in WalkHistory.All)
+            foreach (string id in e.visitedBuildingIds)
+                counts[id] = counts.TryGetValue(id, out int n) ? n + 1 : 1;
+        foreach (var kv in counts)
+            req.visitCounts.Add(new VisitCount { buildingId = kv.Key, count = kv.Value });
         req.candidateBuildingIds = Candidates(mins);
         return req;
     }

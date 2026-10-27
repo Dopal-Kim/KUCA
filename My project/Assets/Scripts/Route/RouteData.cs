@@ -29,6 +29,15 @@ public class RouteRequest
     public bool afterMeal;
     /// <summary>말로 한 산책 바람 (200자 이내, 비우면 칩 선택만). 서버가 해석해 시간 · 취향 · 피할 곳에 반영한다</summary>
     public string wish;
+    /// <summary>장소마다 들른 횟수 (이 기기의 산책 기록). 서버가 "안 가 본 곳 · 자주 가던 곳" 을 판단할 때 쓴다</summary>
+    public List<VisitCount> visitCounts = new List<VisitCount>();
+}
+
+[Serializable]
+public class VisitCount
+{
+    public string buildingId;
+    public int count;
 }
 
 /// <summary>서버가 바람을 어떻게 이해했는지 (RouteResult.wish)</summary>
@@ -39,6 +48,8 @@ public class RouteWish
     public string summary;
     /// <summary>"ai"(AI 가 해석) 또는 "fallback"(말 찾기)</summary>
     public string source;
+    /// <summary>어떤 산책이 맞는지 판단과 이유 한 문장</summary>
+    public string judgment;
 }
 
 [Serializable]
@@ -86,6 +97,8 @@ public class RouteResult
     public string healthNote;
     /// <summary>바람을 보냈을 때만: 어떻게 이해했는지</summary>
     public RouteWish wish;
+    /// <summary>코스 전체를 이렇게 짠 이유 한 문장</summary>
+    public string why;
 }
 
 /// <summary>학교 공지 중 특정 장소와 관련된 것 (GET /api/notices)</summary>

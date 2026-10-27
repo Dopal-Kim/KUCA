@@ -232,31 +232,7 @@ public static class UIKit
             dr.offsetMin = Vector2.zero;
             dr.offsetMax = new Vector2(0f, 2f);
             divider.enabled = false;
-            // 아래로 더 있으면 아래 끝에 구분선 + 위로 옅어지는 그림자: 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14).
-            // 바탕색으로 흐리게 하던 v15 는 흰 카드 → #F2F4F6 라 눈에 안 띄었음
-            RawImage shade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-            shade.transform.SetParent(safe, false);
-            shade.texture = FadeUp;
-            shade.color = new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.22f);
-            shade.raycastTarget = false;
-            RectTransform sr = shade.rectTransform;
-            sr.anchorMin = Vector2.zero;
-            sr.anchorMax = new Vector2(1f, 0f);
-            sr.pivot = new Vector2(0.5f, 0f);
-            sr.offsetMin = new Vector2(0f, bottomH);
-            sr.offsetMax = new Vector2(0f, bottomH + 48f);
-            Image line = Image(shade.transform, "Line", KucaTheme.InkSoft);
-            RectTransform lr = line.rectTransform;
-            lr.anchorMin = Vector2.zero;
-            lr.anchorMax = new Vector2(1f, 0f);
-            lr.pivot = new Vector2(0.5f, 0f);
-            lr.offsetMin = Vector2.zero;
-            lr.offsetMax = new Vector2(0f, 2f);
-            shade.gameObject.SetActive(false);
-            var edges = area.gameObject.AddComponent<ScrollEdges>();
-            edges.scroll = area.GetComponent<ScrollRect>();
-            edges.top = divider;
-            edges.bottom = shade.gameObject;
+            MoreBelow(safe, area, bottomH, divider);
         }
         else
         {
@@ -265,6 +241,37 @@ public static class UIKit
         }
         page.root.SetActive(false);
         return page;
+    }
+
+    /// <summary>
+    /// 스크롤 영역 아래에 더 있으면 아래 끝에 구분선 + 위로 옅어지는 그림자 (bottomH 위에), 위로 밀렸으면 topDivider 를 켠다.
+    /// 확인 버튼 위에서 잘린 카드가 끝처럼 보였음 (REVIEW_v14). 바탕색으로 흐리게 하던 v15 는 흰 카드 → #F2F4F6 라 눈에 안 띄었음
+    /// </summary>
+    public static void MoreBelow(Transform parent, RectTransform scrollArea, float bottomH, Behaviour topDivider = null)
+    {
+        RawImage shade = new GameObject("MoreBelow", typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
+        shade.transform.SetParent(parent, false);
+        shade.texture = FadeUp;
+        shade.color = new Color(KucaTheme.Ink.r, KucaTheme.Ink.g, KucaTheme.Ink.b, 0.22f);
+        shade.raycastTarget = false;
+        RectTransform sr = shade.rectTransform;
+        sr.anchorMin = Vector2.zero;
+        sr.anchorMax = new Vector2(1f, 0f);
+        sr.pivot = new Vector2(0.5f, 0f);
+        sr.offsetMin = new Vector2(0f, bottomH);
+        sr.offsetMax = new Vector2(0f, bottomH + 48f);
+        Image line = Image(shade.transform, "Line", KucaTheme.InkSoft);
+        RectTransform lr = line.rectTransform;
+        lr.anchorMin = Vector2.zero;
+        lr.anchorMax = new Vector2(1f, 0f);
+        lr.pivot = new Vector2(0.5f, 0f);
+        lr.offsetMin = Vector2.zero;
+        lr.offsetMax = new Vector2(0f, 2f);
+        shade.gameObject.SetActive(false);
+        var edges = scrollArea.gameObject.AddComponent<ScrollEdges>();
+        edges.scroll = scrollArea.GetComponent<ScrollRect>();
+        edges.top = topDivider;
+        edges.bottom = shade.gameObject;
     }
 
     /// <summary>아이콘만 있는 둥근 터치 영역 (‹ 뒤로 · × 닫기 등). flip: 좌우 뒤집기 (› 를 ‹ 로)</summary>

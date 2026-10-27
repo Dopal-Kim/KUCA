@@ -17,7 +17,8 @@ public class ScrollEdges : MonoBehaviour
         RectTransform view = (RectTransform)scroll.transform;
         bool longer = scroll.content.rect.height > view.rect.height + 1f;
         float y = scroll.verticalNormalizedPosition;
-        top.enabled = longer && y < 0.995f;
+        if (top != null)   // 시트처럼 위 구분선이 없는 곳
+            top.enabled = longer && y < 0.995f;
         bottom.SetActive(longer && y > 0.005f);
     }
 }
