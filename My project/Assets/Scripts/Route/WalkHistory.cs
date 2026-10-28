@@ -96,6 +96,14 @@ public static class WalkHistory
         return e;
     }
 
+    /// <summary>회원 탈퇴: 기록 파일과 읽어 둔 기록을 지운다</summary>
+    public static void Forget()
+    {
+        cache = null;
+        if (File.Exists(FilePath))
+            File.Delete(FilePath);
+    }
+
     static Store Load()
     {
         if (cache != null)

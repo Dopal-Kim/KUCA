@@ -196,7 +196,44 @@ public static class AuthService
         yield return req.SendWebRequest();
         if (req.result != UnityWebRequest.Result.Success && req.responseCode != 401) { done(ErrorOf(req)); yield break; }
         ForgetToken();
+        ForgetDeviceData();
         done(null);
+    }
+
+    // 탈퇴하면 지우는 기기 안 정보: 진행(레벨 · 티켓 · 경희펫), 산책 기록, 캐릭터, 사진, 취향 · 닉네임 · 첫 안내.
+    // 서버 주소 · 기기 번호 · 노래 앱 · 강조색 · 걸음 센서 · AR 같은 기기 설정은 남긴다.
+    static readonly string[] UserFiles = { "progress.json", "character.json" };
+    static readonly string[] UserDirs = { "scrapbook", "mock_memos" };
+    static readonly string[] UserPrefs =
+    {
+        "walk_prefs", "memo_author", "memo_mine", "memo_seen_likes", "notice_read_ids",
+        "home_coach_done", "health_weight_kg", "privacy_seen",
+    };
+
+    /// <summary>회원 탈퇴 뒤 같은 메일로 다시 가입해도 처음부터 시작하도록 기기 안 사용자 정보를 지운다</summary>
+    public static void ForgetDeviceData()
+    {
+        try
+        {
+            foreach (string name in UserFiles)
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, name);
+                if (System.IO.File.Exists(path)) System.IO.File.Delete(path);
+            }
+            foreach (string name in UserDirs)
+            {
+                string path = System.IO.Path.Combine(Application.persistentDataPath, name);
+                if (System.IO.Directory.Exists(path)) System.IO.Directory.Delete(path, true);
+            }
+            WalkHistory.Forget();
+        }
+        catch (Exception ex)
+        {
+            Debug.LogWarning("[AuthService] 기기 정보를 다 지우지 못했어요: " + ex.Message);
+        }
+        foreach (string key in UserPrefs)
+            PlayerPrefs.DeleteKey(key);
+        PlayerPrefs.Save();
     }
 
     public static IEnumerator Logout(Action done)
