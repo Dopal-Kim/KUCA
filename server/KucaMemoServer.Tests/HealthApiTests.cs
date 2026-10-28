@@ -175,6 +175,18 @@ public class HealthApiTests : IDisposable
     }
 
     [Fact]
+    public void 코스_난이도는_거리와_오르막_장소_수로()
+    {
+        Assert.Equal("easy", HealthRules.Difficulty(1500, 0).Level);
+        Assert.Equal("normal", HealthRules.Difficulty(1501, 0).Level);
+        Assert.Equal("normal", HealthRules.Difficulty(1200, 1).Level);    // 짧아도 오르막이 있으면 쉬움은 아님
+        Assert.Equal("hard", HealthRules.Difficulty(2100, 1).Level);      // 오르막 + 2km 넘음
+        Assert.Equal("hard", HealthRules.Difficulty(1000, 2).Level);      // 오르막 두 곳
+        Assert.Equal("hard", HealthRules.Difficulty(3100, 0).Level);
+        Assert.Equal("보통", HealthRules.Difficulty(2500, 0).Label);
+    }
+
+    [Fact]
     public void 센서_걸음_수는_거리와_맞을_때만_믿는다()
     {
         Assert.Equal(2400, HealthRules.MeasuredSteps(2400, 1400));   // 보폭 0.58m
