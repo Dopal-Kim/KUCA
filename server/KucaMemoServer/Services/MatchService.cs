@@ -852,7 +852,7 @@ public class MatchService(
                 Course: m.Course is { } c
                     ? new MatchCourse(c.Id, c.Title, c.Source, c.Stops, c.TotalDistanceM, c.TotalMinutes,
                                       me.CourseAgree, other.CourseAgree, m.CourseConfirmed, MatchRules.MaxCourseChanges - m.CourseChanges,
-                                      c.Health, HealthRules.Difficulty(c.TotalDistanceM, HillsOn(c.Stops)))
+                                      c.Health, c.Difficulty)
                     : null);
         }
 
@@ -862,10 +862,6 @@ public class MatchService(
 
         return new MatchState("idle");
     }
-
-    /// <summary>코스에서 가는 길에 힘든 오르막이 있는 장소 수</summary>
-    int HillsOn(List<RecommendStop> stops) =>
-        stops.Count(st => spots.All.Any(s => s.Id == st.BuildingId && s.Hill));
 
     static string Iso(DateTimeOffset t) => t.UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
 

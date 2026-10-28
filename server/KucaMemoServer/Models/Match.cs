@@ -25,7 +25,7 @@ public record MatchCourse(
     string RecommendationId, string Title, string Source, List<RecommendStop> Stops, int TotalDistanceM, int TotalMinutes,
     bool MyAgree, bool PartnerAgree, bool Confirmed, int ChangesLeft,
     HealthEstimate? Health = null,          // 대략 칼로리 · 걸음 수 (보통 빠르기, 몸무게 50~70kg 범위)
-    CourseDifficulty? Difficulty = null);   // 쉬움 · 보통 · 힘듦
+    CourseDifficulty? Difficulty = null);   // 난이도 하 · 중 · 상
 
 /// <summary>
 /// GET /api/match 가 돌려주는 지금 상태. State 에 따라 채워지는 필드가 다르다 (나머지는 null).

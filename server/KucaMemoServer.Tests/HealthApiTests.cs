@@ -122,6 +122,9 @@ public class HealthApiTests : IDisposable
         Assert.True(h.GetProperty("steps").GetInt32() > 0);
         Assert.True(h.GetProperty("kcalMin").GetInt32() < h.GetProperty("kcalMax").GetInt32());
         Assert.Equal(JsonValueKind.Null, r.GetProperty("goal").ValueKind);
+        JsonElement d = r.GetProperty("difficulty");
+        Assert.Equal(HealthRules.Difficulty(r.GetProperty("totalDistanceM").GetInt32(), d.GetProperty("hills").GetInt32()).Label,
+                     d.GetProperty("label").GetString());
 
         await Send(client, HttpMethod.Post, "/api/recommendations", null, new { minutes = 30, lat = 37.244, lon = 127.08, weightKg = 10 }, HttpStatusCode.BadRequest);
     }
@@ -179,11 +182,12 @@ public class HealthApiTests : IDisposable
     {
         Assert.Equal("easy", HealthRules.Difficulty(1500, 0).Level);
         Assert.Equal("normal", HealthRules.Difficulty(1501, 0).Level);
-        Assert.Equal("normal", HealthRules.Difficulty(1200, 1).Level);    // 짧아도 오르막이 있으면 쉬움은 아님
+        Assert.Equal("normal", HealthRules.Difficulty(1200, 1).Level);    // 짧아도 오르막이 있으면 하는 아님
         Assert.Equal("hard", HealthRules.Difficulty(2100, 1).Level);      // 오르막 + 2km 넘음
         Assert.Equal("hard", HealthRules.Difficulty(1000, 2).Level);      // 오르막 두 곳
         Assert.Equal("hard", HealthRules.Difficulty(3100, 0).Level);
-        Assert.Equal("보통", HealthRules.Difficulty(2500, 0).Label);
+        Assert.Equal("중", HealthRules.Difficulty(2500, 0).Label);
+        Assert.Equal(("하", "상"), (HealthRules.Difficulty(800, 0).Label, HealthRules.Difficulty(3500, 0).Label));
     }
 
     [Fact]
