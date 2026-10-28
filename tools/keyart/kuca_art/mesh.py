@@ -441,6 +441,33 @@ def write_bytes(path, meshes, pos_unit=None):
     return total
 
 
+def read_chunks(path):
+    """write_bytes 파일을 메시별 원본 바이트 [(이름, 바이트)] 로 (다시 양자화하지 않고 일부만 바꿔 끼울 때)"""
+    import gzip
+    with open(path, 'rb') as f:
+        assert f.read(4) == b'KUCA' and struct.unpack('<i', f.read(4))[0] == 3
+        body = gzip.decompress(f.read())
+    out, o = [], 4
+    for _ in range(struct.unpack_from('<i', body, 0)[0]):
+        start = o
+        nl = struct.unpack_from('<i', body, o)[0]
+        name = body[o + 4:o + 4 + nl].decode('utf-8')
+        o += 4 + nl + 12
+        vc, flags = struct.unpack_from('<ii', body, o)
+        o += 8 + vc * 6 + vc * 4 + (vc * 4 if flags & 1 else 0) + (vc * 3 if flags & 2 else 0)
+        out.append((name, body[start:o]))
+    assert o == len(body), '파일 끝이 맞지 않음'
+    return out
+
+
+def write_chunks(path, chunks):
+    import gzip
+    with open(path, 'wb') as f:
+        f.write(b'KUCA')
+        f.write(struct.pack('<i', 3))
+        f.write(gzip.compress(struct.pack('<i', len(chunks)) + b''.join(raw for _, raw in chunks), 9))
+
+
 POS_UNIT = 0.02
 
 

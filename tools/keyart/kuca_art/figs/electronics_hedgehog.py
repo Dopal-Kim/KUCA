@@ -224,6 +224,12 @@ def build(fig, rng):
     w_mouth(fig, mouth_f, 0.18, (0.3, 0.14, 0.12))
     # 목 아래 몸통은 흰 작업복: 갈색 머리·가시 색이 가슴·등으로 번진 것을 덮음
     fig.paint(lambda P: np.maximum(P[:, 1] - (y0 + 3.3), torso(P) - 0.2), SUIT, soft=0.06)
+    # 펫 검토 v2: 앞에서 몸통이 한 덩어리 피부색 → 앞섶 지퍼 선 + 왼가슴 회색 주머니(위 덮개 진하게)로 작업복 표시
+    front = lambda P: np.maximum(torso(P) - 0.25, 0.6 - P[:, 2])
+    fig.paint(lambda P: np.maximum.reduce([front(P), np.abs(P[:, 0]) - 0.08, np.abs(P[:, 1] - (y0 + 2.56)) - 0.62]), (0.86, 0.70, 0.30), soft=0.03)
+    pocket = lambda P, top: np.maximum.reduce([front(P), np.abs(P[:, 0] + 0.58) - 0.3, np.abs(P[:, 1] - (y0 + 2.6 + top)) - (0.07 if top else 0.24)])
+    fig.paint(lambda P: pocket(P, 0.0), POUCH, soft=0.03)
+    fig.paint(lambda P: pocket(P, 0.19), (0.44, 0.45, 0.48), soft=0.03)
     # ---- 받침 소품: 마이크로칩 (왼쪽 앞) + 회색 돌 ----
     cx_, cz_ = -2.5, 1.9
     Rk = S.rot(25, 0, 0)
