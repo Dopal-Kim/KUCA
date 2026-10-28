@@ -1077,7 +1077,7 @@ public partial class KhuMenus : MonoBehaviour
         profileXpFill.anchorMax = new Vector2(Mathf.Max(0.03f, xpNeed > 0 ? (float)xpIn / xpNeed : 0f), 1f);
 
         statWalk.text = progress.walkedMeters >= 1000f ? $"{progress.walkedMeters / 1000f:F1} km" : $"{progress.walkedMeters:F0} m";
-        statCaught.text = $"{progress.totalCollected:N0}";
+        statCaught.text = $"{progress.caught.Count:N0}";   // "함께하는 경희펫" = 내 경희펫 목록 수 (만난 횟수를 세어 "1마리" 목록과 달랐음)
         statSpots.text = $"{progress.visitedSpots.Count:N0}";
     }
 

@@ -691,8 +691,8 @@ public partial class MemoBoard : MonoBehaviour
         writeHint.transform.parent.gameObject.SetActive((!canWrite || locked) && boardTab == 0);
         if (locked)
             writeHint.text = lockedCount > 0
-                ? $"아직 가 보지 않은 곳이에요  ·  {SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"
-                : $"아직 가 보지 않은 곳이에요  ·  경희스팟까지 {SpotDistance():F0}m";   // 지금 할 수 있는 일은 아래 "이곳 공지 보기" 버튼
+                ? $"아직 가 보지 않은 곳이에요\n{SpotDistance():F0}m 더 가면 쪽지 {lockedCount}개가 열려요"   // 두 줄로 나눔 ("열려요" 만 다음 줄로 꺾였음)
+                : $"아직 가 보지 않은 곳이에요\n경희스팟까지 {SpotDistance():F0}m";   // 지금 할 수 있는 일은 아래 "이곳 공지 보기" 버튼
         else if (!canWrite)
             writeHint.text = $"경희스팟까지 {d:F0}m  ·  {spots.interactRadius:F0}m 안에서 사진을 남길 수 있어요";
     }
