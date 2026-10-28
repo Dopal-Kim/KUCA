@@ -144,6 +144,8 @@ public class MatchScreen : MonoBehaviour
         if (before != s.status)
         {
             // 산책 기록 (B-V4): 시작하면 걸은 거리를 재기 시작하고, 끝나면 완료 화면으로
+            // 걷는 동안은 정한 코스를 혼자 걷기처럼 지도 위 선으로 보여 준다
+            RoutePlanner.FollowMate(s.status == MatchState.Walking && s.HasCourse ? s.course : null);
             if (s.status == MatchState.Walking)
                 WalkSession.BeginMate(s.matchId, s.partner?.nickname, s.walkId);
             else if (s.status == MatchState.Ended && WalkSession.Active && WalkSession.Kind == WalkSession.Mate)
