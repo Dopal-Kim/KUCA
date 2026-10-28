@@ -35,6 +35,11 @@ public static class MatchEndpoints
                                                  RouteRecommender recommender, CancellationToken ct) =>
             RunAsync(req, accounts, async user => Results.Ok(await service.NextCourseAsync(user.Id, matchId, recommender, ct))));
 
+        // 도착지 정하기: 코스가 그곳에서 끝나게 다시 만든다 (buildingId 가 비면 지움). 두 사람의 동의는 지워진다
+        match.MapPost("/{matchId}/course/destination", (string matchId, DestinationRequest? body, HttpRequest req, AccountStore accounts,
+                                                        MatchService service, RouteRecommender recommender, CancellationToken ct) =>
+            RunAsync(req, accounts, async user => Results.Ok(await service.SetDestinationAsync(user.Id, matchId, body?.BuildingId, recommender, ct))));
+
         match.MapPost("/{matchId}/decline", (string matchId, HttpRequest req, AccountStore accounts, MatchService service) =>
             Run(req, accounts, user => Results.Ok(service.Decline(user.Id, matchId))));
 

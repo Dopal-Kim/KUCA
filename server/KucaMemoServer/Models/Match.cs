@@ -5,6 +5,7 @@ namespace KucaMemoServer.Models;
 public record MatchJoinRequest(int Minutes, string? MatchGender, string? BuildingId);
 public record AppearanceRequest(string? Text);
 public record ArrivedRequest(string? BuildingId);
+public record DestinationRequest(string? BuildingId);
 public record MatchCancelRequest(string? Reason);
 public record ReportRequest(string? MatchId, string? Reason, string? Text);
 public record BlockRequest(string? MatchId);
@@ -25,7 +26,8 @@ public record MatchCourse(
     string RecommendationId, string Title, string Source, List<RecommendStop> Stops, int TotalDistanceM, int TotalMinutes,
     bool MyAgree, bool PartnerAgree, bool Confirmed, int ChangesLeft,
     HealthEstimate? Health = null,          // 대략 칼로리 · 걸음 수 (보통 빠르기, 몸무게 50~70kg 범위)
-    CourseDifficulty? Difficulty = null);   // 난이도 하 · 중 · 상
+    CourseDifficulty? Difficulty = null,    // 난이도 하 · 중 · 상
+    string? DestinationId = null);          // 두 사람이 고른 도착지 (코스 마지막 장소, 없으면 null)
 
 /// <summary>
 /// GET /api/match 가 돌려주는 지금 상태. State 에 따라 채워지는 필드가 다르다 (나머지는 null).
