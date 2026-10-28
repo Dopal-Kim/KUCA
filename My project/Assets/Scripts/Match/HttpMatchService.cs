@@ -339,6 +339,10 @@ public class HttpMatchService : IMatchService
     public IEnumerator NextCourse(string matchId, Action<MatchState, string> onDone) =>
         Send("POST", $"/api/match/{M(matchId)}/course/next", "{}", () => fallback.NextCourse(matchId, onDone), onDone, false);
 
+    public IEnumerator SetDestination(string matchId, string buildingId, string name, Action<MatchState, string> onDone) =>
+        Send("POST", $"/api/match/{M(matchId)}/course/destination", JsonUtility.ToJson(new BuildingBody { buildingId = buildingId ?? "" }),
+             () => fallback.SetDestination(matchId, buildingId, name, onDone), onDone, false);
+
     /// <summary>"다음 주제": 서버가 주는 3개를 하나씩 넘기고, 다 보면 다시 부른다 (매칭 하나에 5번까지)</summary>
     public IEnumerator NextTopic(string matchId, Action<TopicCard, string> onDone)
     {

@@ -43,7 +43,10 @@ public class MatchScreen : MonoBehaviour
     GameObject proposeWhyBox;
     RectTransform proposeCard, courseCard, courseStops, talkCard;
     LayoutElement talkTagSize;
-    Button courseAgree, courseNext;
+    Button courseAgree, courseNext, courseDest;
+    GameObject destPage;
+    RectTransform courseDestBox;
+    RectTransform destList;
     RawImage waitPartner, acceptWaitPartner, meetCreature;
     InputField lookInput;
     Image[] minuteChips, genderChips, reasonChips;
@@ -217,7 +220,7 @@ public class MatchScreen : MonoBehaviour
                 acceptWaitPartner.enabled = acceptWaitPartner.texture != null;
                 break;
             case MatchState.Matched:
-                if (!meetPage.activeSelf && !coursePage.activeSelf && !lookPage.activeSelf && !talkPage.activeSelf)
+                if (!meetPage.activeSelf && !coursePage.activeSelf && !destPage.activeSelf && !lookPage.activeSelf && !talkPage.activeSelf)
                     ShowPage(meetPage);
                 FillMeet();
                 FillCourse();
@@ -251,7 +254,7 @@ public class MatchScreen : MonoBehaviour
 
     void ShowPage(GameObject page)
     {
-        foreach (GameObject p in new[] { conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, coursePage, lookPage, talkPage, walkPage, endPage })
+        foreach (GameObject p in new[] { conditionPage, waitPage, proposePage, acceptWaitPage, meetPage, coursePage, destPage, lookPage, talkPage, walkPage, endPage })
             p.SetActive(p == page);
     }
 
@@ -421,12 +424,14 @@ public class MatchScreen : MonoBehaviour
             courseStatus.text = "";
             UIKit.SetLabel(courseAgree, "다음: 인상착의 알려 주기");
             courseNext.gameObject.SetActive(false);
+            courseDestBox.gameObject.SetActive(false);
             return;
         }
         MatchCourse k = state.course;
-        if (k.recommendationId != shownCourseId)
+        string shownKey = k.recommendationId + "|" + k.destinationId;   // 도착지만 바뀌어도 다시 그린다
+        if (shownKey != shownCourseId)
         {
-            shownCourseId = k.recommendationId;
+            shownCourseId = shownKey;
             BuildStops(k);
             PopIn.Play(courseCard);
         }
@@ -446,6 +451,9 @@ public class MatchScreen : MonoBehaviour
         // 내가 좋다고 했으면 상대를 기다리지 않고 다음 단계로 갈 수 있다 (만나서 출발하면 지금 코스로 정해진다)
         UIKit.SetLabel(courseAgree, k.myAgree || k.confirmed ? "다음: 인상착의 알려 주기" : "이 코스 좋아요");
         courseNext.gameObject.SetActive(!k.confirmed);
+        courseDestBox.gameObject.SetActive(!k.confirmed || !string.IsNullOrEmpty(k.destinationId));
+        courseDest.interactable = !k.confirmed;
+        UIKit.SetLabel(courseDest, string.IsNullOrEmpty(k.destinationId) ? "정하지 않음 (추천에 맡기기)" : k.stops[k.stops.Count - 1].name);
         courseNext.interactable = k.changesLeft > 0;
         UIKit.SetLabel(courseNext, k.changesLeft > 0 ? $"다른 코스 보기 ({k.changesLeft}번 남음)" : "다른 코스는 다 봤어요");
     }
@@ -827,8 +835,54 @@ public class MatchScreen : MonoBehaviour
         UIKit.Vertical(courseStops, KucaTheme.Space3);
         courseLoading = UIKit.Text(courseCard, "두 사람에게 맞는 코스를 짜고 있어요…", KucaTheme.Body, TextAnchor.UpperLeft, InkQuiet);
         courseStatus = UIKit.Bold(UIKit.Text(c, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet));
+        courseDestBox = UIKit.Rect(c, "Destination");   // 제목 + 한 줄을 같이 숨기려고 묶는다
+        UIKit.Vertical(courseDestBox, 0f);
+        courseDest = UIKit.ListRow(UIKit.ListGroup(courseDestBox, "도착지"), "정하지 않음 (추천에 맡기기)", ShowDestinations);
         courseAgree = UIKit.PrimaryButton(b, "이 코스 좋아요", AgreeCourse);
         courseNext = UIKit.SecondaryButton(b, "다른 코스 보기", NextCourse);
+        destPage = Step(body, "Destination", "어디서 끝낼까요?", 1, out destList, out RectTransform db);
+        UIKit.SecondaryButton(db, "코스로 돌아가기", () => ShowPage(coursePage));
+    }
+
+    /// <summary>도착지 고르기: 정하지 않음 + 만남 스팟을 뺀 경희스팟 (만남 스팟에서 가까운 곳부터). 고르면 두 사람의 코스가 그곳에서 끝나게 바뀐다</summary>
+    void ShowDestinations()
+    {
+        if (!state.HasCourse || state.course.confirmed) return;
+        for (int i = destList.childCount - 1; i >= 1; i--)   // 0 번은 제목
+        {
+            GameObject old = destList.GetChild(i).gameObject;
+            old.SetActive(false);
+            Destroy(old);
+        }
+        Note(destList, "고르면 코스가 그곳에서 끝나게 바뀌어요. 상대도 같은 코스를 보고, 다시 함께 좋다고 해야 정해져요.");
+        string current = state.course.destinationId ?? "";
+        RectTransform group = UIKit.ListGroup(destList, null);
+        UIKit.ListRow(group, (current.Length == 0 ? "✓  " : "") + "정하지 않음 (추천에 맡기기)", () => PickDestination("", ""), chevron: false);
+        var spots = FindAnyObjectByType<KyungHeeSpots>();
+        var list = new List<KyungHeeSpot>();
+        Vector3 from = PlayerPosition;
+        string meet = state.spot?.buildingId;
+        if (spots != null)
+            foreach (KyungHeeSpot s in spots.Spots)
+            {
+                if (s == null || s.Building == null) continue;
+                if (s.Building.buildingId == meet) from = s.transform.position;   // 만남 스팟은 빼고, 거리 기준으로만
+                else list.Add(s);
+            }
+        list.Sort((a, b) => (a.transform.position - from).sqrMagnitude.CompareTo((b.transform.position - from).sqrMagnitude));
+        foreach (KyungHeeSpot s in list)
+        {
+            string id = s.Building.buildingId, name = s.Building.DisplayName;
+            UIKit.ListRow(group, (id == current ? "✓  " : "") + name, () => PickDestination(id, name), chevron: false);
+        }
+        ShowPage(destPage);
+    }
+
+    void PickDestination(string buildingId, string name)
+    {
+        ShowPage(coursePage);
+        if (busy || !state.HasCourse || (state.course.destinationId ?? "") == buildingId) return;
+        Call(service.SetDestination(state.matchId, buildingId, name, Apply));
     }
 
     void BuildLook(RectTransform body)
