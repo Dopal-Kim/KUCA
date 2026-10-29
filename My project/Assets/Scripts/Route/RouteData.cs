@@ -66,6 +66,8 @@ public class RouteStop
     public double lat, lon;
     /// <summary>v2: 앞 장소(첫 곳은 지금 위치)에서 여기까지 걷는 거리 (m)</summary>
     public int distanceM;
+    /// <summary>앱이 붙인 쉼터 들르기면 쉬는 시간 (분), 아니면 0</summary>
+    public int restMinutes;
 }
 
 /// <summary>서버가 추천에 쓴 상황 (시간대 · 계절 · 날씨)</summary>

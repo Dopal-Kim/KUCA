@@ -6,6 +6,8 @@
 지도 바닥을 만든 OSM 데이터(tools/keyart/osm_ground.json)에서 사람이 걸을 수 있는 길만 골라
 교차점 · 꺾이는 점을 노드로, 이어진 구간을 간선으로 저장한다. 앱의 WalkGraph 가 읽어서 길 찾기를 한다.
   lon[i] · lat[i]: 노드 i 의 경도 · 위도,  a[k] · b[k]: 간선 k 가 잇는 두 노드 번호 (양방향)
+  w[k]: 간선 k 의 힘든 정도 (길이에 곱함, 평지 1 · 사용자 표시 오르막 조금 1.5 · 많이 2.2)
+  rest[j]: 사용자가 표시한 쉼터 j 에서 가장 가까운 노드 번호
   (Unity JsonUtility 가 그대로 읽게 평평한 배열로)
 가장 큰 연결 덩어리만 남긴다 (따로 떨어진 짧은 길로 길 찾기가 끊기지 않게).
 """
@@ -28,6 +30,12 @@ blocked_by_way = defaultdict(list)
 for sgm in marks['blocked_segs']:
     blocked_by_way[sgm['way']].append(sgm['p'])
 blocked_areas = [list(zip(a[::2], a[1::2])) for a in marks['blocked_areas']]
+rest_points = marks.get('rest_points', [])
+# 사용자가 표시한 오르막 (tools/route/slopes.json, 같은 표시가 지도 경사 빗금도 그린다)
+SLOPE_W = {1: 1.5, 2: 2.2}
+slopes_by_way = defaultdict(list)
+for sl in json.load(open(os.path.join(HERE, 'slopes.json'), encoding='utf-8'))['slopes']:
+    slopes_by_way[int(sl['seg'].split(':')[0])].append((sl['p'], sl['level']))
 
 WALKABLE = {'footway', 'path', 'pedestrian', 'steps', 'service', 'residential', 'living_street', 'tertiary',
             'secondary', 'track', 'unclassified', 'cycleway', 'corridor', 'primary'}
@@ -62,8 +70,19 @@ def inside(p, poly):
 def blocked(way, a, b):
     """OSM 길 조각 a-b(경위도)가 막힌 구간 위(같은 길 번호, 2 m 안)이거나 막힌 구역 안이면 길 찾기에서 뺀다"""
     m = map_m((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
-    return any(near_line(m, line, 2.0) for line in blocked_by_way.get(way, ())) or any(inside(m, ar) for ar in blocked_areas)
+    return any(near_line(m, line, 2.0) for line in blocked_by_way.get(way, ())) or in_blocked_area(a, b)
+
+
+def in_blocked_area(a, b):
+    """경위도 a-b 선의 어느 곳이라도 막힌 구역 안이면 (긴 간선이 구역 모서리를 스치는 것도 막는다)"""
+    pa, pb = map_m(*a), map_m(*b)
+    n = max(2, int(((pa[0] - pb[0]) ** 2 + (pa[1] - pb[1]) ** 2) ** 0.5 / 2) + 1)   # 2 m 마다
+    return any(inside((pa[0] + (pb[0] - pa[0]) * k / n, pa[1] + (pb[1] - pa[1]) * k / n), ar)
+               for k in range(n + 1) for ar in blocked_areas)
+
+
 coord = {}
+way_of = {}   # 간선 (작은 노드, 큰 노드) → OSM 길 번호 (오르막 찾기)
 adj = defaultdict(set)
 for e in data['elements']:
     tags = e.get('tags', {})
@@ -78,6 +97,7 @@ for e in data['elements']:
         if a != b and not blocked(e['id'], coord[a], coord[b]):
             adj[a].add(b)
             adj[b].add(a)
+            way_of[(min(a, b), max(a, b))] = e['id']
 
 def xy(nid):
     lon, lat = coord[nid]
@@ -112,7 +132,7 @@ for comp in rest:
     for n in comp:
         p = xy(n)
         d, m = min(((abs(q[0] - p[0]) + abs(q[1] - p[1]), m) for q, m in main_pts), default=(1e9, None))
-        if m is not None and d <= JOIN_M:
+        if m is not None and d <= JOIN_M and not in_blocked_area(coord[n], coord[m]):
             adj[n].add(m)
             adj[m].add(n)
             joined += 1
@@ -142,7 +162,7 @@ for sq in squares:
                 continue
             samples = [(pa[0] + (pb[0] - pa[0]) * k / 10, pa[1] + (pb[1] - pa[1]) * k / 10) for k in range(1, 10)]
             if all(inside(q, sq) for q in samples) and not any(inside(q, w) for q in samples for w in waters) \
-                    and not any(inside(map_m(*coord[a]), ar) or inside(map_m(*coord[b]), ar) for ar in blocked_areas):
+                    and not in_blocked_area(coord[a], coord[b]):
                 adj[a].add(b)
                 adj[b].add(a)
                 crossings += 1
@@ -154,7 +174,26 @@ print(f'joined {joined} near-miss ends, {crossings} open-square crossings in {le
 index = {nid: i for i, nid in enumerate(sorted(keep))}
 nodes = [list(coord[nid]) for nid in sorted(keep)]
 edges = sorted({tuple(sorted((index[a], index[b]))) for a in keep for b in adj[a] if b in keep})
+ids = sorted(keep)
+
+
+def effort(i, j):
+    """간선이 사용자 표시 오르막 위면 그 단계의 무게 (같은 길 번호, 가운데가 선에서 3 m 안)"""
+    a, b = ids[i], ids[j]
+    way = way_of.get((min(a, b), max(a, b)))
+    m = map_m((coord[a][0] + coord[b][0]) / 2, (coord[a][1] + coord[b][1]) / 2)
+    return max([SLOPE_W[lv] for line, lv in slopes_by_way.get(way, ()) if near_line(m, line, 3.0)], default=1.0)
+
+
+weights = [effort(i, j) for i, j in edges]
+mxy = [map_m(*coord[nid]) for nid in ids]
+rest = [min(range(len(ids)), key=lambda i: (mxy[i][0] - x) ** 2 + (mxy[i][1] - y) ** 2) for x, y in rest_points]
+
+# 확인: 남은 간선은 어느 곳도 막힌 구역에 들어가지 않는다
+assert not any(in_blocked_area(coord[ids[i]], coord[ids[j]]) for i, j in edges), 'edge enters a blocked area'
+print(f'slope edges {sum(w > 1 for w in weights)} ({sum(w > 2 for w in weights)} steep), rest nodes '
+      + ', '.join(f'{rest_points[k]} -> {((mxy[i][0] - rest_points[k][0]) ** 2 + (mxy[i][1] - rest_points[k][1]) ** 2) ** 0.5:.1f} m' for k, i in enumerate(rest)))
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 json.dump({'lon': [n[0] for n in nodes], 'lat': [n[1] for n in nodes],
-           'a': [e[0] for e in edges], 'b': [e[1] for e in edges]}, open(OUT, 'w'), separators=(',', ':'))
+           'a': [e[0] for e in edges], 'b': [e[1] for e in edges], 'w': weights, 'rest': rest}, open(OUT, 'w'), separators=(',', ':'))
 print(f'nodes {len(nodes)} (of {len(adj)}), edges {len(edges)} -> {os.path.normpath(OUT)} ({os.path.getsize(OUT)//1024} KB)')
