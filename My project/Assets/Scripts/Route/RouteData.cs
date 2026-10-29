@@ -52,6 +52,8 @@ public class RouteWish
     public string source;
     /// <summary>어떤 산책이 맞는지 판단과 이유 한 문장</summary>
     public string judgment;
+    /// <summary>말에서 읽은 걸을 시간 (분, "1시간 반 걷고 싶어" → 90). 말하지 않았으면 0</summary>
+    public int minutes;
 }
 
 [Serializable]

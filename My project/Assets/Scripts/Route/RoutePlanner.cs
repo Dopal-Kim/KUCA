@@ -431,6 +431,9 @@ public partial class RoutePlanner : MonoBehaviour
             return null;
         result.stops = kept;
         Trace(o);
+        // 말로 시간을 정했으면 (서버도 그 시간으로 짰다) 고른 시간 칩 대신 그 시간에 맞춘다
+        if (result.wish != null && result.wish.minutes > 0)
+            mins = result.wish.minutes;
         // 시간 안에 못 걸으면 (목적지를 빼고) 뒤쪽 장소부터 줄인다
         bool hasEnd = o.hasEnd = destSpot != null || o.returns;
         int minStops = o.returns ? 2 : 1;   // 한 바퀴 코스는 들를 곳 1 + 돌아오기
