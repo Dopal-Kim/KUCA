@@ -449,13 +449,14 @@ public partial class RoutePlanner : MonoBehaviour
         return o;
     }
 
-    const int RestMinutes = 3;        // 쉼터에서 쉬는 시간 (분)
-    const float RestDetour = 150f;    // 쉼터를 들르려고 더 걸어도 되는 거리 (m)
+    const int RestMinMinutes = 2, RestMaxMinutes = 5;   // 쉼터에서 쉬는 시간 (분): 고른 시간에 모자라는 만큼, 이 범위에서
+    const float RestDetour = 150f;    // 쉼터를 들르려고 더 걸어도 되는 거리 (m). 코스가 고른 시간보다 짧으면 모자란 시간만큼 더
     const float RestFromMeters = 600f; // 이보다 짧은 코스는 쉬지 않는다 (m, 보통 걸음 약 8분)
 
     /// <summary>
-    /// 사용자가 산책길 지도에 표시한 쉼터가 코스에서 가까우면 (돌아가는 길 150 m 안, 시간 안) '잠깐 쉬어가기' 를 한 번 넣는다.
-    /// 앞 장소와 다음 장소 사이에서 덜 돌아가는 쉼터 · 자리를 고른다.
+    /// 사용자가 산책길 지도에 표시한 쉼터가 코스에서 가까우면 '잠깐 쉬어가기' 를 한 번 넣는다 (돌아가는 길 150 m 안,
+    /// 코스가 고른 시간보다 짧으면 모자란 시간만큼 더 돌아가도 됨 — 사용자 10/29 "근처 쉼터까지 가서 좀 쉬는 느낌으로").
+    /// 앞 장소와 다음 장소 사이에서 덜 돌아가는 쉼터 · 자리를 고르고, 쉬는 시간은 고른 시간에 모자라는 만큼 (2 ~ 5분).
     /// </summary>
     void AddRest(Option o, int mins)
     {
@@ -464,7 +465,7 @@ public partial class RoutePlanner : MonoBehaviour
             return;
         var way = new List<Vector3> { StartPosition };
         way.AddRange(o.stops);
-        float best = RestDetour;
+        float best = Mathf.Max(RestDetour, (mins - o.walkMinutes) * RouteMath.MetersPerMinute(Pace));
         int at = -1;
         Vector3 spot = default;
         for (int i = 0; i + 1 < way.Count; i++)
@@ -480,11 +481,12 @@ public partial class RoutePlanner : MonoBehaviour
         }
         if (at < 0 || o.meters + best > Budget(mins) * 1.25f)
             return;
+        int rest = Mathf.Clamp(mins - RouteMath.MinutesFor(o.meters + best, Pace), RestMinMinutes, RestMaxMinutes);
         CampusMap.Vector2d geo = Map != null ? Map.WorldToGeo(spot) : default;
         o.result.stops.Insert(at, new RouteStop
         {
-            buildingId = "", name = "잠깐 쉬어가기", reason = $"쉼터에서 {RestMinutes}분쯤 숨 돌리고 가요",
-            lat = geo.y, lon = geo.x, restMinutes = RestMinutes,
+            buildingId = "", name = "잠깐 쉬어가기", reason = $"쉼터에서 {rest}분쯤 숨 돌리고 가요",
+            lat = geo.y, lon = geo.x, restMinutes = rest,
         });
         o.stops.Insert(at, spot);
         Trace(o);

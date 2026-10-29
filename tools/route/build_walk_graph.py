@@ -193,6 +193,44 @@ rest = [min(range(len(ids)), key=lambda i: (mxy[i][0] - x) ** 2 + (mxy[i][1] - y
 assert not any(in_blocked_area(coord[ids[i]], coord[ids[j]]) for i, j in edges), 'edge enters a blocked area'
 print(f'slope edges {sum(w > 1 for w in weights)} ({sum(w > 2 for w in weights)} steep), rest nodes '
       + ', '.join(f'{rest_points[k]} -> {((mxy[i][0] - rest_points[k][0]) ** 2 + (mxy[i][1] - rest_points[k][1]) ** 2) ** 0.5:.1f} m' for k, i in enumerate(rest)))
+# 경희스팟 사이 실제 걷는 거리 (앱 WalkGraph 와 같은 길: 힘든 정도 w 로 고르고 길이는 평지 m, 길까지 붙는 직선 포함)
+#  → 서버 RouteRecommender 가 직선 × 1.3 대신 쓴다 (숲길을 막은 뒤 실제 길이 직선의 1.7배쯤이라 코스 시간이 안 맞았음, 10/29)
+import heapq
+SERVER_DATA = os.path.join(HERE, '..', '..', 'server', 'KucaMemoServer', 'Data')
+bld = {b['id']: b for b in json.load(open(os.path.join(SERVER_DATA, 'buildings.json'), encoding='utf-8'))}
+spot_ids = [s['id'] for s in json.load(open(os.path.join(SERVER_DATA, 'spots.json'), encoding='utf-8')) if s['id'] in bld]
+nbr = defaultdict(list)
+for (i, j), w in zip(edges, weights):
+    d = ((mxy[i][0] - mxy[j][0]) ** 2 + (mxy[i][1] - mxy[j][1]) ** 2) ** 0.5
+    nbr[i].append((j, d, w))
+    nbr[j].append((i, d, w))
+spot_xy = [map_m(bld[i]['lon'], bld[i]['lat']) for i in spot_ids]
+snap = [min(range(len(ids)), key=lambda n: (mxy[n][0] - x) ** 2 + (mxy[n][1] - y) ** 2) for x, y in spot_xy]
+gap = [((mxy[n][0] - x) ** 2 + (mxy[n][1] - y) ** 2) ** 0.5 for n, (x, y) in zip(snap, spot_xy)]
+
+
+def walk_from(s):
+    """s 에서 모든 노드까지: 힘든 정도로 고른 길의 평지 길이"""
+    cost, flat, h = {s: 0.0}, {s: 0.0}, [(0.0, s)]
+    while h:
+        c, u = heapq.heappop(h)
+        if c > cost[u]:
+            continue
+        for v, d, w in nbr[u]:
+            if c + d * w < cost.get(v, 1e18):
+                cost[v], flat[v] = c + d * w, flat[u] + d
+                heapq.heappush(h, (cost[v], v))
+    return flat
+
+
+rows = []
+for a_, s in enumerate(snap):
+    flat = walk_from(s)
+    rows.append([0 if a_ == b_ else round(gap[a_] + flat[t] + gap[b_]) for b_, t in enumerate(snap)])
+json.dump({'about': '경희스팟 사이 실제 걷는 거리 (m). tools/route/build_walk_graph.py 가 앱 길 찾기 그래프(사용자 막힘 · 오르막 표시 반영)로 만든다. 고치지 말고 다시 만들 것',
+           'ids': spot_ids, 'meters': rows}, open(os.path.join(SERVER_DATA, 'walk_meters.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+print(f'walk_meters: {len(spot_ids)} spots')
+
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 json.dump({'lon': [n[0] for n in nodes], 'lat': [n[1] for n in nodes],
            'a': [e[0] for e in edges], 'b': [e[1] for e in edges], 'w': weights, 'rest': rest}, open(OUT, 'w'), separators=(',', ':'))

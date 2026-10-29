@@ -331,7 +331,7 @@ public class WishAndPlaceApiTests : IDisposable
         notices.Add("n3", "지난 공사", "10월 1일", "https://example.com/3", "끝남", "2026-09-20", [Library]);
         notices.AddEvent("n3", [Library], NoticeKinds.Closure, "2026-10-01", "2026-10-01");
 
-        JsonElement r = await Recommend(client, Body(null, candidates: [Pe, Theater, Library]));
+        JsonElement r = await Recommend(client, Body(null, minutes: 60, candidates: [Pe, Theater, Library]));   // 노천극장 ↔ 도서관이 실제 길로 멀어 둘 다 들르려면 60분
         string[] ids = StopIds(r);
         Assert.DoesNotContain(Pe, ids);
         Assert.Contains(Library, ids);   // 지난 통제는 상관없음
