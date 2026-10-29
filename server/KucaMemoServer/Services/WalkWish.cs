@@ -193,36 +193,52 @@ public static partial class WishRules
         ("사진", "photo"), ("인생샷", "photo"), ("조용", "quiet"), ("한적", "quiet"), ("공부", "quiet"), ("생각 정리", "quiet"), ("머리 식", "quiet"),
         ("밥", "food"), ("카페", "food"), ("커피", "food"), ("간식", "food"), ("안 가 본", "unvisited"), ("처음 가", "unvisited"), ("새로운 곳", "unvisited"),
         ("경희펫", "partner"), ("파트너", "partner"), ("운동", "exercise"), ("땀", "exercise"), ("만보", "exercise"), ("사람 없", "quiet"),
+        ("한산", "quiet"), ("고요", "quiet"), ("인적 드", "quiet"), ("아무도 없", "quiet"), ("사람 적", "quiet"),   // 2회차 3000문장 (10/29)
     ];
 
     /// <summary>바라는 모습: (찾을 말, 짧은 말). 뒤에 "빼고 · 말고 · 싫 · 피해" 가 붙으면 피할 것으로</summary>
     static readonly (string Word, string Tag)[] Traits =
     [
-        ("그늘", "그늘"), ("조용", "한산함"), ("한산", "한산함"), ("한적", "한산함"), ("사람 없", "한산함"), ("꽃", "꽃"), ("단풍", "단풍"), ("노을", "노을"),
+        ("그늘", "그늘"), ("조용", "한산함"), ("한산", "한산함"), ("한적", "한산함"), ("사람 없", "한산함"), ("고요", "한산함"), ("인적 드", "한산함"),
+        ("아무도 없", "한산함"), ("사람 적", "한산함"), ("꽃", "꽃"), ("단풍", "단풍"), ("노을", "노을"),
         ("야경", "야경"), ("잔디", "잔디"), ("숲", "숲"), ("나무", "나무"), ("벤치", "벤치"), ("앉아", "벤치"), ("온실", "온실"), ("호수", "물가"), ("연못", "물가"),
     ];
 
     /// <summary>원래 피하고 싶은 것 (말만 나와도 피할 것으로)</summary>
     static readonly (string Word, string Tag)[] Dislikes =
     [
-        ("오르막", "오르막"), ("언덕", "오르막"), ("계단", "계단"), ("사람 많", "붐빔"), ("붐비", "붐빔"), ("북적", "붐빔"),
-        ("공사", "공사"), ("시끄", "시끄러움"), ("어두", "어두움"), ("찻길", "찻길"), ("차 다니", "찻길"),
+        ("오르막", "오르막"), ("언덕", "오르막"), ("경사", "오르막"), ("가파", "오르막"), ("비탈", "오르막"), ("계단", "계단"), ("사람 많", "붐빔"), ("붐비", "붐빔"), ("북적", "붐빔"),
+        ("공사", "공사"), ("시끄", "시끄러움"), ("어두", "어두움"), ("찻길", "찻길"), ("차 다니", "찻길"), ("차다니", "찻길"),
     ];
 
-    // 숫자 앞 "-" · "마이너스" 는 음수 (15-20분 의 - 는 범위라 앞에 숫자가 있으면 보지 않는다). "1시간 30분" 의 30분은 시간 쪽에서 센다
-    [GeneratedRegex(@"(?<![\d.])(?<!시간\s*)(-|마이너스\s*)?(\d{1,4})\s*분")]
+    // 숫자 앞 "-" · "마이너스" 는 음수 (15-20분 의 - 는 범위라 앞에 숫자가 있으면 보지 않는다). "1시간 30분" · "한 시간 30분" 의 30분은 시간 쪽에서 센다.
+    // "점심시간 30분" · "쉬는 시간 10분" 의 시간은 걷는 시간이 아니라 그대로 센다. "2시 10분에" 는 시각이라 세지 않는다. 30min 도 분
+    [GeneratedRegex(@"(?<![\d.])(?<!(?:\d|한|두|세|네|다섯|반)\s*시간\s*)(?<!\d\s*시\s*)(-|마이너스\s*)?(\d{1,4})\s*(?:분|min)")]
     private static partial Regex MinutesWord();
 
-    [GeneratedRegex(@"(?<![\d.])(-|마이너스\s*)?(\d{1,3}(?:\.\d+)?)\s*시간(?:\s*(반|\d{1,2}\s*분))?")]
+    [GeneratedRegex(@"(?<![\d.])(-|마이너스\s*)?(\d{1,3}(?:\.\d+)?)\s*(?:시간|h(?:rs?|ours?)?(?![a-z]))(?:\s*(반|\d{1,2}\s*분))?")]
     private static partial Regex HoursWord();
 
     /// <summary>한자어 분 (십오 분 · 삼십분 · 사십오 분)</summary>
-    [GeneratedRegex(@"(?<![가-힣])(?<!시간\s*)([이삼사오육]?십[일이삼사오육칠팔구]?)\s*분")]
+    // 앞에 한글이 붙어도 "한이십분" · "그냥오십분" 은 센다 (그냥 "십분" 은 '충분히' 뜻일 수 있어 띄어 써야)
+    [GeneratedRegex(@"(?:(?<![가-힣])|(?=[이삼사오육]십))(?<!(?:\d|한|두|세|네|다섯|반)\s*시간\s*)(?<!\d\s*시\s*)([이삼사오육]?십[일이삼사오육칠팔구]?)\s*분")]
     private static partial Regex KoreanMinutesWord();
 
-    /// <summary>고유어 시간 (한 시간 · 반 시간 · 두 시간 · 한 시간 반)</summary>
-    [GeneratedRegex(@"(?<![가-힣])(한|반|두|세|네|다섯)\s*시간(\s*반)?")]
+    /// <summary>고유어 시간 (한 시간 · 반 시간 · 두 시간 · 한 시간 반 · 한 시간 10분). 두 · 세 · 다섯은 붙여 써도 (음두시간 · 고요한길세시간)</summary>
+    [GeneratedRegex(@"(?:(?<![가-힣])|(?=두|세|다섯))(한|반|두|세|네|다섯)\s*시간(\s*반|\s*(\d{1,2})\s*분)?")]
     private static partial Regex KoreanHoursWord();
+
+    /// <summary>하루 종일 · 반나절 걷기 (하루 종일 앉아 있었더니 · 반나절 공부 같은 말은 걷는 시간이 아니다)</summary>
+    [GeneratedRegex(@"(?:하루\s*종일|반나절)(?!\s*(?:앉|공부|과제|일하|누워|자|잠|있|집|수업|컴|게임))")]
+    private static partial Regex AllDayWord();
+
+    /// <summary>남을 해치거나 몰래 찍고 따라가려는 말은 코스를 주지 않는다</summary>
+    [GeneratedRegex(@"몰카|도촬|몰래 ?찍|미행|스토킹|패러 ?가|때리러|(?:여자|남자|사람) ?따라")]
+    private static partial Regex HarmWord();
+
+    /// <summary>산책이 아닌 다른 일을 해 달라는 말 (커피 사줘 · 사진 보정해줘 · 운동 루틴 짜줘)</summary>
+    [GeneratedRegex(@"(?:사|짜|보정해|만들어|보여|알려|해)\s*(?:줘|주세요|줄래|달라)")]
+    private static partial Regex OtherRequest();
 
     /// <summary>십오 → 15, 삼십 → 30</summary>
     static int Sino(string word)
@@ -247,22 +263,25 @@ public static partial class WishRules
     /// <summary>산책 이야기인지 알 수 있는 말 (조건이 하나도 없어도 이 말이 있으면 "알아서 골라 줘" 로 본다)</summary>
     // 낱말 속에 든 말은 산책 이야기가 아니다: 길고양이 · 코스요리 · 전화 걸어줘 · 돌아가신 · 아무 말 (3000문장 시험, 10/29)
     [GeneratedRegex(@"산책|걷|걸을|걸으|걸어(?! ?(?:줘|주|놔|둬|놓))|돌아다|돌아보|돌고|돌자|돌래|바퀴|바람 쐬|기분 전환|곳|데로|데 |가자|가고|알아서" +
-                    @"|아무(?:거나| ?데| ?곳)|(?:코스|길)(?=$|[^가-힣]|[로를을이가는은도만에좀나]|으로|짜|추천|위주)")]
+                    @"|[Ww]alk|들러|들르|아무(?:거나| ?데| ?곳)|(?:코스|길)(?=$|[^가-힣]|[로를을이가는은도만에좀나]|으로|짜|추천|위주|부탁)")]
     private static partial Regex WalkWord();
 
     /// <summary>걸으며 이야기하기: 조용하고 걷기 쉬운 곳 (산책 메이트 · 친구)</summary>
     static readonly string[] TalkWords = ["대화", "얘기", "이야기", "수다", "메이트", "같이 걷", "함께 걷", "친구랑", "어색하지"];
     public const string TalkTag = "대화하기 좋은 곳";
-    public static bool IsTalk(string? text) => text != null && TalkWords.Any(text.Contains);
+    public static bool IsTalk(string? text) => text != null && TalkWords.Any(w => text.Replace(" ", "").Contains(w.Replace(" ", "")));   // 함께걷고싶어 처럼 붙여 써도
 
-    [GeneratedRegex(@"^\s*(?:은|는|이|가|을|를|도|만)?\s*(?:빼고|빼 ?줘|빼 ?주|말고|싫|피해|피하|없는|없이|안 ?가|안 ?들|제외)")]
+    // 말구 · 패스 · 별로 · 노노 · ㄴㄴ · 건너뛰고 · 만 아니면 돼 · 됐어 · 안 갈래 · 쪽은 가지 말자 · 문장 끝 "빼" (2회차 3000문장, 10/29)
+    [GeneratedRegex(@"^\s*(?:은|는|이|가|을|를|도|만)?\s*(?:빼고|빼 ?줘|빼 ?주|빼(?=$|[^가-힣])|말고|말구|싫|피해|피하|없는|없이|안 ?가|안 ?갈|안 ?들|제외|패스|별로|노노|ㄴㄴ|건너뛰|아니면|됐|가지 ?말)")]
     private static partial Regex NegationAfter();
 
     /// <summary>말 찾기에서만 쓰는 줄임말 (공지 분류에는 쓰지 않는다: "중도 휴학" 같은 말이 도서관에 붙지 않게)</summary>
     static readonly Dictionary<string, string[]> Nicknames = new()
     {
-        ["중앙도서관"] = ["중도"], ["학생회관"] = ["학관"], ["노천극장"] = ["노천"], ["공학관"] = ["공대"], ["멀티미디어교육관"] = ["멀티관"],
+        ["중앙도서관"] = ["중도"], ["학생회관"] = ["학관"], ["노천극장"] = ["노천"], ["공학관"] = ["공대"],
         ["생명과학대학"] = ["생명대"], ["외국어대학관"] = ["외대"], ["제2기숙사 남자동"] = ["기숙사"],
+        ["국제대학"] = ["국제대"], ["예술디자인대학"] = ["예디"], ["글로벌관"] = ["글로벌"], ["원예생물공학온실"] = ["온실"],
+        ["멀티미디어교육관"] = ["멀티관", "멀티"],
     };
 
     static IEnumerable<string> NamesOf(Spot s) => s.Aliases.Prepend(s.Name).Concat(Nicknames.GetValueOrDefault(s.Name, [])).Where(n => n.Length >= 2);
@@ -281,8 +300,9 @@ public static partial class WishRules
                 + (x.Groups[3].Value is { Length: > 0 } m ? m == "반" ? 30 : int.Parse(m.TrimEnd('분', ' ')) : 0))))
             .Concat(KoreanMinutesWord().Matches(text).Select(x => (double)Sino(x.Groups[1].Value)))
             .Concat(KoreanHoursWord().Matches(text).Select(x => x.Groups[1].Value == "반" ? 30.0
-                : (Array.IndexOf(["한", "두", "세", "네", "다섯"], x.Groups[1].Value) + 1) * 60 + (x.Groups[2].Success ? 30 : 0)))
-            .Concat(text.Contains("하루 종일") ? [240.0] : Array.Empty<double>()).ToList();
+                : (Array.IndexOf(["한", "두", "세", "네", "다섯"], x.Groups[1].Value) + 1) * 60
+                  + (x.Groups[3].Success ? int.Parse(x.Groups[3].Value) : x.Groups[2].Success ? 30 : 0)))
+            .Concat(AllDayWord().IsMatch(text) ? [240.0] : Array.Empty<double>()).ToList();
         var said = raw.Where(m => m > 0).Select(m => (int)Math.Ceiling(m)).Distinct().ToList();
         // "15-20분" · "20~25분" 처럼 10분 안의 범위는 하나로 (긴 쪽)
         if (said.Count > 1 && said.Max() - said.Min() <= 10)
@@ -301,8 +321,10 @@ public static partial class WishRules
         bool afterMeal = new[] { "밥 먹고", "밥먹고", "식후", "점심 먹고", "저녁 먹고", "소화" }.Any(text.Contains);
         if (afterMeal && !text.Contains("카페") && !text.Contains("커피") && !text.Contains("간식"))
             tastes.Remove("food");   // "밥 먹고 걷기" 는 식후 산책이지 밥집을 찾는 게 아니다
-        bool slow = new[] { "천천히", "느긋", "여유롭", "다리 아파", "다리가 아파", "아파서", "살살", "불편", "피곤" }.Any(text.Contains);
-        bool fast = new[] { "빠르게", "빨리", "속보", "후다닥" }.Any(text.Contains);
+        // 아프거나 다친 몸은 천천히 + 오르막 빼기 (휠체어 · 목발은 계단도)
+        bool sore = new[] { "다리 아파", "다리가 아파", "아파서", "살살", "불편", "피곤", "다쳐", "휠체어", "목발", "깁스" }.Any(text.Contains);
+        bool slow = sore || new[] { "천천히", "느긋", "여유롭", "여유있", "여유 있", "느릿", "느리게", "느린", "쉬엄쉬엄" }.Any(text.Contains);
+        bool fast = new[] { "빠르게", "빨리", "속보", "후다닥", "빠른 걸음", "빠른걸음", "파워워킹", "파워 워킹" }.Any(text.Contains);
         string? pace = slow ? "slow" : fast ? "fast" : null;
 
         var want = new List<string>();
@@ -321,8 +343,10 @@ public static partial class WishRules
                 avoid.Add(tag);
             }
         bool talk = IsTalk(text);
-        if (slow && !text.Contains("천천히") && !text.Contains("느긋") && !text.Contains("여유롭") || talk)
-            avoid.Add("오르막");   // 다리 아파 · 불편 · 피곤, 이야기하며 걷기
+        if (sore || talk)
+            avoid.Add("오르막");   // 다리 아파 · 불편 · 피곤 · 다쳐, 이야기하며 걷기
+        if (text.Contains("휠체어") || text.Contains("목발"))
+            avoid.Add("계단");
         if (talk)
         {
             want.Add(TalkTag);
@@ -347,6 +371,8 @@ public static partial class WishRules
             conflict ??= BadMinutes;
         if (slow && fast)
             conflict ??= "빠르게와 천천히를 함께 말했어요. 하나만 골라 다시 입력해 주세요";
+        if (HarmWord().IsMatch(text))
+            conflict ??= AskAgain;
         if (said.Count > 1)
             conflict ??= $"걷는 시간이 여러 개예요 ({string.Join(" · ", said.Select(m => m + "분"))}). 하나만 골라 다시 입력해 주세요";
         want = want.Distinct().Except(avoid).Take(WishInterpreter.MaxWords).ToList();
@@ -358,8 +384,12 @@ public static partial class WishRules
         // 아무 조건도 못 찾았고 산책 이야기인지도 알 수 없으면 (배고파 · ㅋㅋㅋ · asdf) 다시 묻는다
         bool nothing = minutes == null && tastes.Count == 0 && indoor == null && !afterMeal && pace == null && want.Count == 0 && avoid.Count == 0
                        && wantPlaces.Count == 0 && avoidPlaces.Count == 0 && priorities with { Weather = WalkPriorities.Default.Weather } == WalkPriorities.FromChoices([], false);
+        // 취향 낱말만 있고 다른 일을 해 달라는 말 (커피 사줘 · 사진 보정해줘) 은 산책 바람이 아니다
+        bool otherErrand = minutes == null && indoor == null && !afterMeal && pace == null && want.Count == 0 && avoid.Count == 0
+                           && wantPlaces.Count == 0 && avoidPlaces.Count == 0 && !WalkWord().IsMatch(text) && OtherRequest().IsMatch(text);
         string? unclear = conflict
             ?? (nothing && restricted.Count > 0 ? $"{restricted[0]}{Josa(restricted[0], "은", "는")} 출입이 제한된 곳이라 코스에 넣을 수 없어요. 다른 곳으로 다시 입력해 주세요" : null)
+            ?? (otherErrand ? AskAgain : null)
             ?? (nothing && (!Hangul().IsMatch(text) || text.Contains("http") || !WalkWord().IsMatch(text) && !text.TrimEnd().EndsWith('데')) ? AskAgain : null);
         return Make(original, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces.Distinct().Except(avoidPlaces).ToList(), avoidPlaces, "fallback", spots,
                     null, priorities) with { Unclear = unclear };
@@ -412,9 +442,9 @@ public static partial class WishRules
     {
         if (at < 0)
             return false;
-        // "공사 중인 곳 빼고" 처럼 사이에 몇 글자가 끼는 경우까지 (8글자 안)
+        // "공사 중인 곳 빼고" · "은 이미 가봤으니까 빼줘" 처럼 사이에 몇 글자가 끼는 경우까지 (12글자 안)
         string after = text[(at + word.Length)..];
-        for (int skip = 0; skip <= Math.Min(8, after.Length); skip++)
+        for (int skip = 0; skip <= Math.Min(12, after.Length); skip++)
         {
             // 같은 말이 다시 나오면 그 뒤 부정어는 다음 것이다 ("그늘 좋은데 그늘 싫어")
             if (keys.Any(k => k != word && !word.Contains(k) && after[..skip].Contains(k)) || after[..skip].Contains(word))

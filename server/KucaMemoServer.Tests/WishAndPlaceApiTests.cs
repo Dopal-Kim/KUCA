@@ -591,6 +591,64 @@ public class WishAndPlaceApiTests : IDisposable
         Assert.Contains("다시 입력해 주세요", (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString());
     }
 
+    // ---------- 무작위 문장 3000개 2회차 (seed 4100, 10/29) ----------
+
+    [Theory]
+    [InlineData("점심시간 30분 걷자", "30분")]                       // 시간 앞 낱말(점심시간 · 쉬는 시간)은 걷는 시간이 아니다
+    [InlineData("쉬는 시간 10분 동안 산책", "10분")]
+    [InlineData("2시 10분에 30분 걷기", "30분")]                     // 2시 10분은 시각
+    [InlineData("30min 산책", "30분")]
+    [InlineData("1h 걷자", "60분")]
+    [InlineData("45 mins 걷기", "45분")]
+    [InlineData("1.5h walk 하자", "1시간 30분 중 코스는 1시간")]
+    [InlineData("한 시간 10분 산책", "1시간 10분 중 코스는 1시간")]
+    [InlineData("반나절 걷고 싶어", "4시간 중 코스는 1시간")]
+    [InlineData("그냥이십오분 걷자", "25분")]
+    [InlineData("음두시간산책", "2시간 중 코스는 1시간")]
+    [InlineData("하루 종일 앉아 있었더니 찌뿌둥해서 30분 걷기", "30분")]   // 하루 종일 앉아 → 걷는 시간 아님
+    [InlineData("도서관 말구 걷자", "중앙도서관 피하기")]
+    [InlineData("도서관은 패스 산책", "중앙도서관 피하기")]
+    [InlineData("도서관 안 갈래 산책", "중앙도서관 피하기")]
+    [InlineData("도서관 쪽은 가지 말자 걷기", "중앙도서관 피하기")]
+    [InlineData("도서관만 아니면 돼 산책", "중앙도서관 피하기")]
+    [InlineData("천문대는 이미 가봤으니까 빼줘 걷자", "천문대 피하기")]
+    [InlineData("경사 없는 길로 걷자", "오르막 피하기")]
+    [InlineData("깁스해서 걷기", "천천히")]
+    [InlineData("느릿느릿 산책", "천천히")]
+    [InlineData("여유있게 walk 하자", "천천히")]
+    [InlineData("파워워킹으로 걷기", "빠르게")]
+    [InlineData("인적 드문 곳", "조용한 곳")]
+    [InlineData("예디 들러줘", "예술디자인대학 들르기")]
+    [InlineData("멀티 앞에서 쉬고 싶어", "멀티미디어교육관 들르기")]
+    public void 말_찾기가_2회차에_놓치던_시간_부정어_빠르기_별명을_알아듣는다(string wish, string part)
+    {
+        WalkWish w = WishRules.Parse(wish, new SpotStore(new TestEnv()));
+        Assert.Null(w.Unclear);
+        Assert.Contains(part, w.Summary);
+    }
+
+    [Fact]
+    public void 다친_몸은_오르막을_빼고_휠체어는_계단도_빼며_붙여_쓴_메이트도_안다()
+    {
+        SpotStore spots = new(new TestEnv());
+        Assert.Contains("오르막", WishRules.Parse("발목 다쳐서 산책", spots).Avoid);
+        Assert.Equal(["오르막", "계단"], WishRules.Parse("휠체어라서 산책", spots).Avoid.Intersect(["오르막", "계단"]));
+        Assert.True(WishRules.IsTalk("후배랑함께걷고싶어"));
+    }
+
+    [Theory]
+    [InlineData("빠르게 느리게")]
+    [InlineData("도서관 꼭 가고 도서관은 빼")]
+    [InlineData("커피 사줘")]
+    [InlineData("사진 보정해줘")]
+    [InlineData("몰카 찍기 좋은 곳")]
+    [InlineData("누구 패러 가자")]
+    public async Task 코스가_나오던_모순_심부름_해로운_말은_422(string wish)
+    {
+        var res = await Server().CreateClient().PostAsJsonAsync("/api/recommendations", Body(wish));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+    }
+
     sealed class TestEnv : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
     {
         public string ContentRootPath { get; set; } = FindServerRoot();
