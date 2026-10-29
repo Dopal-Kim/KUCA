@@ -18,6 +18,24 @@ public class WeatherFx : MonoBehaviour
     /// <summary>UI 캡처처럼 화면이 매번 같아야 할 때 끈다</summary>
     public static bool Paused;
 
+    const string EnabledKey = "fx_weather";
+
+    /// <summary>설정의 "날씨 · 계절 애니메이션" (기본 켜짐). 꺼도 지도 색 · 빛 · 젖은 바닥 · 눈 덮임은 그대로</summary>
+    public static bool Enabled
+    {
+        get => fxOn ??= PlayerPrefs.GetInt(EnabledKey, 1) == 1;   // 매 프레임 읽으니 한 번만 저장소에서
+        set
+        {
+            fxOn = value;
+            PlayerPrefs.SetInt(EnabledKey, value ? 1 : 0);
+            PlayerPrefs.Save();
+        }
+    }
+    static bool? fxOn;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => fxOn = null;   // 캡처 전용 저장소로 바뀌어도 다시 읽게
+
     // 그림 칸 (가로 4칸 아틀라스, 전부 흰색 + 알파, 색은 정점 색으로)
     const int Streak = 0, Dot = 1, Ring = 2, Petal = 3;
 
@@ -73,7 +91,7 @@ public class WeatherFx : MonoBehaviour
 
     static Kind Want()
     {
-        if (Paused) return Kind.None;
+        if (Paused || !Enabled) return Kind.None;
         switch (KeyArtLook.ViewWeather)
         {
             case SpawnConditions.Weather.Rain: return Kind.Rain;

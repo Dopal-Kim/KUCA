@@ -938,6 +938,13 @@ public class GameHUD : MonoBehaviour
                 : o.Value == SpawnConditions.Weather.Snow ? (SpawnConditions.Weather?)null : o.Value + 1;
             UIKit.SetLabel(weather, WeatherLabel());
         });
+        // 비 · 눈 · 꽃잎 · 낙엽이 내리는 애니메이션 (지도 색 · 빛은 그대로)
+        Button weatherFx = null;
+        weatherFx = UIKit.ListRow(screenGroup, WeatherFxLabel(), chevron: false, onClick: () =>
+        {
+            WeatherFx.Enabled = !WeatherFx.Enabled;
+            UIKit.SetLabel(weatherFx, WeatherFxLabel());
+        });
 
         RectTransform accountGroup = UIKit.ListGroup(settingsList, "계정");
         UIKit.ListRow(accountGroup, "개인정보 안내", () => { CloseSettings(); LoginScreen.ShowPrivacy(); });
@@ -987,6 +994,8 @@ public class GameHUD : MonoBehaviour
     static string SeasonLabel() => KucaTheme.Override.HasValue
         ? $"계절 (지도 · 강조색): {KucaTheme.Set.name}"
         : $"계절 (지도 · 강조색): 자동 (지금 {KucaTheme.Set.name})";
+
+    static string WeatherFxLabel() => $"비 · 눈 · 꽃잎 애니메이션: {(WeatherFx.Enabled ? "켜짐" : "꺼짐")}";
 
     static readonly string[] WeatherNames = { "모름", "맑음", "흐림", "비", "눈" };
 
