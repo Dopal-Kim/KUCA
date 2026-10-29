@@ -1,11 +1,15 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// 지도 위 날씨 · 계절 화면 효과 (S1): 비 줄기 · 눈송이 · 봄 꽃잎 · 가을 낙엽이 내린다.
-/// - 날씨는 KeyArtLook.ViewWeather (설정의 "날씨 효과" → 기상청), 계절은 KucaTheme.Current (설정의 계절 → 날짜)
-/// - 지도 바로 위, 앱 화면(HUD 10 이상) 아래 캔버스(5)에 반투명 그림 두 겹을 흘려보낸다. 터치는 막지 않는다
-/// - 셰이더 · 머티리얼 에셋 없이 기본 UI 로 그려 빌드에서 빠질 걱정이 없다
+/// 지도 위 날씨 · 계절 화면 효과 (S1): 비 · 눈 · 봄 꽃잎 · 가을 낙엽이 하나씩 따로 내린다.
+/// - 비: 살짝 기운 가는 빗줄기가 빠르게 떨어지고, 바닥에 닿으면 작은 물결 동그라미가 퍼졌다 사라진다
+/// - 눈: 크기 · 속도가 다른 눈송이가 좌우로 흔들리며 천천히 (큰 송이 = 가까이 = 조금 빠르게)
+/// - 봄 꽃잎 · 가을 낙엽: 몇 장만 빙글빙글 돌며
+/// - 번잡하지 않게 개수를 적게 두고, 전부 메시 하나(그리기 한 번)로 그린다
+/// - 날씨는 KeyArtLook.ViewWeather (설정의 "지도 날씨" → 기상청), 계절은 KucaTheme.Current (설정의 계절 → 날짜)
+/// - 지도 바로 위, 앱 화면(HUD 10 이상) 아래 캔버스(5). 터치는 막지 않는다. 셰이더 · 머티리얼 에셋 없이 기본 UI 로 그린다
 /// </summary>
 public class WeatherFx : MonoBehaviour
 {
@@ -14,19 +18,24 @@ public class WeatherFx : MonoBehaviour
     /// <summary>UI 캡처처럼 화면이 매번 같아야 할 때 끈다</summary>
     public static bool Paused;
 
-    struct Layer
+    // 그림 칸 (가로 4칸 아틀라스, 전부 흰색 + 알파, 색은 정점 색으로)
+    const int Streak = 0, Dot = 1, Ring = 2, Petal = 3;
+
+    struct Bit
     {
-        public RawImage img;
-        public Vector2 offset;
-        public float scale;    // 그림 1 px 이 화면 몇 px 인지
-        public Vector2 speed;  // 초당 그림 크기 배수
+        public Vector2 pos, vel, size;
+        public float rot, spin, phase, sway, alpha, life, age;
+        public int cell;
+        public Color color;
     }
 
-    Layer near, far;
+    readonly List<Bit> bits = new List<Bit>();
+    readonly List<Bit> ripples = new List<Bit>();
+    FxMesh mesh;
     Image tint;
     Kind kind = Kind.None;
     bool built;
-    Texture2D rainTex, snowTex, petalTex, leafTex;
+    readonly System.Random rng = new System.Random(7);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -45,17 +54,13 @@ public class WeatherFx : MonoBehaviour
         tint = new GameObject("Tint", typeof(RectTransform), typeof(Image)).GetComponent<Image>();
         Stretch(tint.rectTransform, canvas.transform);
         tint.raycastTarget = false;
-        far = MakeLayer(canvas.transform, "Far");
-        near = MakeLayer(canvas.transform, "Near");
+        mesh = new GameObject("Bits", typeof(RectTransform), typeof(CanvasRenderer), typeof(FxMesh)).GetComponent<FxMesh>();
+        Stretch(mesh.rectTransform, canvas.transform);
+        mesh.raycastTarget = false;
+        mesh.atlas = Atlas();
+        mesh.bits = bits;
+        mesh.ripples = ripples;
         Show(Kind.None);
-    }
-
-    static Layer MakeLayer(Transform parent, string name)
-    {
-        var img = new GameObject(name, typeof(RectTransform), typeof(RawImage)).GetComponent<RawImage>();
-        Stretch(img.rectTransform, parent);
-        img.raycastTarget = false;
-        return new Layer { img = img };
     }
 
     static void Stretch(RectTransform r, Transform parent)
@@ -92,132 +97,133 @@ public class WeatherFx : MonoBehaviour
         }
         if (want != kind) Show(want);
         if (kind == Kind.None) return;
-        float dt = Time.unscaledDeltaTime;
-        float sway = Mathf.Sin(Time.unscaledTime * 0.7f) * 0.25f;   // 눈 · 꽃잎 · 낙엽이 좌우로 흔들림
-        Move(ref near, dt, kind == Kind.Rain ? 0f : sway);
-        Move(ref far, dt, kind == Kind.Rain ? 0f : -sway * 0.6f);
+        Step(Mathf.Min(Time.unscaledDeltaTime, 0.1f));
+        mesh.SetVerticesDirty();
     }
 
-    static void Move(ref Layer l, float dt, float sway)
-    {
-        if (l.img.texture == null) return;
-        float w = Screen.width / (l.img.texture.width * l.scale), h = Screen.height / (l.img.texture.height * l.scale);
-        l.offset += new Vector2(l.speed.x + l.speed.y * sway, l.speed.y) * dt;
-        l.offset.x = Mathf.Repeat(l.offset.x, 1f);
-        l.offset.y = Mathf.Repeat(l.offset.y, 1f);
-        l.img.uvRect = new Rect(l.offset.x, l.offset.y, w, h);
-    }
+    float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
+
+    Vector2 Size => mesh.rectTransform.rect.size;   // 캔버스 단위 (기준 1080 × 1920)
 
     void Show(Kind k)
     {
         kind = k;
-        Texture2D tex = null;
-        Color tintColor = Color.clear;
-        switch (k)
+        bits.Clear();
+        ripples.Clear();
+        int count = k == Kind.Rain ? 46 : k == Kind.Snow ? 55 : k == Kind.Petals ? 18 : k == Kind.Leaves ? 15 : 0;
+        for (int i = 0; i < count; i++)
+            bits.Add(Spawn(true));
+        tint.color = k == Kind.Rain ? new Color(0.30f, 0.38f, 0.48f, 0.10f)   // 비 오는 날 잿빛 공기
+                   : k == Kind.Snow ? new Color(0.92f, 0.95f, 1f, 0.07f) : Color.clear;
+        tint.enabled = tint.color.a > 0f;
+        mesh.enabled = k != Kind.None;
+    }
+
+    /// <summary>새 조각 하나. anywhere = 처음 켤 때 화면 전체에 흩어 놓기 (아니면 화면 위에서 시작)</summary>
+    Bit Spawn(bool anywhere)
+    {
+        Vector2 s = Size;
+        var b = new Bit { color = Color.white, life = 1f };
+        float x = R(-0.1f, 1.1f) * s.x;
+        float y = anywhere ? R(0f, 1f) * s.y : s.y + R(10f, 120f);
+        switch (kind)
         {
             case Kind.Rain:
-                tex = rainTex ??= Streaks(48, 7);
-                Set(ref near, tex, 2.4f, new Vector2(-1.9f * 0.18f, 1.9f), 0.55f);   // 줄기 기울기(0.18)와 같은 방향으로 떨어짐
-                Set(ref far, tex, 1.4f, new Vector2(-1.3f * 0.18f, 1.3f), 0.35f);
-                tintColor = new Color(0.30f, 0.38f, 0.48f, 0.10f);   // 비 오는 날 잿빛 공기
+                float speed = R(1500f, 2100f);
+                b.vel = new Vector2(speed * 0.18f, -speed);   // 살짝 기울게 (오른쪽 아래로)
+                b.size = new Vector2(R(3.5f, 5.5f), R(52f, 84f));
+                b.rot = Mathf.Atan2(b.vel.x, -b.vel.y) * Mathf.Rad2Deg;   // 줄기를 떨어지는 방향으로 눕힘 (Quad 는 반시계 회전)
+                b.alpha = R(0.32f, 0.55f);
+                b.cell = Streak;
+                b.color = new Color(0.90f, 0.95f, 1f);
+                b.life = R(0.15f, 0.9f) * s.y;   // 이 높이에서 바닥에 닿음 (지도는 비스듬히 보이니 화면 곳곳)
                 break;
             case Kind.Snow:
-                tex = snowTex ??= Dots(60, 11, new Color(1f, 1f, 1f), 1.4f, 3.4f, 1f);
-                Set(ref near, tex, 2.2f, new Vector2(0.02f, 0.10f), 0.95f);
-                Set(ref far, tex, 1.3f, new Vector2(0.01f, 0.07f), 0.6f);
-                tintColor = new Color(0.92f, 0.95f, 1f, 0.07f);
+                float d = R(0f, 1f);   // 0 먼 송이 · 1 가까운 송이
+                float r = Mathf.Lerp(9f, 24f, d * d);
+                b.size = new Vector2(r, r);
+                b.vel = new Vector2(R(-12f, 12f), -Mathf.Lerp(55f, 150f, d));
+                b.sway = Mathf.Lerp(14f, 38f, d);
+                b.phase = R(0f, 6.28f);
+                b.spin = R(0.5f, 1.2f);   // 흔들림 빠르기
+                b.alpha = Mathf.Lerp(0.62f, 0.95f, d);
+                b.cell = Dot;
                 break;
-            case Kind.Petals:
-                tex = petalTex ??= Dots(16, 23, new Color(1f, 0.78f, 0.86f), 2.2f, 3.2f, 0.55f);
-                Set(ref near, tex, 2.6f, new Vector2(0.05f, 0.06f), 0.85f);
-                Set(ref far, tex, 1.6f, new Vector2(0.03f, 0.045f), 0.5f);
-                break;
-            case Kind.Leaves:
-                tex = leafTex ??= Dots(12, 31, new Color(0.88f, 0.45f, 0.14f), 2.6f, 3.6f, 0.6f);
-                Set(ref near, tex, 2.6f, new Vector2(0.04f, 0.07f), 0.85f);
-                Set(ref far, tex, 1.6f, new Vector2(0.025f, 0.05f), 0.5f);
+            default:   // 꽃잎 · 낙엽
+                bool petal = kind == Kind.Petals;
+                b.size = petal ? new Vector2(R(20f, 28f), R(12f, 16f)) : new Vector2(R(24f, 34f), R(14f, 19f));
+                b.vel = new Vector2(R(12f, 40f), -R(50f, 95f));
+                b.sway = R(26f, 48f);
+                b.phase = R(0f, 6.28f);
+                b.spin = R(0.6f, 1.1f);
+                b.rot = R(0f, 360f);
+                b.alpha = R(0.75f, 0.95f);
+                b.cell = Petal;
+                Color[] pal = petal
+                    ? new[] { new Color(1f, 0.80f, 0.87f), new Color(1f, 0.90f, 0.93f), new Color(0.98f, 0.70f, 0.80f) }
+                    : new[] { new Color(0.90f, 0.46f, 0.14f), new Color(0.80f, 0.26f, 0.10f), new Color(0.88f, 0.66f, 0.18f), new Color(0.58f, 0.36f, 0.20f) };
+                b.color = pal[rng.Next(pal.Length)];
                 break;
         }
-        near.img.enabled = far.img.enabled = tex != null;
-        tint.color = tintColor;
-        tint.enabled = tintColor.a > 0f;
+        b.pos = new Vector2(x, y);
+        return b;
     }
 
-    static void Set(ref Layer l, Texture2D tex, float scale, Vector2 speed, float alpha)
+    void Step(float dt)
     {
-        l.img.texture = tex;
-        l.scale = scale;
-        l.speed = speed;
-        l.img.color = new Color(1f, 1f, 1f, alpha);
-    }
-
-    // ---------- 그림 (이음새 없이 반복되는 256 px) ----------
-
-    const int N = 256;
-
-    /// <summary>빈 칸도 효과 색(투명)으로 채운다: 검정(0,0,0,0)이면 확대 · 축소할 때 가장자리에 검은 테가 번짐</summary>
-    static Texture2D NewTex(string name, Color c)
-    {
-        var t = new Texture2D(N, N, TextureFormat.RGBA32, false) { name = name, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
-        var px = new Color32[N * N];
-        System.Array.Fill(px, (Color32)new Color(c.r, c.g, c.b, 0f));
-        t.SetPixels32(px);
-        return t;
-    }
-
-    static void Blend(Color32[] px, int x, int y, Color c, float a)
-    {
-        int i = ((y % N + N) % N) * N + (x % N + N) % N;
-        Color32 o = px[i];
-        float na = Mathf.Max(o.a / 255f, a);
-        px[i] = new Color(c.r, c.g, c.b, na);
-    }
-
-    /// <summary>비 줄기: 살짝 기울어진 2 px 선, 아래 끝이 진함 (1 px 은 밝은 바닥 위에서 안 보였음)</summary>
-    static Texture2D Streaks(int count, int seed)
-    {
-        var rng = new System.Random(seed);
-        var c = new Color(0.92f, 0.96f, 1f);
-        Texture2D t = NewTex("Rain", c);
-        Color32[] px = t.GetPixels32();
-        for (int k = 0; k < count; k++)
+        Vector2 s = Size;
+        for (int i = 0; i < bits.Count; i++)
         {
-            int x0 = rng.Next(N), y0 = rng.Next(N), len = 16 + rng.Next(16);
-            for (int j = 0; j < len; j++)
+            Bit b = bits[i];
+            b.age += dt;
+            if (kind == Kind.Rain)
             {
-                float u = j / (float)len, a = 0.2f + 0.65f * u;
-                int x = x0 + Mathf.RoundToInt(j * 0.18f);
-                Blend(px, x, y0 - j, c, a);
-                Blend(px, x + 1, y0 - j, c, a * 0.35f);
+                b.pos += b.vel * dt;
+                if (b.pos.y < b.life)
+                {
+                    if (ripples.Count < 12 && rng.NextDouble() < 0.4)   // 닿은 자리에 물결 (가끔만)
+                        ripples.Add(new Bit { pos = b.pos, cell = Ring, life = R(0.45f, 0.7f), size = new Vector2(R(26f, 40f), 0f), color = new Color(0.92f, 0.96f, 1f), alpha = 0.45f });
+                    b = Spawn(false);
+                }
             }
+            else
+            {
+                b.pos.y += b.vel.y * dt;
+                b.pos.x += (b.vel.x + Mathf.Cos(b.age * b.spin * 2f + b.phase) * b.sway) * dt;
+                if (kind != Kind.Snow) b.rot += Mathf.Sin(b.age * b.spin * 1.6f + b.phase) * 140f * dt;   // 빙글빙글
+                if (b.pos.y < -40f || b.pos.x > s.x + 60f || b.pos.x < -60f) b = Spawn(false);
+            }
+            bits[i] = b;
         }
-        t.SetPixels32(px);
-        t.Apply(false, true);
-        return t;
+        for (int i = ripples.Count - 1; i >= 0; i--)
+        {
+            Bit r = ripples[i];
+            r.age += dt;
+            if (r.age >= r.life) ripples.RemoveAt(i);
+            else ripples[i] = r;
+        }
     }
 
-    /// <summary>눈송이 · 꽃잎 · 낙엽: 부드러운 점 (squash &lt; 1 이면 납작한 잎 모양)</summary>
-    static Texture2D Dots(int count, int seed, Color c, float rMin, float rMax, float squash)
+    // ---------- 그림 (가로 4칸 64 px: 빗줄기 · 둥근 점 · 물결 고리 · 잎) ----------
+
+    static Texture2D Atlas()
     {
-        var rng = new System.Random(seed);
-        Texture2D t = NewTex("Fx" + seed, c);
-        Color32[] px = t.GetPixels32();
-        for (int k = 0; k < count; k++)
-        {
-            int cx = rng.Next(N), cy = rng.Next(N);
-            float r = rMin + (float)rng.NextDouble() * (rMax - rMin);
-            float ang = (float)rng.NextDouble() * Mathf.PI, ca = Mathf.Cos(ang), sa = Mathf.Sin(ang);
-            float shade = 0.85f + 0.3f * (float)rng.NextDouble();
-            var col = new Color(Mathf.Min(1f, c.r * shade), Mathf.Min(1f, c.g * shade), Mathf.Min(1f, c.b * shade));
-            int R = Mathf.CeilToInt(r) + 1;
-            for (int dy = -R; dy <= R; dy++)
-                for (int dx = -R; dx <= R; dx++)
-                {
-                    float u = (dx * ca + dy * sa) / r, v = (-dx * sa + dy * ca) / (r * squash);
-                    float d = u * u + v * v;
-                    if (d < 1f) Blend(px, cx + dx, cy + dy, col, 0.9f * (1f - d * d));
-                }
-        }
+        const int C = 64, W = C * 4;
+        var t = new Texture2D(W, C, TextureFormat.RGBA32, false) { name = "WeatherFx", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+        var px = new Color32[W * C];
+        var a = new float[4];
+        for (int y = 0; y < C; y++)
+            for (int x = 0; x < C; x++)
+            {
+                float u = (x + 0.5f) / C * 2f - 1f, v = (y + 0.5f) / C * 2f - 1f, d = Mathf.Sqrt(u * u + v * v);
+                a[Streak] = Mathf.Exp(-u * u / 0.08f) * Mathf.Clamp01((1f - v) * 0.5f) * Mathf.Clamp01((1f - Mathf.Abs(v)) * 6f);   // 아래(떨어지는 쪽) 끝이 진함
+                a[Dot] = Mathf.Pow(Mathf.Clamp01(1f - d * d), 2f);
+                a[Ring] = Mathf.Exp(-Mathf.Pow((d - 0.75f) / 0.09f, 2f));
+                float pd = u * u + v * v / 0.36f;
+                a[Petal] = Mathf.Clamp01(1f - pd) * Mathf.Clamp01(1.2f - pd * 0.4f);
+                for (int c = 0; c < 4; c++)
+                    px[y * W + c * C + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(a[c]));   // 빈 칸도 흰색(투명): 가장자리 검은 테 방지
+            }
         t.SetPixels32(px);
         t.Apply(false, true);
         return t;
@@ -225,7 +231,46 @@ public class WeatherFx : MonoBehaviour
 
     void OnDestroy()
     {
-        foreach (Texture2D t in new[] { rainTex, snowTex, petalTex, leafTex })
-            if (t != null) Destroy(t);
+        if (mesh != null && mesh.atlas != null) Destroy(mesh.atlas);
+    }
+
+    /// <summary>조각 전부를 사각형 메시 하나로</summary>
+    class FxMesh : MaskableGraphic
+    {
+        public Texture2D atlas;
+        public List<Bit> bits, ripples;
+
+        public override Texture mainTexture => atlas != null ? atlas : s_WhiteTexture;
+
+        protected override void OnPopulateMesh(VertexHelper vh)
+        {
+            vh.Clear();
+            if (bits == null) return;
+            Vector2 origin = rectTransform.rect.min;
+            foreach (Bit b in bits)
+                Quad(vh, origin + b.pos, b.size, b.rot, b.cell, b.color, b.alpha);
+            foreach (Bit r in ripples)
+            {
+                float t = r.age / r.life;   // 0 → 1: 커지며 옅어짐
+                float w = r.size.x * (0.3f + 0.7f * t);
+                Quad(vh, origin + r.pos, new Vector2(w, w * 0.45f), 0f, Ring, r.color, r.alpha * (1f - t));   // 땅에 눕힌 납작한 고리
+            }
+        }
+
+        static void Quad(VertexHelper vh, Vector2 c, Vector2 size, float rotDeg, int cell, Color col, float alpha)
+        {
+            const float inset = 0.5f / 256f;
+            float u0 = cell * 0.25f + inset, u1 = (cell + 1) * 0.25f - inset;
+            float a = rotDeg * Mathf.Deg2Rad, ca = Mathf.Cos(a), sa = Mathf.Sin(a);
+            Vector2 ax = new Vector2(ca, sa) * (size.x * 0.5f), ay = new Vector2(-sa, ca) * (size.y * 0.5f);   // 반시계 rotDeg 회전
+            col.a = alpha;
+            int i = vh.currentVertCount;
+            vh.AddVert(c - ax - ay, col, new Vector2(u0, 0f));
+            vh.AddVert(c - ax + ay, col, new Vector2(u0, 1f));
+            vh.AddVert(c + ax + ay, col, new Vector2(u1, 1f));
+            vh.AddVert(c + ax - ay, col, new Vector2(u1, 0f));
+            vh.AddTriangle(i, i + 1, i + 2);
+            vh.AddTriangle(i + 2, i + 3, i);
+        }
     }
 }
