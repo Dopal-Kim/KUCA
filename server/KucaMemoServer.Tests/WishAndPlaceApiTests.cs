@@ -92,7 +92,7 @@ public class WishAndPlaceApiTests : IDisposable
     {
         SpotStore spots = new(new TestEnv());
         WalkWish w = WishRules.Parse("그늘지고 조용한 데 20분, 오르막은 빼고 천천히", spots);
-        Assert.Equal(15, w.Minutes);
+        Assert.Equal(20, w.Minutes);   // 말한 시간 그대로 (1시간까지)
         Assert.Contains("quiet", w.Tastes);
         Assert.Contains("그늘", w.Want);
         Assert.Contains("오르막", w.Avoid);
@@ -121,7 +121,7 @@ public class WishAndPlaceApiTests : IDisposable
             """{"minutes": 20, "tastes": ["quiet", "shopping"], "indoor": null, "afterMeal": true, "pace": "run", "want": ["그늘", "아주아주아주긴바라는모습"], "avoid": ["붐빔"], "wantPlaces": ["relation-8269760", "way-474531805"], "avoidPlaces": ["way-없음"]}""",
             "아무 말", spots);
         Assert.NotNull(w);
-        Assert.Equal(15, w!.Minutes);
+        Assert.Equal(20, w!.Minutes);
         Assert.Equal(["quiet"], w.Tastes);
         Assert.Null(w.Pace);
         Assert.True(w.AfterMeal);
@@ -132,6 +132,23 @@ public class WishAndPlaceApiTests : IDisposable
     }
 
     // ---------- 추천에 반영 ----------
+
+    [Theory]
+    [InlineData("20분만 걷고 싶어", 20, false)]
+    [InlineData("45분 산책", 45, false)]
+    [InlineData("2시간 걷고 싶어", 60, true)]
+    [InlineData("한 시간 반 걸을래", 60, true)]
+    public async Task 말한_시간은_1시간까지_그대로_넘으면_1시간_코스와_자유_산책을_권한다(string text, int minutes, bool free)
+    {
+        HttpClient client = Server().CreateClient();
+        JsonElement r = await Recommend(client, Body(text, minutes: 15));
+        JsonElement wish = r.GetProperty("wish");
+        Assert.Equal(minutes, wish.GetProperty("minutes").GetInt32());
+        Assert.Equal(free, wish.GetProperty("summary").GetString()!.Contains("자유 산책"));
+        Assert.Equal(free, wish.GetProperty("judgment").GetString()!.Contains("자유 산책"));
+        Assert.Contains($"{minutes}분", r.GetProperty("title").GetString());
+        Assert.InRange(r.GetProperty("totalMinutes").GetInt32(), 1, minutes);
+    }
 
     [Fact]
     public async Task AI_가_없어도_바람을_해석해_돌려주고_뺄_곳은_뺀다()
@@ -516,11 +533,15 @@ public class WishAndPlaceApiTests : IDisposable
     [InlineData("삼십 분 부탁해", "30분")]
     [InlineData("십오 분 걸어볼래", "15분")]
     [InlineData("반 시간 산책", "30분")]
-    [InlineData("두 시간 알려줘", "60분")]
-    [InlineData("1시간 30분 걷고 싶어", "60분")]
+    [InlineData("두 시간 알려줘", "2시간 중 코스는 1시간 · 나머지는 자유 산책")]
+    [InlineData("1시간 30분 걷고 싶어", "1시간 30분 중 코스는 1시간 · 나머지는 자유 산책")]
+    [InlineData("한 시간 반 걷자", "1시간 30분 중 코스는 1시간")]
+    [InlineData("45분 걷고 싶어", "45분")]
+    [InlineData("1시간 걷기", "60분")]
+    [InlineData("5분만 걷자", "10분")]
     [InlineData("0.5시간 산책", "30분")]
-    [InlineData("15-20분 산책", "15분")]
-    [InlineData("1000분 걷기", "60분")]
+    [InlineData("15-20분 산책", "20분")]
+    [InlineData("1000분 걷기", "16시간 40분 중 코스는 1시간 · 나머지는 자유 산책")]
     [InlineData("중도 가고 싶어", "중앙도서관 들르기")]
     [InlineData("노천 극장 쪽으로 걷자", "노천극장 들르기")]
     [InlineData("학생 회관 들러서 산책", "학생회관 들르기")]

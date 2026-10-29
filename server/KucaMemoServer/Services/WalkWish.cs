@@ -9,7 +9,7 @@ namespace KucaMemoServer.Services;
 /// 학생이 말로 한 산책 바람("그늘지고 조용한 데 20분, 오르막은 빼고")을 추천이 쓸 수 있는 조건으로 바꾼 것.
 /// 산책 추천은 이 조건으로 장소를 빼거나 점수를 더하고, AI 는 원래 문장과 함께 보고 코스를 고른다.
 /// </summary>
-/// <param name="Minutes">걸을 시간 15 · 30 · 60 (말하지 않았으면 null)</param>
+/// <param name="Minutes">코스로 짤 걸을 시간 10 ~ 60분 (말한 시간 그대로, 1시간이 넘으면 60. 말하지 않았으면 null)</param>
 /// <param name="Tastes">취향 코드 (RecommendRules.AllowedTastes)</param>
 /// <param name="Indoor">true 실내 위주 · false 바깥 위주 · null 상관없음</param>
 /// <param name="Pace">slow · normal · fast (말하지 않았으면 null)</param>
@@ -110,7 +110,7 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
         "(예: '다리 아파' → pace slow, avoid 오르막 · '머리 식히고 싶어' → tastes quiet · '비 와' → indoor true · '밥 먹고' → afterMeal true · " +
         "'메이트랑 얘기하면서' → want 대화, avoid 붐빔 · 오르막). " +
         "산책과 관계없는 말 · 알아볼 수 없는 말 · 서로 부딪쳐 하나로 정할 수 없는 요청(같은 곳을 넣고 빼기, 빠르게와 천천히 함께)이면 unclear 를 true 로. " +
-        "minutes 는 15 · 30 · 60 중 가장 가까운 값 (말하지 않았으면 null). " +
+        "minutes 는 말한 걸을 시간을 분으로 그대로 (1시간 반 → 90, 말하지 않았으면 null). " +
         "tastes 는 photo(사진) · quiet(조용한 곳) · food(밥 · 카페) · unvisited(안 가 본 곳) · partner(경희펫과 걷기) · exercise(운동) 중에서. " +
         $"want · avoid 는 장소의 모습을 짧은 명사로 (각 최대 {MaxWords}개, {MaxWordLength}자 이내. 예: 그늘, 단풍, 노을, 한산함, 오르막, 붐빔, 공사). " +
         "말에 나온 장소는 아래 목록의 id 로 wantPlaces 나 avoidPlaces 에 넣어. 목록에 없는 장소는 넣지 마. " +
@@ -134,8 +134,8 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
         {
             using JsonDocument doc = JsonDocument.Parse(answer[start..(end + 1)]);
             JsonElement root = doc.RootElement;
-            int? minutes = root.TryGetProperty("minutes", out JsonElement m) && m.ValueKind == JsonValueKind.Number && m.TryGetInt32(out int mm)
-                ? WishRules.Snap(mm) : null;
+            int? asked = root.TryGetProperty("minutes", out JsonElement m) && m.ValueKind == JsonValueKind.Number && m.TryGetInt32(out int mm) && mm > 0
+                ? mm : null;
             bool? indoor = root.TryGetProperty("indoor", out JsonElement i) && i.ValueKind is JsonValueKind.True or JsonValueKind.False ? i.GetBoolean() : null;
             bool afterMeal = root.TryGetProperty("afterMeal", out JsonElement a) && a.ValueKind == JsonValueKind.True;
             string? pace = Str(root, "pace") is { } p && RecommendRules.AllowedPaces.Contains(p) ? p : null;
@@ -157,7 +157,7 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
                     ? Math.Clamp(n, 0, 3) : 1;
                 priorities = new(P("novelty"), P("familiar"), P("scenery"), P("weather"), P("quiet"), P("near"));
             }
-            return WishRules.Make(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, "ai", spots,
+            return WishRules.Make(text, asked, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, "ai", spots,
                                   judgment, priorities ?? WishRules.PrioritiesOf(text, tastes, afterMeal, pace)) with { Unclear = unclear };
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException)
@@ -181,8 +181,12 @@ public class WishInterpreter(IServiceScopeFactory scopes, SpotStore spots, Metri
 /// <summary>AI 없이 바람을 해석하는 말 찾기. 자주 쓰는 표현만 안다</summary>
 public static partial class WishRules
 {
-    /// <summary>말한 분을 허용 값 15 · 30 · 60 중 가까운 쪽으로</summary>
-    public static int Snap(int minutes) => minutes <= 22 ? 15 : minutes <= 45 ? 30 : 60;
+    /// <summary>말로 정한 시간은 이 범위에서 그대로 코스를 짠다. 1시간이 넘으면 코스는 1시간까지 + 나머지는 자유 산책을 권한다 (사용자 결정 10/29)</summary>
+    public const int MinCourseMinutes = 10, MaxCourseMinutes = 60;
+    public static int Fit(int minutes) => Math.Clamp(minutes, MinCourseMinutes, MaxCourseMinutes);
+
+    /// <summary>90 → "1시간 30분"</summary>
+    static string HoursText(int minutes) => minutes < 60 ? $"{minutes}분" : minutes % 60 == 0 ? $"{minutes / 60}시간" : $"{minutes / 60}시간 {minutes % 60}분";
 
     static readonly (string Word, string Taste)[] TasteWords =
     [
@@ -216,8 +220,8 @@ public static partial class WishRules
     [GeneratedRegex(@"(?<![가-힣])(?<!시간\s*)([이삼사오육]?십[일이삼사오육칠팔구]?)\s*분")]
     private static partial Regex KoreanMinutesWord();
 
-    /// <summary>고유어 시간 (한 시간 · 반 시간 · 두 시간)</summary>
-    [GeneratedRegex(@"(?<![가-힣])(한|반|두|세|네|다섯)\s*시간")]
+    /// <summary>고유어 시간 (한 시간 · 반 시간 · 두 시간 · 한 시간 반)</summary>
+    [GeneratedRegex(@"(?<![가-힣])(한|반|두|세|네|다섯)\s*시간(\s*반)?")]
     private static partial Regex KoreanHoursWord();
 
     /// <summary>십오 → 15, 삼십 → 30</summary>
@@ -276,9 +280,13 @@ public static partial class WishRules
             .Concat(HoursWord().Matches(text).Select(x => Sign(x) * (double.Parse(x.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture) * 60
                 + (x.Groups[3].Value is { Length: > 0 } m ? m == "반" ? 30 : int.Parse(m.TrimEnd('분', ' ')) : 0))))
             .Concat(KoreanMinutesWord().Matches(text).Select(x => (double)Sino(x.Groups[1].Value)))
-            .Concat(KoreanHoursWord().Matches(text).Select(x => x.Groups[1].Value == "반" ? 30.0 : 60))
-            .Concat(text.Contains("하루 종일") ? [60.0] : Array.Empty<double>()).ToList();
-        var said = raw.Where(m => m > 0).Select(m => Snap((int)Math.Ceiling(m))).Distinct().ToList();
+            .Concat(KoreanHoursWord().Matches(text).Select(x => x.Groups[1].Value == "반" ? 30.0
+                : (Array.IndexOf(["한", "두", "세", "네", "다섯"], x.Groups[1].Value) + 1) * 60 + (x.Groups[2].Success ? 30 : 0)))
+            .Concat(text.Contains("하루 종일") ? [240.0] : Array.Empty<double>()).ToList();
+        var said = raw.Where(m => m > 0).Select(m => (int)Math.Ceiling(m)).Distinct().ToList();
+        // "15-20분" · "20~25분" 처럼 10분 안의 범위는 하나로 (긴 쪽)
+        if (said.Count > 1 && said.Max() - said.Min() <= 10)
+            said = [said.Max()];
         int? minutes = said.Count > 0 ? said[0] : text.Contains("잠깐") || text.Contains("짧게") ? 15 : null;
         // 부정어("말고 · 빼고")가 어느 말에 붙는지 가를 때 쓰는 아는 말 전부 ("단풍 우정원 말고" 의 말고는 우정원 것)
         string[] keys = TasteWords.Select(t => t.Word).Concat(Traits.Select(t => t.Word)).Concat(Dislikes.Select(t => t.Word)).Concat(names).ToArray();
@@ -423,12 +431,15 @@ public static partial class WishRules
     };
 
     /// <summary>칸을 정리하고 "이렇게 이해했어요" 한 줄을 만든다</summary>
-    public static WalkWish Make(string text, int? minutes, List<string> tastes, bool? indoor, bool afterMeal, string? pace,
+    public static WalkWish Make(string text, int? asked, List<string> tastes, bool? indoor, bool afterMeal, string? pace,
                                 List<string> want, List<string> avoid, List<string> wantPlaces, List<string> avoidPlaces, string source, SpotStore spots,
                                 string? judgment, WalkPriorities priorities)
     {
         var parts = new List<string>();
-        if (minutes != null) parts.Add($"{minutes}분");
+        int? minutes = asked is int a ? Fit(a) : null;
+        bool longer = asked > MaxCourseMinutes;
+        if (longer) parts.Add($"{HoursText(asked!.Value)} 중 코스는 1시간 · 나머지는 자유 산책");
+        else if (minutes != null) parts.Add($"{minutes}분");
         if (afterMeal) parts.Add("식후 가볍게");
         parts.AddRange(tastes.Select(t => TasteNames.GetValueOrDefault(t, t)));
         if (indoor == true) parts.Add("실내 위주");
@@ -445,6 +456,8 @@ public static partial class WishRules
         if (summary.Length == 0)   // 칸으로 못 담은 바람 ("늘 가던 곳 위주로") 은 판단 비중으로
             summary = top.Except(["날씨에 맞는 곳"]).Any() ? string.Join(" · ", top.Except(["날씨에 맞는 곳"]).Take(3)) : "특별한 조건 없이 지금 걷기 좋은 곳";
         judgment ??= top.Count > 0 ? $"말한 바람에 맞춰 {string.Join(" · ", top.Take(3))} 위주로 골라요" : "지금 걷기 좋은 곳을 고루 골라요";
+        if (longer)
+            judgment = $"1시간이 넘는 산책은 정해진 코스보다 마음 가는 대로 걷는 자유 산책이 좋아요. 코스는 1시간까지만 짜 드려요. {judgment}";
         return new WalkWish(text, minutes, tastes, indoor, afterMeal, pace, want, avoid, wantPlaces, avoidPlaces, summary, source, judgment, priorities);
     }
 }
