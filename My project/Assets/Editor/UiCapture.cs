@@ -51,6 +51,55 @@ public static class UiCapture
     static readonly string RoadDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "RoadShots"));
 
     /// <summary>
+    /// 계절 4 × 날씨 4 의 지도 첫 화면 (HUD · 비 눈 꽃잎 효과 포함, 한낮) → Builds/WeatherShots/NN_봄_맑음.png … (S1)
+    ///   Unity.exe -projectPath "My project" -executeMethod UiCapture.RunWeather -logFile weather.log   (창을 띄워 실행)
+    /// </summary>
+    [MenuItem("KUCA/계절 · 날씨 캡처")]
+    public static void RunWeather() => Start(WeatherDir, WeatherScript());
+
+    static readonly string WeatherDir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "..", "Builds", "WeatherShots"));
+
+    static IEnumerator WeatherScript()
+    {
+        Click("확인하고 시작");
+        yield return 1.5f;
+        Click("에디터: 로그인 건너뛰기");
+        yield return 5f;
+        yield return CloseAll();
+        object look = Find("KeyArtLook");
+        Type lookType = look?.GetType();
+        Type theme = TypeOf("KucaTheme");
+        if (lookType == null || theme == null)
+            yield break;
+        Call(look, "SetMode", Enum.Parse(lookType.GetNestedType("Mode"), "Day"));
+        SetStatic("WeatherFx", "Paused", false);
+        string[] seasons = { "Spring", "Summer", "Autumn", "Winter" }, seasonKo = { "봄", "여름", "가을", "겨울" };
+        string[] weathers = { "Clear", "Cloudy", "Rain", "Snow" }, weatherKo = { "맑음", "흐림", "비", "눈" };
+        for (int i = 0; i < seasons.Length; i++)
+        {
+            Call(look, "SetSeason", Enum.Parse(lookType.GetNestedType("Season"), seasons[i]));
+            theme.GetProperty("Override")?.SetValue(null, Enum.Parse(theme.GetNestedType("Season"), seasons[i]));   // 꽃잎 · 낙엽 · 강조색도 같은 계절
+            for (int j = 0; j < weathers.Length; j++)
+            {
+                MapWeather(weathers[j]);
+                yield return 1.5f;   // 비 · 눈이 화면에 퍼지게
+                yield return Shot($"{seasonKo[i]}_{weatherKo[j]}");
+            }
+        }
+    }
+
+    /// <summary>지도 날씨 효과 고정 (null = 기상청). 다른 캡처는 맑음으로 고정해 매번 같은 화면을 찍는다</summary>
+    static void MapWeather(string weather)
+    {
+        Type w = TypeOf("SpawnConditions")?.GetNestedType("Weather");
+        PropertyInfo prop = TypeOf("KeyArtLook")?.GetProperty("WeatherOverride", BindingFlags.Public | BindingFlags.Static);
+        if (w != null && prop != null)
+            prop.SetValue(null, weather == null ? null : Enum.Parse(w, weather));
+    }
+
+    static void SetStatic(string type, string field, object value) => TypeOf(type)?.GetField(field, BindingFlags.Public | BindingFlags.Static)?.SetValue(null, value);
+
+    /// <summary>
     /// 길 사이클 자리 (월드 x, z = 지도 m − 가운데). 지도 m 은 tools/keyart 의 geo.py 좌표 (왼쪽 위 북서, 1418 × 1548)
     /// </summary>
     static readonly (string name, float x, float z, float size)[] RoadSpots =
@@ -121,6 +170,8 @@ public static class UiCapture
         savedOptions = EditorSettings.enterPlayModeOptions;
         PlayerSettings.productName = "KUCA-Capture";
         ResetCaptureData();
+        MapWeather("Clear");                      // 비 · 눈 · 꽃잎이 캡처마다 달리 찍히지 않게 (계절 · 날씨 캡처만 다시 켬)
+        SetStatic("WeatherFx", "Paused", true);
         // 도메인을 다시 불러오지 않아야 이 스크립트의 진행 상태가 플레이 모드 안에서도 이어진다
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
@@ -200,6 +251,9 @@ public static class UiCapture
     {
         EditorApplication.update -= Tick;
         EditorApplication.isPlaying = false;
+        MapWeather(null);   // 캡처 전용 저장소(제품 이름을 되돌리기 전)에서 지운다
+        TypeOf("KucaTheme")?.GetProperty("Override")?.SetValue(null, null);   // 계절 · 날씨 캡처가 고정한 계절도 자동으로
+        SetStatic("WeatherFx", "Paused", false);
         PlayerSettings.productName = savedProduct;
         EditorSettings.enterPlayModeOptionsEnabled = savedOptionsEnabled;
         EditorSettings.enterPlayModeOptions = savedOptions;

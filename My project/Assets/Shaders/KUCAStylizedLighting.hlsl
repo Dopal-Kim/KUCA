@@ -87,6 +87,18 @@ float4 _KucaSeasonLeaf;      // rgb: 활엽 초록에 곱하는 색
 float4 _KucaSeasonBlossom;   // rgb: 분홍 꽃잎이 바뀔 색, a: 바뀌는 정도
 float4 _KucaSeasonGrass;     // rgb: 잔디에 곱하는 색
 float _KucaAutumn, _KucaSnow;
+float4 _KucaSpeckle;         // rgb: 잔디 위 계절 무늬 색 (봄 꽃잎 · 가을 낙엽), a: 양 (0~1)
+float _KucaBare;             // 겨울: 활엽수가 잎 진 가지색으로 (침엽 · 산울타리는 그대로)
+float _KucaBloom;            // 봄: 활엽수 일부가 꽃 핀 색(_KucaSeasonBlossom.rgb)으로 (0~1, 나무마다 다름)
+float _KucaWet;              // 비: 바닥이 젖어 어둡고 차갑게 (0~1)
+
+/// 잘 섞이는 해시 (sin 없이: 모바일 float 에서 큰 좌표도 고르게)
+float KucaHash12(float2 p)
+{
+    float3 p3 = frac(float3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return frac((p3.x + p3.y) * p3.z);
+}
 
 /// 버텍스 색 물체 (나무·관목·산울타리): 초록 잎·분홍 꽃잎을 계절 색으로, 윗면엔 눈
 half3 KucaSeasonFoliage(half3 c, float3 positionWS, float3 normalWS)
@@ -102,6 +114,8 @@ half3 KucaSeasonFoliage(half3 c, float3 positionWS, float3 normalWS)
     maple = lerp(maple, half3(0.55h, 0.10h, 0.04h), step(0.82, h));
     half3 g2 = c * _KucaSeasonLeaf.rgb;
     g2 = lerp(g2, maple * lum * 2.4h, _KucaAutumn * leafy);
+    g2 = lerp(g2, half3(0.40h, 0.33h, 0.27h) * (0.55h + lum), _KucaBare * leafy);   // 겨울: 잎 진 가지
+    g2 = lerp(g2, _KucaSeasonBlossom.rgb * (0.75h + lum * 0.6h), _KucaBloom * leafy * step(h, 0.45));   // 봄: 벚꽃길처럼 꽃 핀 나무
     c = lerp(c, g2, green);
     c = lerp(c, _KucaSeasonBlossom.rgb * (0.7h + lum), pink * _KucaSeasonBlossom.a);
     half snow = _KucaSnow * smoothstep(0.35h, 0.75h, normalWS.y);
@@ -114,11 +128,26 @@ half3 KucaSeasonGround(half3 c, float3 positionWS)
     if (_KucaSeasonLeaf.x <= 0) return c;
     half green = saturate((c.g - max(c.r, c.b)) * 8.0h);
     c = lerp(c, c * _KucaSeasonGrass.rgb, green);
+    // 계절 무늬: 큰 얼룩(8 m, 멀리서 보이는 꽃잎 · 낙엽 쌓인 자리) + 가까이 보이는 잔 점(0.7 m 칸)
+    if (_KucaSpeckle.a > 0.001)
+    {
+        float2 q = positionWS.xz / 8.0;
+        float2 qi = floor(q), qf = frac(q);
+        qf = qf * qf * (3.0 - 2.0 * qf);
+        float n = lerp(lerp(KucaHash12(qi), KucaHash12(qi + float2(1, 0)), qf.x), lerp(KucaHash12(qi + float2(0, 1)), KucaHash12(qi + float2(1, 1)), qf.x), qf.y);
+        half blot = smoothstep(0.5h, 0.9h, (half)n) * 0.65h;
+        float2 cell = floor(positionWS.xz / 0.7);
+        float2 f = frac(positionWS.xz / 0.7) - 0.5;
+        half dotm = step(length(f), 0.24) * step(1.0 - _KucaSpeckle.a * (0.18 + 0.5 * n), KucaHash12(cell));
+        c = lerp(c, _KucaSpeckle.rgb * (0.85h + 0.3h * (half)KucaHash12(cell + 7.0)), saturate(blot + dotm) * green * _KucaSpeckle.a);
+    }
     half water = saturate((c.b - max(c.r, c.g) * 0.85h) * 5.0h);
     float nse = sin(positionWS.x * 0.05) * sin(positionWS.z * 0.043) * 0.5 + 0.5;
     half snow = _KucaSnow * saturate(green * 1.2h + 0.3h) * smoothstep(0.15, 0.6, nse * 0.6 + _KucaSnow * 0.7);
     c = lerp(c, half3(0.84h, 0.88h, 0.95h), snow * (1.0h - water));
-    return lerp(c, half3(0.70h, 0.82h, 0.92h), _KucaSnow * water * 0.6h);   // 얼음
+    c = lerp(c, half3(0.70h, 0.82h, 0.92h), _KucaSnow * water * 0.6h);   // 얼음
+    // 비: 젖은 바닥 — 포장이 잔디보다 더 어둡고 살짝 푸르게
+    return c * lerp(half3(1, 1, 1), half3(0.70h, 0.74h, 0.80h) + 0.1h * green, _KucaWet * (1.0h - water));
 }
 
 #endif

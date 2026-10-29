@@ -22,7 +22,74 @@ public class KeyArtLook : MonoBehaviour
         [Range(0f, 1f)] public float blossomMix;
         [Tooltip("잔디에 곱하는 색 (리니어 배율)")] public Vector3 grass = Vector3.one;
         [Range(0f, 1f)] public float snow;
+        [Header("계절 빛 (S1)")]
+        [Tooltip("햇빛 색에 곱함")] public Color light = Color.white;
+        public float sunScale = 1f;
+        [Tooltip("채도에 더함")] public float saturationAdd;
+        [Tooltip("하늘색에 곱함")] public Color sky = Color.white;
+        [Tooltip("잔디 위 무늬 색 (봄 꽃잎 · 가을 낙엽)")] public Color speckle = Color.white;
+        [Range(0f, 1f)] public float speckleAmount;
+        [Range(0f, 1f), Tooltip("겨울: 활엽수 잎 진 가지")] public float bare;
+        [Range(0f, 1f), Tooltip("봄: 활엽수 일부가 꽃 핀 색 (blossom 색)")] public float bloom;
     }
+
+    /// <summary>날씨가 빛 · 안개 · 하늘 · 바닥을 바꾸는 정도 (맑음 = 그대로). 어둡기는 지금 시간대 값에 곱해 밤에도 맞는다</summary>
+    struct WeatherMod
+    {
+        public float sun, shadow, sat, fog, fogMix, skyMix, exposure, ambient, wet, snow;
+        public Color tint;   // 흐린 하늘 · 안개 색 (지금 하늘 밝기에 곱함)
+    }
+
+    static WeatherMod ModFor(SpawnConditions.Weather w)
+    {
+        switch (w)
+        {
+            case SpawnConditions.Weather.Cloudy:
+                return new WeatherMod { sun = 0.55f, shadow = 0.35f, sat = -0.14f, fog = 0.65f, fogMix = 0.6f, skyMix = 0.75f, exposure = 0.88f, ambient = 1.05f, tint = new Color(0.95f, 0.98f, 1.03f) };
+            case SpawnConditions.Weather.Rain:
+                return new WeatherMod { sun = 0.32f, shadow = 0.15f, sat = -0.2f, fog = 0.42f, fogMix = 0.8f, skyMix = 0.88f, exposure = 0.72f, ambient = 0.86f, wet = 1f, tint = new Color(0.86f, 0.92f, 1.0f) };
+            case SpawnConditions.Weather.Snow:
+                return new WeatherMod { sun = 0.5f, shadow = 0.3f, sat = -0.16f, fog = 0.5f, fogMix = 0.8f, skyMix = 0.8f, exposure = 0.95f, ambient = 1.08f, snow = 0.8f, tint = new Color(0.96f, 0.98f, 1.04f) };
+            default:
+                return new WeatherMod { sun = 1f, shadow = 1f, fog = 1f, exposure = 1f, ambient = 1f, tint = Color.white };
+        }
+    }
+
+    // ---------- 날씨: 기상청(GET /api/weather → SpawnConditions.LiveWeather), 설정에서 고정 가능 ----------
+
+    const string WeatherPrefKey = "map_weather";   // 없음 = 자동(기상청), 1~4 = 맑음 · 흐림 · 비 · 눈
+    static bool weatherLoaded;
+    static SpawnConditions.Weather? weatherOverride;
+
+    /// <summary>설정에서 고정한 날씨 효과 (null = 기상청 날씨). 지도 모습만 바꾸고 경희펫 출현 규칙에는 쓰지 않는다</summary>
+    public static SpawnConditions.Weather? WeatherOverride
+    {
+        get
+        {
+            if (!weatherLoaded)
+            {
+                weatherLoaded = true;
+                int v = PlayerPrefs.GetInt(WeatherPrefKey, 0);
+                weatherOverride = v >= 1 && v <= 4 ? (SpawnConditions.Weather)v : (SpawnConditions.Weather?)null;
+            }
+            return weatherOverride;
+        }
+        set
+        {
+            weatherLoaded = true;
+            weatherOverride = value;
+            if (value.HasValue) PlayerPrefs.SetInt(WeatherPrefKey, (int)value.Value);
+            else PlayerPrefs.DeleteKey(WeatherPrefKey);
+            PlayerPrefs.Save();
+        }
+    }
+
+    /// <summary>지도에 보일 날씨: 고정값 → 기상청 → 모르면 맑음</summary>
+    public static SpawnConditions.Weather ViewWeather =>
+        WeatherOverride ?? (SpawnConditions.CurrentWeather == SpawnConditions.Weather.Unknown ? SpawnConditions.Weather.Clear : SpawnConditions.CurrentWeather);
+
+    /// <summary>지도에 보일 계절 (인스펙터 고정 → 설정 · 날짜, 강조색과 같은 KucaTheme.Current)</summary>
+    public Season ViewSeason => season != Season.Auto ? season : (Season)((int)KucaTheme.Current + 1);
 
     [System.Serializable]
     public class Preset
@@ -88,7 +155,7 @@ public class KeyArtLook : MonoBehaviour
         skyTint = new Color(0.70f, 0.78f, 0.95f), skyExposure = 1.25f,
     };
 
-    [Header("계절 (Auto = 기기 날짜: 3~5 봄, 6~8 여름, 9~11 가을, 12~2 겨울)")]
+    [Header("계절 (Auto = 앱 설정의 계절, 설정이 자동이면 기기 날짜: 3~5 봄, 6~8 여름, 9~11 가을, 12~2 겨울)")]
     public Season season = Season.Auto;
     public SeasonPalette spring = new SeasonPalette();
     public SeasonPalette summer = new SeasonPalette();
@@ -134,14 +201,26 @@ public class KeyArtLook : MonoBehaviour
     static readonly int GrassId = Shader.PropertyToID("_KucaSeasonGrass");
     static readonly int AutumnId = Shader.PropertyToID("_KucaAutumn");
     static readonly int SnowId = Shader.PropertyToID("_KucaSnow");
+    static readonly int SpeckleId = Shader.PropertyToID("_KucaSpeckle");
+    static readonly int BareId = Shader.PropertyToID("_KucaBare");
+    static readonly int WetId = Shader.PropertyToID("_KucaWet");
+    static readonly int BloomId = Shader.PropertyToID("_KucaBloom");
 
     float nextAutoUpdate;
+    Season appliedSeason;
+    SpawnConditions.Weather appliedWeather;
 
     void OnEnable() => Apply();
     void OnValidate() => Apply();
 
     void Update()
     {
+        // 설정에서 계절 · 날씨를 바꾸거나 기상청 날씨가 새로 오면 바로 다시 칠한다
+        if (ViewSeason != appliedSeason || ViewWeather != appliedWeather)
+        {
+            Apply();
+            return;
+        }
         // Auto 는 시각에 따라 천천히 바뀌므로 몇 초마다만 다시 계산
         if (mode == Mode.Auto && Time.realtimeSinceStartup >= nextAutoUpdate)
         {
@@ -159,13 +238,7 @@ public class KeyArtLook : MonoBehaviour
 
     public SeasonPalette CurrentSeason()
     {
-        Season s = season;
-        if (s == Season.Auto)
-        {
-            int m = System.DateTime.Now.Month;
-            s = m >= 3 && m <= 5 ? Season.Spring : m >= 6 && m <= 8 ? Season.Summer : m >= 9 && m <= 11 ? Season.Autumn : Season.Winter;
-        }
-        switch (s)
+        switch (ViewSeason)
         {
             case Season.Summer: return summer;
             case Season.Autumn: return autumn;
@@ -229,8 +302,36 @@ public class KeyArtLook : MonoBehaviour
     {
         Preset p = Current();
         if (p == null) return;
+        appliedSeason = ViewSeason;
+        appliedWeather = ViewWeather;
+        p = Styled(p, CurrentSeason(), ModFor(appliedWeather));
         ApplyShaderGlobals(p);
         ApplyRest(p);
+    }
+
+    static float Luma(Color c) => c.r * 0.3f + c.g * 0.59f + c.b * 0.11f;
+
+    /// <summary>시간대 프리셋에 계절 빛과 날씨를 얹은 사본 (원래 프리셋은 그대로)</summary>
+    static Preset Styled(Preset p, SeasonPalette sp, WeatherMod w)
+    {
+        Preset q = Preset.Lerp(p, p, 0f);
+        q.sunColor = p.sunColor * sp.light;
+        q.sunIntensity = p.sunIntensity * sp.sunScale * w.sun;
+        q.shadowStrength = p.shadowStrength * w.shadow;
+        q.saturation = p.saturation + sp.saturationAdd + w.sat;
+        q.warmTop = p.warmTop * w.sun;
+        q.rim = p.rim * Mathf.Lerp(0.5f, 1f, w.sun);
+        q.wash = p.wash * w.sun;
+        q.skyAmbient = p.skyAmbient * w.ambient;
+        q.groundAmbient = p.groundAmbient * w.ambient;
+        // 흐림 · 비 · 눈: 하늘과 안개를 지금 밝기 그대로 잿빛으로 (밤 하늘이 밝아지지 않게)
+        Color sky = p.skyTint * sp.sky;
+        q.skyTint = Color.Lerp(sky, Luma(sky) * w.tint, w.skyMix);
+        q.skyExposure = p.skyExposure * w.exposure;
+        q.fogColor = Color.Lerp(p.fogColor, Luma(p.fogColor) * w.tint, w.fogMix);
+        q.fogStart = p.fogStart * w.fog;
+        q.fogEnd = p.fogEnd * w.fog;
+        return q;
     }
 
     /// <summary>
@@ -267,7 +368,13 @@ public class KeyArtLook : MonoBehaviour
         Shader.SetGlobalVector(BlossomId, new Vector4(bl.r, bl.g, bl.b, sp.blossomMix));
         Shader.SetGlobalVector(GrassId, sp.grass);
         Shader.SetGlobalFloat(AutumnId, sp.autumn);
-        Shader.SetGlobalFloat(SnowId, sp.snow);
+        WeatherMod w = ModFor(appliedWeather);
+        Shader.SetGlobalFloat(SnowId, Mathf.Max(sp.snow, w.snow));
+        Color sk = sp.speckle.linear;
+        Shader.SetGlobalVector(SpeckleId, new Vector4(sk.r, sk.g, sk.b, sp.speckleAmount));
+        Shader.SetGlobalFloat(BareId, sp.bare);
+        Shader.SetGlobalFloat(BloomId, sp.bloom);
+        Shader.SetGlobalFloat(WetId, w.wet);
 
         if (sun != null)
         {
