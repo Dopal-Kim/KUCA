@@ -11,16 +11,58 @@
 """
 import json
 import os
+import sys
 from collections import defaultdict
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'keyart'))
+from kuca_art.geo import MAP_H, MAP_W, to_world
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, '..', 'keyart', 'osm_ground.json')
 OUT = os.path.join(HERE, '..', '..', 'My project', 'Assets', 'Resources', 'KUCA', 'WalkGraph.json')
 
+# 사용자가 산책길 지도(아티팩트)에 '막힘'으로 표시한 구간 · 구역 (지도 m 좌표, 왼쪽 위 북서). 표시를 바꾸면 다시 내려받아 이 파일을 갱신한다
+MARKS = os.path.join(HERE, 'marks.json')
+marks = json.load(open(MARKS, encoding='utf-8')) if os.path.exists(MARKS) else {'blocked_segs': [], 'blocked_areas': []}
+blocked_by_way = defaultdict(list)
+for sgm in marks['blocked_segs']:
+    blocked_by_way[sgm['way']].append(sgm['p'])
+blocked_areas = [list(zip(a[::2], a[1::2])) for a in marks['blocked_areas']]
+
 WALKABLE = {'footway', 'path', 'pedestrian', 'steps', 'service', 'residential', 'living_street', 'tertiary',
             'secondary', 'track', 'unclassified', 'cycleway', 'corridor', 'primary'}
 
 data = json.load(open(SRC, encoding='utf-8'))
+
+
+def map_m(lon, lat):
+    """경위도 → 지도 m (tools/keyart/kuca_art/geo.py 와 같은 범위)"""
+    x, z = to_world(lon, lat)
+    return x + MAP_W / 2, MAP_H / 2 - z
+
+
+def near_line(p, line, tol):
+    for i in range(0, len(line) - 2, 2):
+        ax, ay, bx, by = line[i], line[i + 1], line[i + 2], line[i + 3]
+        dx, dy = bx - ax, by - ay
+        t = max(0.0, min(1.0, ((p[0] - ax) * dx + (p[1] - ay) * dy) / (dx * dx + dy * dy or 1e-9)))
+        if (p[0] - ax - t * dx) ** 2 + (p[1] - ay - t * dy) ** 2 <= tol * tol:
+            return True
+    return False
+
+
+def inside(p, poly):
+    x, y, c = p[0], p[1], False
+    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
+        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
+            c = not c
+    return c
+
+
+def blocked(way, a, b):
+    """OSM 길 조각 a-b(경위도)가 막힌 구간 위(같은 길 번호, 2 m 안)이거나 막힌 구역 안이면 길 찾기에서 뺀다"""
+    m = map_m((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+    return any(near_line(m, line, 2.0) for line in blocked_by_way.get(way, ())) or any(inside(m, ar) for ar in blocked_areas)
 coord = {}
 adj = defaultdict(set)
 for e in data['elements']:
@@ -33,7 +75,7 @@ for e in data['elements']:
     for nid, g in zip(nodes, geom):
         coord[nid] = (round(g['lon'], 7), round(g['lat'], 7))
     for a, b in zip(nodes, nodes[1:]):
-        if a != b:
+        if a != b and not blocked(e['id'], coord[a], coord[b]):
             adj[a].add(b)
             adj[b].add(a)
 
@@ -59,13 +101,6 @@ def components():
         out.append(comp)
     return sorted(out, key=len, reverse=True)
 
-
-def inside(p, poly):
-    x, y, c = p[0], p[1], False
-    for (x1, y1), (x2, y2) in zip(poly, poly[1:] + poly[:1]):
-        if (y1 > y) != (y2 > y) and x < (x2 - x1) * (y - y1) / (y2 - y1) + x1:
-            c = not c
-    return c
 
 
 # 1) 끊긴 길 잇기: OSM 에서 몇 m 떨어져 그려진 길 (사색의 광장 안 길은 둘레 길과 4 m 떨어져 통째로 빠졌었음, 10/27)
@@ -106,13 +141,15 @@ for sq in squares:
             if d > ACROSS_M or b in adj[a]:
                 continue
             samples = [(pa[0] + (pb[0] - pa[0]) * k / 10, pa[1] + (pb[1] - pa[1]) * k / 10) for k in range(1, 10)]
-            if all(inside(q, sq) for q in samples) and not any(inside(q, w) for q in samples for w in waters):
+            if all(inside(q, sq) for q in samples) and not any(inside(q, w) for q in samples for w in waters) \
+                    and not any(inside(map_m(*coord[a]), ar) or inside(map_m(*coord[b]), ar) for ar in blocked_areas):
                 adj[a].add(b)
                 adj[b].add(a)
                 crossings += 1
 
 # 가장 큰 연결 덩어리
 keep = set(components()[0])
+print(f"user marks: {len(marks['blocked_segs'])} blocked segments, {len(blocked_areas)} blocked areas")
 print(f'joined {joined} near-miss ends, {crossings} open-square crossings in {len(squares)} squares')
 index = {nid: i for i, nid in enumerate(sorted(keep))}
 nodes = [list(coord[nid]) for nid in sorted(keep)]
