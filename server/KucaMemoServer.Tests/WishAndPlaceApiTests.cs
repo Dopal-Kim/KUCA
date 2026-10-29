@@ -510,6 +510,66 @@ public class WishAndPlaceApiTests : IDisposable
         Assert.Contains(Engineering, ids);
     }
 
+    // ---------- 무작위 문장 3000개 시험 (10/29) ----------
+
+    [Theory]
+    [InlineData("삼십 분 부탁해", "30분")]
+    [InlineData("십오 분 걸어볼래", "15분")]
+    [InlineData("반 시간 산책", "30분")]
+    [InlineData("두 시간 알려줘", "60분")]
+    [InlineData("1시간 30분 걷고 싶어", "60분")]
+    [InlineData("0.5시간 산책", "30분")]
+    [InlineData("15-20분 산책", "15분")]
+    [InlineData("1000분 걷기", "60분")]
+    [InlineData("중도 가고 싶어", "중앙도서관 들르기")]
+    [InlineData("노천 극장 쪽으로 걷자", "노천극장 들르기")]
+    [InlineData("학생 회관 들러서 산책", "학생회관 들르기")]
+    [InlineData("공대 꼭 넣어줘", "공학관 들르기")]
+    [InlineData("공학관 안 들르고 30분 걷자", "공학관 피하기")]
+    [InlineData("천문 대 는 말고 걷고 싶어", "천문대 피하기")]
+    [InlineData("사람 없는 데 돌고 싶어", "조용한 곳")]
+    [InlineData("후다닥 돌고 싶어", "빠르게")]
+    [InlineData("허리 아파서 살살", "천천히")]
+    [InlineData("만보 채우고 싶어", "운동 삼아")]
+    public void 말_찾기가_놓치던_시간_장소_부정어를_알아듣는다(string wish, string part)
+    {
+        WalkWish w = WishRules.Parse(wish, new SpotStore(new TestEnv()));
+        Assert.Null(w.Unclear);
+        Assert.Contains(part, w.Summary);
+    }
+
+    [Fact]
+    public void 긴_이름의_일부나_모르는_말_너머로_장소와_부정어가_새지_않는다()
+    {
+        SpotStore spots = new(new TestEnv());
+        Assert.Equal(["way-474085542"], WishRules.Parse("국제학관 가자", spots).WantPlaces);              // 학관(학생회관) 아님
+        Assert.Equal(["way-474521123"], WishRules.Parse("예술디자인대학 도예관 가자", spots).WantPlaces);   // 예술디자인대학 아님
+        WalkWish w = WishRules.Parse("조용한 데 학관 빼줘", spots);
+        Assert.Contains("한산함", w.Want);
+        Assert.Equal([Union], w.AvoidPlaces);
+        Assert.True(WishRules.Parse("바깥은 싫어 30분 걷기", spots).Indoor);
+        Assert.False(WishRules.Parse("비 와도 바깥으로 걷고 싶어", spots).Indoor);
+    }
+
+    [Theory]
+    [InlineData("그늘 좋은데 그늘 싫어")]
+    [InlineData("노천극장 가자 노천극장 말고")]
+    [InlineData("실내로 바깥으로 산책")]
+    [InlineData("0분 걷기")]
+    [InlineData("-10분 산책")]
+    [InlineData("마이너스 30분 걷기")]
+    [InlineData("기숙사 가자")]
+    [InlineData("코스요리 먹고 싶다")]
+    [InlineData("전화 걸어줘")]
+    [InlineData("돌아가신 할머니가 보고 싶어")]
+    [InlineData("아무 말이나 해봐")]
+    public async Task 코스가_나오던_모순_0분_출입제한_관계없는_말은_422(string wish)
+    {
+        var res = await Server().CreateClient().PostAsJsonAsync("/api/recommendations", Body(wish));
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, res.StatusCode);
+        Assert.Contains("다시 입력해 주세요", (await res.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("error").GetString());
+    }
+
     sealed class TestEnv : Microsoft.AspNetCore.Hosting.IWebHostEnvironment
     {
         public string ContentRootPath { get; set; } = FindServerRoot();
