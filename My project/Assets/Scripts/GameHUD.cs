@@ -865,9 +865,8 @@ public class GameHUD : MonoBehaviour
         StartCoroutine(AuthService.DeleteAccount(error =>
         {
             if (error != null) { Toast("탈퇴하지 못했어요: " + error); return; }
-            CloseSettings();
-            Toast("계정을 지웠어요");
-            LoginScreen.Begin();
+            // 기기 정보를 지웠으니 화면을 처음부터 다시 띄운다 (잡은 경희펫 · 레벨이 메모리에 남지 않게). 시작하면 로그인 화면이 뜬다.
+            UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().buildIndex);
         }));
     }
 

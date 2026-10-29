@@ -64,6 +64,12 @@ public class MatchCourse
     public int totalMinutes;
     public bool myAgree, partnerAgree, confirmed;
     public int changesLeft;
+    /// <summary>대략 칼로리 · 걸음 수 (몸무게는 매칭에서 받지 않아 50~70kg 범위). 예전 서버면 비어 있음</summary>
+    public HealthEstimate health;
+    /// <summary>난이도 하 · 중 · 상</summary>
+    public CourseDifficulty difficulty;
+    /// <summary>두 사람이 고른 도착지 (코스 마지막 장소, 없으면 빈 값)</summary>
+    public string destinationId;
 }
 
 [Serializable]
@@ -132,6 +138,8 @@ public interface IMatchService
     IEnumerator AgreeCourse(string matchId, Action<MatchState, string> onDone);
     /// <summary>"다른 코스 보기" (두 사람의 동의가 지워진다)</summary>
     IEnumerator NextCourse(string matchId, Action<MatchState, string> onDone);
+    /// <summary>도착지 정하기 (buildingId 가 비면 지움). 코스가 그곳에서 끝나게 바뀌고 두 사람의 동의가 지워진다. name 은 화면 · 가상 상대용</summary>
+    IEnumerator SetDestination(string matchId, string buildingId, string name, Action<MatchState, string> onDone);
     IEnumerator StartWalk(string matchId, Action<MatchState, string> onDone);
     /// <summary>산책 끝내기 → ended (완료 · 리뷰 · 보상은 B-V4 / C-V4)</summary>
     IEnumerator End(string matchId, Action<MatchState, string> onDone);

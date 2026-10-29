@@ -313,6 +313,12 @@ public class CatchCameraScreen : MonoBehaviour
         tr.pivot = new Vector2(0.5f, 1f);
         tr.offsetMin = new Vector2(KucaTheme.Gutter + 120f, -136f);
         tr.offsetMax = new Vector2(-KucaTheme.Gutter - 260f, -24f);
+        // AR 켬 단추 옆이라 좁다: 한 줄 그대로 작게 ("함께 한 / 장!" 처럼 낱말 가운데서 꺾였음, 세로로 긴 폰)
+        title.verticalOverflow = VerticalWrapMode.Truncate;
+        title.resizeTextForBestFit = true;
+        title.resizeTextMaxSize = KucaTheme.Heading;
+        title.resizeTextMinSize = KucaTheme.Label;
+        tr.offsetMin = new Vector2(tr.offsetMin.x, -24f - 76f);   // 한 줄 높이: 두 줄로 꺾이지 못하게
 
         note = UIKit.Text(safe, "", KucaTheme.Label, TextAnchor.UpperLeft, Color.white);
         Shadowed(note);

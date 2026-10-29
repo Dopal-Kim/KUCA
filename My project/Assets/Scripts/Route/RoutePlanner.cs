@@ -101,6 +101,8 @@ public partial class RoutePlanner : MonoBehaviour
     readonly List<bool> done = new List<bool>();
     CourseGuide guide;   // 걷는 중 지도 위 코스 선 (다음 장소까지 진하게 + 화살표)
     bool showPath = true;
+    bool mate;   // 지금 선이 함께 걷기 코스인지 (FollowMate)
+    static readonly Variant MateVariant = new Variant("mate", "함께 걷는 코스", Variants[0].color);
 
     readonly Dictionary<string, List<PlaceNotice>> noticesByPlace = new Dictionary<string, List<PlaceNotice>>();
     List<PlaceNotice> allNotices = new List<PlaceNotice>();
@@ -508,6 +510,50 @@ public partial class RoutePlanner : MonoBehaviour
         Toast($"{o.variant.label}로 출발해요");
     }
 
+    /// <summary>
+    /// 함께 걷기: 두 사람이 정한 코스를 혼자 걷기처럼 지도 위 선 (다음 장소까지 진하게 + 화살표) 으로 그리고 도착한 곳을 체크한다.
+    /// 걷는 중 판 · 산책 기록 · 끝내기는 MatchScreen 이 맡는다. course 가 null 이면 선을 지운다.
+    /// </summary>
+    public static void FollowMate(MatchCourse course)
+    {
+        RoutePlanner p = FindAnyObjectByType<RoutePlanner>();
+        if (p == null)
+        {
+            if (course == null) return;
+            p = new GameObject("RoutePlanner").AddComponent<RoutePlanner>();
+        }
+        if (course == null || course.stops == null || course.stops.Count == 0)
+        {
+            if (p.mate) p.EndRoute(false);
+            return;
+        }
+        if (p.mate && p.active != null && p.active.result.id == course.recommendationId)
+            return;   // 이미 그리는 코스
+        var result = new RouteResult { title = course.title, id = course.recommendationId, source = course.source };
+        var o = new Option { variant = MateVariant, result = result };
+        foreach (CourseStop s in course.stops)
+        {
+            var stop = new RouteStop { buildingId = s.buildingId, name = s.name, reason = s.reason };
+            if (!p.TryPlace(stop, out Vector3 pos)) continue;
+            result.stops.Add(stop);
+            o.stops.Add(pos);
+        }
+        if (result.stops.Count == 0)
+            return;
+        p.Trace(o);
+        p.HideChooser();
+        p.EndRoute(false);
+        p.mate = true;
+        p.active = o;
+        for (int i = 0; i < result.stops.Count; i++)
+            p.done.Add(false);
+        if (p.guide == null)
+            p.guide = CourseGuide.Create(p.transform);
+        p.guide.Show(o.path, o.legEnds, o.variant.color);
+        p.RefreshGuide();
+        p.guide.SetVisible(p.showPath);
+    }
+
     /// <summary>지도 위 선을 내 위치 → 다음 장소 기준으로 다시 그린다</summary>
     void RefreshGuide()
     {
@@ -529,6 +575,7 @@ public partial class RoutePlanner : MonoBehaviour
                 WalkSession.Abandon();
         }
         active = null;
+        mate = false;
         done.Clear();
         if (guide != null) guide.SetVisible(false);
         if (walkPanel != null) walkPanel.SetActive(false);
@@ -545,7 +592,7 @@ public partial class RoutePlanner : MonoBehaviour
             if (picker.activeSelf) picker.SetActive(false);
             if (placePopup.activeSelf) ClosePlace();
         }
-        bool showPanel = active != null && !otherOpen && !chooser.activeSelf;
+        bool showPanel = active != null && !mate && !otherOpen && !chooser.activeSelf;
         if (walkPanel.activeSelf != showPanel)
             walkPanel.SetActive(showPanel);
         if (showPanel)

@@ -367,6 +367,10 @@ public class MatchApiTests : IDisposable
         Assert.False(course.GetProperty("confirmed").GetBoolean());
         Assert.Equal(MatchRules.MaxCourseChanges, course.GetProperty("changesLeft").GetInt32());
         Assert.Equal(S(course, "recommendationId"), S(Course(await State(b)), "recommendationId"));   // 두 사람이 같은 코스
+        // 대략 칼로리 · 난이도 (몸무게는 매칭에서 받지 않으니 50~70kg 범위)
+        JsonElement health = course.GetProperty("health");
+        Assert.True(health.GetProperty("kcalMax").GetInt32() > health.GetProperty("kcalMin").GetInt32());
+        Assert.Contains(S(course.GetProperty("difficulty"), "level"), new[] { "easy", "normal", "hard" });
 
         JsonElement mine = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", a, null, HttpStatusCode.OK));
         Assert.True(mine.GetProperty("myAgree").GetBoolean());
@@ -376,6 +380,34 @@ public class MatchApiTests : IDisposable
         JsonElement both = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", b, null, HttpStatusCode.OK));
         Assert.True(both.GetProperty("confirmed").GetBoolean());
         await Send(HttpMethod.Post, $"/api/match/{id}/course/next", a, null, HttpStatusCode.Conflict);   // 확정 뒤엔 못 바꿈
+    }
+
+    [Fact]
+    public async Task 도착지를_고르면_코스가_그곳에서_끝나고_동의를_다시_받는다()
+    {
+        (string a, string b, string id, JsonElement m) = await Meet();
+        string spot = S(m.GetProperty("meetSpot"), "buildingId");
+        string dest = new[] { Library, Engineering, StudentHall }.First(x => x != spot);
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/agree", a, null, HttpStatusCode.OK);
+
+        JsonElement course = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/destination", b, new { buildingId = dest }, HttpStatusCode.OK));
+        string[] stops = StopIds(course);
+        Assert.Equal(dest, stops[^1]);                                                       // 마지막이 도착지
+        Assert.Single(stops, dest);                                                          // 중간에 또 나오지 않음
+        Assert.Equal(dest, S(course, "destinationId"));
+        Assert.False(course.GetProperty("partnerAgree").GetBoolean());                       // a 의 동의가 지워짐
+        Assert.Equal(MatchRules.MaxCourseChanges, course.GetProperty("changesLeft").GetInt32());   // "다른 코스" 횟수는 그대로
+        Assert.Equal(course.GetProperty("stops").EnumerateArray().Sum(s => s.GetProperty("distanceM").GetInt32()),
+                     course.GetProperty("totalDistanceM").GetInt32());
+        Assert.Equal(dest, StopIds(Course(await State(a)))[^1]);                             // 상대에게도 같은 코스
+
+        // 다른 코스를 봐도 도착지는 그대로, 비우면 지워진다
+        Assert.Equal(dest, StopIds(Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/next", a, null, HttpStatusCode.OK)))[^1]);
+        JsonElement cleared = Course(await Send(HttpMethod.Post, $"/api/match/{id}/course/destination", a, new { buildingId = "" }, HttpStatusCode.OK));
+        Assert.Equal(JsonValueKind.Null, cleared.GetProperty("destinationId").ValueKind);
+
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/destination", a, new { buildingId = spot }, HttpStatusCode.BadRequest);     // 만나는 곳
+        await Send(HttpMethod.Post, $"/api/match/{id}/course/destination", a, new { buildingId = "way-0" }, HttpStatusCode.BadRequest);  // 없는 건물
     }
 
     [Fact]

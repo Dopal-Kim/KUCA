@@ -661,7 +661,9 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
     "recommendationId": "rec_3b9a…", "title": "가을 오후 함께 걷는 30분", "source": "ai",
     "stops": [ { "buildingId": "way-474085534", "name": "중앙도서관", "reason": "…", "walkMinutes": 4, "distanceM": 310, "lat": 37.2421, "lon": 127.0796 } ],
     "totalDistanceM": 1450, "totalMinutes": 21,
-    "myAgree": true, "partnerAgree": false, "confirmed": false, "changesLeft": 2
+    "myAgree": true, "partnerAgree": false, "confirmed": false, "changesLeft": 2,
+    "health": { "steps": 2140, "kcalMin": 61, "kcalMax": 86, "intensity": "moderate", "intensityLabel": "보통 걷기" },
+    "difficulty": { "level": "normal", "label": "중", "hills": 0 }
   }
 }
 ```
@@ -726,6 +728,13 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
 - 본문 없음. `200 MatchState`. 새 코스로 바뀌고 **두 사람의 동의가 지워집니다** (다시 함께 골라야 함).
 - 이미 보여 준 장소는 빼고 짜서 실제로 다른 코스가 나옵니다.
 - 매칭마다 **3번까지** (`changesLeft`). 넘으면 `429`, 확정된 뒤에는 `409`, 코스를 아직 만드는 중이면 `409`.
+
+`POST /api/match/{matchId}/course/destination` — 도착지 정하기 (10/28)
+- 본문 `{ "buildingId": "way-474085534" }`. 빈 값이면 도착지를 지웁니다. `200 MatchState`.
+- 코스를 **그 도착지에서 끝나게** 다시 만들고 (도착지는 마지막 장소 하나로만), 두 사람의 동의를 지웁니다. "다른 코스" 횟수는 쓰지 않습니다.
+- `course.destinationId` 로 지금 도착지를 보여 줍니다 (없으면 `null`). "다른 코스 보기" 를 눌러도 도착지는 그대로입니다.
+- 마지막 구간 거리는 직선거리 × 1.3 으로 셉니다. 거리 · 시간 · 칼로리 · 난이도는 도착지를 넣어 다시 셉니다.
+- 캠퍼스 건물이 아니거나 만남 스팟이면 `400`, `meeting` 이 아니거나 확정된 뒤면 `409`.
 
 출발 (둘 다 `arrived`) 하면 그때의 코스로 확정되고, 산책 기록(`walkId`)의 계획 거리 · 장소가 됩니다. 완료 판정은 혼자 걷는 추천 코스와 같습니다 (마지막 장소 도착 또는 계획 거리의 80%).
 
@@ -857,6 +866,10 @@ idle ──들어가기──▶ waiting ──짝 찾음──▶ proposed ─�
   - 몸무게를 모르면 50~70kg 범위 `[가정]`, 알면 그 몸무게 ±10% `[가정]`
   - 추천은 고른 걷는 속도로, 산책 끝은 실제 빠르기(분당 70m 미만 느긋 · 85m 미만 보통 · 그 위 빠름)로 셉니다
 - `intensity`: `light`(가벼운 산책) · `moderate`(보통 걷기) · `brisk`(운동 되는 걷기)
+- **`difficulty` (난이도 하 · 중 · 상)**: 추천 응답과 함께 걷기 코스(`course`)에 붙습니다. `{ "level": "normal", "label": "중", "hills": 0 }`
+  - 하(`easy`): 1.5km 이하이고 오르막 장소 없음 · 상(`hard`): 3km 넘음, 오르막 장소 2곳 이상, 또는 오르막이 있고 2km 넘음 · 중(`normal`): 나머지 `[가정]`
+  - 오르막 장소는 `spots.json` 의 `hill` (가는 길에 힘든 오르막이 있는 곳)
+- 함께 걷기 코스의 `health` 는 몸무게를 받지 않으므로 50~70kg 범위입니다.
 - **몸무게(`weightKg`, 선택)**: 추천 요청 · 산책 끝 요청에 실어 보냅니다. 30~200, 아니면 `400`. `0` 이하는 "모름" 입니다. **서버는 저장하지 않습니다** (앱이 이 기기에만 저장, 취향 체크리스트 마지막 단계)
 
 **주간 목표 (WHO: 일주일 중간 강도 활동 150분)**

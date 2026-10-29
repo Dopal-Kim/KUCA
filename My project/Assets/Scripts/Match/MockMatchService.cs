@@ -36,6 +36,7 @@ public class MockMatchService : IMatchService
     readonly MatchState state = new MatchState();
     float joinedAt, acceptedAt, matchedAt, courseAt;
     int topic, courseIndex;
+    string destId = "", destName = "";
     List<string> myTastes = new List<string>();
 
     readonly Func<float> clock;
@@ -153,9 +154,27 @@ public class MockMatchService : IMatchService
         onDone(Tick(), null);
     }
 
+    public IEnumerator SetDestination(string matchId, string buildingId, string name, Action<MatchState, string> onDone)
+    {
+        yield return null;
+        if (!state.HasCourse || state.course.confirmed)
+        {
+            onDone(Tick(), "두 사람이 이미 정한 코스예요.");
+            yield break;
+        }
+        destId = buildingId ?? "";
+        destName = destId.Length > 0 ? name ?? "" : "";
+        state.course = MakeCourse(state.course.changesLeft);   // 가상 상대는 바로 다시 동의한다
+        courseAt = Now;
+        onDone(Tick(), null);
+    }
+
     MatchCourse MakeCourse(int changesLeft)
     {
         var stops = new List<CourseStop>(Courses[courseIndex]);
+        stops.RemoveAll(s => s.name == destName);
+        if (destId.Length > 0)
+            stops.Add(new CourseStop { buildingId = destId, name = destName, reason = "두 사람이 고른 도착지예요", walkMinutes = 5, distanceM = 380 });
         int total = 0, meters = 0;
         foreach (CourseStop s in stops) { total += s.walkMinutes; meters += s.distanceM; }
         return new MatchCourse
@@ -167,6 +186,7 @@ public class MockMatchService : IMatchService
             totalMinutes = total,
             totalDistanceM = meters,
             changesLeft = changesLeft,
+            destinationId = destId,
         };
     }
 
@@ -259,6 +279,7 @@ public class MockMatchService : IMatchService
                     state.cards = new List<TopicCard>();
                     foreach (int i in picks) { state.smalltalk.Add(Topics[i]); state.cards.Add(Card(i)); }
                     courseIndex = 0;
+                    destId = destName = "";
                     state.course = MakeCourse(CourseChanges);
                     matchedAt = courseAt = now;
                 }

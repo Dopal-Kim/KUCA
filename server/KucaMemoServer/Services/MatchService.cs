@@ -112,6 +112,8 @@ public class MatchService(
         public string? WalkId;
         // 함께 걸을 코스: 둘 다 동의하면 확정, "다른 코스"는 MaxCourseChanges 번까지
         public RecommendResult? Course;
+        // 함께 고른 도착지 (없으면 null): 코스 마지막에 붙인다
+        public Building? Destination;
         // 왜 연결했는지 한 줄: 제안 순간 틀 문장, 곧 AI 문장으로 바뀜
         public string PickedBy = "rule";   // 짝을 누가 골랐는지: rule · ai
         public string? Why;
@@ -372,6 +374,39 @@ public class MatchService(
     }
 
     /// <summary>
+    /// 도착지 정하기 (buildingId 가 비면 지운다). 코스를 그 도착지로 끝나게 다시 만들고 두 사람의 동의를 지운다.
+    /// "다른 코스" 횟수는 쓰지 않는다.
+    /// </summary>
+    public async Task<MatchState> SetDestinationAsync(string userId, string matchId, string? buildingId, RouteRecommender recommender, CancellationToken ct)
+    {
+        Match m;
+        lock (gate)
+        {
+            Tick(Now);
+            m = Own(userId, matchId);
+            if (m.State != "meeting")
+                throw new MatchException(409, "만나러 가는 중에만 도착지를 정할 수 있어요.");
+            if (m.CourseConfirmed)
+                throw new MatchException(409, "두 사람이 이미 정한 코스예요.");
+            Building? dest = null;
+            if (!string.IsNullOrEmpty(buildingId))
+            {
+                dest = spots.Find(buildingId) != null ? buildings.Find(buildingId) : null;
+                if (dest == null)
+                    throw new MatchException(400, "buildingId 가 없거나 캠퍼스 건물이 아닙니다.");
+                if (buildingId == m.Spot?.Id)
+                    throw new MatchException(400, "만나는 곳과 다른 곳을 골라 주세요.");
+            }
+            if (m.Destination?.Id == dest?.Id)
+                return View(userId);
+            m.Destination = dest;
+        }
+        await MakeCourseAsync(m, recommender, ct);
+        lock (gate)
+            return View(userId);
+    }
+
+    /// <summary>
     /// 만남 스팟에서 출발하는 코스를 추천 v2 로 만든다 (고른 시간 · 두 사람의 공통 취향 · 지금 날씨).
     /// 만남 스팟과 이미 보여 준 장소는 빼서 "다른 코스"가 실제로 달라지게 한다.
     /// </summary>
@@ -384,7 +419,8 @@ public class MatchService(
             if (!matches.ContainsKey(m.Id) || m.Spot == null || m.SpotBuilding == null)
                 return;
             string meetId = m.Spot.Id;
-            var all = spots.All.Select(s => s.Id).Where(id => id != meetId && buildings.Find(id) != null).ToList();
+            string? destId = m.Destination?.Id;
+            var all = spots.All.Select(s => s.Id).Where(id => id != meetId && id != destId && buildings.Find(id) != null).ToList();
             var fresh = all.Where(id => !m.CourseSeen.Contains(id)).ToList();
             var tastes = m.A.Prefs.Tastes.Intersect(m.B.Prefs.Tastes).Where(RecommendRules.AllowedTastes.Contains).ToList();
             request = new RecommendRequest(m.Minutes, tastes, m.SpotBuilding.Lat, m.SpotBuilding.Lon, null,
@@ -396,12 +432,34 @@ public class MatchService(
         {
             if (!matches.ContainsKey(m.Id) || m.CourseVersion != version || m.CourseConfirmed)
                 return;
+            if (m.Destination != null)
+                course = EndAt(course, m.Destination, m.SpotBuilding!);
             m.Course = course;
             foreach (RecommendStop stop in course.Stops)
                 m.CourseSeen.Add(stop.BuildingId);
             foreach (Side s in m.Sides)
                 s.CourseAgree = s.IsDemo;   // 새 코스는 다시 동의받는다 (가상 상대는 바로 동의)
         }
+    }
+
+    /// <summary>코스 마지막에 도착지를 붙이고 거리 · 시간 · 칼로리 · 난이도를 다시 센다 (도착지는 추천 장소에서 이미 빠져 있다)</summary>
+    RecommendResult EndAt(RecommendResult course, Building dest, Building start)
+    {
+        RecommendStop? last = course.Stops.LastOrDefault();
+        double straight = last != null ? Geo.Meters(last.Lat, last.Lon, dest.Lat, dest.Lon) : Geo.Meters(start.Lat, start.Lon, dest.Lat, dest.Lon);
+        int meters = (int)Math.Round(straight * RecommendRules.PathFactor);
+        int minutes = Math.Max(1, (int)Math.Ceiling(meters / (double)RecommendRules.MetersPerMinute("normal")));
+        var stops = new List<RecommendStop>(course.Stops)
+        {
+            new(dest.Id, spots.Find(dest.Id)?.Name ?? dest.Name ?? dest.Id, "두 사람이 고른 도착지예요", minutes, meters, dest.Lat, dest.Lon),
+        };
+        int distance = stops.Sum(s => s.DistanceM), total = stops.Sum(s => s.WalkMinutes);
+        return course with
+        {
+            Stops = stops, TotalDistanceM = distance, TotalMinutes = total,
+            Health = HealthRules.Estimate(distance, total, "normal", null),
+            Difficulty = HealthRules.Difficulty(distance, stops.Count(s => spots.Find(s.BuildingId)?.Hill == true)),
+        };
     }
 
     public MatchState Decline(string userId, string matchId)
@@ -851,7 +909,8 @@ public class MatchService(
                 SmalltalkCards: m.Cards,
                 Course: m.Course is { } c
                     ? new MatchCourse(c.Id, c.Title, c.Source, c.Stops, c.TotalDistanceM, c.TotalMinutes,
-                                      me.CourseAgree, other.CourseAgree, m.CourseConfirmed, MatchRules.MaxCourseChanges - m.CourseChanges)
+                                      me.CourseAgree, other.CourseAgree, m.CourseConfirmed, MatchRules.MaxCourseChanges - m.CourseChanges,
+                                      c.Health, c.Difficulty, m.Destination?.Id)
                     : null);
         }
 

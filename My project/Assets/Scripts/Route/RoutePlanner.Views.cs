@@ -8,7 +8,7 @@ using UnityEngine.UI;
 /// </summary>
 public partial class RoutePlanner
 {
-    const float WalkPanelHeight = 430f;
+    const float WalkPanelHeight = 360f;   // 걷는 중 판: 지도를 가리지 않게 낮게 (10/27 폰에서 글자 · 판이 너무 큼)
     static readonly string SoftHex = ColorUtility.ToHtmlStringRGB(KucaTheme.InkSoft);
     static readonly string PrimaryHex = ColorUtility.ToHtmlStringRGB(KucaTheme.Primary);
 
@@ -334,7 +334,7 @@ public partial class RoutePlanner
 
         Option o = options[chosen];
         string source = o.result.source == "ai" ? "AI 추천" : "기본 추천";
-        UIKit.Bold(UIKit.Text(chooserCards, o.variant.label, KucaTheme.Title, TextAnchor.UpperLeft, Ink));
+        UIKit.Bold(UIKit.Text(chooserCards, o.variant.label + CourseDifficulty.Tag(o.result.difficulty, KucaTheme.Label), KucaTheme.Title, TextAnchor.UpperLeft, Ink));
         UIKit.Text(chooserCards, source + (o.returns ? "  ·  출발지로 돌아오는 한 바퀴" : ""), KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
         // 문장을 어떻게 읽었는지만 한 줄 (틀렸으면 고쳐 적게). 코스 설명은 길어서 뺌 (사용자 결정 10/27)
         if (!string.IsNullOrEmpty(o.result.wish?.summary))
@@ -514,7 +514,7 @@ public partial class RoutePlanner
             RouteStop s = o.result.stops[next];
             float left = Flat(PlayerPosition, o.stops[next]);
             bool last = next == o.result.stops.Count - 1;
-            walkNext.text = $"<color=#{ColorUtility.ToHtmlStringRGB(o.variant.color)}>{(last ? "마지막" : "다음")} {next + 1}</color>  {Escape(s.name)}  <size={KucaTheme.Label}><color=#{SoftHex}>· {RouteMath.Distance(left)}</color></size>";
+            walkNext.text = $"<color=#{ColorUtility.ToHtmlStringRGB(o.variant.color)}>{(last ? "마지막" : "다음")} {next + 1}</color>  {Escape(s.name)}  <size={KucaTheme.Caption}><color=#{SoftHex}>· {RouteMath.Distance(left)}</color></size>";
             walkReason.text = Escape(s.reason);
         }
         walkProgress.text = $"{count}/{o.result.stops.Count}곳 들렀어요  <color=#{SoftHex}>· {RouteMath.Distance(o.meters)} · 약 {o.walkMinutes}분</color>";
@@ -544,9 +544,9 @@ public partial class RoutePlanner
         walkDot.sprite = HudIcons.Circle;
         Place(walkDot.rectTransform, new Vector2(0f, 1f), new Vector2(44f, -52f));
         walkDot.rectTransform.sizeDelta = new Vector2(32f, 32f);
-        walkTitle = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Body, TextAnchor.MiddleLeft, Ink));
-        Box(walkTitle.rectTransform, 92f, 30f, 430f, 76f);
-        OneLine(walkTitle, KucaTheme.Body, KucaTheme.Caption);
+        walkTitle = UIKit.Bold(UIKit.Text(pr, "", KucaTheme.Label, TextAnchor.MiddleLeft, Ink));
+        Box(walkTitle.rectTransform, 92f, 30f, 430f, 64f);
+        OneLine(walkTitle, KucaTheme.Label, KucaTheme.Caption);
 
         Button toggle = UIKit.Button(pr, "경로 켜짐", () => { showPath = !showPath; RefreshWalkPanel(); }, RouteBlue, KucaTheme.Caption);
         pathToggle = toggle.GetComponent<Image>();
@@ -564,15 +564,16 @@ public partial class RoutePlanner
         var nb = next.gameObject.AddComponent<Button>();
         nb.transition = Selectable.Transition.None;
         nb.onClick.AddListener(() => { int i = done.FindIndex(x => !x); OpenPlace(i < 0 ? 0 : i); });
-        walkNext = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Heading, TextAnchor.UpperLeft, Ink));
-        Box(walkNext.rectTransform, 12f, 0f, 12f, 72f);
-        OneLine(walkNext, KucaTheme.Heading, KucaTheme.Label);
-        walkReason = UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, InkQuiet);
+        // 다음 장소는 본문 크기 (카드 제목 크기 Heading 은 360px 폭에서 장소 이름이 잘렸다), 이유 · 진행은 작은 글씨
+        walkNext = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Body, TextAnchor.UpperLeft, Ink));
+        Box(walkNext.rectTransform, 12f, 0f, 12f, 60f);
+        OneLine(walkNext, KucaTheme.Body, KucaTheme.Caption);
+        walkReason = UIKit.Text(next.transform, "", KucaTheme.Caption, TextAnchor.UpperLeft, InkQuiet);
         walkReason.verticalOverflow = VerticalWrapMode.Truncate;
-        Box(walkReason.rectTransform, 12f, 80f, 12f, 96f);
-        walkProgress = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Label, TextAnchor.UpperLeft, RouteBlue));
-        Box(walkProgress.rectTransform, 12f, 184f, 12f, 52f);
-        OneLine(walkProgress, KucaTheme.Label, KucaTheme.Caption - 2);
+        Box(walkReason.rectTransform, 12f, 66f, 12f, 84f);   // 두 줄까지
+        walkProgress = UIKit.Bold(UIKit.Text(next.transform, "", KucaTheme.Caption, TextAnchor.UpperLeft, RouteBlue));
+        Box(walkProgress.rectTransform, 12f, 156f, 12f, 44f);
+        OneLine(walkProgress, KucaTheme.Caption, KucaTheme.Caption - 2);
         walkPanel.SetActive(false);
     }
 
