@@ -47,7 +47,7 @@ MAIN_ROAD_M = 150      # 이보다 긴 구내 찻길(주차장 통로 · 진입�
 BUMP_EVERY_M = 110
 # 사용자가 산책길 지도에 표시한 오르막 (tools/route/slopes.json) — 길 양옆에 경사 빗금 (지도 기호, 길 사이클 R5)
 SLOPES = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'route', 'slopes.json')
-SLOPE_INK = np.array([96, 84, 72], np.float32)
+SLOPE_INK = np.array([58, 80, 36], np.float32)   # 진한 풀색: 회갈색 막대는 위에서 울타리 · 침목처럼 읽혔음 (ROAD_REVIEW_v5)
 JUNCTION_GAP_M = 20   # 중앙선은 길 끝(합류 · 교차)에서 이만큼 앞에서 멈추고, 과속방지턱은 교차점에서 이만큼 띄운다
 TRAIL = {'path', 'track'}
 
@@ -76,6 +76,18 @@ def _smooth_noise(shape, cells, seed):
     img = Image.fromarray(((g + 1) * 127.5).astype(np.uint8)).resize((shape[1], shape[0]), Image.BICUBIC)
     return np.asarray(img).astype(np.float32) / 127.5 - 1
 
+
+def _inside(pt, poly):
+    """점이 다각형 안인지 (짝홀 규칙)"""
+    x, y = pt
+    hit = False
+    for (x0, y0), (x1, y1) in zip(poly, poly[1:] + poly[:1]):
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            hit = not hit
+    return hit
+
+
+assert _inside((0.5, 0.5), [(0, 0), (1, 0), (1, 1), (0, 1)]) and not _inside((2, 0.5), [(0, 0), (1, 0), (1, 1), (0, 1)])
 
 class Ground:
     def __init__(self, osm, tiles_dir, height_px=4096, seed=7):
@@ -539,9 +551,6 @@ class Ground:
         blend(np.asarray(marks) > 0, flat(LINE), 0.5)
         blend((np.asarray(center) > 0) & self.road_p, flat(YELLOW), 0.6)
         blend((np.asarray(bumps) > 0) & self.road_p, flat(SPEED_BUMP), 0.5)   # 과속방지턱 (실사: 노랑 · 흰 줄, 아주 많음)
-        ticks = Image.new('L', (W, H), 0)
-        self._slope_ticks(ImageDraw.Draw(ticks))
-        blend((np.asarray(ticks) > 0) & ~(self.road_p | self.buildings | self.water), flat(SLOPE_INK), 0.4)
 
         # 포장 가장자리 선: 포장 안쪽 0.35 m 를 살짝 어둡게 (타일 테두리처럼 또렷하게)
         light_paved = walk_m | self.square | self.paved | self.apron | self.parking
@@ -554,6 +563,11 @@ class Ground:
         hard = light_paved | self.road_p | self.curb_p | rim | self.track   # 그리지 않은 주차장 통로 자리에 테두리 잔상이 남지 않게 (ROAD_REVIEW_v2)
         d_out = ndimage.distance_transform_edt(~hard) / ppm
         canvas *= (1 - 0.16 * np.exp(-d_out / 0.6) * (d_out > 0))[..., None]
+
+        # 오르막 빗금: 포장 · 보도 · 물 위와 건물 3 m 안은 빼고 잔디에만 (천문대 회차로 섬 · 포장 위 낙서, ROAD_REVIEW_v5)
+        ticks = Image.new('L', (W, H), 0)
+        self._slope_ticks(ImageDraw.Draw(ticks))
+        blend((np.asarray(ticks) > 0) & ~(hard | self.sidewalk | self.water | self._grow(self.buildings, 3.0)), flat(SLOPE_INK), 0.55)
 
         # 건물 둘레 그늘 (접지감)
         d_b = ndimage.distance_transform_edt(~self.buildings) / ppm
@@ -642,29 +656,46 @@ class Ground:
         return np.asarray(img).astype(np.float32)
 
     def _slope_ticks(self, md):
-        """오르막 길 양옆 빗금: 많이 힘듦은 2 m 마다 1.6 m, 조금 힘듦은 3.5 m 마다 1.0 m (오르는 방향은 표시가 없어 양옆 같게)"""
+        """오르막 길 양옆 쐐기 빗금 (지도 경사 기호): 길 쪽이 굵고 바깥 끝이 뾰족. 많이 힘듦은 촘촘 · 길게, 조금 힘듦은 성기게 · 짧게.
+        간격 · 길이 ±20% (같은 간격이면 울타리처럼 읽힘), 구간 끝 5 m(갈림목)와 닫힌 고리 안쪽은 비움,
+        'up' (start | end) 이 있으면 위쪽으로 갈수록 빗금이 길어짐 (오르는 방향, ROAD_REVIEW_v5)"""
         if not os.path.exists(SLOPES):
             return
-        w = max(1, int(0.35 * self.ppm))
-        for o in json.load(open(SLOPES, encoding='utf-8'))['slopes']:
-            p = o['p']
-            pts = [(p[i] - MAP_W / 2, MAP_H / 2 - p[i + 1]) for i in range(0, len(p), 2)]
+        slopes = json.load(open(SLOPES, encoding='utf-8'))['slopes']
+        world = lambda p: [(p[i] - MAP_W / 2, MAP_H / 2 - p[i + 1]) for i in range(0, len(p), 2)]
+        loops = {}   # 같은 길(way)의 조각이 처음 점으로 돌아오면 고리 (천문대 회차로)
+        for o in slopes:
+            loops.setdefault(o['seg'].split(':')[0], []).extend(world(o['p']))
+        loops = [pts for pts in loops.values() if math.dist(pts[0], pts[-1]) < 1.0]
+        for o in slopes:
+            pts = world(o['p'])
+            rng = random.Random(o['seg'])
             inner = (ROAD_W['service'] / 2 + 2.3) if o['kind'] in ('service', 'road') else 2.0
-            every, length = (2.0, 1.6) if o['level'] == 2 else (3.5, 1.0)
+            every, length, half = (2.0, 1.6, 0.32) if o['level'] == 2 else (3.5, 1.0, 0.24)
+            total = sum(math.dist(a, b) for a, b in zip(pts, pts[1:]))
+            trim = 5.0 if total > 14 else 0.0
+            done = 0.0
             for a, b in zip(pts, pts[1:]):
-                L = math.hypot(b[0] - a[0], b[1] - a[1])
+                L = math.dist(a, b)
                 if L < 0.5:
                     continue
                 rx, rz = (b[0] - a[0]) / L, (b[1] - a[1]) / L
                 nx, nz = -rz, rx
                 s = every / 2
                 while s < L:
-                    cx, cz = a[0] + rx * s, a[1] + rz * s
-                    for side in (1, -1):
-                        x0, z0 = cx + nx * inner * side, cz + nz * inner * side
-                        x1, z1 = cx + nx * (inner + length) * side, cz + nz * (inner + length) * side
-                        md.line([self.r.px(x0, z0), self.r.px(x1, z1)], fill=255, width=w)
-                    s += every
+                    t = (done + s) / total
+                    if trim <= done + s <= total - trim:
+                        grade = {'end': 0.7 + 0.6 * t, 'start': 1.3 - 0.6 * t}.get(o.get('up'), 1.0)
+                        cx, cz = a[0] + rx * s, a[1] + rz * s
+                        for side in (1, -1):
+                            k = length * grade * rng.uniform(0.8, 1.2)
+                            tip = (cx + nx * (inner + k) * side, cz + nz * (inner + k) * side)
+                            if any(_inside(tip, lp) for lp in loops):
+                                continue
+                            bx, bz = cx + nx * inner * side, cz + nz * inner * side
+                            md.polygon([self.r.px(bx - rx * half, bz - rz * half), self.r.px(bx + rx * half, bz + rz * half), self.r.px(*tip)], fill=255)
+                    s += every * rng.uniform(0.8, 1.2)
+                done += L
 
     def _bumps(self, md):
         """구내 큰 찻길에 BUMP_EVERY_M 마다 길과 직각인 1.2 m 띠"""

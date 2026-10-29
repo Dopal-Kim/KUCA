@@ -13,7 +13,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from kuca_art import creatures
-from kuca_art.mesh import write_bytes
+from kuca_art.mesh import read_chunks, write_bytes, write_chunks
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', '..', 'My project', 'Assets', 'Resources', 'KUCA')
@@ -23,7 +23,7 @@ from kuca_art import figures
 
 # 고품질 피규어(kuca_art/figures.py, figs/) 로 지도용 두 단계 + 도감용 고품질을 만든다.
 #   CreatureMeshes.bytes     가까이 (LOD0, 약 18k 삼각형)  — 확대했을 때 매끈하게
-#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 8k 삼각형)   — 지도에서 여러 마리가 떠 있어도 부드럽게
+#   CreatureMeshesFar.bytes  멀리   (LOD1, 약 9~13k 삼각형) — 지도에서 여러 마리가 떠 있어도 부드럽게 (복잡한 펫은 sculpt 하한으로 조금 더)
 #   --hq → CreatureMeshesHQ.bytes (도감 확대용 60k)
 LEVELS = {'near': ('CreatureMeshes.bytes', 13000, 0.045, 0.4, 6000),
           'far': ('CreatureMeshesFar.bytes', 5000, 0.05, 0.3, 3000),
@@ -39,6 +39,22 @@ old = dict(creatures.build_all())
 for lv in levels:
     fname, tris, voxel, lod, cap = LEVELS[lv]
     meshes = []
+    if only:   # 고른 펫만 다시 만들어 지금 파일에 바꿔 끼운다 (나머지는 바이트 그대로 — 옛 단순 모델로 덮지 않게)
+        for cid in only:
+            mb, glass = figures.build(cid, tris, voxel=voxel, lod=lod, extra_cap=cap)
+            meshes += [(f'Creature_{cid}', mb)] + ([(f'Creature_{cid}__glass', glass)] if glass else [])
+            print(lv, cid, len(mb.pos) // 9, 'tris', flush=True)
+        path = os.path.join(OUT, fname)
+        write_bytes(path + '.part', meshes, pos_unit=creatures.POS_UNIT)
+        new = dict(read_chunks(path + '.part'))
+        os.remove(path + '.part')
+        mine = {f'Creature_{c}' for c in only} | {f'Creature_{c}__glass' for c in only}
+        old_chunks = read_chunks(path)
+        merged = [(n, new.pop(n)) if n in new else (n, raw) for n, raw in old_chunks if n in new or n not in mine]
+        write_chunks(path, merged + list(new.items()))
+        assert [n for n, _ in read_chunks(path)] == [n for n, _ in merged] + list(new)
+        print(lv, 'replaced', sorted(mine & {n for n, _ in merged}), flush=True)
+        continue
     for cid in creatures.CREATURES:
         if cid in figures.FIGURES and (only is None or cid in only):
             mb, glass = figures.build(cid, tris, voxel=voxel, lod=lod, extra_cap=cap)

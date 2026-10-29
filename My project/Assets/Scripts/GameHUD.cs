@@ -918,7 +918,7 @@ public class GameHUD : MonoBehaviour
             if (v.On) v.Stop(); else v.Begin();
         });
 
-        // 화면: 강조색 계절 (자동 → 봄 → 여름 → 가을 → 겨울 → 자동)
+        // 화면: 계절 (지도 색 · 강조색, 자동 → 봄 → 여름 → 가을 → 겨울 → 자동)
         RectTransform screenGroup = UIKit.ListGroup(settingsList, "화면");
         Button season = null;
         season = UIKit.ListRow(screenGroup, SeasonLabel(), chevron: false, onClick: () =>
@@ -927,6 +927,22 @@ public class GameHUD : MonoBehaviour
             KucaTheme.Override = o == null ? KucaTheme.Season.Spring
                 : (int)o.Value == KucaTheme.Seasons.Length - 1 ? (KucaTheme.Season?)null : (KucaTheme.Season)((int)o.Value + 1);
             UIKit.SetLabel(season, SeasonLabel());
+        });
+        // 지도 날씨 효과 (자동 = 기상청 → 맑음 → 흐림 → 비 → 눈 → 자동). 경희펫 출현 규칙은 실제 날씨 그대로
+        Button weather = null;
+        weather = UIKit.ListRow(screenGroup, WeatherLabel(), chevron: false, onClick: () =>
+        {
+            SpawnConditions.Weather? o = KeyArtLook.WeatherOverride;
+            KeyArtLook.WeatherOverride = o == null ? SpawnConditions.Weather.Clear
+                : o.Value == SpawnConditions.Weather.Snow ? (SpawnConditions.Weather?)null : o.Value + 1;
+            UIKit.SetLabel(weather, WeatherLabel());
+        });
+        // 비 · 눈 · 꽃잎 · 낙엽이 내리는 애니메이션 (지도 색 · 빛은 그대로)
+        Button weatherFx = null;
+        weatherFx = UIKit.ListRow(screenGroup, WeatherFxLabel(), chevron: false, onClick: () =>
+        {
+            WeatherFx.Enabled = !WeatherFx.Enabled;
+            UIKit.SetLabel(weatherFx, WeatherFxLabel());
         });
 
         RectTransform accountGroup = UIKit.ListGroup(settingsList, "계정");
@@ -975,8 +991,16 @@ public class GameHUD : MonoBehaviour
     static string MusicAppLabel() => $"노래 들을 앱: {WalkMusic.AppName}";
 
     static string SeasonLabel() => KucaTheme.Override.HasValue
-        ? $"강조색: {KucaTheme.Set.name}"
-        : $"강조색: 자동 (지금 {KucaTheme.Set.name})";
+        ? $"계절 (지도 · 강조색): {KucaTheme.Set.name}"
+        : $"계절 (지도 · 강조색): 자동 (지금 {KucaTheme.Set.name})";
+
+    static string WeatherFxLabel() => $"비 · 눈 · 꽃잎 애니메이션: {(WeatherFx.Enabled ? "켜짐" : "꺼짐")}";
+
+    static readonly string[] WeatherNames = { "모름", "맑음", "흐림", "비", "눈" };
+
+    static string WeatherLabel() => KeyArtLook.WeatherOverride.HasValue
+        ? $"지도 날씨: {WeatherNames[(int)KeyArtLook.ViewWeather]}"
+        : $"지도 날씨: 자동 (기상청 · 지금 {WeatherNames[(int)KeyArtLook.ViewWeather]})";
 
     /// <summary>목록 카드 안의 여백 있는 칸 (입력칸 같은 내용용)</summary>
     static RectTransform Padded(RectTransform group, string name)

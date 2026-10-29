@@ -71136,19 +71136,35 @@ MonoBehaviour:
     skyExposure: 0.35
   season: 0
   spring:
-    leaf: {x: 1, y: 1, z: 1}
+    leaf: {x: 1.06, y: 1.1, z: 0.84}
     autumn: 0
-    blossom: {r: 0.98, g: 0.76, b: 0.84, a: 1}
-    blossomMix: 0
-    grass: {x: 1, y: 1, z: 1}
+    blossom: {r: 1, g: 0.7, b: 0.82, a: 1}
+    blossomMix: 0.55
+    grass: {x: 1.1, y: 1.08, z: 0.82}
     snow: 0
+    light: {r: 1, g: 0.98, b: 0.96, a: 1}
+    sunScale: 1
+    saturationAdd: 0.03
+    sky: {r: 0.98, g: 0.99, b: 1, a: 1}
+    speckle: {r: 1, g: 0.82, b: 0.9, a: 1}
+    speckleAmount: 0.7
+    bare: 0
+    bloom: 0.65
   summer:
-    leaf: {x: 0.82, y: 1, z: 0.8}
+    leaf: {x: 0.8, y: 0.98, z: 0.74}
     autumn: 0
     blossom: {r: 0.22, g: 0.5, b: 0.14, a: 1}
     blossomMix: 1
-    grass: {x: 0.88, y: 1.02, z: 0.86}
+    grass: {x: 0.84, y: 1, z: 0.8}
     snow: 0
+    light: {r: 1, g: 1, b: 0.97, a: 1}
+    sunScale: 1.08
+    saturationAdd: 0.08
+    sky: {r: 0.9, g: 1, b: 1.08, a: 1}
+    speckle: {r: 0.97, g: 0.96, b: 0.86, a: 1}
+    speckleAmount: 0.12
+    bare: 0
+    bloom: 0
   autumn:
     leaf: {x: 1, y: 1, z: 1}
     autumn: 1
@@ -71156,13 +71172,29 @@ MonoBehaviour:
     blossomMix: 1
     grass: {x: 1.18, y: 1, z: 0.7}
     snow: 0
+    light: {r: 1, g: 0.9, b: 0.78, a: 1}
+    sunScale: 1
+    saturationAdd: 0.04
+    sky: {r: 1, g: 0.96, b: 0.9, a: 1}
+    speckle: {r: 0.86, g: 0.42, b: 0.12, a: 1}
+    speckleAmount: 0.85
+    bare: 0
+    bloom: 0
   winter:
-    leaf: {x: 0.78, y: 0.88, z: 0.84}
+    leaf: {x: 0.74, y: 0.84, z: 0.82}
     autumn: 0
-    blossom: {r: 0.36, g: 0.27, b: 0.2, a: 1}
+    blossom: {r: 0.4, g: 0.33, b: 0.27, a: 1}
     blossomMix: 1
-    grass: {x: 0.92, y: 0.94, z: 0.9}
-    snow: 0.85
+    grass: {x: 1.45, y: 0.86, z: 0.42}
+    snow: 0.15
+    light: {r: 0.96, g: 0.97, b: 1.02, a: 1}
+    sunScale: 0.9
+    saturationAdd: -0.04
+    sky: {r: 0.9, g: 0.95, b: 1.06, a: 1}
+    speckle: {r: 1, g: 1, b: 1, a: 1}
+    speckleAmount: 0
+    bare: 1
+    bloom: 0
   glowColor: {r: 1, g: 0.74, b: 0.42, a: 1}
   glowStrength: 1.6
   litWindows: 0.55

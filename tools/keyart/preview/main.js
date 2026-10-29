@@ -18,9 +18,29 @@ async function main() {
   for (const k of ['sun', 'ambient', 'sunny', 'fog']) if (md[k]) look[k] = { ...look[k], ...md[k] };
   if (md.shadowStrength !== undefined) look.shadowStrength = md.shadowStrength;
   const night = md.night || 0;
-  const skyTint = (md.sky && md.sky.tint) || look.fog.color;
+  let skyTint = (md.sky && md.sky.tint) || look.fog.color;
   // ?season=spring|summer|autumn|winter (KeyArtLook.json seasons)
-  const season = (look.seasons || {})[q.get('season') || 'spring'] || { leaf: [1, 1, 1], autumn: 0, blossom: [1, 1, 1, 0], grass: [1, 1, 1], snow: 0 };
+  const season = { leaf: [1, 1, 1], autumn: 0, blossom: [1, 1, 1, 0], grass: [1, 1, 1], snow: 0, light: [1, 1, 1], sunScale: 1, saturationAdd: 0, sky: [1, 1, 1], speckle: [1, 1, 1, 0], bare: 0,
+    ...((look.seasons || {})[q.get('season') || 'spring'] || {}) };
+  // ?weather=clear|cloudy|rain|snow : Unity KeyArtLook.ModFor · Styled 와 같은 계산 (S1)
+  const WEATHER = {
+    clear: { sun: 1, shadow: 1, sat: 0, fog: 1, fogMix: 0, skyMix: 0, ambient: 1, wet: 0, snow: 0, tint: [1, 1, 1] },
+    cloudy: { sun: 0.55, shadow: 0.35, sat: -0.14, fog: 0.65, fogMix: 0.6, skyMix: 0.75, ambient: 1.05, wet: 0, snow: 0, tint: [0.95, 0.98, 1.03] },
+    rain: { sun: 0.32, shadow: 0.15, sat: -0.2, fog: 0.42, fogMix: 0.8, skyMix: 0.88, ambient: 0.86, wet: 1, snow: 0, tint: [0.86, 0.92, 1.0] },
+    snow: { sun: 0.5, shadow: 0.3, sat: -0.16, fog: 0.5, fogMix: 0.8, skyMix: 0.8, ambient: 1.08, wet: 0, snow: 0.8, tint: [0.96, 0.98, 1.04] },
+  };
+  const wx = WEATHER[q.get('weather') || 'clear'] || WEATHER.clear;
+  const luma = (c) => c[0] * 0.3 + c[1] * 0.59 + c[2] * 0.11;
+  const mul = (a, b) => a.map((v, i) => v * b[i]);
+  const mixc = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+  look.sun = { ...look.sun, color: mul(look.sun.color, season.light), intensity: look.sun.intensity * season.sunScale * wx.sun };
+  look.shadowStrength *= wx.shadow;
+  look.sunny = { ...look.sunny, saturation: look.sunny.saturation + season.saturationAdd + wx.sat, warmTop: look.sunny.warmTop * wx.sun,
+    rim: look.sunny.rim * (0.5 + 0.5 * wx.sun), wash: look.sunny.wash * wx.sun };
+  look.ambient = { sky: look.ambient.sky.map((v) => v * wx.ambient), ground: look.ambient.ground.map((v) => v * wx.ambient) };
+  const sky0 = mul(skyTint, season.sky);
+  skyTint = mixc(sky0, wx.tint.map((v) => v * luma(sky0)), wx.skyMix);
+  look.fog = { color: mixc(look.fog.color, wx.tint.map((v) => v * luma(look.fog.color)), wx.fogMix), start: look.fog.start * wx.fog, end: look.fog.end * wx.fog };
   const W = num('w', 1280), H = num('h', 800);
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setSize(W, H);
@@ -65,7 +85,8 @@ async function main() {
     uLitWindows: { value: look.glow.litWindows },
     uLights: { value: lightsTex }, uGroundLight: { value: look.glow.groundLight || 0 },
     uSeasonLeaf: { value: raw(season.leaf) }, uSeasonBlossom: { value: new THREE.Vector4(...lin(season.blossom).toArray(), season.blossom[3]) },
-    uSeasonGrass: { value: raw(season.grass) }, uAutumn: { value: season.autumn }, uSnow: { value: season.snow },
+    uSeasonGrass: { value: raw(season.grass) }, uAutumn: { value: season.autumn }, uSnow: { value: Math.max(season.snow, wx.snow) },
+    uSpeckle: { value: new THREE.Vector4(...lin(season.speckle).toArray(), season.speckle[3]) }, uBare: { value: season.bare }, uWet: { value: wx.wet }, uBloom: { value: season.bloom || 0 },
   };
 
   // 지면
@@ -154,7 +175,13 @@ float kNightAmt = 0.0;    // 넓게 퍼지는 밤 빛을 받는 정도 (지면 1
 uniform sampler2D uLights;
 uniform float uGroundLight, uAutumn, uSnow;
 uniform vec3 uSeasonLeaf, uSeasonGrass;
-uniform vec4 uSeasonBlossom;
+uniform vec4 uSeasonBlossom, uSpeckle;
+uniform float uBare, uWet, uBloom;
+float kucaHash12(vec2 p) {
+  vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+  p3 += dot(p3, p3.yzx + 33.33);
+  return fract((p3.x + p3.y) * p3.z);
+}
 vec3 kucaNightLight(vec3 albedo, vec3 p, float amount) {
   if (uNight <= 0.001 || amount <= 0.0) return vec3(0.0);
   float pool = texture2D(uLights, p.xz / vec2(1418.0, 1548.0) + 0.5).r;
@@ -171,6 +198,8 @@ vec3 kucaSeasonFoliage(vec3 c, vec3 p, vec3 n) {
   maple = mix(maple, vec3(0.55, 0.10, 0.04), step(0.82, h));
   vec3 g2 = c * uSeasonLeaf;
   g2 = mix(g2, maple * lum * 2.4, uAutumn * leafy);
+  g2 = mix(g2, vec3(0.40, 0.33, 0.27) * (0.55 + lum), uBare * leafy);
+  g2 = mix(g2, uSeasonBlossom.rgb * (0.75 + lum * 0.6), uBloom * leafy * step(h, 0.45));
   c = mix(c, g2, green);
   c = mix(c, uSeasonBlossom.rgb * (0.7 + lum), pink * uSeasonBlossom.a);
   return mix(c, vec3(0.90, 0.94, 1.0), uSnow * smoothstep(0.35, 0.75, n.y));
@@ -178,11 +207,21 @@ vec3 kucaSeasonFoliage(vec3 c, vec3 p, vec3 n) {
 vec3 kucaSeasonGround(vec3 c, vec3 p) {
   float green = clamp((c.g - max(c.r, c.b)) * 8.0, 0.0, 1.0);
   c = mix(c, c * uSeasonGrass, green);
+  if (uSpeckle.a > 0.001) {
+    vec2 q = p.xz / 8.0; vec2 qi = floor(q), qf = fract(q);
+    qf = qf * qf * (3.0 - 2.0 * qf);
+    float n = mix(mix(kucaHash12(qi), kucaHash12(qi + vec2(1, 0)), qf.x), mix(kucaHash12(qi + vec2(0, 1)), kucaHash12(qi + vec2(1, 1)), qf.x), qf.y);
+    float blot = smoothstep(0.5, 0.9, n) * 0.65;
+    vec2 cell = floor(p.xz / 0.7); vec2 f = fract(p.xz / 0.7) - 0.5;
+    float dotm = step(length(f), 0.24) * step(1.0 - uSpeckle.a * (0.18 + 0.5 * n), kucaHash12(cell));
+    c = mix(c, uSpeckle.rgb * (0.85 + 0.3 * kucaHash12(cell + 7.0)), clamp(blot + dotm, 0.0, 1.0) * green * uSpeckle.a);
+  }
   float water = clamp((c.b - max(c.r, c.g) * 0.85) * 5.0, 0.0, 1.0);
   float nse = sin(p.x * 0.05) * sin(p.z * 0.043) * 0.5 + 0.5;
   float snow = uSnow * clamp(green * 1.2 + 0.3, 0.0, 1.0) * smoothstep(0.15, 0.6, nse * 0.6 + uSnow * 0.7);
   c = mix(c, vec3(0.84, 0.88, 0.95), snow * (1.0 - water));
-  return mix(c, vec3(0.70, 0.82, 0.92), uSnow * water * 0.6);
+  c = mix(c, vec3(0.70, 0.82, 0.92), uSnow * water * 0.6);
+  return c * mix(vec3(1.0), vec3(0.70, 0.74, 0.80) + 0.1 * green, uWet * (1.0 - water));
 }
 uniform vec2 uResolution;
 varying vec3 vWPos;

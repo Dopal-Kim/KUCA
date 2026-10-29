@@ -224,6 +224,16 @@ def build(fig, rng):
     w_mouth(fig, mouth_f, 0.18, (0.3, 0.14, 0.12))
     # 목 아래 몸통은 흰 작업복: 갈색 머리·가시 색이 가슴·등으로 번진 것을 덮음
     fig.paint(lambda P: np.maximum(P[:, 1] - (y0 + 3.3), torso(P) - 0.2), SUIT, soft=0.06)
+    # 펫 검토 v2: 앞에서 몸통이 한 덩어리 피부색 → 앞섶 진홍 띠(팔 띠와 같은 색) + 왼가슴 회색 주머니(위 덮개 진하게).
+    # 칠은 간략화에서 점으로 흩어져, 벨트처럼 몸 표면을 따라 0.06 m 도드라진 조각으로 붙인다
+    skin = lambda P: torso(P) - 0.06
+    front = lambda c, h: S.intersect(skin, S.box(c, h))
+    pieces = [(front((0, y0 + 2.56, 1.0), (0.13, 0.62, 0.8)), STRIPE, 'placket'),
+              (front((-0.62, y0 + 2.6, 1.0), (0.32, 0.24, 0.8)), (0.50, 0.51, 0.54), 'pocket'),
+              (S.intersect(lambda P: torso(P) - 0.1, S.box((-0.62, y0 + 2.79, 1.0), (0.34, 0.07, 0.8))), (0.32, 0.33, 0.36), 'pocket2')]
+    for f, col, layer in pieces:
+        fig.add(f, col, k=0.0, layer=layer)
+        fig.paint(lambda P, f=f: f(P) - 0.02, col, soft=0.01)   # 위 흰 작업복 칠이 조각까지 덮어서 다시 칠
     # ---- 받침 소품: 마이크로칩 (왼쪽 앞) + 회색 돌 ----
     cx_, cz_ = -2.5, 1.9
     Rk = S.rot(25, 0, 0)

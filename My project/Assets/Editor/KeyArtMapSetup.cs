@@ -82,7 +82,7 @@ public static class KeyArtMapSetup
         public float night; public ModeSky sky;
     }
     [System.Serializable] class Modes { public ModePreset day, sunset, night; }
-    [System.Serializable] class SeasonRow { public float[] leaf, blossom, grass; public float autumn, snow; }
+    [System.Serializable] class SeasonRow { public float[] leaf, blossom, grass, light, sky, speckle; public float autumn, snow, sunScale = 1f, saturationAdd, bare, bloom; }
     [System.Serializable] class Seasons { public SeasonRow spring, summer, autumn, winter; }
     [System.Serializable] class Glow { public float[] color; public float litWindows = 0.55f, strength = 1.6f, groundLight = 0.9f; }
     [System.Serializable]
@@ -108,6 +108,17 @@ public static class KeyArtMapSetup
         }
         p.autumn = r.autumn;
         p.snow = r.snow;
+        if (r.light != null && r.light.Length >= 3) p.light = Srgb(r.light);
+        if (r.sky != null && r.sky.Length >= 3) p.sky = Srgb(r.sky);
+        if (r.speckle != null && r.speckle.Length >= 4)
+        {
+            p.speckle = Srgb(r.speckle);
+            p.speckleAmount = r.speckle[3];
+        }
+        p.sunScale = r.sunScale;
+        p.saturationAdd = r.saturationAdd;
+        p.bare = r.bare;
+        p.bloom = r.bloom;
         return p;
     }
 
@@ -281,6 +292,21 @@ public static class KeyArtMapSetup
     [MenuItem("KUCA/Season/Summer 여름")] static void SeasonSummer() => SetSeason(KeyArtLook.Season.Summer);
     [MenuItem("KUCA/Season/Autumn 가을")] static void SeasonAutumn() => SetSeason(KeyArtLook.Season.Autumn);
     [MenuItem("KUCA/Season/Winter 겨울")] static void SeasonWinter() => SetSeason(KeyArtLook.Season.Winter);
+
+    // 날씨 효과 (지도만, 경희펫 출현 규칙은 그대로): 설정의 "날씨 효과" 와 같은 값
+    [MenuItem("KUCA/Weather/Auto (기상청)")] static void WeatherAuto() => SetWeather(null);
+    [MenuItem("KUCA/Weather/Clear 맑음")] static void WeatherClear() => SetWeather(SpawnConditions.Weather.Clear);
+    [MenuItem("KUCA/Weather/Cloudy 흐림")] static void WeatherCloudy() => SetWeather(SpawnConditions.Weather.Cloudy);
+    [MenuItem("KUCA/Weather/Rain 비")] static void WeatherRain() => SetWeather(SpawnConditions.Weather.Rain);
+    [MenuItem("KUCA/Weather/Snow 눈")] static void WeatherSnow() => SetWeather(SpawnConditions.Weather.Snow);
+
+    static void SetWeather(SpawnConditions.Weather? w)
+    {
+        KeyArtLook.WeatherOverride = w;
+        var kl = Object.FindAnyObjectByType<KeyArtLook>();
+        if (kl != null) kl.Apply();
+        SceneView.RepaintAll();
+    }
 
     static void SetSeason(KeyArtLook.Season season)
     {
