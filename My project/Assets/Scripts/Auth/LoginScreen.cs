@@ -400,7 +400,7 @@ public class LoginScreen : MonoBehaviour
         Button kakao = UIKit.BigButton(actions, "카카오로 시작하기", () => LoginWith("kakao"), KakaoYellow, KakaoInk);
         kakao.gameObject.AddComponent<PressScale>();
         AddIcon(kakao, HudIcons.Bubble, KakaoInk);
-        if (AuthConfig.AppleLoginEnabled)
+        if (AuthConfig.AppleLoginEnabled && Application.platform != RuntimePlatform.Android)   // 안드로이드에는 Apple 로그인이 없다
         {
             Button apple = UIKit.BigButton(actions, "Apple로 계속하기", () => LoginWith("apple"), Color.black, Color.white);
             apple.gameObject.AddComponent<PressScale>();
